@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.3 — Constants, Literals, and const · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .from-book { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-left: 4px solid var(--yellow); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; font-style: italic; color: var(--ink); }
+  .from-book::before { content: "📖 FROM YOUR NOTES"; position: absolute; top: -10px; left: 14px; background: var(--yellow); color: var(--ink); padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; font-style: normal; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  /* ===== Three flavors cards ===== */
+  .flavor-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 16px 0; }
+  .flavor-card { background: white; border: 2px solid var(--bg3); border-radius: 14px; padding: 16px 20px; transition: all 0.25s var(--bouncy); display: grid; grid-template-columns: 36px 1fr; gap: 16px; align-items: start; }
+  .flavor-card:hover { transform: translateX(4px); border-color: var(--orange); box-shadow: var(--shadow); }
+  .flavor-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; }
+  .flavor-body h4 { margin: 4px 0 6px; color: var(--ink); font-size: 16px; }
+  .flavor-body p { margin: 0 0 8px; font-size: 14.5px; color: var(--ink-soft); line-height: 1.5; }
+  .flavor-body pre { margin: 6px 0 0; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; overflow-x: auto; }
+  .flavor-body pre .kw { color: #c4b5fd; }
+  .flavor-body pre .preproc { color: #f9a8d4; }
+  .flavor-body pre .num { color: #fde047; }
+  .flavor-body pre .str { color: #86efac; }
+  .flavor-body pre .com { color: #64748b; font-style: italic; }
+  .flavor-body pre .name { color: #f9a8d4; }
+
+  /* ===== Suffix table ===== */
+  .lit-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .lit-table thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .lit-table th, .lit-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .lit-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .lit-table td.mono { font-family: var(--mono); font-size: 13px; }
+  .lit-table .lit-ex { background: linear-gradient(135deg, #fef3c7, #fed7aa); color: var(--orange-deep); padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+
+  /* ===== Literal explorer interactive ===== */
+  .lit-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .lit-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .lit-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .lit-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .lit-counter strong { font-size: 18px; }
+
+  .lit-input-wrap { position: relative; margin-bottom: 14px; }
+  .lit-input { width: 100%; padding: 14px 18px; font: inherit; font-family: var(--mono); font-size: 17px; border: 3px solid var(--bg3); border-radius: 12px; background: white; color: var(--ink); transition: all 0.25s; }
+  .lit-input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15); }
+
+  .lit-result { padding: 14px 18px; border-radius: 12px; background: white; border: 2px solid var(--bg3); margin-bottom: 14px; min-height: 80px; }
+  .lit-result-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .lit-result-label { font-family: var(--mono); font-size: 14px; color: var(--ink-dim); background: var(--bg1); padding: 4px 10px; border-radius: 6px; }
+  .lit-result-type { font-family: var(--mono); font-size: 18px; color: var(--orange-deep); font-weight: 700; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 4px 12px; border-radius: 8px; }
+  .lit-result-note { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .lit-result-note code { font-size: 0.92em; }
+  .lit-result.invalid { border-color: var(--red); background: linear-gradient(135deg, #fff1f2, white); }
+  .lit-result.invalid .lit-result-type { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
+
+  .lit-presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .lit-presets-label { font-size: 13px; font-weight: 600; color: var(--ink-dim); margin-right: 4px; }
+  .lit-preset { background: white; border: 2px solid var(--bg3); border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 13px; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .lit-preset:hover { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .lit-preset.tried { background: linear-gradient(135deg, #fef3c7, #fed7aa); border-color: var(--orange-light); }
+
+  /* ===== Quiz / mistakes / exercises (standard) ===== */
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Constants — values that DON'T change. Plus C's most useful keyword: <code>const</code>. 🔒
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK · 2.3</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 13 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II · CORE LANGUAGE</span>
+    <h1>Constants, Literals, and <code style="background: rgba(0,0,0,0.2); color: white; padding: 2px 10px; border-radius: 6px; font-size: 0.85em;">const</code></h1>
+    <p class="hero-sub">Sometimes a value should never change — π, the days in a week, the maximum length of a username. Today: the three ways C lets you say "this is constant," plus the <code>const</code> keyword that turns a variable into a promise.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Locking down what shouldn't change 🔒</h2>
+
+    <div class="from-book">
+      An entity whose value doesn't change is called a constant — where a variable is an entity whose value can be changed.
+    </div>
+
+    <p>Your notes had it exactly right. A <em>variable</em> is a container whose contents can change. A <em>constant</em> is a value that can't. Some things in your programs really shouldn't change — π is always π, there are always 12 months in a year, your buffer size shouldn't shift mid-loop. Marking those as constants tells the compiler (and any future reader) <em>"this is fixed, don't touch."</em></p>
+
+    <p>And when you make a mistake and try to change one anyway? The compiler catches it. That's the whole win — preventable bugs prevented at compile time.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The three flavors of constants</div>
+    <h2>Literals, <code>#define</code>, and <code>const</code> 📝</h2>
+
+    <div class="from-book">
+      Types of constants — primarily, there are three types of constants.
+    </div>
+
+    <p>Your notes hinted at the three. Modernized for today's C, they are:</p>
+
+    <div class="flavor-grid">
+      <div class="flavor-card">
+        <div class="flavor-num">1</div>
+        <div class="flavor-body">
+          <h4>Literals — values written directly in code</h4>
+          <p>The simplest: numbers and characters you just write. <code>5</code>, <code>3.14</code>, <code>'A'</code>, <code>"hello"</code> are all literals. They're constants by nature — no name needed.</p>
+          <pre><span class="kw">int</span> <span class="name">age</span> = <span class="num">25</span>;          <span class="com">// 25 is an int literal</span>
+<span class="kw">double</span> <span class="name">pi</span> = <span class="num">3.14159</span>;     <span class="com">// 3.14159 is a double literal</span>
+<span class="kw">char</span> <span class="name">grade</span> = <span class="str">'A'</span>;        <span class="com">// 'A' is a char literal (its value is 65)</span></pre>
+        </div>
+      </div>
+      <div class="flavor-card">
+        <div class="flavor-num">2</div>
+        <div class="flavor-body">
+          <h4><code>#define</code> — the preprocessor macro (older style)</h4>
+          <p>Names a constant value at the preprocessor level. Before the compiler ever sees your code, every <code>PI</code> is replaced with <code>3.14159</code> — pure text substitution.</p>
+          <pre><span class="preproc">#define</span> <span class="name">PI</span> <span class="num">3.14159</span>
+<span class="preproc">#define</span> <span class="name">MAX_USERS</span> <span class="num">100</span>
+
+<span class="kw">double</span> <span class="name">area</span> = <span class="name">PI</span> * <span class="name">r</span> * <span class="name">r</span>;   <span class="com">// PI becomes 3.14159 before compile</span></pre>
+        </div>
+      </div>
+      <div class="flavor-card">
+        <div class="flavor-num">3</div>
+        <div class="flavor-body">
+          <h4><code>const</code> — a variable that promises not to change (modern preference)</h4>
+          <p>A normal variable, but with the <code>const</code> keyword stuck on. The compiler enforces the promise: try to assign to it and you get a compile error.</p>
+          <pre><span class="kw">const</span> <span class="kw">double</span> <span class="name">PI</span> = <span class="num">3.14159</span>;
+<span class="kw">const</span> <span class="kw">int</span> <span class="name">MAX_USERS</span> = <span class="num">100</span>;
+
+<span class="name">PI</span> = <span class="num">3.14</span>;   <span class="com">// ERROR — can't assign to a const variable</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <p>Use <strong><code>const</code></strong> whenever possible. It's typed, scoped, and the compiler protects it. <code>#define</code> still has its place (header guards, conditional compilation) but for naming a constant value, <code>const</code> is the modern win.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Literal suffixes — making the type explicit</div>
+    <h2>The little letters that change everything 🔤</h2>
+
+    <div class="new-content">
+      By default, <code>42</code> is an <code>int</code> and <code>3.14</code> is a <code>double</code>. But you can <strong>force a different type</strong> by adding a one or two-letter suffix to the literal. This matters when the default type isn't what you want.
+    </div>
+
+    <table class="lit-table">
+      <thead>
+        <tr><th>Suffix</th><th>Example</th><th>Type</th><th>When to use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">(none)</td><td class="mono"><span class="lit-ex">42</span></td><td class="mono">int</td><td>Default integer literal</td></tr>
+        <tr><td class="mono">U or u</td><td class="mono"><span class="lit-ex">42U</span></td><td class="mono">unsigned int</td><td>When you specifically need unsigned</td></tr>
+        <tr><td class="mono">L or l</td><td class="mono"><span class="lit-ex">42L</span></td><td class="mono">long</td><td>Large numbers (e.g. 4000000000L)</td></tr>
+        <tr><td class="mono">LL</td><td class="mono"><span class="lit-ex">42LL</span></td><td class="mono">long long</td><td>Really large numbers</td></tr>
+        <tr><td class="mono">UL, ULL</td><td class="mono"><span class="lit-ex">42UL</span></td><td class="mono">unsigned long, etc.</td><td>Combine for unsigned + long</td></tr>
+        <tr><td class="mono">(none)</td><td class="mono"><span class="lit-ex">3.14</span></td><td class="mono">double</td><td>Default decimal literal</td></tr>
+        <tr><td class="mono">F or f</td><td class="mono"><span class="lit-ex">3.14f</span></td><td class="mono">float</td><td>When you need float specifically</td></tr>
+        <tr><td class="mono">L or l</td><td class="mono"><span class="lit-ex">3.14L</span></td><td class="mono">long double</td><td>Extra precision (rare)</td></tr>
+      </tbody>
+    </table>
+
+    <p>Also notable: integer literals in different <strong>bases</strong>:</p>
+
+    <ul style="margin: 0 0 14px 24px; color: var(--ink-soft);">
+      <li><code>42</code> — decimal (base 10)</li>
+      <li><code>052</code> — octal (base 8, starts with <code>0</code>). Watch out — leading zero changes the meaning!</li>
+      <li><code>0x2A</code> — hexadecimal (base 16, starts with <code>0x</code>). Useful for bit patterns and memory addresses.</li>
+      <li><code>0b101010</code> — binary (C99 and later, starts with <code>0b</code>). Direct bit specification.</li>
+    </ul>
+
+    <p>All four of those equal <strong>42</strong> in value — same number, written different ways for different occasions.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The <code>const</code> keyword in detail</div>
+    <h2>A promise the compiler enforces 🤝</h2>
+
+    <div class="new-content">
+      The simplest use of <code>const</code> is what you've seen: <code>const int MAX = 100;</code>. But <code>const</code> goes deeper — it can also lock down function parameters and (when we meet pointers in Part VI) what a pointer can change.
+    </div>
+
+    <div style="background: var(--terminal); color: #e2e8f0; padding: 14px 18px; border-radius: 12px; font-family: var(--mono); font-size: 13px; line-height: 1.7; margin: 10px 0;">
+<span style="color: #64748b;">// A const variable: must initialize at declaration</span>
+<span style="color: #c4b5fd;">const</span> <span style="color: #c4b5fd;">int</span> <span style="color: #f9a8d4;">DAYS_PER_WEEK</span> = <span style="color: #fde047;">7</span>;
+
+<span style="color: #c4b5fd;">const</span> <span style="color: #c4b5fd;">int</span> <span style="color: #f9a8d4;">x</span>;          <span style="color: #64748b;">// ERROR — const must be initialized</span>
+<span style="color: #f9a8d4;">DAYS_PER_WEEK</span> = <span style="color: #fde047;">8</span>;   <span style="color: #64748b;">// ERROR — can't assign to a const</span>
+
+<span style="color: #64748b;">// A const function parameter — "I promise I won't modify this"</span>
+<span style="color: #c4b5fd;">void</span> <span style="color: #fbbf24;">printPrice</span>(<span style="color: #c4b5fd;">const</span> <span style="color: #c4b5fd;">double</span> <span style="color: #f9a8d4;">price</span>) {
+    <span style="color: #fbbf24;">printf</span>(<span style="color: #86efac;">"$%.2f"</span>, <span style="color: #f9a8d4;">price</span>);
+    <span style="color: #f9a8d4;">price</span> = <span style="color: #fde047;">0</span>;       <span style="color: #64748b;">// ERROR — can't modify the const parameter</span>
+}
+    </div>
+
+    <p>Why bother marking parameters const if you weren't planning to modify them anyway? <strong>Documentation + protection.</strong> The function signature now says <em>"I treat this as read-only"</em>, and the compiler catches you if you accidentally try to modify it. In bigger programs this is a real bug-preventer.</p>
+
+    <p><strong>Modern convention:</strong> mark anything that doesn't need to change as <code>const</code>. It's free documentation and free bug prevention. The C++ community even has a term for the habit — "const correctness." (More on this when we get to C++ in Part VI of that book.)</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Try it — literal type explorer</div>
+    <h2>Type any literal — I'll show you the type 🔬</h2>
+
+    <div class="new-content">
+      Type any literal value in the box below — like <code>42</code>, <code>3.14</code>, <code>3.14f</code>, <code>'A'</code>, <code>"hello"</code>, <code>0x2A</code>, <code>0b1010</code>. I'll tell you what type C parses it as and why. Each new literal tested = <strong>+4 XP</strong>; the unusual ones each = bonus.
+    </div>
+
+    <div class="lit-area">
+      <div class="lit-header">
+        <div class="lit-title">🔬 Literal type explorer</div>
+        <div class="lit-counter"><strong id="litCount">0</strong> tested</div>
+      </div>
+
+      <div class="lit-input-wrap">
+        <input type="text" class="lit-input" id="litInput" placeholder='Type any literal: 42, 3.14, 3.14f, "hello", 0xFF, 0b1010...' autocomplete="off" spellcheck="false" value="42">
+      </div>
+
+      <div class="lit-result" id="litResult">
+        <div class="lit-result-head">
+          <span class="lit-result-label">42</span>
+          <span class="lit-result-type">int</span>
+        </div>
+        <div class="lit-result-note">A plain decimal integer literal — defaults to <code>int</code>.</div>
+      </div>
+
+      <div class="lit-presets">
+        <span class="lit-presets-label">Try:</span>
+        <button class="lit-preset" data-v="42">42</button>
+        <button class="lit-preset" data-v="42L">42L</button>
+        <button class="lit-preset" data-v="42U">42U</button>
+        <button class="lit-preset" data-v="42ULL">42ULL</button>
+        <button class="lit-preset" data-v="3.14">3.14</button>
+        <button class="lit-preset" data-v="3.14f">3.14f</button>
+        <button class="lit-preset" data-v="'A'">'A'</button>
+        <button class="lit-preset" data-v='"hello"'>"hello"</button>
+        <button class="lit-preset" data-v="0xFF">0xFF</button>
+        <button class="lit-preset" data-v="0b1010">0b1010</button>
+        <button class="lit-preset" data-v="052">052</button>
+        <button class="lit-preset" data-v="1.5e10">1.5e10</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>What's the value of <code>x</code>? 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You write this C code:
+<pre><span style="color: #c4b5fd;">int</span> x = <span style="color: #fde047;">052</span>;
+<span style="color: #fbbf24;">printf</span>(<span style="color: #86efac;">"%d\n"</span>, x);</pre>
+What gets printed?</div>
+      <button class="opt" data-correct="false"><code>52</code></button>
+      <button class="opt" data-correct="true"><code>42</code> — <code>052</code> is an <strong>octal</strong> literal (base 8). 5×8 + 2 = 42.</button>
+      <button class="opt" data-correct="false">Compiler error — leading zero not allowed.</button>
+      <button class="opt" data-correct="false"><code>052</code> printed literally.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Three traps with constants 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Leading zero is harmless formatting."</strong>
+        <small>It's not — leading zero on an integer literal means <em>octal</em> (base 8). <code>012</code> is <strong>10</strong>, not <strong>12</strong>. Drop the leading zero, or pad with spaces. The only "safe" leading zero is <code>0</code> itself.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"<code>#define</code> and <code>const</code> are interchangeable."</strong>
+        <small>Mostly, yes. But <code>#define MAX 100</code> has no type, no scope, and no respect for namespaces — it's just text substitution. <code>const int MAX = 100;</code> has all three. Modern C prefers <code>const</code> for values; <code>#define</code> survives for things like header guards (<code>#ifndef MY_H</code>) and platform conditionals (<code>#ifdef _WIN32</code>).</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"<code>3.14</code> is a float."</strong>
+        <small>In C, <code>3.14</code> is a <code>double</code>. Writing <code>float f = 3.14;</code> compiles but does a silent narrowing conversion from double to float. To get a real float literal, write <code>3.14f</code> with the <code>f</code> suffix. (The compiler will usually warn if you have <code>-Wall</code> on.)</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Practice with constants 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Add three constants to your hello.c.</strong> Open your <code>hello.c</code>. Above <code>main()</code>, add: <code>const double PI = 3.14159;</code>, <code>const int MAX_USERS = 100;</code>, <code>const char GRADE = 'A';</code>. Print them all in <code>main</code> using <code>printf</code> with the right format specifiers (<code>%f</code>, <code>%d</code>, <code>%c</code>).
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Find the const-able variables.</strong> Look at any program longer than 20 lines you've written (or the hello.c you just modified). Identify every variable whose value never changes after initialization. Mark all of them <code>const</code>. Recompile. Did everything still build? (It should — if not, you found a place that <em>does</em> modify it. Interesting!)
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Octal trap in the wild.</strong> Write this program:
+      <div style="background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-family: var(--mono); font-size: 12.5px; margin: 6px 0; line-height: 1.55;">int total = 100;<br>int discount = 020;<br>printf("Final: %d\n", total - discount);</div>
+      Predict what it prints, then run it. (Hint: <code>020</code> isn't 20.) Now write the same program with proper decimal literals and confirm the difference. This kind of accidental-octal bug really happens.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>A <strong>constant</strong> is a value that can't change. Three flavors: <strong>literals</strong> (values in code), <strong><code>#define</code> macros</strong>, <strong><code>const</code> variables</strong>.</li>
+      <li>Use <strong><code>const</code></strong> whenever you can — it's typed, scoped, compiler-enforced.</li>
+      <li>Literal suffixes change the type: <code>42L</code> is <code>long</code>, <code>42U</code> is <code>unsigned</code>, <code>3.14f</code> is <code>float</code>, <code>3.14</code> is <code>double</code>.</li>
+      <li>Integer bases: decimal (<code>42</code>), octal (<code>052</code>), hex (<code>0x2A</code>), binary (<code>0b101010</code>) — all equal 42. Beware leading-zero octal!</li>
+      <li>Mark function parameters <code>const</code> when you don't intend to modify them. Free documentation + protection.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_2_2.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.2  Basic types — sizes &amp; ranges
+    </a>
+    <a href="C_Book_Lesson_2_4.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      2.4  Operators part 1 — arithmetic, assignment, comparison
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Constants — values that DON'T change. Plus C's most useful keyword: <code>const</code>. 🔒",
+    "Three flavors. Literals are values in code; <code>#define</code> is preprocessor; <code>const</code> is typed and scoped (modern win).",
+    "Suffixes matter! <code>42L</code> ≠ <code>42</code>. <code>3.14f</code> ≠ <code>3.14</code>. Watch the type. 🔤",
+    "<code>const</code> = promise. Compiler holds you to it. Free bug prevention.",
+    "Type any literal — I'll show what type C sees. Try the weird ones! 🔬",
+    "Read carefully — there's a leading-zero gotcha worth knowing. 🎯",
+    "These three traps catch beginners. The octal one is sneaky!",
+    "Try the medium — find const-able variables in your existing code. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Lesson 2.3 complete! +50 XP'); addXP(50); }, 400); } }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) { const line = BIT_LINES[idx] || BIT_LINES[0]; bitBubble.style.opacity = '0'; setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250); }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.bit; if (i !== currentBit) { currentBit = i; updateBit(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Literal type explorer =====
+  function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function classify(raw) {
+    const lit = raw.trim();
+    if (!lit) return { type: '—', note: 'Type any literal to see what type C parses it as.', valid: false, empty: true };
+
+    // String literal: "..."
+    if (lit.startsWith('"') && lit.endsWith('"') && lit.length >= 2) {
+      const inner = lit.slice(1, -1);
+      return { type: 'const char[' + (inner.length + 1) + ']', note: `A <strong>string literal</strong> — array of <code>${inner.length}</code> chars plus a null terminator <code>'\\0'</code>. Its address can be passed to functions expecting <code>const char*</code>.`, valid: true };
+    }
+    // Char literal: 'x'
+    if (lit.startsWith("'") && lit.endsWith("'") && lit.length >= 3) {
+      const inner = lit.slice(1, -1);
+      if (inner.length === 1) {
+        const code = inner.charCodeAt(0);
+        return { type: 'int', note: `A <strong>character literal</strong>. Note: in C (unlike C++), character literals have type <code>int</code>, not <code>char</code>. Value: <code>${code}</code> (ASCII code for <code>'${escapeHtml(inner)}'</code>).`, valid: true };
+      }
+      if (inner.startsWith('\\') && inner.length === 2) {
+        const escapes = { n: 10, t: 9, r: 13, '0': 0, '\\': 92, "'": 39, '"': 34 };
+        const ch = inner[1];
+        if (ch in escapes) {
+          return { type: 'int', note: `An <strong>escape sequence character literal</strong>: <code>${escapeHtml(inner)}</code>. Value: <code>${escapes[ch]}</code>. Special characters like newline are represented this way.`, valid: true };
+        }
+      }
+      return { type: 'invalid', note: `<strong>Invalid character literal.</strong> A char literal must contain exactly one character (or one escape sequence like <code>\\n</code>).`, valid: false };
+    }
+    // Hex
+    if (/^0[xX][0-9a-fA-F]+$/.test(lit)) {
+      const val = parseInt(lit, 16);
+      return { type: 'int', note: `A <strong>hexadecimal integer literal</strong> (base 16). Value: <strong>${val}</strong> in decimal. Hex is great for bit patterns and memory addresses.`, valid: true };
+    }
+    // Binary (C99+)
+    if (/^0[bB][01]+$/.test(lit)) {
+      const val = parseInt(lit.slice(2), 2);
+      return { type: 'int', note: `A <strong>binary literal</strong> (base 2, C2x / GCC extension). Value: <strong>${val}</strong> in decimal. Each digit is a bit — useful for specifying patterns.`, valid: true };
+    }
+    // Octal (leading 0 followed by digits 0-7)
+    if (/^0[0-7]+$/.test(lit)) {
+      const val = parseInt(lit, 8);
+      return { type: 'int', note: `An <strong>octal literal</strong> (base 8 — leading <code>0</code> triggers this). Value: <strong>${val}</strong> in decimal. ⚠️ This is a classic gotcha — drop the leading zero for decimal.`, valid: true };
+    }
+    // Floating with suffix
+    let fm = lit.match(/^(\d+\.\d*|\.?\d+\.?\d*|\d+)([eE][+-]?\d+)?([fFlL]?)$/);
+    if (fm && (lit.includes('.') || lit.toLowerCase().includes('e'))) {
+      const suffix = fm[3];
+      if (suffix === 'f' || suffix === 'F') {
+        return { type: 'float', note: `A <strong>float literal</strong> — the <code>f</code> suffix forces single precision (4 bytes, ~7 digits). Default float type for graphics/embedded.`, valid: true };
+      }
+      if (suffix === 'l' || suffix === 'L') {
+        return { type: 'long double', note: `A <strong>long double literal</strong> — extended precision (often 10 or 16 bytes). Used rarely; usually <code>double</code> is plenty.`, valid: true };
+      }
+      return { type: 'double', note: `A <strong>double literal</strong> (default for decimal numbers in C). 8 bytes, ~15 digits of precision. The right default for most decimal math.`, valid: true };
+    }
+    // Integer with suffix (decimal)
+    let im = lit.match(/^([0-9]+)([uU])?([lL][lL]?)?$|^([0-9]+)([lL][lL]?)?([uU])?$/);
+    if (im) {
+      const num = (im[1] || im[4]);
+      const u = (im[2] || im[6]);
+      const l = (im[3] || im[5]);
+      let typeName = 'int';
+      let bits = 32;
+      if (l && l.length === 2) { typeName = 'long long'; bits = 64; }
+      else if (l && l.length === 1) { typeName = 'long'; bits = 64; }
+      if (u) typeName = 'unsigned ' + typeName;
+      let note = '';
+      if (!u && !l) note = `Plain decimal integer literal — defaults to <code>int</code>.`;
+      else {
+        const parts = [];
+        if (u) parts.push(`<code>U</code> suffix forces unsigned`);
+        if (l && l.length === 2) parts.push(`<code>LL</code> suffix forces <code>long long</code> (at least 64 bits)`);
+        else if (l && l.length === 1) parts.push(`<code>L</code> suffix forces <code>long</code> (at least 32, often 64 bits)`);
+        note = `Suffix decoded: ${parts.join(' + ')}.`;
+      }
+      return { type: typeName, note: note, valid: true };
+    }
+    return { type: 'invalid', note: `Not a recognized C literal. Try formats like <code>42</code>, <code>42L</code>, <code>3.14f</code>, <code>'A'</code>, <code>"hello"</code>, <code>0xFF</code>, <code>0b1010</code>.`, valid: false };
+  }
+
+  const input = document.getElementById('litInput');
+  const result = document.getElementById('litResult');
+  const litCounter = document.getElementById('litCount');
+  const tested = new Set();
+  function showResult(raw) {
+    const r = classify(raw);
+    if (r.empty) {
+      result.classList.remove('invalid');
+      result.innerHTML = '<div class="lit-result-note">Type any literal to see what type C parses it as.</div>';
+      return;
+    }
+    const cls = r.valid ? '' : 'invalid';
+    result.className = 'lit-result ' + cls;
+    result.innerHTML = `<div class="lit-result-head"><span class="lit-result-label">${escapeHtml(raw)}</span><span class="lit-result-type">${escapeHtml(r.type)}</span></div><div class="lit-result-note">${r.note}</div>`;
+    if (!tested.has(raw) && r.valid) {
+      tested.add(raw);
+      litCounter.textContent = tested.size;
+      litCounter.style.transform = 'scale(1.3)';
+      setTimeout(() => litCounter.style.transform = 'scale(1)', 200);
+      const rect = input.getBoundingClientRect();
+      addXP(4, rect.right - 30, rect.top + 10);
+      bumpStreak();
+    }
+  }
+  input.addEventListener('input', () => showResult(input.value));
+  showResult(input.value);
+
+  document.querySelectorAll('.lit-preset').forEach(p => {
+    p.addEventListener('click', () => {
+      input.value = p.dataset.v;
+      p.classList.add('tried');
+      showResult(p.dataset.v);
+      input.focus();
+    });
+  });
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> Leading zero means octal in C. <code>052</code> = 5×8 + 2 = 42. This silently breaks "obviously decimal" code — always strip leading zeros except for the literal value <code>0</code> itself.' : '✓ <strong style="color: var(--green)">Got it.</strong> Leading zero = octal. <code>052</code> = 42.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. What does a leading zero mean in a C integer literal?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>
