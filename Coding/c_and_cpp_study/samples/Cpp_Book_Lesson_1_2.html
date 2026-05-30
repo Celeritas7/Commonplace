@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1.2 — Editor + Turning On the C++ Standard · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .from-book { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-left: 4px solid var(--yellow); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; font-style: italic; color: var(--ink); }
+  .from-book::before { content: "📖 FROM YOUR NOTES"; position: absolute; top: -10px; left: 14px; background: var(--yellow); color: var(--ink); padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; font-style: normal; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .powers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+  .power { background: linear-gradient(135deg, white, var(--bg1)); border: 2px solid var(--bg3); border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; transition: all 0.25s var(--bouncy); }
+  .power:hover { transform: translateY(-3px); border-color: var(--purple); box-shadow: var(--shadow); }
+  .power-icon { font-size: 26px; flex-shrink: 0; }
+  .power-body strong { display: block; color: var(--ink); margin-bottom: 2px; font-size: 14.5px; }
+  .power-body small { color: var(--ink-soft); font-size: 13px; line-height: 1.4; }
+  @media (max-width: 600px) { .powers { grid-template-columns: 1fr; } }
+
+  .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .editor-card { background: white; border: 2px solid var(--bg3); border-radius: 14px; padding: 16px 18px; transition: all 0.25s var(--bouncy); }
+  .editor-card.pick { border-color: var(--purple); background: linear-gradient(135deg, white, #faf5ff); position: relative; }
+  .editor-card.pick::after { content: "OUR PICK"; position: absolute; top: -10px; right: 12px; background: var(--purple); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 0.6px; }
+  .editor-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .editor-card h4 { margin: 4px 0 6px; color: var(--ink); font-size: 16px; }
+  .editor-card .editor-meta { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; }
+  .editor-card p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  @media (max-width: 600px) { .editor-grid { grid-template-columns: 1fr; } }
+
+  .install-block { background: linear-gradient(135deg, #faf5ff, #fdf4ff); border: 2px solid var(--purple-light); border-radius: 18px; padding: 22px; margin-top: 14px; }
+  .install-step { display: flex; gap: 14px; margin-bottom: 14px; }
+  .install-step:last-child { margin-bottom: 0; }
+  .install-step-num { flex: 0 0 32px; height: 32px; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4); }
+  .install-step-body { flex: 1; min-width: 0; }
+  .install-step-body h5 { margin: 4px 0 6px; font-size: 15px; color: var(--ink); }
+  .install-step-body p { margin: 0 0 6px; font-size: 14.5px; color: var(--ink-soft); }
+  .install-step-body a { color: var(--purple-deep); font-weight: 600; }
+
+  .check-area { background: linear-gradient(135deg, #faf5ff, #fdf4ff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .check-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .check-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .check-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .check-counter strong { font-size: 18px; }
+  .check-item { background: white; border: 2px solid var(--bg3); border-radius: 14px; margin-bottom: 10px; transition: all 0.3s var(--bouncy); overflow: hidden; cursor: pointer; }
+  .check-item:hover { border-color: var(--purple); transform: translateX(3px); }
+  .check-item.done { background: linear-gradient(135deg, #f0fdf4, white); border-color: var(--green); }
+  .check-item.highlight { border-color: var(--cyan); background: linear-gradient(135deg, #f0f9ff, white); }
+  .check-head { display: flex; gap: 14px; align-items: center; padding: 14px 18px; font-weight: 500; }
+  .check-box { flex: 0 0 24px; height: 24px; border: 2px solid var(--bg3); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.25s var(--bouncy); }
+  .check-item.done .check-box { background: var(--green); border-color: var(--green); color: white; }
+  .check-icon { font-size: 22px; flex-shrink: 0; }
+  .check-name { flex: 1; font-size: 15.5px; color: var(--ink); }
+  .check-name small { display: block; font-size: 12.5px; color: var(--ink-dim); font-weight: 500; margin-top: 2px; }
+  .check-toggle { color: var(--ink-dim); font-size: 14px; transition: transform 0.3s var(--bouncy); }
+  .check-item.open .check-toggle { transform: rotate(180deg); }
+  .check-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s; padding: 0 18px; font-size: 14.5px; color: var(--ink-soft); line-height: 1.55; }
+  .check-item.open .check-body { max-height: 700px; padding: 0 18px 14px; border-top: 1px dashed var(--purple-light); padding-top: 14px; }
+  .check-body strong { color: var(--ink); }
+  .code-block { background: var(--terminal); color: #e0e7ff; border-radius: 10px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; overflow-x: auto; position: relative; margin: 8px 0; }
+  .code-block pre { margin: 0; padding-right: 70px; white-space: pre-wrap; word-break: break-all; }
+  .code-block .key { color: #f9a8d4; }
+  .code-block .val { color: #86efac; }
+  .code-block .com { color: #94a3b8; font-style: italic; }
+  .code-block .prompt { color: #94a3b8; user-select: none; margin-right: 6px; }
+  .copy-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: #e0e7ff; padding: 4px 10px; border-radius: 6px; font-family: var(--sans); font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.4px; transition: all 0.2s; }
+  .copy-btn:hover { background: rgba(255,255,255,0.16); }
+  .copy-btn.copied { background: rgba(34, 197, 94, 0.3); border-color: rgba(34, 197, 94, 0.5); color: #bbf7d0; }
+  .check-finish { margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, var(--bg1), white); border: 2px dashed var(--purple-light); border-radius: 12px; text-align: center; font-size: 14px; color: var(--ink-soft); transition: all 0.4s; }
+  .check-finish.done { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); border-style: solid; color: #166534; font-weight: 700; }
+
+  .quiz { background: linear-gradient(135deg, #fce7f3, #f3e8ff); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--pink); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--pink); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/><circle cx="50" cy="36" r="3.5" fill="#ec4899"/>
+      <text x="40" y="56" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="10" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="64" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="32" y="60" width="16" height="6" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="26" y="66" width="28" height="8" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Editor time! VS Code + the right extensions + one C++ standard flag = modern setup. ✨
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK · 1.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 7 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🛠️ PART I · SETTING UP</span>
+    <h1>Editor + Turning On Modern C++</h1>
+    <p class="hero-sub">VS Code is the standard pick. Add a couple of extensions, flip one critical flag (<code>-std=c++20</code>), and you're configured for the entire rest of the book.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="7" r="4" fill="#fde047" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="54" rx="18" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+      <rect x="26" y="33" width="48" height="22" rx="10" fill="#1e1b4b" stroke="#1e1b4b" stroke-width="2"/>
+      <circle cx="38" cy="44" r="4" fill="#06b6d4"/><circle cx="62" cy="44" r="4" fill="#ec4899"/>
+      <text x="50" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="12" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="80" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="40" y="74" width="20" height="8" rx="2" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="32" y="82" width="36" height="10" rx="3" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-pix="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>An editor that understands modern C++ 💪</h2>
+
+    <div class="new-content">
+      A good editor catches mistakes <em>as you type</em> — wrong types, undeclared identifiers, missing semicolons. For a language as nuanced as C++, that real-time feedback is the difference between flowing and floundering. And one critical flag (<code>-std=c++20</code>) tells your tools you're writing the modern stuff, not legacy C++98.
+    </div>
+
+    <p>This lesson does two things: gets you a properly configured VS Code, and explicitly turns on the modern C++ standard so the next lessons work as written.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-pix="1">
+    <div class="step-label"><span class="step-num">2</span> The superpowers you're about to gain</div>
+    <h2>Six things your editor will do for you ✨</h2>
+
+    <div class="new-content">
+      You don't need to understand any of these yet. Knowing they're coming makes it less mysterious when they kick in.
+    </div>
+
+    <div class="powers">
+      <div class="power">
+        <div class="power-icon">🎨</div>
+        <div class="power-body">
+          <strong>Syntax highlighting</strong>
+          <small>Keywords, types, strings, numbers each in their own color.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">💡</div>
+        <div class="power-body">
+          <strong>IntelliSense (autocomplete)</strong>
+          <small>Type <code>std::v</code>, get <code>std::vector</code> suggested with all its methods.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🚨</div>
+        <div class="power-body">
+          <strong>Live error squiggles</strong>
+          <small>Type errors and unknown identifiers underlined in red <em>before</em> you compile.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🔧</div>
+        <div class="power-body">
+          <strong>One-key build and run</strong>
+          <small>F5 runs the file. No retyping <code>g++ -std=c++20 main.cpp &amp;&amp; ./a.out</code>.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🐛</div>
+        <div class="power-body">
+          <strong>Step-through debugger</strong>
+          <small>Pause execution at any line, inspect every variable. Essential for C++.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🔗</div>
+        <div class="power-body">
+          <strong>Jump-to-definition</strong>
+          <small>Ctrl+click any class or function to leap to where it's defined.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-pix="2">
+    <div class="step-label"><span class="step-num">3</span> Why VS Code</div>
+    <h2>The modern default, and what else exists 📝</h2>
+
+    <div class="from-book">
+      Various C++ IDEs and compilers are available. We'll use a free tool called Code::Blocks, which includes both an IDE and...
+    </div>
+
+    <p>Your notes' suggestion of Code::Blocks was reasonable a decade ago, but the C++ world has moved on. The modern free choices:</p>
+
+    <div class="editor-grid">
+      <div class="editor-card pick">
+        <div class="editor-meta">FREE · CROSS-PLATFORM · MODERN</div>
+        <h4>Visual Studio Code</h4>
+        <p>The dominant editor for new C++ projects in the last several years. Free, fast, runs everywhere, huge extension ecosystem. Plays nicely with g++/clang++. Our choice.</p>
+      </div>
+      <div class="editor-card">
+        <div class="editor-meta">FREE · WINDOWS ONLY · POWERFUL</div>
+        <h4>Visual Studio Community</h4>
+        <p>Microsoft's full IDE (different product from VS Code). Best-in-class for big Windows C++ projects, but heavy for learning. Free for personal use.</p>
+      </div>
+      <div class="editor-card">
+        <div class="editor-meta">PAID · CROSS-PLATFORM · POLISHED</div>
+        <h4>CLion (JetBrains)</h4>
+        <p>Premium C++ IDE with stellar refactoring, native CMake support, and a beautiful debugger. Subscription needed (free for students). Many professionals swear by it.</p>
+      </div>
+      <div class="editor-card">
+        <div class="editor-meta">DEPRECATED · LEGACY</div>
+        <h4>Code::Blocks</h4>
+        <p>The old recommendation. Hasn't seen a major update since 2020. Still works, but won't help you learn modern C++ habits. <em>Skip in favour of VS Code.</em></p>
+      </div>
+    </div>
+
+    <p>If you're determined to use Visual Studio or CLion you can absolutely follow this book — but the next instructions assume VS Code.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-pix="3">
+    <div class="step-label"><span class="step-num">4</span> Install VS Code</div>
+    <h2>Three steps, five minutes ⏱️</h2>
+
+    <div class="install-block">
+      <div class="install-step">
+        <div class="install-step-num">1</div>
+        <div class="install-step-body">
+          <h5>Download</h5>
+          <p>Go to <a href="https://code.visualstudio.com/" target="_blank" rel="noopener">code.visualstudio.com</a>. The big button auto-detects your OS. Click it.</p>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">2</div>
+        <div class="install-step-body">
+          <h5>Run the installer</h5>
+          <p>Accept all defaults. On Windows, tick <strong>"Add to PATH"</strong> and <strong>"Register Code as an editor for supported file types"</strong> when offered. On Mac, drag the app to Applications.</p>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">3</div>
+        <div class="install-step-body">
+          <h5>Open it</h5>
+          <p>Launch VS Code, close the welcome tab. The interface is three parts: the tall <strong>activity bar</strong> on the left, a wider <strong>sidebar</strong> next to it (file tree, search, etc.), and the big <strong>editor area</strong> in the middle.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-pix="4">
+    <div class="step-label"><span class="step-num">5</span> The setup checklist</div>
+    <h2>Seven configurations for modern C++ 📋</h2>
+
+    <div class="new-content">
+      Click each item to expand. Tick the box when done. Each finished item = <strong>+8 XP</strong>. The last item (the C++ standard flag) is the most important — don't skip it.
+    </div>
+
+    <div class="check-area">
+      <div class="check-header">
+        <div class="check-title">🛠️ Your VS Code setup checklist</div>
+        <div class="check-counter"><strong id="checkCount">0</strong> / 7 done</div>
+      </div>
+
+      <div class="check-item" data-id="1">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">🧠</div>
+          <div class="check-name">Install the <strong>C/C++</strong> extension (Microsoft)<small>The big one — IntelliSense, error squiggles, debugger.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Click the <strong>Extensions</strong> icon in the activity bar (four squares with one breaking off). Search <code>C/C++</code>. The first result by <strong>Microsoft</strong> (millions of installs) is what you want. Click <em>Install</em>.</p>
+          <p>This single extension gives you syntax highlighting, IntelliSense, navigation, and the debugger. After installing, VS Code may offer to install the "C/C++ Extension Pack" — accept it; it brings the CMake Tools too, which is useful from lesson 1.4 onward.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="2">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">▶️</div>
+          <div class="check-name">Install <strong>Code Runner</strong><small>One-click run for any file. Beginner-friendly shortcut.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Same extensions panel; search <code>Code Runner</code>, install by <em>Jun Han</em>. A ▶️ button appears at the top-right of every editor window. Click it → your .cpp file compiles and runs in the terminal panel.</p>
+          <p>Code Runner uses default flags, which may not include <code>-std=c++20</code> — we'll fix that explicitly in item #7.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="3">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">💾</div>
+          <div class="check-name">Turn on <strong>Auto Save</strong><small>Never lose work to a crash.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Open <strong>File → Auto Save</strong> and tick it. Done. The file now saves automatically.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="4">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">🎨</div>
+          <div class="check-name">Turn on <strong>Format on Save</strong><small>Tidy code, every save, automatically.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Open <strong>File → Preferences → Settings</strong> (or <code>Ctrl+,</code>). Search <code>format on save</code>. Tick the checkbox.</p>
+          <p>The C/C++ extension ships with the LLVM clang-format style by default, which is industry-standard. You can switch styles (Google, Mozilla, Microsoft) later by setting <code>C_Cpp.clang_format_style</code>, but the default is great.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="5">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">🚦</div>
+          <div class="check-name">Install <strong>Error Lens</strong><small>Inline error text right beside the code.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Search Extensions for <code>Error Lens</code>, install by <em>Alexander</em>. Now errors and warnings appear <strong>inline</strong> at the end of the line, in colored text. C++ error messages can be hundreds of characters long, but Error Lens shows the first line right where the problem is, which is enough 90% of the time.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="6">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">📁</div>
+          <div class="check-name">Install <strong>Material Icon Theme</strong><small>Distinct icons for <code>.cpp</code>, <code>.h</code>, etc.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Search Extensions for <code>Material Icon Theme</code>, install it. Then run <strong>Command Palette</strong> (Ctrl+Shift+P / Cmd+Shift+P) → type <em>Icon Theme</em> → pick <em>Material Icon Theme</em>. Source files, headers, and CMake files now all have distinct visual identities.</p>
+        </div>
+      </div>
+
+      <div class="check-item highlight" data-id="7">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">⚡</div>
+          <div class="check-name">Set the <strong>C++ standard</strong> to C++20<small>The single most important setting in this lesson.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Without this, your tools will probably default to C++14 or C++17, and some lessons in the book won't compile. Two places to set it:</p>
+
+          <p><strong>1. For IntelliSense</strong> (so the editor understands modern C++):<br>
+          Open Command Palette → <em>C/C++: Edit Configurations (UI)</em>. Find <strong>C++ standard</strong> and set it to <code>c++20</code>. Save.</p>
+
+          <p><strong>2. For Code Runner</strong> (so your runs use C++20):<br>
+          Open Settings, search <code>code-runner.executorMap</code>, click <em>Edit in settings.json</em>. Find the <code>"cpp"</code> entry and add <code>-std=c++20 -Wall</code> to the g++ command. Example:</p>
+
+          <div class="code-block">
+            <button class="copy-btn" data-copy='"cpp": "cd $dir && g++ -std=c++20 -Wall $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt"'>Copy</button>
+            <pre><span class="key">"cpp"</span>: <span class="val">"cd $dir &amp;&amp; g++ -std=c++20 -Wall $fileName -o $fileNameWithoutExt &amp;&amp; $dir$fileNameWithoutExt"</span></pre>
+          </div>
+
+          <p>(<code>-Wall</code> turns on warnings — extra hints from the compiler about questionable code. We'll see them in action in lesson 1.5.)</p>
+
+          <p><strong>Why this matters:</strong> features like structured bindings, <code>std::optional</code>, ranges, concepts — half this book — require C++17 or C++20. Without the flag, your compiler reports them as errors. With the flag, they just work.</p>
+        </div>
+      </div>
+
+      <div class="check-finish" id="checkFinish">
+        Tick each item as you complete it. Item #7 (the C++ standard flag) is essential — don't skip it.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-pix="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You skip setting <code>-std=c++20</code> and try to compile this line: <code>auto [a, b] = std::make_pair(1, 2);</code>. What happens?</div>
+      <button class="opt" data-correct="false">It runs fine — modern compilers default to C++20.</button>
+      <button class="opt" data-correct="true">The compiler errors with something like <em>"structured bindings are a C++17 extension"</em> — the syntax is rejected because the default standard is older than C++17.</button>
+      <button class="opt" data-correct="false">It compiles but prints warnings.</button>
+      <button class="opt" data-correct="false">It crashes at runtime.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-pix="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Three setup traps 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"VS Code and Visual Studio — same thing, right?"</strong>
+        <small>Two different products. <strong>VS Code</strong> (blue chevron icon) is a lightweight editor. <strong>Visual Studio</strong> (colored infinity icon) is a massive IDE. They share a brand and that's it. For this book, we use VS Code.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"My editor still flags modern C++ features as errors after I set the standard."</strong>
+        <small>You probably set it in only one of the two places. The C/C++ extension's IntelliSense and Code Runner have <em>separate</em> standard settings. Both need to say C++20 (item #7). Otherwise the editor shows red squiggles while your runs actually work — or vice versa. Set both.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"IntelliSense isn't suggesting <code>std::cout</code>."</strong>
+        <small>Two common causes: (1) you haven't <code>#include &lt;iostream&gt;</code> at the top of the file — IntelliSense needs the include to know about <code>std::cout</code>. (2) the C/C++ extension can't find your g++ — open Command Palette → <em>C/C++: Edit Configurations (UI)</em> and set the Compiler path to your g++ from lesson 1.1.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-pix="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Configure your editor 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Run the checklist.</strong> Click through all 7 items and actually install/configure each. Screenshot the Extensions panel showing them installed. (You need this for lesson 1.3 where we write our first program.)
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Open a folder, not a file.</strong> Create an empty folder called <code>cpp-practice</code>. In VS Code: <em>File → Open Folder</em> → pick it. Always open the folder, not individual files — VS Code is much smarter when it sees the project root. From here on we'll always work this way.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Try clangd.</strong> Many serious C++ developers prefer <strong>clangd</strong> over Microsoft's C/C++ extension because it's faster on large projects. Search Extensions for <em>clangd</em> (by LLVM), install it, and follow its prompts to set up <code>compile_commands.json</code>. (You may want to disable Microsoft's IntelliSense to avoid duplication.) Compare the two; pick the one that feels right.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li><strong>VS Code</strong> is the modern default for C++ learners — free, fast, cross-platform.</li>
+      <li>The one must-install extension: <strong>Microsoft's C/C++ extension</strong>. IntelliSense, error squiggles, debugger.</li>
+      <li>7-item setup checklist: C/C++ extension · Code Runner · Auto Save · Format on Save · Error Lens · Material Icon Theme · <strong>C++ standard = c++20</strong>.</li>
+      <li>The C++ standard flag matters: without it, your tools default to C++14 or C++17 and reject newer syntax we'll use later.</li>
+      <li><strong>Open a folder, not a file</strong>. VS Code is smarter when it knows the project root.</li>
+      <li>You're now configured to write, edit, and run modern C++ productively. Next: <code>hello.cpp</code> line by line.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_1_1.html" class="nav-btn prev">
+      <small>← Previous</small>
+      1.1  Installing a modern compiler
+    </a>
+    <a href="Cpp_Book_Lesson_1_3.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      1.3  Your first program — hello.cpp with iostream
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Editor time! VS Code + the right extensions + one C++ standard flag = modern setup. ✨",
+    "Six things your editor will do for you. Each one a real time-saver.",
+    "VS Code beat the old Code::Blocks recommendation. Modern wins.",
+    "Three steps, five minutes. Easy mode. ⏱️",
+    "Seven items. Item #7 (the C++ standard) is the most important. Don't skip it!",
+    "Read the answer carefully — only one option respects the C++ version question. 🎯",
+    "These three setup traps are oddly common. Now you'll spot them first.",
+    "Try the medium one — open a FOLDER not a file. It changes everything. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Lesson 1.2 complete! +50 XP'); addXP(50); }, 400); } }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) { const line = PIXEL_LINES[idx] || PIXEL_LINES[0]; pixelBubble.style.opacity = '0'; setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250); }
+  let currentPix = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.pix; if (i !== currentPix) { currentPix = i; updatePixel(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // Checklist
+  const items = document.querySelectorAll('.check-item');
+  const counter = document.getElementById('checkCount');
+  const finish = document.getElementById('checkFinish');
+  const done = new Set();
+  const expanded = new Set();
+  items.forEach(item => {
+    const head = item.querySelector('.check-head');
+    const box = item.querySelector('.check-box');
+    head.addEventListener('click', (e) => {
+      item.classList.toggle('open');
+      const id = item.dataset.id;
+      if (item.classList.contains('open') && !expanded.has(id)) {
+        expanded.add(id);
+        addXP(3, e.clientX, e.clientY);
+      }
+    });
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = item.dataset.id;
+      if (done.has(id)) return;
+      done.add(id);
+      item.classList.add('done');
+      counter.textContent = done.size;
+      counter.style.transform = 'scale(1.3)';
+      setTimeout(() => counter.style.transform = 'scale(1)', 200);
+      addXP(8, e.clientX, e.clientY);
+      bumpStreak();
+      if (done.size === items.length) {
+        finish.classList.add('done');
+        finish.innerHTML = '🎉 <strong>All 7 done!</strong> Your editor is configured for modern C++. Next lesson: hello.cpp.';
+        burst();
+        addXP(30, window.innerWidth/2, window.innerHeight/2, '🎉 Setup complete! +30 XP');
+      }
+    });
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copy;
+      try { await navigator.clipboard.writeText(text); } catch (e) {
+        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      btn.classList.add('copied'); btn.textContent = 'Copied ✓';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1500);
+      addXP(2, 0, 0);
+    });
+  });
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> Most compilers still default to C++14 or C++17. Modern syntax = explicit <code>-std=c++20</code>.' : '✓ <strong style="color: var(--green)">Got it.</strong> The default standard is older than C++17, so newer syntax errors.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Think about what compilers default to without an explicit standard flag.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>

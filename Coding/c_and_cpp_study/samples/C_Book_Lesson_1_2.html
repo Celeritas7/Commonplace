@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1.2 — Choosing and Setting Up an Editor · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .from-book { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-left: 4px solid var(--yellow); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; font-style: italic; color: var(--ink); }
+  .from-book::before { content: "📖 FROM YOUR NOTES"; position: absolute; top: -10px; left: 14px; background: var(--yellow); color: var(--ink); padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; font-style: normal; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  /* ===== Editor superpowers grid ===== */
+  .powers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+  .power { background: linear-gradient(135deg, white, var(--bg1)); border: 2px solid var(--bg3); border-radius: 14px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; transition: all 0.25s var(--bouncy); }
+  .power:hover { transform: translateY(-3px); border-color: var(--orange); box-shadow: var(--shadow); }
+  .power-icon { font-size: 26px; flex-shrink: 0; }
+  .power-body strong { display: block; color: var(--ink); margin-bottom: 2px; font-size: 14.5px; }
+  .power-body small { color: var(--ink-soft); font-size: 13px; line-height: 1.4; }
+  @media (max-width: 600px) { .powers { grid-template-columns: 1fr; } }
+
+  /* ===== Editor comparison ===== */
+  .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  .editor-card { background: white; border: 2px solid var(--bg3); border-radius: 14px; padding: 16px 18px; transition: all 0.25s var(--bouncy); }
+  .editor-card.pick { border-color: var(--orange); background: linear-gradient(135deg, white, #fff7ed); position: relative; }
+  .editor-card.pick::after { content: "OUR PICK"; position: absolute; top: -10px; right: 12px; background: var(--orange); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 0.6px; }
+  .editor-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .editor-card h4 { margin: 4px 0 6px; color: var(--ink); font-size: 16px; }
+  .editor-card .editor-meta { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; }
+  .editor-card p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  @media (max-width: 600px) { .editor-grid { grid-template-columns: 1fr; } }
+
+  /* ===== Install steps ===== */
+  .install-block { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange-light); border-radius: 18px; padding: 22px; margin-top: 14px; }
+  .install-step { display: flex; gap: 14px; margin-bottom: 14px; }
+  .install-step:last-child { margin-bottom: 0; }
+  .install-step-num { flex: 0 0 32px; height: 32px; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  .install-step-body { flex: 1; min-width: 0; }
+  .install-step-body h5 { margin: 4px 0 6px; font-size: 15px; color: var(--ink); }
+  .install-step-body p { margin: 0 0 6px; font-size: 14.5px; color: var(--ink-soft); }
+  .install-step-body a { color: var(--orange-deep); font-weight: 600; }
+
+  /* ===== Setup checklist (the interactive) ===== */
+  .check-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .check-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .check-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .check-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .check-counter strong { font-size: 18px; }
+  .check-item { background: white; border: 2px solid var(--bg3); border-radius: 14px; margin-bottom: 10px; transition: all 0.3s var(--bouncy); overflow: hidden; cursor: pointer; }
+  .check-item:hover { border-color: var(--orange); transform: translateX(3px); }
+  .check-item.done { background: linear-gradient(135deg, #f0fdf4, white); border-color: var(--green); }
+  .check-head { display: flex; gap: 14px; align-items: center; padding: 14px 18px; font-weight: 500; }
+  .check-box { flex: 0 0 24px; height: 24px; border: 2px solid var(--bg3); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.25s var(--bouncy); }
+  .check-item.done .check-box { background: var(--green); border-color: var(--green); color: white; }
+  .check-icon { font-size: 22px; flex-shrink: 0; }
+  .check-name { flex: 1; font-size: 15.5px; color: var(--ink); }
+  .check-name small { display: block; font-size: 12.5px; color: var(--ink-dim); font-weight: 500; margin-top: 2px; }
+  .check-toggle { color: var(--ink-dim); font-size: 14px; transition: transform 0.3s var(--bouncy); }
+  .check-item.open .check-toggle { transform: rotate(180deg); }
+  .check-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s; padding: 0 18px; font-size: 14.5px; color: var(--ink-soft); line-height: 1.55; }
+  .check-item.open .check-body { max-height: 600px; padding: 0 18px 14px; border-top: 1px dashed var(--orange-light); padding-top: 14px; }
+  .check-body strong { color: var(--ink); }
+  .code-block { background: var(--terminal); color: #e2e8f0; border-radius: 10px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; overflow-x: auto; position: relative; margin: 8px 0; }
+  .code-block pre { margin: 0; padding-right: 70px; white-space: pre-wrap; word-break: break-all; }
+  .code-block .key { color: #f9a8d4; }
+  .code-block .val { color: #86efac; }
+  .code-block .com { color: #94a3b8; font-style: italic; }
+  .code-block .prompt { color: #94a3b8; user-select: none; margin-right: 6px; }
+  .copy-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: #e2e8f0; padding: 4px 10px; border-radius: 6px; font-family: var(--sans); font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.4px; transition: all 0.2s; }
+  .copy-btn:hover { background: rgba(255,255,255,0.16); }
+  .copy-btn.copied { background: rgba(34, 197, 94, 0.3); border-color: rgba(34, 197, 94, 0.5); color: #bbf7d0; }
+  .check-finish { margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, var(--bg1), white); border: 2px dashed var(--orange-light); border-radius: 12px; text-align: center; font-size: 14px; color: var(--ink-soft); transition: all 0.4s; }
+  .check-finish.done { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); border-style: solid; color: #166534; font-weight: 700; }
+
+  /* ===== Quiz / mistakes / exercises (same as previous lessons) ===== */
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Editor time! VS Code is your home for the next 50 lessons. Let's get it set up properly. 🏠
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK · 1.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 7 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🛠️ PART I · SETTING UP</span>
+    <h1>Choosing and Setting Up an Editor</h1>
+    <p class="hero-sub">You could write C in Notepad. You shouldn't. The right editor catches mistakes as you type, jumps to definitions, runs your code on one keypress. We pick VS Code, get it installed, and tick off a 6-item setup checklist.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>What an editor actually does for you 💪</h2>
+
+    <div class="new-content">
+      A good editor turns hours of frustration into minutes of progress. It's the difference between "I think this might be right" and "I can see it's right before I run it." That difference compounds over every lesson in this book.
+    </div>
+
+    <p>Notepad can hold C source code, sure — but it's blind. It can't tell you that you mis-spelled <code>printf</code> as <code>prinft</code>, that you forgot a semicolon, or that you're calling a function with the wrong arguments. A real code editor catches all of that as you type. Today we install one and configure it specifically for C.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The superpowers you're about to gain</div>
+    <h2>Six things your editor will do for you ✨</h2>
+
+    <div class="new-content">
+      You don't need to understand any of these yet. You just need to know they're coming, so when they happen during the next lessons you'll know why.
+    </div>
+
+    <div class="powers">
+      <div class="power">
+        <div class="power-icon">🎨</div>
+        <div class="power-body">
+          <strong>Syntax highlighting</strong>
+          <small>Keywords, strings, numbers each get their own color so code is scannable at a glance.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">💡</div>
+        <div class="power-body">
+          <strong>IntelliSense (autocomplete)</strong>
+          <small>Start typing <code>print</code> and the editor suggests <code>printf</code>, with its expected arguments.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🚨</div>
+        <div class="power-body">
+          <strong>Live error squiggles</strong>
+          <small>Red underlines appear under mistakes <em>as you type</em>, not just when you compile.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🔧</div>
+        <div class="power-body">
+          <strong>One-key build and run</strong>
+          <small>F5 or Ctrl+Alt+N runs the file. No retyping <code>gcc hello.c -o hello && ./hello</code>.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🐛</div>
+        <div class="power-body">
+          <strong>Step-through debugger</strong>
+          <small>Pause execution at any line, inspect every variable. The way professionals find bugs.</small>
+        </div>
+      </div>
+      <div class="power">
+        <div class="power-icon">🔗</div>
+        <div class="power-body">
+          <strong>Jump-to-definition</strong>
+          <small>Ctrl+click any function name to leap to where it's defined, even across files.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Why VS Code</div>
+    <h2>The reasonable default, and what else exists 📝</h2>
+
+    <div class="from-book">
+      We will use VS Code as our code editor to write our code...
+    </div>
+
+    <p>Your notes already picked VS Code, and it's the right call. Here's why, and what the main alternatives are if you ever want to compare:</p>
+
+    <div class="editor-grid">
+      <div class="editor-card pick">
+        <div class="editor-meta">FREE · CROSS-PLATFORM · BEGINNER-FRIENDLY</div>
+        <h4>Visual Studio Code</h4>
+        <p>The most popular code editor in the world. Free, lightweight, runs on Windows/Mac/Linux. Huge extension ecosystem. Backed by Microsoft. Our choice for this book.</p>
+      </div>
+      <div class="editor-card">
+        <div class="editor-meta">FREE · WINDOWS ONLY · HEAVIER</div>
+        <h4>Visual Studio Community</h4>
+        <p>Microsoft's full IDE (different product from VS Code). More powerful for huge projects but overkill for learning. Windows only.</p>
+      </div>
+      <div class="editor-card">
+        <div class="editor-meta">FREE · CROSS-PLATFORM · MINIMAL</div>
+        <h4>Vim / Neovim</h4>
+        <p>Lightning fast, terminal-based, beloved by veterans. Steep learning curve. Worth trying after you've got a few months of C under your belt.</p>
+      </div>
+      <div class="editor-card">
+        <div class="editor-meta">PAID · CROSS-PLATFORM · POLISHED</div>
+        <h4>CLion (JetBrains)</h4>
+        <p>Heavy-duty C/C++ IDE with stellar refactoring. Subscription required (free for students). Many pros use it. Way more tool than you need today.</p>
+      </div>
+    </div>
+
+    <p>If you already use one of the others happily, you can absolutely follow this book in it — but the rest of these instructions assume VS Code.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Install VS Code</div>
+    <h2>Three steps, five minutes ⏱️</h2>
+
+    <div class="new-content">
+      The installer is the same on all three operating systems. Download, run, open.
+    </div>
+
+    <div class="install-block">
+      <div class="install-step">
+        <div class="install-step-num">1</div>
+        <div class="install-step-body">
+          <h5>Download</h5>
+          <p>Go to <a href="https://code.visualstudio.com/" target="_blank" rel="noopener">code.visualstudio.com</a>. The site auto-detects your OS and offers the right installer on the big button. Click it.</p>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">2</div>
+        <div class="install-step-body">
+          <h5>Run the installer</h5>
+          <p>Accept all the defaults. On Windows, do tick the boxes for <strong>"Add to PATH"</strong> and <strong>"Register Code as an editor for supported file types"</strong> when offered — they're convenient. On Mac, drag the app to Applications. On Linux, your distro's package install runs as usual.</p>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">3</div>
+        <div class="install-step-body">
+          <h5>Open it</h5>
+          <p>Launch VS Code. You'll see a welcome screen with sample shortcuts. Close that — we'll explore as we go. The window has three main parts: a tall thin <strong>activity bar</strong> on the left (icons), a wider <strong>sidebar</strong> next to it (file tree, search, etc.), and the big <strong>editor area</strong> in the middle where your code lives.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> The setup checklist</div>
+    <h2>Six quick configurations 📋</h2>
+
+    <div class="new-content">
+      Click each item below to expand. Tick the box when you've done it. Each finished item = <strong>+8 XP</strong>. Finish all 6 = bonus + confetti.
+    </div>
+
+    <div class="check-area">
+      <div class="check-header">
+        <div class="check-title">🛠️ Your VS Code setup checklist</div>
+        <div class="check-counter"><strong id="checkCount">0</strong> / 6 done</div>
+      </div>
+
+      <div class="check-item" data-id="1">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">🧠</div>
+          <div class="check-name">Install the <strong>C/C++</strong> extension (Microsoft)<small>The big one — provides IntelliSense, error squiggles, and the debugger.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Click the <strong>Extensions</strong> icon in the activity bar (looks like four squares with one breaking off). In the search box at the top, type <code>C/C++</code>. The first result published by <strong>Microsoft</strong> (with millions of installs) is the one you want. Click <em>Install</em>.</p>
+          <p>That's the single most important extension. It alone gives you syntax highlighting, IntelliSense, code navigation, and the debugger. After installation, VS Code may ask if you want to install additional related extensions — click <em>Yes</em>.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="2">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">▶️</div>
+          <div class="check-name">Install <strong>Code Runner</strong><small>One-click button to run the current file. Beginner-friendly shortcut.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Same extensions panel, search <code>Code Runner</code>, install the one by <em>Jun Han</em>. After installing, a little triangle ▶️ appears at the top-right of every editor window. Click it → your C file compiles and runs in the terminal panel at the bottom. Magic.</p>
+          <p>(Eventually you'll graduate to proper VS Code <em>tasks</em> and the F5 debugger. Code Runner is your training wheels — useful for the first few lessons.)</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="3">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">💾</div>
+          <div class="check-name">Turn on <strong>Auto Save</strong><small>So you never lose work to a crash or forgotten Ctrl+S.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Open <strong>File → Auto Save</strong> and tick it. Done. Now your file saves whenever you switch focus or wait a moment between keystrokes. No more "I forgot to save" debugging mysteries.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="4">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">🎨</div>
+          <div class="check-name">Turn on <strong>Format on Save</strong><small>Your code gets tidy whitespace automatically.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Open <strong>File → Preferences → Settings</strong> (or <code>Ctrl+,</code>). In the search bar, type <code>format on save</code>. Tick the checkbox.</p>
+          <p>Now every time the file saves, VS Code reformats your code consistently — indentation, spacing around braces, etc. The "right" style is enforced for free, and you stop arguing with yourself about it. (We'll learn more about formatting rules later; the defaults are fine.)</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="5">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">🚦</div>
+          <div class="check-name">Install <strong>Error Lens</strong><small>Inline error messages right next to the line, instead of just a tooltip.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Search the Extensions panel for <code>Error Lens</code>, install the one by <em>Alexander</em>. After install, errors and warnings appear <strong>inline</strong> at the end of the line they're on, in red or yellow text. No more hovering over squiggles to read the message.</p>
+          <p>This is hands-down the most quality-of-life extension for beginners. You'll know what's wrong without breaking your typing flow.</p>
+        </div>
+      </div>
+
+      <div class="check-item" data-id="6">
+        <div class="check-head">
+          <div class="check-box">✓</div>
+          <div class="check-icon">📁</div>
+          <div class="check-name">Install <strong>Material Icon Theme</strong><small>Pretty file icons in the sidebar. Pure quality-of-life.</small></div>
+          <div class="check-toggle">▼</div>
+        </div>
+        <div class="check-body">
+          <p>Search Extensions for <code>Material Icon Theme</code>, install it. Then run <strong>Command Palette</strong> (Ctrl+Shift+P / Cmd+Shift+P) → type <em>Icon Theme</em> → pick <em>Material Icon Theme</em>.</p>
+          <p>Now every file type has a distinct, recognizable icon: <code>.c</code> files are blue, header files have a different look, folders are colorful. Tiny detail, but you'll notice when you switch back to the default — boring grey blobs everywhere.</p>
+        </div>
+      </div>
+
+      <div class="check-finish" id="checkFinish">
+        Tick each item as you complete it. There are 6 in total.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You install VS Code, open a <code>.c</code> file, and notice the syntax highlighting isn't working — everything is plain white text. What's the most likely fix?</div>
+      <button class="opt" data-correct="false">Reinstall VS Code.</button>
+      <button class="opt" data-correct="false">The file isn't really a C file. Rename it.</button>
+      <button class="opt" data-correct="true">You haven't installed the <strong>C/C++ extension</strong> yet. VS Code knows about <code>.c</code> files but doesn't have language support until you add the extension.</button>
+      <button class="opt" data-correct="false">VS Code only highlights JavaScript by default. Switch to a different editor.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Three setup traps 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"I installed VS Code AND Visual Studio. Why doesn't anything work?"</strong>
+        <small>Two completely different products with confusingly similar names. <strong>VS Code</strong> (a lightweight editor) is what we want. <strong>Visual Studio</strong> (a huge IDE) is something else. Check the icon — VS Code has a blue chevron <code>&lt;/&gt;</code>; Visual Studio has a colored infinity symbol. Open VS Code (the blue one) and ignore the other.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"I installed an extension but nothing changed."</strong>
+        <small>Some extensions activate immediately; others need a window reload. If you don't see a change, run <strong>Command Palette → Developer: Reload Window</strong> (or just close and reopen VS Code). If still nothing, check the Extensions panel — there may be an "enable" toggle you missed.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"IntelliSense isn't suggesting anything when I type."</strong>
+        <small>Two common causes: (1) the file isn't saved with a <code>.c</code> extension yet (it has to know the language), or (2) the C/C++ extension can't find your compiler. Open Command Palette → <em>C/C++: Edit Configurations (UI)</em> and make sure the "Compiler path" field points at your <code>gcc</code> from lesson 1.1.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Configure your editor 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Do the checklist.</strong> Click through all 6 items above and actually install/configure each one. Screenshot the Extensions panel showing them all installed. (This is the warm-up for lesson 1.3 where you'll write your first program.)
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Open a folder, not a file.</strong> Create an empty folder somewhere on your machine called <code>c-practice</code>. In VS Code, choose <em>File → Open Folder</em> and pick it. Notice the sidebar now shows your folder's contents. <em>Always</em> open the folder, not individual files — VS Code is far smarter when it knows the project root.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Customize a key binding.</strong> Open <strong>File → Preferences → Keyboard Shortcuts</strong>. Find the action <em>"Run Code"</em> (from Code Runner) and check what key it's bound to. Try changing it to <code>F6</code> (or whatever you like). Bonus: try the same for <em>"Format Document"</em>. Customizing your tools is a programmer habit you'll never regret.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li><strong>VS Code</strong> is the reasonable default editor. Free, fast, cross-platform, huge ecosystem.</li>
+      <li>The one must-install extension is <strong>Microsoft's C/C++ extension</strong> — it gives you IntelliSense, error squiggles, and the debugger in one shot.</li>
+      <li>The 6-item checklist: C/C++ extension · Code Runner · Auto Save · Format on Save · Error Lens · Material Icon Theme.</li>
+      <li><strong>Always open a folder</strong>, not a single file. VS Code is much smarter when it sees a project root.</li>
+      <li>You're now set up to write, edit, and run C code productively. Next lesson: <code>hello.c</code>, line by line.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_1_1.html" class="nav-btn prev">
+      <small>← Previous</small>
+      1.1  Installing a compiler
+    </a>
+    <a href="C_Book_Lesson_1_3.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      1.3  Your very first program — hello.c
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Editor time! VS Code is your home for the next 50 lessons. Let's get it set up properly. 🏠",
+    "Notepad works. Why don't we use Notepad? These six superpowers are why.",
+    "VS Code wins on free, fast, friendly. Other editors exist; we'll skip the debate.",
+    "Three steps, five minutes. Easy mode. ⏱️",
+    "Knock 'em out — six items, each one a real quality-of-life boost.",
+    "Read the options carefully — there's one clear right answer. 🎯",
+    "These three install gotchas catch every beginner once. Now you'll dodge them.",
+    "Try the medium one — open a FOLDER not a file. It changes everything. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Lesson 1.2 complete! +50 XP'); addXP(50); }, 400); } }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) { const line = BIT_LINES[idx] || BIT_LINES[0]; bitBubble.style.opacity = '0'; setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250); }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.bit; if (i !== currentBit) { currentBit = i; updateBit(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Checklist =====
+  const items = document.querySelectorAll('.check-item');
+  const counter = document.getElementById('checkCount');
+  const finish = document.getElementById('checkFinish');
+  const done = new Set();
+  const expanded = new Set();
+  items.forEach(item => {
+    const head = item.querySelector('.check-head');
+    const box = item.querySelector('.check-box');
+    head.addEventListener('click', (e) => {
+      // Toggle expansion
+      item.classList.toggle('open');
+      const id = item.dataset.id;
+      if (item.classList.contains('open') && !expanded.has(id)) {
+        expanded.add(id);
+        addXP(3, e.clientX, e.clientY);
+      }
+    });
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = item.dataset.id;
+      if (done.has(id)) return;
+      done.add(id);
+      item.classList.add('done');
+      counter.textContent = done.size;
+      counter.style.transform = 'scale(1.3)';
+      setTimeout(() => counter.style.transform = 'scale(1)', 200);
+      addXP(8, e.clientX, e.clientY);
+      bumpStreak();
+      if (done.size === items.length) {
+        finish.classList.add('done');
+        finish.innerHTML = '🎉 <strong>All 6 done!</strong> Your editor is configured. Next lesson: we write our first program.';
+        burst();
+        addXP(30, window.innerWidth/2, window.innerHeight/2, '🎉 Setup complete! +30 XP');
+      }
+    });
+  });
+
+  // Copy buttons (none in this lesson's checklist but pattern is here for future)
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copy;
+      try { await navigator.clipboard.writeText(text); } catch (e) {
+        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      btn.classList.add('copied'); btn.textContent = 'Copied ✓';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1500);
+    });
+  });
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> Out of the box, VS Code is a plain text editor. Language support comes from extensions. The C/C++ extension is the first stop.' : '✓ <strong style="color: var(--green)">Got it.</strong> Install the C/C++ extension and the squiggles arrive.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Think about what gives VS Code its smarts.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>

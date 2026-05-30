@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1.3 — Your First Program: hello.c · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .from-book { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-left: 4px solid var(--yellow); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; font-style: italic; color: var(--ink); }
+  .from-book::before { content: "📖 FROM YOUR NOTES"; position: absolute; top: -10px; left: 14px; background: var(--yellow); color: var(--ink); padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; font-style: normal; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  /* ===== Hello program in static code block ===== */
+  .hello-static { background: var(--terminal); color: #e2e8f0; border-radius: 14px; padding: 22px 26px; font-family: var(--mono); font-size: 14px; margin: 14px 0; line-height: 1.7; position: relative; overflow-x: auto; }
+  .hello-static .preproc { color: #f9a8d4; }
+  .hello-static .kw { color: #c4b5fd; }
+  .hello-static .fn { color: #fbbf24; }
+  .hello-static .str { color: #86efac; }
+  .hello-static .num { color: #fde047; }
+  .hello-static .com { color: #94a3b8; font-style: italic; }
+  .hello-static .filename { position: absolute; top: 10px; right: 14px; background: rgba(255,255,255,0.1); color: #cbd5e1; padding: 2px 10px; border-radius: 6px; font-size: 11px; letter-spacing: 0.5px; font-weight: 700; }
+
+  /* ===== Code tour (the interactive) ===== */
+  .tour-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .tour-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .tour-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .tour-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .tour-counter strong { font-size: 18px; }
+  .tour-code { background: var(--terminal); color: #e2e8f0; border-radius: 14px; padding: 18px 0; font-family: var(--mono); font-size: 14px; line-height: 1.8; margin-bottom: 16px; position: relative; }
+  .tour-code .filename { position: absolute; top: 10px; right: 14px; background: rgba(255,255,255,0.1); color: #cbd5e1; padding: 2px 10px; border-radius: 6px; font-size: 11px; letter-spacing: 0.5px; font-weight: 700; }
+  .tour-line { padding: 4px 20px 4px 12px; display: flex; align-items: center; gap: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+  .tour-line.clickable { cursor: pointer; }
+  .tour-line.clickable:hover { background: rgba(249, 115, 22, 0.1); border-left-color: var(--orange-light); }
+  .tour-line.active { background: rgba(249, 115, 22, 0.18); border-left-color: var(--orange); }
+  .tour-line.explored .ln-num::after { content: "✓"; color: #86efac; margin-left: 4px; font-size: 11px; }
+  .tour-line .ln-num { color: #64748b; user-select: none; flex-shrink: 0; font-size: 12px; min-width: 18px; text-align: right; }
+  .tour-line .preproc { color: #f9a8d4; }
+  .tour-line .kw { color: #c4b5fd; }
+  .tour-line .fn { color: #fbbf24; }
+  .tour-line .str { color: #86efac; }
+  .tour-line .num { color: #fde047; }
+  .tour-line .pun { color: #cbd5e1; }
+  .tour-panel { background: white; border: 2px solid var(--orange-light); border-radius: 14px; padding: 18px 20px; min-height: 100px; }
+  .tour-panel h4 { margin: 0 0 8px; font-size: 16px; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .tour-panel .tour-tag { background: var(--orange); color: white; font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 700; letter-spacing: 0.5px; }
+  .tour-panel p { margin: 0 0 10px; font-size: 14.5px; color: var(--ink-soft); line-height: 1.55; }
+  .tour-panel p:last-child { margin-bottom: 0; }
+  .tour-panel code { font-size: 0.92em; }
+  .tour-finish { margin-top: 14px; padding: 12px 16px; background: linear-gradient(135deg, var(--bg1), white); border: 2px dashed var(--orange-light); border-radius: 10px; text-align: center; font-size: 14px; color: var(--ink-soft); transition: all 0.4s; }
+  .tour-finish.done { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); border-style: solid; color: #166534; font-weight: 700; }
+
+  /* ===== Build & run commands ===== */
+  .cmd-block { background: var(--terminal); color: #e2e8f0; border-radius: 12px; padding: 14px 18px; font-family: var(--mono); font-size: 13px; overflow-x: auto; position: relative; margin: 10px 0; }
+  .cmd-block pre { margin: 0; padding-right: 70px; white-space: pre-wrap; word-break: break-all; }
+  .cmd-block .prompt { color: #94a3b8; user-select: none; margin-right: 6px; }
+  .cmd-block .cmd { color: #86efac; }
+  .cmd-block .out { color: #cbd5e1; }
+  .copy-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: #e2e8f0; padding: 4px 12px; border-radius: 8px; font-family: var(--sans); font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.4px; transition: all 0.2s; }
+  .copy-btn:hover { background: rgba(255,255,255,0.16); }
+  .copy-btn.copied { background: rgba(34, 197, 94, 0.3); border-color: rgba(34, 197, 94, 0.5); color: #bbf7d0; }
+
+  /* ===== Output preview ===== */
+  .preview { background: linear-gradient(135deg, #dcfce7, #ecfdf5); border: 2px solid var(--green); border-radius: 14px; padding: 16px 20px; margin: 16px 0; }
+  .preview h4 { margin: 0 0 8px; color: #166534; font-size: 15px; }
+  .preview pre { margin: 0; padding: 12px 16px; background: var(--terminal); color: #cbd5e1; border-radius: 10px; font-family: var(--mono); font-size: 13px; }
+
+  /* ===== Quiz ===== */
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    First REAL C code! Six lines that have launched a million careers. Let's go! 🚀
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK · 1.3</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 8 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🛠️ PART I · SETTING UP</span>
+    <h1>Your Very First Program — <code style="background: rgba(0,0,0,0.2); color: white; padding: 2px 10px; border-radius: 6px;">hello.c</code></h1>
+    <p class="hero-sub">Six lines. We'll write them, decode every part, compile them into a working program, and run it. By the end of this lesson you'll have made a computer print "Hello, world!" — and you'll know <em>why</em>.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>The rite of passage 🚀</h2>
+
+    <div class="new-content">
+      Every programmer's first C program is some variation of "Hello, world!" — a one-line greeting on the terminal. It looks trivial, but every single piece of it teaches you something about how C is structured. After this lesson, you'll have read, understood, and run real C code.
+    </div>
+
+    <p>The phrase comes from Brian Kernighan and Dennis Ritchie's 1978 book <em>The C Programming Language</em> — yes, the same Dennis Ritchie who created C. They used "hello, world" as the very first example, and now every language teaches the same thing first. You're about to join a tradition that's older than the web.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The program</div>
+    <h2>Six lines — meet your first C 💻</h2>
+
+    <div class="new-content">
+      Below is the complete program. Don't worry about understanding every part yet — we'll click through every piece in the next section. Just read it once and notice the shape.
+    </div>
+
+    <div class="hello-static">
+      <span class="filename">hello.c</span>
+<span class="preproc">#include</span> <span class="preproc">&lt;stdio.h&gt;</span>
+
+<span class="kw">int</span> <span class="fn">main</span>() {
+    <span class="fn">printf</span>(<span class="str">"Hello, world!\n"</span>);
+    <span class="kw">return</span> <span class="num">0</span>;
+}
+    </div>
+
+    <p>Six lines (or four, if you don't count the blank line and the lonely closing brace). That's the smallest legal C program that does something visible. You'll write this shape — <code>#include</code> at top, <code>int main()</code>, statements inside, <code>return 0;</code> at the end — for every single C program in this book. Get comfortable with it.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Line-by-line tour</div>
+    <h2>Click any line — I'll explain it 🔍</h2>
+
+    <div class="new-content">
+      Below is the same program, but now each meaningful line is clickable. Click to read what that line does. Each first-time click = <strong>+5 XP</strong>. Visit all 4 = bonus.
+    </div>
+
+    <div class="tour-area">
+      <div class="tour-header">
+        <div class="tour-title">🔍 Code tour</div>
+        <div class="tour-counter"><strong id="tourCount">0</strong> / 4 explored</div>
+      </div>
+
+      <div class="tour-code">
+        <span class="filename">hello.c</span>
+        <div class="tour-line clickable" data-id="1">
+          <span class="ln-num">1</span>
+          <span><span class="preproc">#include</span> <span class="preproc">&lt;stdio.h&gt;</span></span>
+        </div>
+        <div class="tour-line">
+          <span class="ln-num">2</span>
+          <span></span>
+        </div>
+        <div class="tour-line clickable" data-id="2">
+          <span class="ln-num">3</span>
+          <span><span class="kw">int</span> <span class="fn">main</span><span class="pun">() {</span></span>
+        </div>
+        <div class="tour-line clickable" data-id="3">
+          <span class="ln-num">4</span>
+          <span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">printf</span><span class="pun">(</span><span class="str">"Hello, world!\n"</span><span class="pun">);</span></span>
+        </div>
+        <div class="tour-line clickable" data-id="4">
+          <span class="ln-num">5</span>
+          <span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="num">0</span><span class="pun">;</span></span>
+        </div>
+        <div class="tour-line">
+          <span class="ln-num">6</span>
+          <span><span class="pun">}</span></span>
+        </div>
+      </div>
+
+      <div class="tour-panel" id="tourPanel">
+        <h4>👆 Click any highlighted line above</h4>
+        <p>Each of the four numbered, clickable lines has its own job. Tap one to learn what it does.</p>
+      </div>
+
+      <div class="tour-finish" id="tourFinish">
+        Click all 4 lines to complete the tour.
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Compile and run it</div>
+    <h2>From text file to running program ⚡</h2>
+
+    <div class="new-content">
+      Save the program above as <code>hello.c</code> (the filename matters — must end in <code>.c</code>). Open a terminal in the folder where you saved it, then run these two commands:
+    </div>
+
+    <div class="cmd-block">
+      <button class="copy-btn" data-copy="gcc hello.c -o hello">Copy</button>
+      <pre><span class="prompt">$</span> <span class="cmd">gcc hello.c -o hello</span></pre>
+    </div>
+
+    <p>That's the compiler. It reads <code>hello.c</code>, produces a new file called <code>hello</code> (on Linux/Mac; on Windows it'll be <code>hello.exe</code>). If there are no errors, the command finishes silently — no news is good news.</p>
+
+    <div class="cmd-block">
+      <button class="copy-btn" data-copy="./hello">Copy</button>
+      <pre><span class="prompt">$</span> <span class="cmd">./hello</span></pre>
+    </div>
+
+    <p>That runs the executable. (On Windows cmd, you can just type <code>hello</code> without the <code>./</code>.) You should see:</p>
+
+    <div class="preview">
+      <h4>✅ Expected output</h4>
+      <pre>Hello, world!</pre>
+    </div>
+
+    <p>That's the rite of passage. You made a computer print "Hello, world!" — and you wrote, compiled, and ran C to do it.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Predict the output</div>
+    <h2>One small change, one big difference 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You change just the <code>printf</code> line of <code>hello.c</code> to look like this:
+<pre><span style="color: #fbbf24;">printf</span>(<span style="color: #86efac;">"Hello %s\n"</span>, <span style="color: #86efac;">"Aniket"</span>);</pre>
+What does the program print when you run it?</div>
+      <button class="opt" data-correct="false"><code>Hello %s Aniket</code></button>
+      <button class="opt" data-correct="true"><code>Hello Aniket</code></button>
+      <button class="opt" data-correct="false">Compiler error — too many arguments to <code>printf</code>.</button>
+      <button class="opt" data-correct="false">It prints nothing (the format string is broken).</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Common mistakes</div>
+    <h2>What trips beginners on their first program 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Forgetting the semicolon at the end of a statement.</strong>
+        <small>Every C statement ends with <code>;</code>. Drop one and you'll see a cryptic error like <em>"expected ';' before something"</em>. The fix is usually on the line <em>above</em> the one the compiler points at — the compiler kept reading hoping to find one and gave up later.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Smart quotes" instead of plain quotes.</strong>
+        <small>If you copy code from a webpage or Word document, you might end up with <code>"</code> and <code>"</code> (curly) instead of <code>"</code> and <code>"</code> (straight). The compiler will reject them. Always type quotes by hand inside your editor, or paste into a code-aware editor (like VS Code) that won't transform them.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Saving the file as <code>hello.txt</code> instead of <code>hello.c</code>.</strong>
+        <small>The <code>.c</code> extension matters. Some editors (especially Notepad on Windows) silently add a <code>.txt</code> on top. If <code>gcc hello.c</code> complains <em>"no such file or directory"</em>, do a directory listing — your file is probably <code>hello.c.txt</code>. Rename it.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Your turn</div>
+    <h2>Make this program your own 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Personalize it.</strong> Change the string inside <code>printf</code> from <code>"Hello, world!"</code> to <code>"Hello, Aniket!"</code> (or your own name). Recompile and run. Take a screenshot of the output — it's the first program <em>you</em> wrote, even if the change is small.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Print three lines.</strong> Use three separate <code>printf</code> calls (or one call with two <code>\n</code>s) to make the output look like:
+      <div class="cmd-block" style="background: #1f2937; margin: 8px 0;">
+        <pre><span class="out">Hello, world!
+This is line two.
+And this is line three.</span></pre>
+      </div>
+      Run it. Now try removing all the <code>\n</code>s — what happens? (You'll see all three messages run together on one line. That's why <code>\n</code> exists.)
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Break the program on purpose.</strong> Try four variations, one at a time, recompile, and read the error:
+      (a) remove the semicolon after <code>printf(...)</code>.
+      (b) remove <code>#include &lt;stdio.h&gt;</code>.
+      (c) change <code>main</code> to <code>Main</code> (capital M).
+      (d) change <code>return 0;</code> to <code>return "zero";</code>.
+      Don't fix them yet — just read each error message and try to guess what the compiler is complaining about. This is how you build error-reading skill, which is lesson 1.5's headline topic.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>Every C program follows the same shape: <code>#include</code> what you need at the top, <code>int main()</code>, statements inside, <code>return 0;</code> at the end.</li>
+      <li><code>#include &lt;stdio.h&gt;</code> gives you access to <code>printf</code> and friends — the standard input/output library.</li>
+      <li><code>main()</code> is the function the operating system runs when you launch your program. It's the only entry point.</li>
+      <li><code>printf("...")</code> prints text. <code>\n</code> inside the string means "go to a new line."</li>
+      <li><code>return 0;</code> tells the operating system the program finished successfully. Non-zero means "something went wrong."</li>
+      <li>Two commands turn your source code into a running program: <code>gcc hello.c -o hello</code> compiles, <code>./hello</code> runs.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_1_2.html" class="nav-btn prev">
+      <small>← Previous</small>
+      1.2  Choosing and setting up an editor
+    </a>
+    <a href="#" class="nav-btn next">
+      <small>Next lesson →</small>
+      1.4  What happens when you press "run"
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "First REAL C code! Six lines that have launched a million careers. Let's go! 🚀",
+    "Memorize this shape — you'll write it thousands of times. Six lines. That's it.",
+    "Click each numbered line — I'll explain. 5 XP per first click! 🔍",
+    "Two terminal commands. Type 'em, watch the magic. ⚡",
+    "Predict first, peek second. That's how you build a model of how things work. 🎯",
+    "These three mistakes catch every beginner once. Now you'll dodge them.",
+    "Try the stretch — break it on purpose. Best way to learn errors! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 7;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Lesson 1.3 complete! +50 XP'); addXP(50); }, 400); } }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) { const line = BIT_LINES[idx] || BIT_LINES[0]; bitBubble.style.opacity = '0'; setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250); }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.bit; if (i !== currentBit) { currentBit = i; updateBit(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Code tour =====
+  const TOUR = {
+    '1': {
+      title: '#include &lt;stdio.h&gt;',
+      tag: 'PREPROCESSOR',
+      body: `<p>This line is a <strong>preprocessor directive</strong> — an instruction to a tool that runs before the real compiler. The <code>#</code> at the start is the giveaway: anything starting with <code>#</code> is preprocessor business.</p><p>What it means in English: "before compiling, paste in the contents of the file <code>stdio.h</code> right here." That file (the <em>standard I/O header</em>) declares functions like <code>printf</code>, <code>scanf</code>, <code>fopen</code> and friends. Without this line, <code>printf</code> on line 4 would be undefined and the compiler would refuse.</p><p>The angle brackets <code>&lt;...&gt;</code> tell the preprocessor "find this in the system headers." We'll see <code>"..."</code> quotes used differently in lesson 4.6 — that means "find this in my own project."</p>`
+    },
+    '2': {
+      title: 'int main() {',
+      tag: 'ENTRY POINT',
+      body: `<p>This declares a function called <code>main</code>. When you run a C program, the operating system finds the function named exactly <code>main</code> and starts executing its body. It's the single, mandatory entry point of every C program.</p><p>The <code>int</code> at the front is the function's return type — <code>main</code> promises to give an integer back when it's done. The empty <code>()</code> means "takes no arguments." (We'll see versions with arguments in lesson 9.5 — <code>argc</code> and <code>argv</code> — when we handle command-line input.)</p><p>The <code>{</code> at the end opens the <em>function body</em> — everything between this brace and the matching <code>}</code> at line 6 belongs to <code>main</code>.</p>`
+    },
+    '3': {
+      title: 'printf("Hello, world!\\n");',
+      tag: 'OUTPUT STATEMENT',
+      body: `<p>This is a <strong>function call</strong>. We're invoking the <code>printf</code> function (which was made available by line 1's <code>#include</code>) and handing it one argument: the string <code>"Hello, world!\\n"</code>.</p><p><code>printf</code> writes whatever you pass it to the terminal. The double quotes mark the start and end of a <strong>string literal</strong> — a chunk of text. The funny <code>\\n</code> at the end isn't two characters — it's the <em>newline character</em>, the same thing as pressing Enter. Drop the <code>\\n</code> and your terminal prompt comes back on the same line as your text. Awkward but not wrong.</p><p>The line ends with a <code>;</code> — that's how C marks "end of statement." Forget it and the compiler complains.</p>`
+    },
+    '4': {
+      title: 'return 0;',
+      tag: 'EXIT STATUS',
+      body: `<p>This ends the <code>main</code> function and hands an integer back to whoever ran the program (usually the operating system).</p><p>By convention, <strong>return 0 means "everything went fine."</strong> Any non-zero number means "something went wrong." (You can run <code>echo $?</code> in Linux/Mac or <code>echo %ERRORLEVEL%</code> in Windows right after your program finishes to see this exit code.)</p><p>Technically, in C99 and later, <code>main</code> implicitly returns 0 if you leave this line out. But writing it explicitly is the universal habit — it shows intent and works in older standards.</p>`
+    }
+  };
+  const lines = document.querySelectorAll('.tour-line.clickable');
+  const panel = document.getElementById('tourPanel');
+  const tourCounter = document.getElementById('tourCount');
+  const tourFinish = document.getElementById('tourFinish');
+  const explored = new Set();
+  lines.forEach(line => {
+    line.addEventListener('click', (e) => {
+      const id = line.dataset.id;
+      const t = TOUR[id];
+      if (!t) return;
+      lines.forEach(l => l.classList.remove('active'));
+      line.classList.add('active');
+      panel.innerHTML = `<h4><span class="tour-tag">${t.tag}</span> ${t.title}</h4>${t.body}`;
+      if (!explored.has(id)) {
+        explored.add(id);
+        line.classList.add('explored');
+        tourCounter.textContent = explored.size;
+        tourCounter.style.transform = 'scale(1.3)';
+        setTimeout(() => tourCounter.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (explored.size === lines.length) {
+          tourFinish.classList.add('done');
+          tourFinish.innerHTML = '🎉 <strong>All 4 explored!</strong> You can now read every line of hello.c. That\'s real progress.';
+          setTimeout(() => { burst(); addXP(20, window.innerWidth/2, window.innerHeight/2, '🎉 Tour complete! +20 XP'); }, 200);
+        }
+      }
+    });
+  });
+
+  // Copy buttons
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copy;
+      try { await navigator.clipboard.writeText(text); } catch (e) {
+        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      btn.classList.add('copied'); btn.textContent = 'Copied ✓';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1500);
+      addXP(2, 0, 0);
+    });
+  });
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> <code>%s</code> in the format string is a placeholder that says "insert a string from the next argument here." So <code>"Aniket"</code> takes the place of <code>%s</code>. You\'ve just glimpsed how variables enter strings — full coverage in lesson 2.8.' : '✓ <strong style="color: var(--green)">Got it.</strong> <code>%s</code> = "insert a string here." So <code>"Aniket"</code> fills the slot.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Hint: <code>%s</code> is special — it\'s a placeholder. What does the next argument do?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>
