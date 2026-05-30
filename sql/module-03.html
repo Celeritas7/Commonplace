@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 3 — Aggregating Data · Interactive SQL Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+    --warn-bg:#fef3c7; --warn-fg:#92400e; --warn-badge:#f59e0b;
+    --ok-bg:#d1fae5; --ok-fg:#065f46;
+    --err-bg:#fee2e2; --err-fg:#991b1b;
+    --tip-bg:#ede9fe; --tip-fg:#3730a3;
+    --example-bg:#fdf4ff; --example-fg:#86198f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .nav-modules { display: flex; gap: 4px; font-size: 12px; overflow-x: auto; max-width: 60vw; }
+  .topnav .nav-modules a {
+    color: var(--text-mute); text-decoration: none; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .topnav .nav-modules a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .nav-modules a.current { background: var(--accent); color: #fff; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; max-width: 1180px; margin: 0 auto; padding: 28px 28px 80px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 20px; } .sidebar { display: none; } }
+
+  .sidebar { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; padding-right: 8px; }
+  .sidebar h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-mute); margin: 4px 0 12px 0; font-weight: 700; }
+  .sidebar a { display: block; color: var(--text-soft); text-decoration: none; padding: 6px 12px; border-left: 2px solid transparent; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .sidebar a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { min-width: 0; }
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .summary { margin-top: 14px; font-size: 15.5px; line-height: 1.6; color: rgba(255,255,255,0.94); max-width: 620px; }
+  .module-hero .meta-line { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .module-hero .meta-line strong { color: #fff; }
+
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); }
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; font-size: 0.9em;
+  }
+
+  /* Funnel */
+  .funnel-wrap { display: flex; justify-content: center; margin: 24px 0 28px; }
+  .funnel-wrap.mini { justify-content: flex-start; margin: 12px 0; }
+  .funnel { display: block; max-width: 360px; height: auto; }
+  .funnel.mini { max-width: 160px; }
+
+  /* Lesson header (mini-funnel + intro) */
+  .lesson-header { display: flex; align-items: center; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); margin-top: 36px; }
+  .lesson-header .funnel-wrap { margin: 0; flex-shrink: 0; }
+  .lesson-header .intro .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); }
+  .lesson-header .intro h2 { margin: 4px 0 6px; font-size: 22px; }
+  .lesson-header .intro p { margin: 0; font-style: italic; }
+
+  /* Code blocks (Pygments output) */
+  .highlight {
+    background: var(--code-bg) !important; color: var(--code-fg);
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55; overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    border-left: 4px solid var(--accent);
+  }
+  .highlight pre { margin: 0; background: transparent; color: inherit; }
+  .highlight .k, .highlight .kw, .highlight .kr, .highlight .kn, .highlight .kc { color: #f472b6; font-weight: 700; }
+  .highlight .nb { color: #c4b5fd; }
+  .highlight .n, .highlight .nx, .highlight .nv { color: #93c5fd; }
+  .highlight .s, .highlight .s1, .highlight .s2 { color: #fcd34d; }
+  .highlight .mi, .highlight .mf { color: #34d399; }
+  .highlight .o, .highlight .p { color: #94a3b8; }
+  .highlight .c, .highlight .c1, .highlight .cm { color: #64748b; font-style: italic; }
+
+  /* Admonitions (note, tip, warning, example) */
+  .admonition { margin: 20px 0; padding: 14px 18px; border-radius: 10px; border-left: 4px solid; font-size: 14.5px; }
+  .admonition .admonition-title { font-weight: 700; font-size: 12.5px; letter-spacing: 0.4px; text-transform: uppercase; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .admonition p { margin: 6px 0; }
+  .admonition.note { background: var(--tip-bg); color: var(--tip-fg); border-color: var(--accent); }
+  .admonition.note .admonition-title::before { content: "ℹ"; }
+  .admonition.tip { background: #ecfdf5; color: #065f46; border-color: #10b981; }
+  .admonition.tip .admonition-title::before { content: "✓"; }
+  .admonition.warning { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-badge); }
+  .admonition.warning .admonition-title::before { content: "⚠"; }
+  .admonition.danger { background: var(--err-bg); color: var(--err-fg); border-color: #ef4444; }
+  .admonition.danger .admonition-title::before { content: "✕"; }
+  .admonition.example { background: var(--example-bg); color: var(--example-fg); border-color: #c026d3; }
+  .admonition.example .admonition-title::before { content: "▶"; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin: 16px 0; }
+  th { background: var(--text); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-soft); font-size: 14px; }
+  td code { background: var(--accent-soft); padding: 1px 6px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Playground */
+  .playground { margin: 20px 0; border: 1px solid var(--border); background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .pg-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-mute); display: flex; align-items: center; justify-content: space-between; }
+  .pg-header .left { display: flex; align-items: center; gap: 10px; }
+  .pg-header .led { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.7); }
+  .pg-header .led.loading { background: #f59e0b; }
+  .pg-header .led.err { background: #ef4444; }
+  .pg-header .hint { font-size: 11px; color: var(--text-mute); font-weight: 400; }
+  .playground textarea {
+    width: 100%; background: var(--code-bg); color: var(--code-fg); border: none;
+    padding: 16px 18px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    resize: vertical; min-height: 80px; outline: none; caret-color: #a5b4fc;
+  }
+  .pg-actions { background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pg-actions .left-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn { background: #f3f4f6; color: var(--text-soft); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #e5e7eb; color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 7px 16px; font-weight: 600; }
+  .btn.primary:hover { background: #4338ca; }
+  .pg-result { border-top: 1px solid var(--border); padding: 14px 16px; background: #fafbfc; font-size: 13px; max-height: 360px; overflow: auto; }
+  .pg-result:empty { display: none; }
+  .pg-result table { width: 100%; background: #fff; }
+  .pg-result th { background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: 11.5px; }
+  .pg-result td { padding: 7px 12px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+  .pg-status { font-size: 12px; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; font-weight: 500; }
+  .pg-status.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pg-status.err { background: var(--err-bg); color: var(--err-fg); font-family: "JetBrains Mono", monospace; }
+
+  /* Module nav at bottom */
+  .module-nav { margin-top: 60px; padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .module-nav a, .module-nav span { color: var(--text-soft); text-decoration: none; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); min-width: 240px; }
+  .module-nav a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .module-nav .label { display: block; font-size: 10.5px; color: var(--text-mute); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .module-nav .title { display: block; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="index.html"><span class="dot"></span>Interactive SQL Book</a>
+  <div class="nav-modules">
+      <a href="module-01.html" class="">1. Retrieving Data</a>
+      <a href="module-02.html" class="">2. Filtering &amp; Sorting</a>
+      <a href="module-03.html" class="current">3. Aggregating Data</a>
+      <a href="module-04.html" class="">4. JOINs</a>
+      <a href="module-05.html" class="">5. Advanced SQL</a>
+      <a href="module-06.html" class="">6. Creating &amp; Modifying Tables</a>
+      <a href="module-07.html" class="">7. Conditional Expressions &amp; Views</a>
+      <a href="module-08.html" class="">8. Importing &amp; Exporting Data</a>
+      <a href="module-09.html" class="">9. PostgreSQL with Python</a>
+      <a href="module-10.html" class="">10. Capstone — Tiffinly</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>In this module</h4>
+    <div id="toc"></div>
+  </aside>
+
+  <main>
+    <div class="module-hero">
+      <div class="meta">Module 3 of 10</div>
+      <h1>Aggregating Data</h1>
+<div class="summary">Stop thinking row-by-row. Start asking questions that collapse many rows into one — totals, averages, counts per group, filtered by what those totals look like.</div>      <div class="meta-line">
+<strong>Estimated time:</strong> 75–100 minutes · <strong>Prerequisites:</strong> Modules 1 and 2 complete. Comfort with SELECT, WHERE, and the COUNT function.      </div>
+    </div>
+
+    <h2 id="what-this-module-covers">What this module covers</h2>
+<p>So far, every query returned one result row per input row. This module teaches the second great pattern of SQL: collapsing many rows into one — or many groups into many summary rows.</p>
+<ul>
+<li><strong>Aggregation functions</strong> — SUM, AVG, MIN, MAX, and revisiting COUNT. They take many rows and return one number.</li>
+<li><strong>GROUP BY</strong> — apply an aggregation <em>per category</em> instead of across the whole table.</li>
+<li><strong>HAVING</strong> — filter on aggregated values (which WHERE cannot do).</li>
+</ul>
+<p>This is where SQL stops feeling like "fetch some rows" and starts feeling like "answer a business question".</p>
+<h2 id="the-sql-funnel-two-more-layers">The SQL funnel — two more layers</h2>
+<p>We are now descending into the middle of the funnel:</p>
+<div class="funnel-wrap"><svg viewBox="0 0 360 256" xmlns="http://www.w3.org/2000/svg" class="funnel "><polygon points="0.0,0 360.0,0 351.42857142857144,32 8.571428571428571,32" fill="#7cb342" fill-opacity="0.3"/><text x="180.0" y="20.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">SELECT cols (AS aliases)</text><polygon points="8.571428571428571,36 351.42857142857144,36 342.85714285714283,68 17.142857142857142,68" fill="#26a69a" fill-opacity="0.3"/><text x="180.0" y="56.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">FROM table</text><polygon points="17.142857142857142,72 342.85714285714283,72 334.2857142857143,104 25.714285714285715,104" fill="#42a5f5" fill-opacity="0.3"/><text x="180.0" y="92.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">WHERE row filter</text><polygon points="25.714285714285715,108 334.2857142857143,108 325.7142857142857,140 34.285714285714285,140" fill="#7e57c2" fill-opacity="1.0"/><text x="180.0" y="128.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">GROUP BY cols</text><polygon points="34.285714285714285,144 325.7142857142857,144 317.14285714285717,176 42.857142857142854,176" fill="#ec407a" fill-opacity="0.3"/><text x="180.0" y="164.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">HAVING group filter</text><polygon points="42.857142857142854,180 317.14285714285717,180 308.57142857142856,212 51.42857142857143,212" fill="#ff9800" fill-opacity="0.3"/><text x="180.0" y="200.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">ORDER BY cols</text><polygon points="51.42857142857143,216 308.57142857142856,216 300.0,248 60.0,248" fill="#78909c" fill-opacity="0.3"/><text x="180.0" y="236.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">LIMIT n</text></svg></div>
+
+<p>GROUP BY and HAVING are stacked: HAVING only makes sense in the presence of GROUP BY. Together they let you say "for each category, compute something — but only show me the categories where that something looks a certain way".</p>
+<div class="admonition note">
+<p class="admonition-title">The mental shift this module asks of you</p>
+<p>So far, one input row produced one output row. From this module on, that stops being true. A GROUP BY query can take 10 million rows and return 5. You are no longer reading data — you are <em>summarizing</em> it.</p>
+<p>This is the single biggest conceptual jump in SQL. Once you have it, everything past this point (window functions, CTEs, analytics) builds on it.</p>
+</div>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="1.0"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-31-aggregation-functions">Lesson 3.1 — Aggregation functions</h2>
+<p><em>Functions that take many rows of input and return one row of output.</em></p>
+<h3 id="why-this-matters">Why this matters</h3>
+<p>In Module 1 you learned <code>COUNT(*)</code> — your first aggregate. Aggregates feel different from regular SELECT because they violate the "one input row, one output row" rule. Instead, they fold a whole column down to a single value.</p>
+<p>There are five you will use constantly. Learn them in one sitting:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>COUNT(...)</code></td>
+<td>Number of rows (revisited from Module 1)</td>
+</tr>
+<tr>
+<td><code>SUM(col)</code></td>
+<td>Sum of all values in a numeric column</td>
+</tr>
+<tr>
+<td><code>AVG(col)</code></td>
+<td>Mean of all values in a numeric column</td>
+</tr>
+<tr>
+<td><code>MIN(col)</code></td>
+<td>Smallest value (works on numbers, dates, and text)</td>
+</tr>
+<tr>
+<td><code>MAX(col)</code></td>
+<td>Largest value (works on numbers, dates, and text)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sum-totals">SUM — totals</h3>
+<div class="playground" data-pg-idx="0">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Total amount paid across all payments</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT SUM(amount) AS total_revenue FROM payment;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>One row in, one number out. SUM ignores NULL values silently — same as COUNT(column).</p>
+<h3 id="avg-mean">AVG — mean</h3>
+<div class="playground" data-pg-idx="1">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Average film length</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT AVG(length) AS avg_length FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>AVG</code> returns a floating-point number. If the result is ugly, wrap it in <code>ROUND(..., 2)</code>:</p>
+<div class="playground" data-pg-idx="2">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Cleaner output with ROUND</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT ROUND(AVG(length), 2) AS avg_length FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="min-and-max-extremes">MIN and MAX — extremes</h3>
+<p>These do exactly what they say. They also work on non-numeric columns — <code>MIN(title)</code> gives you the alphabetically first title; <code>MAX(payment_date)</code> gives the most recent payment.</p>
+<div class="playground" data-pg-idx="3">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Range of payment amounts</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT MIN(amount) AS min_pay,
+       MAX(amount) AS max_pay
+FROM payment;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="4">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>MIN/MAX on text — alphabetic extremes</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT MIN(title) AS first_title,
+       MAX(title) AS last_title
+FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="multiple-aggregates-in-one-query">Multiple aggregates in one query</h3>
+<p>Put as many as you want in a single SELECT. Each one is computed independently:</p>
+<div class="playground" data-pg-idx="5">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Five-number summary of payment amounts</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT COUNT(*)        AS n,
+       SUM(amount)     AS total,
+       ROUND(AVG(amount), 2) AS avg,
+       MIN(amount)     AS smallest,
+       MAX(amount)     AS largest
+FROM payment;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>This kind of one-row dashboard query is extremely common in data work. Memorize the shape.</p>
+<h3 id="the-you-cant-have-both-rule">The "you can't have both" rule</h3>
+<p>What does this query mean?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">AVG</span><span class="p">(</span><span class="k">length</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>It is asking for <em>every</em> film title (15 rows) AND <em>one</em> average across all films (1 row). Those two answers cannot fit in the same result table.</p>
+<p>PostgreSQL refuses to run it. SQLite (this playground) will run it but return nonsense — picking a single title arbitrarily and pairing it with the average. Either way: <strong>you cannot mix aggregate and non-aggregate columns in a SELECT</strong> unless you tell SQL how to group them. That is what GROUP BY is for, and it is the entire content of Lesson 3.2.</p>
+<div class="admonition note">
+<p class="admonition-title">Why this rule exists</p>
+<p>Aggregates produce <em>one</em> row. Regular columns produce <em>one row per input row</em>. SQL has no way to combine those shapes without instructions. GROUP BY is the instruction: "compute the aggregate <em>per category</em>, and pair each result with that category". After GROUP BY, the shapes match — one row per category.</p>
+</div>
+<h3 id="common-mistakes">Common mistakes</h3>
+<h4 id="summing-something-that-is-not-a-number">SUMming something that is not a number</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">title</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w">   </span><span class="c1">-- error or weird result</span>
+</code></pre></div>
+
+<p><code>title</code> is text. SUM expects numbers. Most databases will reject this; SQLite will return 0 (it casts unparseable text to 0 silently). Always check the column's data type.</p>
+<h4 id="mixing-aggregate-and-non-aggregate-columns">Mixing aggregate and non-aggregate columns</h4>
+<p>Covered above. This is the most common GROUP BY mistake by far.</p>
+<h4 id="forgetting-that-avg-ignores-nulls">Forgetting that AVG ignores NULLs</h4>
+<p><code>AVG(salary)</code> averages the rows where salary is not NULL. If 200 of 1000 employees have NULL salary, the average is over 800 rows, not 1000. Sometimes that is what you want — sometimes you need <code>COALESCE(salary, 0)</code> first to count NULLs as zero. Decide deliberately.</p>
+<h3 id="practice-challenges">Practice challenges</h3>
+<h4 id="challenge-311-total-revenue">Challenge 3.1.1 — Total revenue</h4>
+<p>What is the total amount the business has collected in payments?</p>
+<div class="playground" data-pg-idx="6">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.1.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SUM(amount) FROM payment.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT SUM(amount) AS total_revenue FROM payment;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-312-three-numbers-about-films">Challenge 3.1.2 — Three numbers about films</h4>
+<p>Return the count, average length, and longest length of all films in a single row.</p>
+<div class="playground" data-pg-idx="7">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.1.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Three aggregates in one SELECT.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT COUNT(*) AS n, AVG(length) AS avg_len, MAX(length) AS max_len FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-313-output-prediction">Challenge 3.1.3 — Output prediction</h4>
+<p>What will this return — and is it meaningful?</p>
+<div class="playground" data-pg-idx="8">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.1.3 — predict, then run</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, AVG(length) FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-314-cleaner-reporting">Challenge 3.1.4 — Cleaner reporting</h4>
+<p>Return the average rental_rate rounded to 2 decimal places, aliased as <code>avg_rate</code>.</p>
+<div class="playground" data-pg-idx="9">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.1.4</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ROUND(AVG(...), 2) AS avg_rate.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT ROUND(AVG(rental_rate), 2) AS avg_rate FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions">Solutions</h3>
+<h4 id="solution-311">Solution 3.1.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_revenue</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-312">Solution 3.1.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="k">AVG</span><span class="p">(</span><span class="k">length</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_len</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="k">MAX</span><span class="p">(</span><span class="k">length</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">max_len</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-313">Solution 3.1.3</h4>
+<p>The query mixes a non-aggregate column (<code>title</code>) with an aggregate (<code>AVG(length)</code>). PostgreSQL would reject it. SQLite returns one row pairing the average length with an arbitrary title — useful for nothing. Fix it by either dropping <code>title</code> or adding <code>GROUP BY title</code> (which would give you a per-film average — equal to that film's length, since each group has one row).</p>
+<h4 id="solution-314">Solution 3.1.4</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">rental_rate</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_rate</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="1.0"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-32-group-by">Lesson 3.2 — GROUP BY</h2>
+<p><em>Apply an aggregation per category instead of across the whole table.</em></p>
+<h3 id="why-this-matters_1">Why this matters</h3>
+<p><code>SELECT SUM(amount) FROM payment</code> gives you total revenue. That is useful, but the moment someone says "OK, but per customer?", you need GROUP BY.</p>
+<p>GROUP BY answers questions of the form "for each X, what is the [count / total / average / min / max] of Y?". That covers a huge fraction of every business question ever asked.</p>
+<h3 id="the-shape-of-a-grouped-query">The shape of a grouped query</h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w">  </span><span class="n">grouping_column</span><span class="p">,</span><span class="w"> </span><span class="n">AGG</span><span class="p">(</span><span class="n">other_column</span><span class="p">)</span><span class="w"></span>
+<span class="k">FROM</span><span class="w">    </span><span class="k">table</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w">   </span><span class="n">condition</span><span class="w">          </span><span class="c1">-- optional, filters BEFORE grouping</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">grouping_column</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="p">...</span><span class="w">               </span><span class="c1">-- optional</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w">                   </span><span class="c1">-- optional</span>
+</code></pre></div>
+
+<p>The grouping column appears twice: once in SELECT (so you can see which group is which), once in GROUP BY (the instruction).</p>
+<div class="playground" data-pg-idx="10">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Count of films per rating</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT rating, COUNT(*) AS film_count
+FROM film
+GROUP BY rating;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>One row per distinct rating value. Five rows back (since there are five ratings).</p>
+<h3 id="the-golden-rule">The golden rule</h3>
+<p>Every non-aggregate column in SELECT must also appear in GROUP BY.</p>
+<p>If you SELECT a column that is not aggregated and not grouped, what would each row pair it with? There is no single answer. PostgreSQL errors. SQLite returns garbage. Either way, you have to obey:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- ILLEGAL: title is neither aggregated nor grouped</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">-- LEGAL: every non-aggregate is in GROUP BY</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">-- ALSO LEGAL: group by both, get one row per (title, rating)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<div class="admonition warning">
+<p class="admonition-title">The rule, restated</p>
+<p>If a column appears in SELECT but is not wrapped in an aggregate function, it <strong>must</strong> appear in GROUP BY. No exceptions.</p>
+<p>This is the single most common error new SQL writers hit. When you get a "column must appear in GROUP BY" error, do not panic — just add the column.</p>
+</div>
+<h3 id="grouping-by-multiple-columns">Grouping by multiple columns</h3>
+<p>GROUP BY can take a comma-separated list. The result is one row per <em>combination</em>:</p>
+<div class="playground" data-pg-idx="11">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Avg length per rating, also broken out by rental_duration</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT rating, rental_duration, COUNT(*) AS n, AVG(length) AS avg_len
+FROM film
+GROUP BY rating, rental_duration;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Each row in the result represents one unique (rating, rental_duration) pair, with a count and average computed across the rows that fell into that bucket.</p>
+<h3 id="ordering-grouped-results">Ordering grouped results</h3>
+<p>GROUP BY does not order. If you want predictable order, add ORDER BY:</p>
+<div class="playground" data-pg-idx="12">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Ratings ranked by film count</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT rating, COUNT(*) AS film_count
+FROM film
+GROUP BY rating
+ORDER BY film_count DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You can order by:
+- A grouping column: <code>ORDER BY rating</code>
+- An aggregate: <code>ORDER BY COUNT(*) DESC</code>
+- An alias: <code>ORDER BY film_count DESC</code> (often the most readable)</p>
+<h3 id="where-before-group-by">WHERE before GROUP BY</h3>
+<p>WHERE filters the <em>raw rows</em> before grouping. This is what you want when the filter is on a per-row attribute:</p>
+<div class="playground" data-pg-idx="13">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Avg length per rating — but only short films</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT rating, AVG(length) AS avg_len
+FROM film
+WHERE length &lt; 100
+GROUP BY rating;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The query first throws away every film 100 minutes or longer, then groups what is left by rating, then averages.</p>
+<div class="admonition note">
+<p class="admonition-title">WHERE filters rows, HAVING filters groups</p>
+<p>This is the entire intuition for Lesson 3.3. Hold onto it.</p>
+</div>
+<h3 id="common-mistakes_1">Common mistakes</h3>
+<h4 id="forgetting-the-column-in-group-by">Forgetting the column in GROUP BY</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">AVG</span><span class="p">(</span><span class="k">length</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- PostgreSQL: error. Add: GROUP BY rating</span>
+</code></pre></div>
+
+<p>The fix is mechanical — copy the non-aggregate column into a GROUP BY clause.</p>
+<h4 id="putting-aggregates-in-group-by">Putting aggregates in GROUP BY</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">);</span><span class="w">   </span><span class="c1">-- nonsense</span>
+</code></pre></div>
+
+<p>You group <em>by</em> raw columns. Aggregates are the <em>result</em> of grouping, not part of the instruction.</p>
+<h4 id="trying-to-filter-aggregates-in-where">Trying to filter aggregates in WHERE</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- error: cannot use aggregate in WHERE</span>
+</code></pre></div>
+
+<p>WHERE runs <em>before</em> aggregation. The count does not exist yet. You need HAVING — see Lesson 3.3.</p>
+<h3 id="practice-challenges_1">Practice challenges</h3>
+<h4 id="challenge-321-count-per-category">Challenge 3.2.1 — Count per category</h4>
+<p>How many films are there in each rating?</p>
+<div class="playground" data-pg-idx="14">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.2.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT rating, COUNT(*), then GROUP BY rating.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT rating, COUNT(*) AS n FROM film GROUP BY rating;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-322-total-per-customer">Challenge 3.2.2 — Total per customer</h4>
+<p>What is the total amount paid by each customer?</p>
+<div class="playground" data-pg-idx="15">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.2.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT customer_id, SUM(amount), GROUP BY customer_id.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT customer_id, SUM(amount) AS total FROM payment GROUP BY customer_id;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-323-ordered-by-aggregate">Challenge 3.2.3 — Ordered by aggregate</h4>
+<p>Show every customer's total amount paid, biggest spender first.</p>
+<div class="playground" data-pg-idx="16">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.2.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Like 3.2.2 plus ORDER BY total DESC.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT customer_id, SUM(amount) AS total FROM payment GROUP BY customer_id ORDER BY total DESC;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-324-bug-spotting">Challenge 3.2.4 — Bug spotting</h4>
+<p>Why does this query fail (or return garbage)?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="n">payment_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="challenge-325-filter-then-group">Challenge 3.2.5 — Filter then group</h4>
+<p>Show the number of films in each rating, considering only films longer than 90 minutes.</p>
+<div class="playground" data-pg-idx="17">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.2.5</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='WHERE length &gt; 90 comes before GROUP BY.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT rating, COUNT(*) AS n FROM film WHERE length &gt; 90 GROUP BY rating;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_1">Solutions</h3>
+<h4 id="solution-321">Solution 3.2.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-322">Solution 3.2.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-323">Solution 3.2.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-324">Solution 3.2.4</h4>
+<p><code>payment_id</code> is in SELECT but not in GROUP BY and not aggregated. It violates the golden rule. Fix by removing <code>payment_id</code> (since you are summing within a customer, the individual payment IDs are meaningless) — or by adding it to GROUP BY, which would defeat the purpose because there is one payment per payment_id and the SUM becomes trivial.</p>
+<h4 id="solution-325">Solution 3.2.5</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">n</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">90</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="1.0"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-33-having">Lesson 3.3 — HAVING</h2>
+<p><em>Filter on aggregated values. WHERE cannot do this.</em></p>
+<h3 id="why-having-exists">Why HAVING exists</h3>
+<p>You learned in Module 2 that WHERE filters rows. So why is there a second filter clause?</p>
+<p>Because WHERE runs <em>before</em> aggregation. By the time WHERE looks at the data, no aggregates exist yet — there are no counts, no totals. You cannot ask "give me customers whose total spend exceeds $10" with WHERE, because the total has not been computed.</p>
+<p>HAVING runs <em>after</em> GROUP BY and aggregation. By the time HAVING looks at the data, each group is a single row with its aggregates already computed. <em>Now</em> you can filter on them.</p>
+<div class="playground" data-pg-idx="18">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Customers who paid more than $5 in total</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT customer_id, SUM(amount) AS total
+FROM payment
+GROUP BY customer_id
+HAVING SUM(amount) &gt; 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Read that bottom to top: group payments by customer, sum each customer's amount, keep only the customers whose sum exceeds 5.</p>
+<h3 id="having-vs-where-the-one-line-rule">HAVING vs WHERE — the one-line rule</h3>
+<table>
+<thead>
+<tr>
+<th>Clause</th>
+<th>Filters</th>
+<th>Runs</th>
+<th>Can reference aggregates?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WHERE</code></td>
+<td>Individual rows</td>
+<td>Before GROUP BY</td>
+<td>No</td>
+</tr>
+<tr>
+<td><code>HAVING</code></td>
+<td>Whole groups</td>
+<td>After GROUP BY</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>They can both appear in the same query. WHERE drops rows before grouping; HAVING drops groups after.</p>
+<div class="playground" data-pg-idx="19">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Both filters in one query</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT rating, COUNT(*) AS n, AVG(length) AS avg_len
+FROM film
+WHERE length &gt; 60           -- drop short films before grouping
+GROUP BY rating
+HAVING COUNT(*) &gt; 2;        -- only show ratings with more than 2 such films</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="what-having-can-reference">What HAVING can reference</h3>
+<p>HAVING can reference:
+- The grouping columns (<code>HAVING rating = 'PG'</code>)
+- Aggregate expressions (<code>HAVING COUNT(*) &gt; 5</code>, <code>HAVING SUM(amount) BETWEEN 10 AND 100</code>)
+- Combinations with AND/OR</p>
+<p>You can use any aggregate function in HAVING, not just the one in SELECT:</p>
+<div class="playground" data-pg-idx="20">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Ratings whose average film length exceeds 100</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT rating, COUNT(*) AS n
+FROM film
+GROUP BY rating
+HAVING AVG(length) &gt; 100;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Notice — AVG(length) is in HAVING but not SELECT. That is fine. The database computes both, uses one for filtering, returns the other.</p>
+<div class="admonition tip">
+<p class="admonition-title">Style: where to put the filter</p>
+<p>If a filter <em>can</em> go in WHERE, put it in WHERE. Only use HAVING for things WHERE cannot do (filtering aggregates).</p>
+<p><code>WHERE rating = 'G' GROUP BY ...</code> is faster than <code>GROUP BY rating HAVING rating = 'G'</code> because the WHERE version drops rows before doing the (expensive) grouping work.</p>
+</div>
+<h3 id="common-mistakes_2">Common mistakes</h3>
+<h4 id="putting-aggregates-in-where">Putting aggregates in WHERE</h4>
+<div class="highlight"><pre><span></span><code><span class="k">WHERE</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w">   </span><span class="c1">-- error: aggregate not allowed in WHERE</span>
+</code></pre></div>
+
+<p>Use HAVING.</p>
+<h4 id="putting-per-row-conditions-in-having">Putting per-row conditions in HAVING</h4>
+<div class="highlight"><pre><span></span><code><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="k">HAVING</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+</code></pre></div>
+
+<p>This errors or behaves strangely. <code>amount</code> is per-row, not per-group. Put it in WHERE.</p>
+<h4 id="using-having-without-group-by">Using HAVING without GROUP BY</h4>
+<p>PostgreSQL technically allows this — it treats the whole table as one group. Rarely useful and confusing to read. If you find yourself writing <code>HAVING</code> without a <code>GROUP BY</code>, you probably wanted WHERE.</p>
+<h4 id="referencing-a-select-alias-in-having">Referencing a SELECT alias in HAVING</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">HAVING</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">   </span><span class="c1">-- PostgreSQL: error. SQLite: works.</span>
+</code></pre></div>
+
+<p>Some databases allow the alias in HAVING, some require the full expression <code>HAVING SUM(amount) &gt; 5</code>. PostgreSQL requires the full expression. Write it the long way for portability.</p>
+<h3 id="practice-challenges_2">Practice challenges</h3>
+<h4 id="challenge-331-filter-on-count">Challenge 3.3.1 — Filter on count</h4>
+<p>Show every rating that has more than 3 films.</p>
+<div class="playground" data-pg-idx="21">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.3.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='GROUP BY rating, then HAVING COUNT(*) &gt; 3.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT rating, COUNT(*) AS n FROM film GROUP BY rating HAVING COUNT(*) &gt; 3;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-332-filter-on-sum">Challenge 3.3.2 — Filter on sum</h4>
+<p>Show every customer whose total payment is at least $10.</p>
+<div class="playground" data-pg-idx="22">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.3.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='GROUP BY customer_id, then HAVING SUM(amount) &gt;= 10.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT customer_id, SUM(amount) AS total FROM payment GROUP BY customer_id HAVING SUM(amount) &gt;= 10;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-333-where-vs-having">Challenge 3.3.3 — WHERE vs HAVING</h4>
+<p>Show, for films longer than 60 minutes, every rating where the average length is over 100. Use both WHERE and HAVING.</p>
+<div class="playground" data-pg-idx="23">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.3.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='WHERE length &gt; 60 filters rows. HAVING AVG(length) &gt; 100 filters groups.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT rating, COUNT(*) AS n, AVG(length) AS avg_len FROM film WHERE length &gt; 60 GROUP BY rating HAVING AVG(length) &gt; 100;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-334-bug-spotting">Challenge 3.3.4 — Bug spotting</h4>
+<p>Why is this wrong?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="challenge-335-top-spenders">Challenge 3.3.5 — Top spenders</h4>
+<p>Show the top 2 customers by total amount paid.</p>
+<div class="playground" data-pg-idx="24">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 3.3.5</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Combine GROUP BY + ORDER BY total DESC + LIMIT 2.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT customer_id, SUM(amount) AS total FROM payment GROUP BY customer_id ORDER BY total DESC LIMIT 2;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_2">Solutions</h3>
+<h4 id="solution-331">Solution 3.3.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">n</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="w"></span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-332">Solution 3.3.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-333">Solution 3.3.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="k">AVG</span><span class="p">(</span><span class="k">length</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_len</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">60</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="w"></span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">AVG</span><span class="p">(</span><span class="k">length</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>This uses every clause you have learned so far: SELECT (with aggregates), FROM, WHERE, GROUP BY, HAVING. Read it top to bottom — that is literally the order SQL evaluates.</p>
+<h4 id="solution-334">Solution 3.3.4</h4>
+<p>You cannot put aggregates in WHERE — WHERE runs before aggregation. Use HAVING:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-335">Solution 3.3.5</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="k">DESC</span><span class="w"></span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>This is the "top N by aggregate" pattern, possibly the single most common analytics query you will ever write. Memorize the shape.</p>
+<hr />
+<h2 id="whats-next">What's next</h2>
+<p>You can now filter, sort, cap, and summarize. The last big piece of single-table SQL is in place.</p>
+<p>Module 4 introduces <strong>JOINs</strong> — combining rows from two or more tables. JOINs are where SQL stops being a query language and starts feeling like working with a network of related ideas. The customer table has a customer_id; the payment table has a customer_id; JOINs are what let you say "show me each customer's name <em>and</em> what they paid" in one query.</p>
+
+    <div class="module-nav">
+        <a href="module-02.html"><span class="label">← Previous · Module 2</span><span class="title">Filtering &amp; Sorting</span></a>
+        <a href="module-04.html"><span class="label">Next · Module 4 →</span><span class="title">JOINs</span></a>
+    </div>
+  </main>
+</div>
+
+<script>
+const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
+let dbPromise = null;
+function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+async function getDb() {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const SQL = await initSqlJs({ locateFile: f => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f });
+      const db = new SQL.Database();
+      db.exec(SEED_SQL);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+function renderResult(el, columns, rows, msg) {
+  let html = "";
+  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
+  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
+  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
+  html += "</tbody></table>";
+  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
+  el.innerHTML = html;
+}
+async function runQuery(pg) {
+  const led = pg.querySelector(".led");
+  const ta = pg.querySelector("textarea");
+  const result = pg.querySelector(".pg-result");
+  const sql = ta.value.trim();
+  if (!sql) { result.innerHTML = ""; return; }
+  led.classList.add("loading");
+  try {
+    const db = await getDb();
+    const out = db.exec(sql);
+    if (out.length === 0) renderResult(result, null, null, "Statement executed");
+    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    led.classList.remove("loading","err");
+  } catch (e) {
+    led.classList.remove("loading"); led.classList.add("err");
+    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+const ORIG = new WeakMap();
+document.querySelectorAll(".playground").forEach(pg => {
+  const ta = pg.querySelector("textarea");
+  ORIG.set(pg, ta.value);
+  pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
+  const reset = pg.querySelector('[data-action="reset"]');
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
+  const hint = pg.querySelector('[data-action="hint"]');
+  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  const sol = pg.querySelector('[data-action="solution"]');
+  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+});
+getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
+       .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
+
+// Auto-build sidebar TOC from h2 headings
+const tocEl = document.getElementById("toc");
+document.querySelectorAll("main h2").forEach(h => {
+  if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const a = document.createElement("a");
+  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
+  tocEl.appendChild(a);
+});
+const sections = document.querySelectorAll("main h2[id]");
+function updateActiveToc() {
+  let id = null;
+  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
+  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+}
+window.addEventListener("scroll", updateActiveToc, { passive: true });
+updateActiveToc();
+</script>
+</body>
+</html>

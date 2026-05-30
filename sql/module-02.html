@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 2 — Filtering &amp; Sorting · Interactive SQL Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+    --warn-bg:#fef3c7; --warn-fg:#92400e; --warn-badge:#f59e0b;
+    --ok-bg:#d1fae5; --ok-fg:#065f46;
+    --err-bg:#fee2e2; --err-fg:#991b1b;
+    --tip-bg:#ede9fe; --tip-fg:#3730a3;
+    --example-bg:#fdf4ff; --example-fg:#86198f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .nav-modules { display: flex; gap: 4px; font-size: 12px; overflow-x: auto; max-width: 60vw; }
+  .topnav .nav-modules a {
+    color: var(--text-mute); text-decoration: none; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .topnav .nav-modules a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .nav-modules a.current { background: var(--accent); color: #fff; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; max-width: 1180px; margin: 0 auto; padding: 28px 28px 80px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 20px; } .sidebar { display: none; } }
+
+  .sidebar { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; padding-right: 8px; }
+  .sidebar h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-mute); margin: 4px 0 12px 0; font-weight: 700; }
+  .sidebar a { display: block; color: var(--text-soft); text-decoration: none; padding: 6px 12px; border-left: 2px solid transparent; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .sidebar a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { min-width: 0; }
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .summary { margin-top: 14px; font-size: 15.5px; line-height: 1.6; color: rgba(255,255,255,0.94); max-width: 620px; }
+  .module-hero .meta-line { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .module-hero .meta-line strong { color: #fff; }
+
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); }
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; font-size: 0.9em;
+  }
+
+  /* Funnel */
+  .funnel-wrap { display: flex; justify-content: center; margin: 24px 0 28px; }
+  .funnel-wrap.mini { justify-content: flex-start; margin: 12px 0; }
+  .funnel { display: block; max-width: 360px; height: auto; }
+  .funnel.mini { max-width: 160px; }
+
+  /* Lesson header (mini-funnel + intro) */
+  .lesson-header { display: flex; align-items: center; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); margin-top: 36px; }
+  .lesson-header .funnel-wrap { margin: 0; flex-shrink: 0; }
+  .lesson-header .intro .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); }
+  .lesson-header .intro h2 { margin: 4px 0 6px; font-size: 22px; }
+  .lesson-header .intro p { margin: 0; font-style: italic; }
+
+  /* Code blocks (Pygments output) */
+  .highlight {
+    background: var(--code-bg) !important; color: var(--code-fg);
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55; overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    border-left: 4px solid var(--accent);
+  }
+  .highlight pre { margin: 0; background: transparent; color: inherit; }
+  .highlight .k, .highlight .kw, .highlight .kr, .highlight .kn, .highlight .kc { color: #f472b6; font-weight: 700; }
+  .highlight .nb { color: #c4b5fd; }
+  .highlight .n, .highlight .nx, .highlight .nv { color: #93c5fd; }
+  .highlight .s, .highlight .s1, .highlight .s2 { color: #fcd34d; }
+  .highlight .mi, .highlight .mf { color: #34d399; }
+  .highlight .o, .highlight .p { color: #94a3b8; }
+  .highlight .c, .highlight .c1, .highlight .cm { color: #64748b; font-style: italic; }
+
+  /* Admonitions (note, tip, warning, example) */
+  .admonition { margin: 20px 0; padding: 14px 18px; border-radius: 10px; border-left: 4px solid; font-size: 14.5px; }
+  .admonition .admonition-title { font-weight: 700; font-size: 12.5px; letter-spacing: 0.4px; text-transform: uppercase; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .admonition p { margin: 6px 0; }
+  .admonition.note { background: var(--tip-bg); color: var(--tip-fg); border-color: var(--accent); }
+  .admonition.note .admonition-title::before { content: "ℹ"; }
+  .admonition.tip { background: #ecfdf5; color: #065f46; border-color: #10b981; }
+  .admonition.tip .admonition-title::before { content: "✓"; }
+  .admonition.warning { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-badge); }
+  .admonition.warning .admonition-title::before { content: "⚠"; }
+  .admonition.danger { background: var(--err-bg); color: var(--err-fg); border-color: #ef4444; }
+  .admonition.danger .admonition-title::before { content: "✕"; }
+  .admonition.example { background: var(--example-bg); color: var(--example-fg); border-color: #c026d3; }
+  .admonition.example .admonition-title::before { content: "▶"; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin: 16px 0; }
+  th { background: var(--text); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-soft); font-size: 14px; }
+  td code { background: var(--accent-soft); padding: 1px 6px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Playground */
+  .playground { margin: 20px 0; border: 1px solid var(--border); background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .pg-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-mute); display: flex; align-items: center; justify-content: space-between; }
+  .pg-header .left { display: flex; align-items: center; gap: 10px; }
+  .pg-header .led { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.7); }
+  .pg-header .led.loading { background: #f59e0b; }
+  .pg-header .led.err { background: #ef4444; }
+  .pg-header .hint { font-size: 11px; color: var(--text-mute); font-weight: 400; }
+  .playground textarea {
+    width: 100%; background: var(--code-bg); color: var(--code-fg); border: none;
+    padding: 16px 18px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    resize: vertical; min-height: 80px; outline: none; caret-color: #a5b4fc;
+  }
+  .pg-actions { background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pg-actions .left-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn { background: #f3f4f6; color: var(--text-soft); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #e5e7eb; color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 7px 16px; font-weight: 600; }
+  .btn.primary:hover { background: #4338ca; }
+  .pg-result { border-top: 1px solid var(--border); padding: 14px 16px; background: #fafbfc; font-size: 13px; max-height: 360px; overflow: auto; }
+  .pg-result:empty { display: none; }
+  .pg-result table { width: 100%; background: #fff; }
+  .pg-result th { background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: 11.5px; }
+  .pg-result td { padding: 7px 12px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+  .pg-status { font-size: 12px; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; font-weight: 500; }
+  .pg-status.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pg-status.err { background: var(--err-bg); color: var(--err-fg); font-family: "JetBrains Mono", monospace; }
+
+  /* Module nav at bottom */
+  .module-nav { margin-top: 60px; padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .module-nav a, .module-nav span { color: var(--text-soft); text-decoration: none; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); min-width: 240px; }
+  .module-nav a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .module-nav .label { display: block; font-size: 10.5px; color: var(--text-mute); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .module-nav .title { display: block; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="index.html"><span class="dot"></span>Interactive SQL Book</a>
+  <div class="nav-modules">
+      <a href="module-01.html" class="">1. Retrieving Data</a>
+      <a href="module-02.html" class="current">2. Filtering &amp; Sorting</a>
+      <a href="module-03.html" class="">3. Aggregating Data</a>
+      <a href="module-04.html" class="">4. JOINs</a>
+      <a href="module-05.html" class="">5. Advanced SQL</a>
+      <a href="module-06.html" class="">6. Creating &amp; Modifying Tables</a>
+      <a href="module-07.html" class="">7. Conditional Expressions &amp; Views</a>
+      <a href="module-08.html" class="">8. Importing &amp; Exporting Data</a>
+      <a href="module-09.html" class="">9. PostgreSQL with Python</a>
+      <a href="module-10.html" class="">10. Capstone — Tiffinly</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>In this module</h4>
+    <div id="toc"></div>
+  </aside>
+
+  <main>
+    <div class="module-hero">
+      <div class="meta">Module 2 of 10</div>
+      <h1>Filtering &amp; Sorting</h1>
+<div class="summary">Narrow the rows you retrieve, decide what order they come back in, and cap how many you see. The three knobs that turn &#34;fetch some data&#34; into &#34;answer a question&#34;.</div>      <div class="meta-line">
+<strong>Estimated time:</strong> 75–100 minutes · <strong>Prerequisites:</strong> Module 1 complete (SELECT, DISTINCT, COUNT). dvdrental sample database loaded.      </div>
+    </div>
+
+    <h2 id="what-this-module-covers">What this module covers</h2>
+<p>Module 1 taught you to retrieve data. This module teaches you to retrieve the <em>right</em> data.</p>
+<ul>
+<li><strong>WHERE</strong> — keep only the rows that match a condition. The most-used clause after SELECT itself.</li>
+<li><strong>ORDER BY</strong> — decide what order the rows come back in. Without it, you have no guarantees.</li>
+<li><strong>LIMIT</strong> — cap how many rows you get. Pairs with ORDER BY to answer "top N" questions.</li>
+</ul>
+<h2 id="the-sql-funnel-moving-down-a-layer">The SQL funnel — moving down a layer</h2>
+<p>In Module 1 we lived entirely at the top of the funnel. Now we descend:</p>
+<div class="funnel-wrap"><svg viewBox="0 0 360 256" xmlns="http://www.w3.org/2000/svg" class="funnel "><polygon points="0.0,0 360.0,0 351.42857142857144,32 8.571428571428571,32" fill="#7cb342" fill-opacity="0.3"/><text x="180.0" y="20.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">SELECT cols (AS aliases)</text><polygon points="8.571428571428571,36 351.42857142857144,36 342.85714285714283,68 17.142857142857142,68" fill="#26a69a" fill-opacity="0.3"/><text x="180.0" y="56.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">FROM table</text><polygon points="17.142857142857142,72 342.85714285714283,72 334.2857142857143,104 25.714285714285715,104" fill="#42a5f5" fill-opacity="1.0"/><text x="180.0" y="92.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">WHERE row filter</text><polygon points="25.714285714285715,108 334.2857142857143,108 325.7142857142857,140 34.285714285714285,140" fill="#7e57c2" fill-opacity="0.3"/><text x="180.0" y="128.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">GROUP BY cols</text><polygon points="34.285714285714285,144 325.7142857142857,144 317.14285714285717,176 42.857142857142854,176" fill="#ec407a" fill-opacity="0.3"/><text x="180.0" y="164.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">HAVING group filter</text><polygon points="42.857142857142854,180 317.14285714285717,180 308.57142857142856,212 51.42857142857143,212" fill="#ff9800" fill-opacity="0.3"/><text x="180.0" y="200.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">ORDER BY cols</text><polygon points="51.42857142857143,216 308.57142857142856,216 300.0,248 60.0,248" fill="#78909c" fill-opacity="0.3"/><text x="180.0" y="236.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">LIMIT n</text></svg></div>
+
+<p>WHERE sits one layer below SELECT/FROM. ORDER BY and LIMIT are further down still — they shape the result after the rows have already been chosen. Notice how each clause does less and less work as we move down: the heavy lifting is at the top, the polish is at the bottom.</p>
+<div class="admonition note">
+<p class="admonition-title">Clause order is fixed</p>
+<p>You write SQL clauses in a specific order: SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT. Swap any two and you get a syntax error. The funnel is not just a metaphor — it is the literal order you type things.</p>
+</div>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="1.0"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-21-where">Lesson 2.1 — WHERE</h2>
+<p><em>The first filter. Keep only the rows that match a condition.</em></p>
+<h3 id="why-this-matters">Why this matters</h3>
+<p>A real database has thousands or millions of rows. You almost never want all of them. WHERE is how you say "only the rows that look like this".</p>
+<p>Every query you write past Module 1 will have a WHERE clause. Reports, dashboards, app queries, data exports — all of them filter. Master WHERE and you can answer almost any question about your data.</p>
+<h3 id="the-shape-of-a-filtered-query">The shape of a filtered query</h3>
+<p>WHERE goes immediately after FROM. The condition is anything that evaluates to true or false for each row:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">columns</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="k">table</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">condition</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>For each row in the table, SQL evaluates the condition. If true, the row stays. If false (or NULL), the row drops.</p>
+<div class="playground" data-pg-idx="0">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Try it: filter by exact match</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating FROM film WHERE rating = &#x27;G&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You get only the G-rated films. Everything else was thrown away.</p>
+<h3 id="comparison-operators">Comparison operators</h3>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>=</code></td>
+<td>equal to</td>
+<td><code>rating = 'G'</code></td>
+</tr>
+<tr>
+<td><code>&lt;&gt;</code> or <code>!=</code></td>
+<td>not equal to</td>
+<td><code>rating &lt;&gt; 'NC-17'</code></td>
+</tr>
+<tr>
+<td><code>&lt;</code></td>
+<td>less than</td>
+<td><code>length &lt; 90</code></td>
+</tr>
+<tr>
+<td><code>&gt;</code></td>
+<td>greater than</td>
+<td><code>rental_rate &gt; 2.99</code></td>
+</tr>
+<tr>
+<td><code>&lt;=</code></td>
+<td>less than or equal</td>
+<td><code>length &lt;= 100</code></td>
+</tr>
+<tr>
+<td><code>&gt;=</code></td>
+<td>greater than or equal</td>
+<td><code>rental_rate &gt;= 4.99</code></td>
+</tr>
+</tbody>
+</table>
+<div class="playground" data-pg-idx="1">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Comparison: films longer than 100 minutes</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, length FROM film WHERE length &gt; 100;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition warning">
+<p class="admonition-title">Strings use single quotes, not double</p>
+<p>In PostgreSQL, single quotes wrap a string literal. Double quotes wrap an identifier (a column or table name). Write <code>WHERE rating = 'G'</code>, not <code>WHERE rating = "G"</code> — the second form makes PostgreSQL look for a column named G and error out.</p>
+</div>
+<h3 id="combining-conditions-with-and-or-not">Combining conditions with AND, OR, NOT</h3>
+<p>A single WHERE clause can have multiple conditions glued together:</p>
+<div class="playground" data-pg-idx="2">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>AND: both must be true</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating, length FROM film
+WHERE rating = &#x27;PG&#x27; AND length &gt; 100;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="3">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>OR: either is enough</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating FROM film
+WHERE rating = &#x27;G&#x27; OR rating = &#x27;PG&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="4">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>NOT: invert the test</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating FROM film
+WHERE NOT rating = &#x27;NC-17&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition warning">
+<p class="admonition-title">AND binds tighter than OR</p>
+<p>In a chain like <code>A OR B AND C</code>, SQL reads it as <code>A OR (B AND C)</code> — not <code>(A OR B) AND C</code>. When mixing them, <strong>always use parentheses</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- ambiguous, easy to misread:</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G&#39;</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PG&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100</span><span class="w"></span>
+
+<span class="c1">-- explicit, what you almost certainly meant:</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="p">(</span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G&#39;</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PG&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100</span><span class="w"></span>
+</code></pre></div>
+
+</div>
+<h3 id="is-null-testing-for-missing-data">IS NULL — testing for missing data</h3>
+<p>Some columns can be NULL — meaning "no value recorded". You cannot test for NULL with <code>=</code>. Use <code>IS NULL</code> and <code>IS NOT NULL</code>:</p>
+<div class="playground" data-pg-idx="5">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Customers without an email</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT first_name, last_name FROM customer WHERE email IS NULL;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="6">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Customers WITH an email</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT first_name, last_name, email FROM customer WHERE email IS NOT NULL;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition danger">
+<p class="admonition-title">The NULL trap that bites everyone</p>
+<p><code>email = NULL</code> does NOT find rows where email is NULL. It returns <em>zero rows, every time</em>. The query runs without error — exactly the kind of bug that ships to production.</p>
+<p>NULL means "unknown", and asking "is unknown equal to NULL?" is itself unknown. Use <code>IS NULL</code> or <code>IS NOT NULL</code>. Always.</p>
+</div>
+<h3 id="between-range-shortcut">BETWEEN — range shortcut</h3>
+<p><code>BETWEEN a AND b</code> is a compact way to say <code>&gt;= a AND &lt;= b</code>. Both endpoints are inclusive.</p>
+<div class="playground" data-pg-idx="7">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Films priced between $1 and $3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rental_rate FROM film
+WHERE rental_rate BETWEEN 1.00 AND 3.00;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>These two queries are identical:</p>
+<div class="highlight"><pre><span></span><code><span class="k">WHERE</span><span class="w"> </span><span class="n">rental_rate</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">00</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="mi">3</span><span class="p">.</span><span class="mi">00</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">rental_rate</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">00</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">rental_rate</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">3</span><span class="p">.</span><span class="mi">00</span><span class="w"></span>
+</code></pre></div>
+
+<p>BETWEEN is clearer when the range is short and the operator chain would be repetitive. Use whichever reads better.</p>
+<div class="admonition tip">
+<p class="admonition-title">BETWEEN is inclusive on both ends</p>
+<p><code>length BETWEEN 90 AND 120</code> includes films of exactly 90 minutes AND exactly 120 minutes. If you wanted "strictly more than 90 and strictly less than 120", you need <code>length &gt; 90 AND length &lt; 120</code>.</p>
+</div>
+<h3 id="in-set-membership">IN — set membership</h3>
+<p><code>IN (a, b, c)</code> is a compact way to say <code>= a OR = b OR = c</code>. Useful when you have a known list of acceptable values.</p>
+<div class="playground" data-pg-idx="8">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Family-friendly ratings only</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating FROM film
+WHERE rating IN (&#x27;G&#x27;, &#x27;PG&#x27;);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You can negate it with <code>NOT IN</code>:</p>
+<div class="playground" data-pg-idx="9">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Everything except adult content</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating FROM film
+WHERE rating NOT IN (&#x27;NC-17&#x27;, &#x27;R&#x27;);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition warning">
+<p class="admonition-title">NOT IN and NULL — a sharp edge</p>
+<p><code>column NOT IN (a, b, NULL)</code> returns no rows. If any value in the list is NULL, the whole expression evaluates to NULL (which is not true, so the row drops).</p>
+<p>This catches everyone the first time. If your <code>NOT IN</code> list comes from a subquery, filter out NULLs first.</p>
+</div>
+<h3 id="like-pattern-matching">LIKE — pattern matching</h3>
+<p><code>LIKE</code> lets you match string patterns. Two wildcards:</p>
+<ul>
+<li><code>%</code> matches any sequence of characters (including none)</li>
+<li><code>_</code> matches exactly one character</li>
+</ul>
+<div class="playground" data-pg-idx="10">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Films whose title starts with &#x27;A&#x27;</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title FROM film WHERE title LIKE &#x27;A%&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="11">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Customers whose first name has exactly 5 letters</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT first_name FROM customer WHERE first_name LIKE &#x27;_____&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="12">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Emails containing &#x27;example&#x27;</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT email FROM customer WHERE email LIKE &#x27;%example%&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>LIKE is case-sensitive in PostgreSQL. PostgreSQL also has <code>ILIKE</code> for case-insensitive matching:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;a%&#39;</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- matches both &quot;Academy Dinosaur&quot; and &quot;ace Goldfinger&quot;</span>
+</code></pre></div>
+
+<p>To get the same effect in SQLite or other dialects, lowercase both sides explicitly:</p>
+<div class="playground" data-pg-idx="13">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Portable case-insensitive match</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title FROM film WHERE LOWER(title) LIKE &#x27;a%&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition note">
+<p class="admonition-title">ILIKE is PostgreSQL-only</p>
+<p><code>ILIKE</code> is a PostgreSQL extension. SQLite (this playground) does not recognize it. The <code>LOWER(...) LIKE '...'</code> pattern above works everywhere — slightly more verbose but fully portable across PostgreSQL, MySQL, and SQLite.</p>
+</div>
+<h3 id="common-mistakes">Common mistakes</h3>
+<h4 id="quoting-numbers">Quoting numbers</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;100&#39;</span><span class="p">;</span><span class="w">   </span><span class="c1">-- works in SQLite, breaks elsewhere</span>
+</code></pre></div>
+
+<p>Numbers do not take quotes. PostgreSQL will sometimes implicitly cast and sometimes throw a type error depending on the column type. Be explicit: <code>WHERE length = 100</code>.</p>
+<h4 id="comparing-to-null-with">Comparing to NULL with <code>=</code></h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w">   </span><span class="c1">-- always zero rows</span>
+</code></pre></div>
+
+<p>Already covered above, but it bears repeating because nobody escapes this bug once.</p>
+<h4 id="stacking-ands-when-you-mean-or">Stacking ANDs when you mean OR</h4>
+<div class="highlight"><pre><span></span><code><span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PG&#39;</span><span class="p">;</span><span class="w">   </span><span class="c1">-- no row matches both</span>
+</code></pre></div>
+
+<p>A column can only hold one value per row. <code>rating = 'G' AND rating = 'PG'</code> asks for rows where the rating is simultaneously G and PG. Use <code>OR</code> or <code>IN ('G','PG')</code>.</p>
+<h4 id="forgetting-parentheses-with-mixed-andor">Forgetting parentheses with mixed AND/OR</h4>
+<p>Covered above. AND binds tighter than OR. Add parens.</p>
+<h3 id="practice-challenges">Practice challenges</h3>
+<h4 id="challenge-211-exact-match">Challenge 2.1.1 — Exact match</h4>
+<p>Return every film with rating 'R'.</p>
+<div class="playground" data-pg-idx="14">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.1.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='One equality test in WHERE.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, rating FROM film WHERE rating = &#x27;R&#x27;;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-212-range-filter">Challenge 2.1.2 — Range filter</h4>
+<p>Return every film between 60 and 100 minutes long, inclusive.</p>
+<div class="playground" data-pg-idx="15">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.1.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='BETWEEN ... AND ... or two comparisons joined by AND.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, length FROM film WHERE length BETWEEN 60 AND 100;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-213-set-membership">Challenge 2.1.3 — Set membership</h4>
+<p>Return every customer whose first_name is one of: Aniket, Priya, Yuki.</p>
+<div class="playground" data-pg-idx="16">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.1.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='IN (..., ..., ...).'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT first_name, last_name FROM customer WHERE first_name IN (&#x27;Aniket&#x27;, &#x27;Priya&#x27;, &#x27;Yuki&#x27;);'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-214-pattern-match">Challenge 2.1.4 — Pattern match</h4>
+<p>Return every film whose title contains the word "Dinosaur".</p>
+<div class="playground" data-pg-idx="17">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.1.4</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='LIKE with % on both sides.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title FROM film WHERE title LIKE &#x27;%Dinosaur%&#x27;;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-215-bug-spotting">Challenge 2.1.5 — Bug spotting</h4>
+<p>Why does this return zero rows?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="challenge-216-combined-condition">Challenge 2.1.6 — Combined condition</h4>
+<p>Return every PG or PG-13 film longer than 90 minutes.</p>
+<div class="playground" data-pg-idx="18">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.1.6</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Two ratings (IN or OR), one length condition, and parentheses.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, rating, length FROM film WHERE rating IN (&#x27;PG&#x27;, &#x27;PG-13&#x27;) AND length &gt; 90;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions">Solutions</h3>
+<h4 id="solution-211">Solution 2.1.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;R&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-212">Solution 2.1.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Or equivalently: <code>WHERE length &gt;= 60 AND length &lt;= 100</code>.</p>
+<h4 id="solution-213">Solution 2.1.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">last_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;Aniket&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Priya&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Yuki&#39;</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-214">Solution 2.1.4</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%Dinosaur%&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The <code>%</code> on both sides matches any characters before and after — so "Academy Dinosaur" matches.</p>
+<h4 id="solution-215">Solution 2.1.5</h4>
+<p>You cannot compare to NULL with <code>=</code>. The expression <code>email = NULL</code> evaluates to NULL (unknown), not true, so the row is filtered out. Every time. Use:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-216">Solution 2.1.6</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;PG&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;PG-13&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">90</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="1.0"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-22-order-by">Lesson 2.2 — ORDER BY</h2>
+<p><em>Decide the order rows come back in. Without it, you have no guarantees.</em></p>
+<h3 id="why-this-matters_1">Why this matters</h3>
+<p>Here is a fact that surprises everyone the first time: <strong>SQL does not guarantee any row order unless you ask for one.</strong> A query may return rows in insertion order today and a different order tomorrow after the table is rebuilt. If order matters — for a report, a leaderboard, a paginated UI — you must say so.</p>
+<p>ORDER BY also pairs with LIMIT (next lesson) to answer "top N" questions: the highest-paid customer, the longest film, the most recent rental.</p>
+<h3 id="basic-syntax">Basic syntax</h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">columns</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="k">table</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">condition</span><span class="w">           </span><span class="c1">-- optional</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">column</span><span class="w"> </span><span class="p">[</span><span class="k">ASC</span><span class="o">|</span><span class="k">DESC</span><span class="p">];</span><span class="w"></span>
+</code></pre></div>
+
+<p>ORDER BY sits below WHERE in the funnel — it works on rows that have already been filtered.</p>
+<div class="playground" data-pg-idx="19">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Films ordered shortest to longest</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, length FROM film ORDER BY length;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Default direction is <code>ASC</code> (ascending — smallest first, A first, oldest first). Add <code>DESC</code> to flip it.</p>
+<div class="playground" data-pg-idx="20">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Longest films first</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, length FROM film ORDER BY length DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="sorting-by-multiple-columns">Sorting by multiple columns</h3>
+<p>When you list two or more columns, SQL sorts by the first, then breaks ties using the second, then the third, etc.</p>
+<div class="playground" data-pg-idx="21">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>By rating, then by length within each rating</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating, length FROM film
+ORDER BY rating, length DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>ASC</code>/<code>DESC</code> applies per column — here rating is ascending alphabetically, but within each rating group, length is descending.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tiebreakers matter for pagination</p>
+<p>If you are paginating results (page 1, page 2, page 3...), order by enough columns to make ties impossible. If two rows have the same value in your sort column and ties are not broken, those rows can appear on different pages between requests — or both, or neither.</p>
+<p>A common pattern: <code>ORDER BY created_at DESC, id DESC</code> — most-recent first, with <code>id</code> as a deterministic tiebreaker.</p>
+</div>
+<h3 id="sorting-by-an-expression">Sorting by an expression</h3>
+<p>You are not limited to sorting by raw columns. Any expression works:</p>
+<div class="playground" data-pg-idx="22">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Sort by total payment value (per row)</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT customer_id, amount, payment_date FROM payment
+ORDER BY amount DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="23">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Sort by an alias defined in SELECT</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, length AS minutes FROM film
+ORDER BY minutes DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You can also sort by column <em>position</em> — <code>ORDER BY 2</code> means "the second column in SELECT". It works, but avoid it: rearranging the SELECT list silently changes the sort.</p>
+<h3 id="null-handling">NULL handling</h3>
+<p>NULLs sort to one end of the result. PostgreSQL puts them last by default in ascending order, first in descending. You can override this with <code>NULLS FIRST</code> or <code>NULLS LAST</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="n">NULLS</span><span class="w"> </span><span class="k">LAST</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<div class="admonition note">
+<p class="admonition-title">SQLite vs PostgreSQL on NULL ordering</p>
+<p>SQLite (this playground) puts NULLs first in ascending order — opposite of PostgreSQL. If consistent NULL placement matters, always be explicit with <code>NULLS FIRST</code> / <code>NULLS LAST</code> on PostgreSQL.</p>
+</div>
+<h3 id="common-mistakes_1">Common mistakes</h3>
+<h4 id="assuming-insertion-order">Assuming insertion order</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w">   </span><span class="c1">-- looks ordered by film_id, but no guarantee</span>
+</code></pre></div>
+
+<p>The rows look ordered today. They may not be tomorrow. If the order matters, write <code>ORDER BY film_id</code> explicitly.</p>
+<h4 id="sorting-after-limiting">Sorting after limiting</h4>
+<p>ORDER BY runs <em>before</em> LIMIT (the funnel shows this — ORDER BY is above LIMIT). If you LIMIT first and then ORDER BY in your application, you get a random subset sorted, not the <em>top</em> subset.</p>
+<h4 id="desc-applies-only-to-the-column-it-follows">DESC applies only to the column it follows</h4>
+<div class="highlight"><pre><span></span><code><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w">   </span><span class="c1">-- rating ascending, length descending</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">DESC</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="p">;</span><span class="w">   </span><span class="c1">-- rating descending, length ascending</span>
+</code></pre></div>
+
+<p>Each column has its own direction. If you want both descending, say so: <code>ORDER BY rating DESC, length DESC</code>.</p>
+<h3 id="practice-challenges_1">Practice challenges</h3>
+<h4 id="challenge-221-simple-sort">Challenge 2.2.1 — Simple sort</h4>
+<p>Return every film's title and length, longest first.</p>
+<div class="playground" data-pg-idx="24">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.2.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ORDER BY length DESC.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, length FROM film ORDER BY length DESC;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-222-two-column-sort">Challenge 2.2.2 — Two-column sort</h4>
+<p>Return every customer sorted by last_name, then first_name.</p>
+<div class="playground" data-pg-idx="25">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.2.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ORDER BY column_1, column_2.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT first_name, last_name FROM customer ORDER BY last_name, first_name;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-223-filter-then-sort">Challenge 2.2.3 — Filter, then sort</h4>
+<p>Return every PG or G-rated film, sorted from longest to shortest.</p>
+<div class="playground" data-pg-idx="26">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.2.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='WHERE comes before ORDER BY in the syntax.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, rating, length FROM film WHERE rating IN (&#x27;G&#x27;, &#x27;PG&#x27;) ORDER BY length DESC;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-224-code-review">Challenge 2.2.4 — Code review</h4>
+<p>Will this return PG-13 films sorted by length descending? If not, fix it.</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">DESC</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PG-13&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions_1">Solutions</h3>
+<h4 id="solution-221">Solution 2.2.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-222">Solution 2.2.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">last_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">last_name</span><span class="p">,</span><span class="w"> </span><span class="n">first_name</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-223">Solution 2.2.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;G&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;PG&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-224">Solution 2.2.4</h4>
+<p>It will not run — <code>ORDER BY</code> must come <em>after</em> WHERE, not before. Fix:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PG-13&#39;</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Clause order is fixed: SELECT, FROM, WHERE, ORDER BY, LIMIT.</p>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="1.0"/></svg></div>
+
+<h2 id="lesson-23-limit">Lesson 2.3 — LIMIT</h2>
+<p><em>Cap how many rows you get. Pairs with ORDER BY for "top N" questions.</em></p>
+<h3 id="why-this-matters_2">Why this matters</h3>
+<p>LIMIT is the simplest clause in SQL and one of the most useful. Three reasons you reach for it constantly:</p>
+<ul>
+<li><strong>Exploration</strong> — peek at the first few rows of an unfamiliar table without dumping thousands of rows into the console.</li>
+<li><strong>Top N</strong> — get the 5 longest films, the 10 newest customers, the 3 biggest payments. Always ORDER BY + LIMIT.</li>
+<li><strong>Pagination</strong> — show 25 results per page. LIMIT + OFFSET is the building block of every "Page 1 of 47" UI you have ever seen.</li>
+</ul>
+<h3 id="basic-syntax_1">Basic syntax</h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">columns</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="k">table</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">condition</span><span class="w">           </span><span class="c1">-- optional</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">column</span><span class="w">           </span><span class="c1">-- optional, but usually you want it</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="n">n</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<div class="playground" data-pg-idx="27">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Peek at the first 3 films</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title FROM film LIMIT 3;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Without ORDER BY, "first 3" is whatever 3 SQLite happens to return — same caveat as in Lesson 2.2. Useful for exploration, dangerous for reports.</p>
+<h3 id="the-top-n-pattern">The "top N" pattern</h3>
+<p>LIMIT shines when paired with ORDER BY. This is the single most common SQL pattern in business reporting:</p>
+<div class="playground" data-pg-idx="28">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Top 5 longest films</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, length FROM film
+ORDER BY length DESC
+LIMIT 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Read it left to right: filter (none here), sort longest-first, keep the top 5. You can answer "highest", "lowest", "newest", "oldest", "biggest", "smallest" — any superlative — with ORDER BY + LIMIT.</p>
+<div class="playground" data-pg-idx="29">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>3 customers who paid the most</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT customer_id, amount FROM payment
+ORDER BY amount DESC
+LIMIT 3;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="pagination-with-offset">Pagination with OFFSET</h3>
+<p>LIMIT can be paired with OFFSET to skip the first N rows. Page 1 starts at offset 0, page 2 at offset 25, page 3 at offset 50, etc.</p>
+<div class="playground" data-pg-idx="30">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Films 6–10 by length</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, length FROM film
+ORDER BY length DESC
+LIMIT 5 OFFSET 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition warning">
+<p class="admonition-title">Pagination needs a stable sort</p>
+<p>If your ORDER BY has ties, OFFSET-based pagination breaks: a row can appear on two pages, or no page. Always sort by enough columns that no two rows tie. A unique column like <code>id</code> as the final tiebreaker is usually enough.</p>
+</div>
+<h3 id="common-mistakes_2">Common mistakes</h3>
+<h4 id="limit-without-order-by">LIMIT without ORDER BY</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">   </span><span class="c1">-- five arbitrary rows</span>
+</code></pre></div>
+
+<p>Fine for exploration. Wrong for anything a user will see. If you mean "the 5 newest" or "5 random", say so with ORDER BY.</p>
+<h4 id="limit-before-order-by">LIMIT before ORDER BY</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w">   </span><span class="c1">-- syntax error</span>
+</code></pre></div>
+
+<p>Clause order is fixed. ORDER BY comes first, LIMIT last.</p>
+<h4 id="using-limit-for-aggregation">Using LIMIT for aggregation</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">   </span><span class="c1">-- the LIMIT does nothing useful</span>
+</code></pre></div>
+
+<p>COUNT already returns one row. Adding LIMIT 1 is harmless but reveals a misunderstanding of what COUNT does. (It is also a hint that you might want <code>LIMIT 5</code> on a query <em>before</em> the COUNT — i.e., "count the top 5", which needs a subquery, not a bare LIMIT.)</p>
+<h4 id="confusing-limit-with-top">Confusing LIMIT with TOP</h4>
+<p><code>LIMIT n</code> is the PostgreSQL/MySQL/SQLite syntax. <code>SELECT TOP n</code> is SQL Server's. <code>FETCH FIRST n ROWS ONLY</code> is the SQL-standard syntax. They all do the same thing. PostgreSQL accepts both LIMIT and FETCH FIRST.</p>
+<h3 id="practice-challenges_2">Practice challenges</h3>
+<h4 id="challenge-231-quick-peek">Challenge 2.3.1 — Quick peek</h4>
+<p>Return any 3 rows from the customer table.</p>
+<div class="playground" data-pg-idx="31">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.3.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='LIMIT 3.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT * FROM customer LIMIT 3;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-232-top-n">Challenge 2.3.2 — Top N</h4>
+<p>Return the 3 most expensive films by replacement_cost.</p>
+<div class="playground" data-pg-idx="32">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.3.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ORDER BY replacement_cost DESC, then LIMIT 3.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, replacement_cost FROM film ORDER BY replacement_cost DESC LIMIT 3;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-233-bottom-n">Challenge 2.3.3 — Bottom N</h4>
+<p>Return the 3 <em>shortest</em> films.</p>
+<div class="playground" data-pg-idx="33">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.3.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ORDER BY length ASC (or just ORDER BY length) and LIMIT 3.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, length FROM film ORDER BY length LIMIT 3;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-234-pagination">Challenge 2.3.4 — Pagination</h4>
+<p>Return rows 4–6 of films sorted by title alphabetically.</p>
+<div class="playground" data-pg-idx="34">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.3.4</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='OFFSET 3 to skip the first 3, then LIMIT 3.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title FROM film ORDER BY title LIMIT 3 OFFSET 3;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-235-combined-module-review">Challenge 2.3.5 — Combined module review</h4>
+<p>Return the top 3 PG-rated films by length (longest first), showing only title and length.</p>
+<div class="playground" data-pg-idx="35">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 2.3.5</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='WHERE rating = &#x27;PG&#x27;, ORDER BY length DESC, LIMIT 3.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, length FROM film WHERE rating = &#x27;PG&#x27; ORDER BY length DESC LIMIT 3;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_2">Solutions</h3>
+<h4 id="solution-231">Solution 2.3.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-232">Solution 2.3.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">replacement_cost</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">replacement_cost</span><span class="w"> </span><span class="k">DESC</span><span class="w"></span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-233">Solution 2.3.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="w"></span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-234">Solution 2.3.4</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">title</span><span class="w"></span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="k">OFFSET</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>OFFSET 3 skips the first 3 rows; LIMIT 3 returns the next 3 — so rows 4, 5, 6.</p>
+<h4 id="solution-235">Solution 2.3.5</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PG&#39;</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">DESC</span><span class="w"></span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>This one query exercises everything in Module 2: a WHERE filter, a multi-direction ORDER BY, and a LIMIT cap. From here on, almost every real query you write follows this same skeleton.</p>
+<hr />
+<h2 id="whats-next">What's next</h2>
+<p>You can now filter, sort, and cap. Module 3 introduces <strong>GROUP BY and aggregations</strong> — the move from "give me rows" to "give me totals, averages, and counts per group". That is where SQL stops feeling like a query language and starts feeling like an analytics tool.</p>
+
+    <div class="module-nav">
+        <a href="module-01.html"><span class="label">← Previous · Module 1</span><span class="title">Retrieving Data</span></a>
+        <a href="module-03.html"><span class="label">Next · Module 3 →</span><span class="title">Aggregating Data</span></a>
+    </div>
+  </main>
+</div>
+
+<script>
+const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
+let dbPromise = null;
+function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+async function getDb() {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const SQL = await initSqlJs({ locateFile: f => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f });
+      const db = new SQL.Database();
+      db.exec(SEED_SQL);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+function renderResult(el, columns, rows, msg) {
+  let html = "";
+  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
+  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
+  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
+  html += "</tbody></table>";
+  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
+  el.innerHTML = html;
+}
+async function runQuery(pg) {
+  const led = pg.querySelector(".led");
+  const ta = pg.querySelector("textarea");
+  const result = pg.querySelector(".pg-result");
+  const sql = ta.value.trim();
+  if (!sql) { result.innerHTML = ""; return; }
+  led.classList.add("loading");
+  try {
+    const db = await getDb();
+    const out = db.exec(sql);
+    if (out.length === 0) renderResult(result, null, null, "Statement executed");
+    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    led.classList.remove("loading","err");
+  } catch (e) {
+    led.classList.remove("loading"); led.classList.add("err");
+    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+const ORIG = new WeakMap();
+document.querySelectorAll(".playground").forEach(pg => {
+  const ta = pg.querySelector("textarea");
+  ORIG.set(pg, ta.value);
+  pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
+  const reset = pg.querySelector('[data-action="reset"]');
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
+  const hint = pg.querySelector('[data-action="hint"]');
+  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  const sol = pg.querySelector('[data-action="solution"]');
+  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+});
+getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
+       .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
+
+// Auto-build sidebar TOC from h2 headings
+const tocEl = document.getElementById("toc");
+document.querySelectorAll("main h2").forEach(h => {
+  if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const a = document.createElement("a");
+  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
+  tocEl.appendChild(a);
+});
+const sections = document.querySelectorAll("main h2[id]");
+function updateActiveToc() {
+  let id = null;
+  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
+  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+}
+window.addEventListener("scroll", updateActiveToc, { passive: true });
+updateActiveToc();
+</script>
+</body>
+</html>

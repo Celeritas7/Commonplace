@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 8 — Importing &amp; Exporting Data · Interactive SQL Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+    --warn-bg:#fef3c7; --warn-fg:#92400e; --warn-badge:#f59e0b;
+    --ok-bg:#d1fae5; --ok-fg:#065f46;
+    --err-bg:#fee2e2; --err-fg:#991b1b;
+    --tip-bg:#ede9fe; --tip-fg:#3730a3;
+    --example-bg:#fdf4ff; --example-fg:#86198f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .nav-modules { display: flex; gap: 4px; font-size: 12px; overflow-x: auto; max-width: 60vw; }
+  .topnav .nav-modules a {
+    color: var(--text-mute); text-decoration: none; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .topnav .nav-modules a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .nav-modules a.current { background: var(--accent); color: #fff; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; max-width: 1180px; margin: 0 auto; padding: 28px 28px 80px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 20px; } .sidebar { display: none; } }
+
+  .sidebar { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; padding-right: 8px; }
+  .sidebar h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-mute); margin: 4px 0 12px 0; font-weight: 700; }
+  .sidebar a { display: block; color: var(--text-soft); text-decoration: none; padding: 6px 12px; border-left: 2px solid transparent; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .sidebar a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { min-width: 0; }
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .summary { margin-top: 14px; font-size: 15.5px; line-height: 1.6; color: rgba(255,255,255,0.94); max-width: 620px; }
+  .module-hero .meta-line { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .module-hero .meta-line strong { color: #fff; }
+
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); }
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; font-size: 0.9em;
+  }
+
+  /* Funnel */
+  .funnel-wrap { display: flex; justify-content: center; margin: 24px 0 28px; }
+  .funnel-wrap.mini { justify-content: flex-start; margin: 12px 0; }
+  .funnel { display: block; max-width: 360px; height: auto; }
+  .funnel.mini { max-width: 160px; }
+
+  /* Lesson header (mini-funnel + intro) */
+  .lesson-header { display: flex; align-items: center; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); margin-top: 36px; }
+  .lesson-header .funnel-wrap { margin: 0; flex-shrink: 0; }
+  .lesson-header .intro .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); }
+  .lesson-header .intro h2 { margin: 4px 0 6px; font-size: 22px; }
+  .lesson-header .intro p { margin: 0; font-style: italic; }
+
+  /* Code blocks (Pygments output) */
+  .highlight {
+    background: var(--code-bg) !important; color: var(--code-fg);
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55; overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    border-left: 4px solid var(--accent);
+  }
+  .highlight pre { margin: 0; background: transparent; color: inherit; }
+  .highlight .k, .highlight .kw, .highlight .kr, .highlight .kn, .highlight .kc { color: #f472b6; font-weight: 700; }
+  .highlight .nb { color: #c4b5fd; }
+  .highlight .n, .highlight .nx, .highlight .nv { color: #93c5fd; }
+  .highlight .s, .highlight .s1, .highlight .s2 { color: #fcd34d; }
+  .highlight .mi, .highlight .mf { color: #34d399; }
+  .highlight .o, .highlight .p { color: #94a3b8; }
+  .highlight .c, .highlight .c1, .highlight .cm { color: #64748b; font-style: italic; }
+
+  /* Admonitions (note, tip, warning, example) */
+  .admonition { margin: 20px 0; padding: 14px 18px; border-radius: 10px; border-left: 4px solid; font-size: 14.5px; }
+  .admonition .admonition-title { font-weight: 700; font-size: 12.5px; letter-spacing: 0.4px; text-transform: uppercase; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .admonition p { margin: 6px 0; }
+  .admonition.note { background: var(--tip-bg); color: var(--tip-fg); border-color: var(--accent); }
+  .admonition.note .admonition-title::before { content: "ℹ"; }
+  .admonition.tip { background: #ecfdf5; color: #065f46; border-color: #10b981; }
+  .admonition.tip .admonition-title::before { content: "✓"; }
+  .admonition.warning { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-badge); }
+  .admonition.warning .admonition-title::before { content: "⚠"; }
+  .admonition.danger { background: var(--err-bg); color: var(--err-fg); border-color: #ef4444; }
+  .admonition.danger .admonition-title::before { content: "✕"; }
+  .admonition.example { background: var(--example-bg); color: var(--example-fg); border-color: #c026d3; }
+  .admonition.example .admonition-title::before { content: "▶"; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin: 16px 0; }
+  th { background: var(--text); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-soft); font-size: 14px; }
+  td code { background: var(--accent-soft); padding: 1px 6px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Playground */
+  .playground { margin: 20px 0; border: 1px solid var(--border); background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .pg-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-mute); display: flex; align-items: center; justify-content: space-between; }
+  .pg-header .left { display: flex; align-items: center; gap: 10px; }
+  .pg-header .led { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.7); }
+  .pg-header .led.loading { background: #f59e0b; }
+  .pg-header .led.err { background: #ef4444; }
+  .pg-header .hint { font-size: 11px; color: var(--text-mute); font-weight: 400; }
+  .playground textarea {
+    width: 100%; background: var(--code-bg); color: var(--code-fg); border: none;
+    padding: 16px 18px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    resize: vertical; min-height: 80px; outline: none; caret-color: #a5b4fc;
+  }
+  .pg-actions { background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pg-actions .left-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn { background: #f3f4f6; color: var(--text-soft); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #e5e7eb; color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 7px 16px; font-weight: 600; }
+  .btn.primary:hover { background: #4338ca; }
+  .pg-result { border-top: 1px solid var(--border); padding: 14px 16px; background: #fafbfc; font-size: 13px; max-height: 360px; overflow: auto; }
+  .pg-result:empty { display: none; }
+  .pg-result table { width: 100%; background: #fff; }
+  .pg-result th { background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: 11.5px; }
+  .pg-result td { padding: 7px 12px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+  .pg-status { font-size: 12px; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; font-weight: 500; }
+  .pg-status.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pg-status.err { background: var(--err-bg); color: var(--err-fg); font-family: "JetBrains Mono", monospace; }
+
+  /* Module nav at bottom */
+  .module-nav { margin-top: 60px; padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .module-nav a, .module-nav span { color: var(--text-soft); text-decoration: none; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); min-width: 240px; }
+  .module-nav a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .module-nav .label { display: block; font-size: 10.5px; color: var(--text-mute); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .module-nav .title { display: block; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="index.html"><span class="dot"></span>Interactive SQL Book</a>
+  <div class="nav-modules">
+      <a href="module-01.html" class="">1. Retrieving Data</a>
+      <a href="module-02.html" class="">2. Filtering &amp; Sorting</a>
+      <a href="module-03.html" class="">3. Aggregating Data</a>
+      <a href="module-04.html" class="">4. JOINs</a>
+      <a href="module-05.html" class="">5. Advanced SQL</a>
+      <a href="module-06.html" class="">6. Creating &amp; Modifying Tables</a>
+      <a href="module-07.html" class="">7. Conditional Expressions &amp; Views</a>
+      <a href="module-08.html" class="current">8. Importing &amp; Exporting Data</a>
+      <a href="module-09.html" class="">9. PostgreSQL with Python</a>
+      <a href="module-10.html" class="">10. Capstone — Tiffinly</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>In this module</h4>
+    <div id="toc"></div>
+  </aside>
+
+  <main>
+    <div class="module-hero">
+      <div class="meta">Module 8 of 10</div>
+      <h1>Importing &amp; Exporting Data</h1>
+<div class="summary">Getting data into and out of a database. CSVs you receive from elsewhere, exports for analysts who don&#39;t speak SQL, the routine data hygiene that comes with both.</div>      <div class="meta-line">
+<strong>Estimated time:</strong> 75–100 minutes · <strong>Prerequisites:</strong> Modules 1–7 complete. Comfort with CREATE TABLE, INSERT, UPDATE, and CAST.      </div>
+    </div>
+
+    <h2 id="what-this-module-covers">What this module covers</h2>
+<p>A surprising fraction of working SQL is getting data <em>in</em> and <em>out</em> of the database, not querying what is already there. CSVs from spreadsheets, exports for the marketing team, dumps for backup, JSON from APIs — every database has interfaces with the outside world. This module covers the routine ones.</p>
+<ul>
+<li><strong>Importing CSVs</strong> — loading external files into tables. The <code>COPY</code> family (PostgreSQL) and the <code>.import</code> mechanism (SQLite).</li>
+<li><strong>Exporting data</strong> — getting query results out as CSV, for downstream tools or non-SQL audiences.</li>
+<li><strong>Cleaning what arrives</strong> — real-world CSVs are messy. Type mismatches, NULL sentinels, encoding gotchas, duplicates. Standard patterns for fixing them.</li>
+</ul>
+<h2 id="a-note-on-what-you-can-run-in-this-module">A note on what you can run in this module</h2>
+<p>Most of Modules 1–7 ran every example against the in-page playground. This module is different: <strong>file-based import and export inherently need a real file system</strong>, and our in-browser SQLite has none.</p>
+<p>So some examples are display-only (<code>sql</code> code blocks) — the canonical PostgreSQL syntax you would type into pgAdmin or <code>psql</code>. Other examples are playground-runnable — they simulate the import by using INSERT, then exercise the same cleaning and exporting patterns you would use on real loaded data. Each block is marked.</p>
+<div class="admonition note">
+<p class="admonition-title">Funnel takes a break again</p>
+<p>Like Module 6 (DDL), this module is mostly outside the SELECT funnel. Importing and exporting are <em>administrative</em> operations — they touch the boundary between the database and the outside world. The funnel returns in Module 9.</p>
+</div>
+<hr />
+<h2 id="lesson-81-importing-data">Lesson 8.1 — Importing data</h2>
+<p><em>Getting a CSV into a table. The first 10 minutes of most analytics projects.</em></p>
+<h3 id="the-shape-of-an-import">The shape of an import</h3>
+<p>Every import has the same three steps, regardless of database:</p>
+<ol>
+<li><strong>Create the destination table</strong> — define the columns and types</li>
+<li><strong>Load the file</strong> — point the database at the CSV; it fills the table</li>
+<li><strong>Validate</strong> — run a few sanity SELECTs to make sure types parsed and row counts match</li>
+</ol>
+<p>Step 2 is where the dialects differ.</p>
+<h3 id="postgresql-the-copy-command">PostgreSQL — the <code>COPY</code> command</h3>
+<p>The standard PostgreSQL import is the <code>COPY</code> command:</p>
+<div class="highlight"><pre><span></span><code><span class="k">COPY</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="p">,</span><span class="w"> </span><span class="n">category</span><span class="p">)</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="s1">&#39;/absolute/path/to/products.csv&#39;</span><span class="w"></span>
+<span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">FORMAT</span><span class="w"> </span><span class="n">csv</span><span class="p">,</span><span class="w"> </span><span class="n">HEADER</span><span class="w"> </span><span class="k">true</span><span class="p">,</span><span class="w"> </span><span class="k">DELIMITER</span><span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<p>Reading left to right:
+- <code>COPY product (cols...)</code> — which table and columns we are filling
+- <code>FROM '/path/to/file.csv'</code> — the file path, <em>as seen by the PostgreSQL server</em> (not your laptop). This is the source of most COPY confusion.
+- <code>WITH (...)</code> — options. <code>HEADER true</code> skips the first line, <code>DELIMITER</code> is comma by default, <code>NULL 'NULL'</code> sets which string means NULL.</p>
+<p>If the file is on your laptop and PostgreSQL is on a remote server, <code>COPY</code> cannot reach it. The fix is <code>\copy</code> — see below.</p>
+<h3 id="postgresql-copy-in-psql">PostgreSQL — <code>\copy</code> in psql</h3>
+<p><code>\copy</code> is a meta-command inside the <code>psql</code> client. Same syntax minus a backslash, but the file path is resolved on <em>your</em> machine:</p>
+<div class="highlight"><pre><span></span><code>\copy product (id, name, price, category) FROM &#39;products.csv&#39; CSV HEADER
+</code></pre></div>
+
+<p>This is what you'll actually use 90% of the time. <code>COPY</code> (no backslash) is for files already on the database server — typically only true for self-hosted databases or specific data-pipeline setups.</p>
+<h3 id="pgadmin-the-gui-route">pgAdmin — the GUI route</h3>
+<p>For one-off imports, the pgAdmin GUI is friendly: right-click a table, choose <strong>Import/Export Data</strong>, point at a CSV, tick "Header", click OK. Under the hood it generates a <code>\copy</code> and runs it. Useful when you forget the exact syntax.</p>
+<h3 id="sqlite-import">SQLite — <code>.import</code></h3>
+<p>SQLite's command-line tool has its own meta-command:</p>
+<div class="highlight"><pre><span></span><code>.mode csv
+.import &#39;products.csv&#39; product
+</code></pre></div>
+
+<p>Different syntax, same idea: tell SQLite to read a CSV and route it into the <code>product</code> table.</p>
+<h3 id="what-the-playground-can-do">What the playground can do</h3>
+<p>Our in-browser SQLite has no file system. To exercise import workflows here, we simulate "loading" by INSERTing rows directly. The cleaning techniques in Lesson 8.3 work identically whether the rows arrived via COPY or INSERT.</p>
+<div class="playground" data-pg-idx="0">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Simulate loading a CSV via INSERTs</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">DROP TABLE IF EXISTS product_import;
+CREATE TABLE product_import (
+  id        INTEGER PRIMARY KEY,
+  name      TEXT,
+  price     TEXT,           -- deliberately TEXT to mirror messy CSV loads
+  category  TEXT,
+  added_on  TEXT
+);
+INSERT INTO product_import VALUES
+  (1, &#x27;  Notebook  &#x27;,     &#x27;4.99&#x27;,      &#x27;Stationery&#x27;,   &#x27;2024-05-30&#x27;),
+  (2, &#x27;Pen&#x27;,              &#x27;1.25&#x27;,      &#x27;stationery&#x27;,   &#x27;2024-05-30&#x27;),
+  (3, &#x27;Mouse pad&#x27;,        &#x27;8.50&#x27;,      &#x27;Electronics&#x27;,  &#x27;2024-05-31&#x27;),
+  (4, &#x27;Coffee mug&#x27;,       &#x27;6.00&#x27;,      &#x27;KITCHEN&#x27;,      &#x27;2024-05-31&#x27;),
+  (5, &#x27;Headphones&#x27;,       &#x27;NULL&#x27;,      &#x27;electronics&#x27;,  &#x27;2024-06-01&#x27;),
+  (6, &#x27;Stapler&#x27;,          &#x27;12.0&#x27;,      &#x27;stationery&#x27;,   &#x27;&#x27;),
+  (7, &#x27;Headphones&#x27;,       &#x27;49.99&#x27;,     &#x27;Electronics&#x27;,  &#x27;2024-06-01&#x27;);   -- duplicate name
+SELECT * FROM product_import;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>This <code>product_import</code> table now has the kind of mess a real CSV produces — leading whitespace, inconsistent casing, a string <code>'NULL'</code> instead of an actual NULL, an empty string in a date column, a duplicate row.</p>
+<p>We'll clean it in Lesson 8.3.</p>
+<h3 id="common-import-pitfalls">Common import pitfalls</h3>
+<h4 id="wrong-file-path">Wrong file path</h4>
+<p><code>COPY ... FROM '/data/products.csv'</code> is the server's view of the file. If <code>psql</code> is on your laptop and PostgreSQL is on a remote host, the server has no file called <code>/data/products.csv</code> and the command fails with "could not open file". Use <code>\copy</code> instead.</p>
+<h4 id="null-representation">NULL representation</h4>
+<p>CSVs encode NULL in many ways: empty string, <code>NULL</code>, <code>\N</code>, <code>NA</code>, <code>None</code>. PostgreSQL defaults to treating empty strings as the NULL marker, but if your file uses <code>NULL</code> (literal text), you need <code>WITH (NULL 'NULL')</code>.</p>
+<h4 id="encoding">Encoding</h4>
+<p>A file with non-ASCII characters (accented names, emoji, Japanese, etc.) saved as Windows-1252 will load with garbled characters into a UTF-8 database. Always save CSVs as UTF-8 and tell <code>COPY</code> so: <code>WITH (FORMAT csv, ENCODING 'UTF8')</code>.</p>
+<h4 id="header-column-count-vs-declared-column-count">Header column count vs declared column count</h4>
+<p><code>COPY product (id, name, price)</code> expects three columns per row. A CSV header with four columns will cause every row to error. Check the column list matches the file.</p>
+<h4 id="types-loose-enough-to-swallow-garbage">Types loose enough to swallow garbage</h4>
+<p>If you create the table with all <code>TEXT</code> columns, the import will probably succeed — but you have just loaded a table of strings, including "4.99" instead of 4.99. Cleaning becomes Lesson 8.3.</p>
+<h3 id="practice-challenges">Practice challenges</h3>
+<h4 id="challenge-811-simulated-load">Challenge 8.1.1 — Simulated load</h4>
+<p>Drop <code>product_import</code> if it exists, create it again with the schema from the example above, and load 3 rows of your own data.</p>
+<div class="playground" data-pg-idx="1">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 8.1.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='DROP TABLE IF EXISTS, CREATE TABLE, then INSERT 3 rows.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='DROP TABLE IF EXISTS product_import; CREATE TABLE product_import (id INTEGER PRIMARY KEY, name TEXT, price TEXT, category TEXT, added_on TEXT); INSERT INTO product_import VALUES (1, &#x27;Apple&#x27;, &#x27;1.00&#x27;, &#x27;fruit&#x27;, &#x27;2024-06-15&#x27;), (2, &#x27;Banana&#x27;, &#x27;0.50&#x27;, &#x27;fruit&#x27;, &#x27;2024-06-15&#x27;), (3, &#x27;Cherry&#x27;, &#x27;3.00&#x27;, &#x27;fruit&#x27;, &#x27;2024-06-15&#x27;);'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-812-row-count">Challenge 8.1.2 — Row count</h4>
+<p>How many rows did the import bring in?</p>
+<div class="playground" data-pg-idx="2">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 8.1.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT COUNT(*) FROM product_import.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT COUNT(*) AS row_count FROM product_import;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-813-concept-check">Challenge 8.1.3 — Concept check</h4>
+<p>You receive a CSV with 100,000 rows. You CREATE TABLE correctly and run <code>COPY</code>, but only 1,000 rows show up. The COPY did not error. What is the most likely cause?</p>
+<h3 id="solutions">Solutions</h3>
+<h4 id="solution-811">Solution 8.1.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">product_import</span><span class="p">;</span><span class="w"></span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product_import</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w">        </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w">      </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">price</span><span class="w">     </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">category</span><span class="w">  </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">added_on</span><span class="w">  </span><span class="nb">TEXT</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">product_import</span><span class="w"> </span><span class="k">VALUES</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w">  </span><span class="s1">&#39;1.00&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;fruit&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-06-15&#39;</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;0.50&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;fruit&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-06-15&#39;</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Cherry&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;3.00&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;fruit&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-06-15&#39;</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-812">Solution 8.1.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">row_count</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product_import</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-813">Solution 8.1.3</h4>
+<p>The most likely cause is <strong>a column count mismatch on a single line that COPY treated as a CSV quoting issue</strong>, causing it to consume the next 99,000 lines as one giant quoted string. Or your COPY ran against a different table from what you think. Always run a <code>SELECT COUNT(*)</code> immediately after every import and compare to the line count of the source file (<code>wc -l products.csv</code> on Mac/Linux). The two should match within 1 (the header).</p>
+<hr />
+<h2 id="lesson-82-exporting-data">Lesson 8.2 — Exporting data</h2>
+<p><em>Getting the result of a query out as a file. The reverse of import, with mostly the same syntax.</em></p>
+<h3 id="why-export">Why export</h3>
+<p>Three common needs:</p>
+<ul>
+<li><strong>Hand off to non-SQL audiences</strong> — your boss wants the data in Excel; your marketing colleague wants a CSV they can drop into a dashboard tool.</li>
+<li><strong>Pipeline output</strong> — your job is the SQL stage of a larger workflow; downstream tools (Python, R, Tableau) consume your CSV.</li>
+<li><strong>Backups and snapshots</strong> — periodically dump a table for archival.</li>
+</ul>
+<h3 id="postgresql-copy-to">PostgreSQL — <code>COPY ... TO</code></h3>
+<p>The reverse of <code>COPY ... FROM</code>. Pick a query, pick a destination file:</p>
+<div class="highlight"><pre><span></span><code><span class="k">COPY</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+<span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="s1">&#39;/path/to/expensive_products.csv&#39;</span><span class="w"></span>
+<span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">FORMAT</span><span class="w"> </span><span class="n">csv</span><span class="p">,</span><span class="w"> </span><span class="n">HEADER</span><span class="w"> </span><span class="k">true</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<p>Same caveats as import: the path is the <em>server's</em> view of the file system. For files on your laptop, use <code>\copy</code> in psql:</p>
+<div class="highlight"><pre><span></span><code>\copy (SELECT id, name, price FROM product WHERE price &gt; 5) TO &#39;expensive.csv&#39; CSV HEADER
+</code></pre></div>
+
+<h3 id="quick-output-to-your-own-screen">Quick output to your own screen</h3>
+<p>Sometimes you just want to see the query result in a way you can copy/paste. In psql:</p>
+<div class="highlight"><pre><span></span><code>\pset format csv
+SELECT id, name, price FROM product WHERE price &gt; 5;
+</code></pre></div>
+
+<p>Outputs CSV directly to the terminal. Paste it into Excel or send it. No file involved.</p>
+<h3 id="pg_dump-exporting-whole-tables-or-databases">pg_dump — exporting whole tables or databases</h3>
+<p>For backups and migrations, <code>pg_dump</code> is the workhorse. Run it from the shell, not from SQL:</p>
+<div class="highlight"><pre><span></span><code>pg_dump -h localhost -U postgres -d dvdrental -t film &gt; film.sql
+pg_dump -h localhost -U postgres -d dvdrental &gt; whole_database.sql
+</code></pre></div>
+
+<p>The output is a series of <code>CREATE TABLE</code> + <code>INSERT</code> statements — a complete reproducible snapshot. To restore: pipe the file back into <code>psql</code>.</p>
+<h3 id="sqlite-output-and-mode">SQLite — <code>.output</code> and <code>.mode</code></h3>
+<div class="highlight"><pre><span></span><code>.headers on
+.mode csv
+.output products.csv
+SELECT * FROM product;
+.output stdout
+</code></pre></div>
+
+<p>Switch the output destination to a file, run a query, switch back. Same idea, different syntax.</p>
+<h3 id="what-the-playground-can-do_1">What the playground can do</h3>
+<p>The playground can produce CSV-shaped <em>output</em> but cannot write files. To produce something you could copy/paste as a CSV, build the rows yourself with concatenation:</p>
+<div class="playground" data-pg-idx="3">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Build a CSV-ish output you can copy/paste</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT film_id || &#x27;,&#x27; || title || &#x27;,&#x27; || rating || &#x27;,&#x27; || length AS csv_line
+FROM film
+LIMIT 10;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The result is a single column where each row is a CSV line. Select all, copy, paste into a <code>.csv</code> file. Crude but works for ad-hoc needs.</p>
+<p>A more disciplined approach uses your client tool's "export to CSV" button — pgAdmin, DBeaver, DataGrip, TablePlus all have one. Even simpler than <code>\copy</code> for one-off exports.</p>
+<h3 id="exporting-to-json">Exporting to JSON</h3>
+<p>For programmatic consumers, JSON is often nicer than CSV. PostgreSQL has rich JSON support:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">json_agg</span><span class="p">(</span><span class="n">row_to_json</span><span class="p">(</span><span class="n">t</span><span class="p">))</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G&#39;</span><span class="p">)</span><span class="w"> </span><span class="n">t</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>That gives you a single JSON array, one object per row. Pipe it to a file via <code>\copy</code> and you have JSON output ready for any modern consumer.</p>
+<p>SQLite's JSON is more limited but workable for small exports.</p>
+<h3 id="common-export-pitfalls">Common export pitfalls</h3>
+<h4 id="permission-denied">Permission denied</h4>
+<p><code>COPY ... TO '/etc/passwd'</code> will fail (good) and so will <code>COPY ... TO '/users/me/file.csv'</code> if PostgreSQL runs as a different user. Use <code>\copy</code> for client-side paths.</p>
+<h4 id="csv-that-breaks-on-the-receiving-end">CSV that breaks on the receiving end</h4>
+<p>If your data contains commas, quotes, or newlines, naive string concatenation produces invalid CSV. Use COPY/<code>\copy</code> which handles quoting correctly. For ad-hoc concatenation, prefer pipe-delimited or tab-delimited.</p>
+<h4 id="stale-exports">Stale exports</h4>
+<p>A CSV is a snapshot. If anyone consumes it and your underlying data changes, they have stale numbers. For repeatable analytics, prefer giving them query access to the database (or a view) over emailing CSVs.</p>
+<h3 id="practice-challenges_1">Practice challenges</h3>
+<h4 id="challenge-821-csv-ish-output">Challenge 8.2.1 — CSV-ish output</h4>
+<p>Produce one column where each row is a CSV line of <code>id,name,price</code> from the <code>product_import</code> table.</p>
+<div class="playground" data-pg-idx="4">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 8.2.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT id || &#x27;,&#x27; || name || &#x27;,&#x27; || price FROM product_import.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT id || &#x27;,&#x27; || name || &#x27;,&#x27; || price AS csv_line FROM product_import;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-822-filtered-export">Challenge 8.2.2 — Filtered export</h4>
+<p>Same CSV-ish output, but only for products in the 'Electronics' category (any case).</p>
+<div class="playground" data-pg-idx="5">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 8.2.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Add a WHERE with LOWER(category) = &#x27;electronics&#x27;.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT id || &#x27;,&#x27; || name || &#x27;,&#x27; || price AS csv_line FROM product_import WHERE LOWER(category) = &#x27;electronics&#x27;;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_1">Solutions</h3>
+<h4 id="solution-821">Solution 8.2.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">csv_line</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">product_import</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-822">Solution 8.2.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;,&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">csv_line</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">product_import</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">LOWER</span><span class="p">(</span><span class="n">category</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;electronics&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<h2 id="lesson-83-cleaning-what-arrives">Lesson 8.3 — Cleaning what arrives</h2>
+<p><em>Real CSVs are messy. The routine pattern for turning a freshly-imported table into something queryable.</em></p>
+<h3 id="the-mess-you-typically-inherit">The mess you typically inherit</h3>
+<p>Open any CSV someone hands you, and you will likely find some combination of:</p>
+<ul>
+<li><strong>Leading or trailing whitespace</strong> — <code>'  Notebook  '</code> instead of <code>'Notebook'</code>.</li>
+<li><strong>Mixed case</strong> — <code>'Stationery'</code>, <code>'stationery'</code>, <code>'STATIONERY'</code> all meaning the same category.</li>
+<li><strong>Sentinel strings for NULL</strong> — <code>'NULL'</code>, <code>'NA'</code>, <code>'N/A'</code>, <code>'-'</code>, <code>''</code>. Some columns have one convention, some another.</li>
+<li><strong>Numbers in text columns</strong> — prices stored as <code>'4.99'</code> instead of as a NUMERIC.</li>
+<li><strong>Dates as text in mixed formats</strong> — <code>'2024-05-30'</code>, <code>'5/30/2024'</code>, <code>''</code>.</li>
+<li><strong>Duplicates</strong> — the same row appearing twice because someone exported the same file twice.</li>
+</ul>
+<p>Each of these has a standard SQL fix. We'll walk through them on the <code>product_import</code> table loaded in Lesson 8.1.</p>
+<h3 id="trim-whitespace">Trim whitespace</h3>
+<div class="playground" data-pg-idx="6">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Strip leading/trailing whitespace from name</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">UPDATE product_import SET name = TRIM(name);
+SELECT id, name FROM product_import;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>TRIM(s)</code> removes leading and trailing whitespace. There are also <code>LTRIM</code> and <code>RTRIM</code> if you only want one side.</p>
+<h3 id="normalize-case">Normalize case</h3>
+<p>Pick a canonical form (lowercase is conventional) and standardize:</p>
+<div class="playground" data-pg-idx="7">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Normalize category to lowercase</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">UPDATE product_import SET category = LOWER(category);
+SELECT DISTINCT category FROM product_import;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Now <code>'Stationery'</code>, <code>'stationery'</code>, and <code>'STATIONERY'</code> all collapse to <code>'stationery'</code>.</p>
+<h3 id="convert-sentinel-strings-to-real-nulls">Convert sentinel strings to real NULLs</h3>
+<p>Earlier we loaded a row with <code>'NULL'</code> as the price string. That is a <em>value</em>, not a NULL — the database can't aggregate or compare it correctly. Convert it:</p>
+<div class="playground" data-pg-idx="8">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Turn the string &#x27;NULL&#x27; into a real NULL</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">UPDATE product_import SET price = NULL WHERE price = &#x27;NULL&#x27;;
+SELECT id, name, price FROM product_import;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Same idea for empty strings in date columns:</p>
+<div class="playground" data-pg-idx="9">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Empty string in added_on → real NULL</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">UPDATE product_import SET added_on = NULL WHERE added_on = &#x27;&#x27;;
+SELECT id, name, added_on FROM product_import;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="convert-text-columns-to-proper-types">Convert text columns to proper types</h3>
+<p>The <code>price</code> column is TEXT — so <code>WHERE price &gt; 5</code> would compare strings, not numbers (and <code>'9.99' &lt; '12.00'</code> because of lexical comparison). Two options:</p>
+<p><strong>Option A — leave the original column, add a typed one</strong> (safer):</p>
+<div class="playground" data-pg-idx="10">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Add a numeric column derived from the text one</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">ALTER TABLE product_import ADD COLUMN price_num NUMERIC(10, 2);
+UPDATE product_import SET price_num = CAST(price AS NUMERIC) WHERE price IS NOT NULL;
+SELECT id, name, price, price_num FROM product_import;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You keep <code>price</code> (in case you need to debug the original input), and <code>price_num</code> is queryable as a real number.</p>
+<p><strong>Option B — replace the column entirely</strong> (more invasive). Not always possible in SQLite without recreating the table, and reversible only if you have backups.</p>
+<h3 id="find-and-remove-duplicates">Find and remove duplicates</h3>
+<p>We deliberately inserted two <code>'Headphones'</code> rows (id 5 and id 7). Find them:</p>
+<div class="playground" data-pg-idx="11">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Find duplicate names</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT name, COUNT(*) AS n
+FROM product_import
+GROUP BY name
+HAVING COUNT(*) &gt; 1;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Decide which copy to keep — usually the one with more complete data, or simply the lowest <code>id</code>:</p>
+<div class="playground" data-pg-idx="12">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Keep the lowest-id row, delete the rest</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">DELETE FROM product_import
+WHERE id NOT IN (
+  SELECT MIN(id) FROM product_import GROUP BY name
+);
+SELECT id, name, price_num FROM product_import ORDER BY id;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>MIN(id) GROUP BY name</code> gives one id per distinct name — the smallest. The DELETE keeps those and removes the rest.</p>
+<h3 id="the-cleaning-script-as-a-recipe">The cleaning script as a recipe</h3>
+<p>After enough imports you will find yourself running the same five UPDATEs every time. Wrap them in a stored procedure or a <code>.sql</code> script you run after every load. The investment pays back fast — bug-free, repeatable cleanup is what separates "the analyst" from "the analyst who can be trusted with new data".</p>
+<h3 id="common-cleaning-mistakes">Common cleaning mistakes</h3>
+<h4 id="updating-before-backing-up">Updating before backing up</h4>
+<p>If a cleaning UPDATE turns out to be wrong, you cannot rewind without a backup. For one-time analyses, this is acceptable. For production tables, always back up first — or work in a staging table (load into <code>product_import_staging</code>, clean it, then INSERT … SELECT into <code>product</code>).</p>
+<h4 id="inconsistent-null-handling">Inconsistent NULL handling</h4>
+<p><code>COALESCE(price, 0)</code> treats NULL as zero. <code>WHERE price &gt; 0</code> excludes NULLs entirely. Both are valid, depending on intent — decide deliberately whether "no price recorded" should count as zero, exclude, or error.</p>
+<h4 id="premature-deduplication">Premature deduplication</h4>
+<p>Two rows look identical but might represent two different real-world events — two payments of the same amount on the same day from the same customer, for instance. Before DELETE-ing as duplicates, confirm with the source: "are these really duplicates, or two separate events?".</p>
+<h4 id="cleaning-that-hides-upstream-bugs">Cleaning that hides upstream bugs</h4>
+<p>If every batch needs the same five fixes, the source system is producing dirty data. Push fixes upstream — into the export step, the data entry form, or the ETL job — rather than silently cleaning forever. Cleanup is a sign of an upstream problem, not the end state.</p>
+<h3 id="practice-challenges_2">Practice challenges</h3>
+<h4 id="challenge-831-trim-a-column">Challenge 8.3.1 — Trim a column</h4>
+<p>Add a few rows to <code>product_import</code> with whitespace around the name. Then run a TRIM update and verify with SELECT.</p>
+<div class="playground" data-pg-idx="13">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 8.3.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='INSERT a row with &#x27;  Test  &#x27; as name, then UPDATE product_import SET name = TRIM(name); SELECT.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='INSERT INTO product_import (id, name, price, category) VALUES (10, &#x27;  Whitespace  &#x27;, &#x27;5.00&#x27;, &#x27;misc&#x27;); UPDATE product_import SET name = TRIM(name); SELECT * FROM product_import WHERE id = 10;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-832-lowercase-all-categories">Challenge 8.3.2 — Lowercase all categories</h4>
+<p>Run a query that normalizes the <code>category</code> column to lowercase, then show the distinct categories left.</p>
+<div class="playground" data-pg-idx="14">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 8.3.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='UPDATE then SELECT DISTINCT.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='UPDATE product_import SET category = LOWER(category); SELECT DISTINCT category FROM product_import;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-833-find-duplicate-prone-rows">Challenge 8.3.3 — Find duplicate-prone rows</h4>
+<p>Show every (name, price_num) pair that appears more than once in <code>product_import</code>.</p>
+<div class="playground" data-pg-idx="15">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 8.3.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='GROUP BY name, price_num then HAVING COUNT(*) &gt; 1.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT name, price_num, COUNT(*) AS n FROM product_import GROUP BY name, price_num HAVING COUNT(*) &gt; 1;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_2">Solutions</h3>
+<h4 id="solution-831">Solution 8.3.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">product_import</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="p">,</span><span class="w"> </span><span class="n">category</span><span class="p">)</span><span class="w"></span>
+<span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;  Whitespace  &#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;5.00&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;misc&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">product_import</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">TRIM</span><span class="p">(</span><span class="n">name</span><span class="p">);</span><span class="w"></span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product_import</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-832">Solution 8.3.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">UPDATE</span><span class="w"> </span><span class="n">product_import</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">LOWER</span><span class="p">(</span><span class="n">category</span><span class="p">);</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product_import</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-833">Solution 8.3.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price_num</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">n</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">product_import</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price_num</span><span class="w"></span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<h2 id="whats-next">What's next</h2>
+<p>You can now move data across the boundary in either direction — and clean what arrives once it crosses.</p>
+<p>Module 9 turns to <strong>PostgreSQL with Python</strong> — connecting to your database from outside SQL. You'll see how psycopg2 (the canonical Python driver) makes queries from Python code, how parameters protect against SQL injection, and how to weave SQL into a real script that reads, processes, and writes back.</p>
+
+    <div class="module-nav">
+        <a href="module-07.html"><span class="label">← Previous · Module 7</span><span class="title">Conditional Expressions &amp; Views</span></a>
+        <a href="module-09.html"><span class="label">Next · Module 9 →</span><span class="title">PostgreSQL with Python</span></a>
+    </div>
+  </main>
+</div>
+
+<script>
+const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
+let dbPromise = null;
+function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+async function getDb() {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const SQL = await initSqlJs({ locateFile: f => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f });
+      const db = new SQL.Database();
+      db.exec(SEED_SQL);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+function renderResult(el, columns, rows, msg) {
+  let html = "";
+  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
+  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
+  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
+  html += "</tbody></table>";
+  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
+  el.innerHTML = html;
+}
+async function runQuery(pg) {
+  const led = pg.querySelector(".led");
+  const ta = pg.querySelector("textarea");
+  const result = pg.querySelector(".pg-result");
+  const sql = ta.value.trim();
+  if (!sql) { result.innerHTML = ""; return; }
+  led.classList.add("loading");
+  try {
+    const db = await getDb();
+    const out = db.exec(sql);
+    if (out.length === 0) renderResult(result, null, null, "Statement executed");
+    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    led.classList.remove("loading","err");
+  } catch (e) {
+    led.classList.remove("loading"); led.classList.add("err");
+    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+const ORIG = new WeakMap();
+document.querySelectorAll(".playground").forEach(pg => {
+  const ta = pg.querySelector("textarea");
+  ORIG.set(pg, ta.value);
+  pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
+  const reset = pg.querySelector('[data-action="reset"]');
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
+  const hint = pg.querySelector('[data-action="hint"]');
+  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  const sol = pg.querySelector('[data-action="solution"]');
+  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+});
+getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
+       .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
+
+// Auto-build sidebar TOC from h2 headings
+const tocEl = document.getElementById("toc");
+document.querySelectorAll("main h2").forEach(h => {
+  if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const a = document.createElement("a");
+  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
+  tocEl.appendChild(a);
+});
+const sections = document.querySelectorAll("main h2[id]");
+function updateActiveToc() {
+  let id = null;
+  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
+  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+}
+window.addEventListener("scroll", updateActiveToc, { passive: true });
+updateActiveToc();
+</script>
+</body>
+</html>

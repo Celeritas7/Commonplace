@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 7 — Conditional Expressions &amp; Views · Interactive SQL Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+    --warn-bg:#fef3c7; --warn-fg:#92400e; --warn-badge:#f59e0b;
+    --ok-bg:#d1fae5; --ok-fg:#065f46;
+    --err-bg:#fee2e2; --err-fg:#991b1b;
+    --tip-bg:#ede9fe; --tip-fg:#3730a3;
+    --example-bg:#fdf4ff; --example-fg:#86198f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .nav-modules { display: flex; gap: 4px; font-size: 12px; overflow-x: auto; max-width: 60vw; }
+  .topnav .nav-modules a {
+    color: var(--text-mute); text-decoration: none; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .topnav .nav-modules a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .nav-modules a.current { background: var(--accent); color: #fff; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; max-width: 1180px; margin: 0 auto; padding: 28px 28px 80px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 20px; } .sidebar { display: none; } }
+
+  .sidebar { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; padding-right: 8px; }
+  .sidebar h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-mute); margin: 4px 0 12px 0; font-weight: 700; }
+  .sidebar a { display: block; color: var(--text-soft); text-decoration: none; padding: 6px 12px; border-left: 2px solid transparent; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .sidebar a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { min-width: 0; }
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .summary { margin-top: 14px; font-size: 15.5px; line-height: 1.6; color: rgba(255,255,255,0.94); max-width: 620px; }
+  .module-hero .meta-line { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .module-hero .meta-line strong { color: #fff; }
+
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); }
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; font-size: 0.9em;
+  }
+
+  /* Funnel */
+  .funnel-wrap { display: flex; justify-content: center; margin: 24px 0 28px; }
+  .funnel-wrap.mini { justify-content: flex-start; margin: 12px 0; }
+  .funnel { display: block; max-width: 360px; height: auto; }
+  .funnel.mini { max-width: 160px; }
+
+  /* Lesson header (mini-funnel + intro) */
+  .lesson-header { display: flex; align-items: center; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); margin-top: 36px; }
+  .lesson-header .funnel-wrap { margin: 0; flex-shrink: 0; }
+  .lesson-header .intro .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); }
+  .lesson-header .intro h2 { margin: 4px 0 6px; font-size: 22px; }
+  .lesson-header .intro p { margin: 0; font-style: italic; }
+
+  /* Code blocks (Pygments output) */
+  .highlight {
+    background: var(--code-bg) !important; color: var(--code-fg);
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55; overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    border-left: 4px solid var(--accent);
+  }
+  .highlight pre { margin: 0; background: transparent; color: inherit; }
+  .highlight .k, .highlight .kw, .highlight .kr, .highlight .kn, .highlight .kc { color: #f472b6; font-weight: 700; }
+  .highlight .nb { color: #c4b5fd; }
+  .highlight .n, .highlight .nx, .highlight .nv { color: #93c5fd; }
+  .highlight .s, .highlight .s1, .highlight .s2 { color: #fcd34d; }
+  .highlight .mi, .highlight .mf { color: #34d399; }
+  .highlight .o, .highlight .p { color: #94a3b8; }
+  .highlight .c, .highlight .c1, .highlight .cm { color: #64748b; font-style: italic; }
+
+  /* Admonitions (note, tip, warning, example) */
+  .admonition { margin: 20px 0; padding: 14px 18px; border-radius: 10px; border-left: 4px solid; font-size: 14.5px; }
+  .admonition .admonition-title { font-weight: 700; font-size: 12.5px; letter-spacing: 0.4px; text-transform: uppercase; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .admonition p { margin: 6px 0; }
+  .admonition.note { background: var(--tip-bg); color: var(--tip-fg); border-color: var(--accent); }
+  .admonition.note .admonition-title::before { content: "ℹ"; }
+  .admonition.tip { background: #ecfdf5; color: #065f46; border-color: #10b981; }
+  .admonition.tip .admonition-title::before { content: "✓"; }
+  .admonition.warning { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-badge); }
+  .admonition.warning .admonition-title::before { content: "⚠"; }
+  .admonition.danger { background: var(--err-bg); color: var(--err-fg); border-color: #ef4444; }
+  .admonition.danger .admonition-title::before { content: "✕"; }
+  .admonition.example { background: var(--example-bg); color: var(--example-fg); border-color: #c026d3; }
+  .admonition.example .admonition-title::before { content: "▶"; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin: 16px 0; }
+  th { background: var(--text); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-soft); font-size: 14px; }
+  td code { background: var(--accent-soft); padding: 1px 6px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Playground */
+  .playground { margin: 20px 0; border: 1px solid var(--border); background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .pg-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-mute); display: flex; align-items: center; justify-content: space-between; }
+  .pg-header .left { display: flex; align-items: center; gap: 10px; }
+  .pg-header .led { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.7); }
+  .pg-header .led.loading { background: #f59e0b; }
+  .pg-header .led.err { background: #ef4444; }
+  .pg-header .hint { font-size: 11px; color: var(--text-mute); font-weight: 400; }
+  .playground textarea {
+    width: 100%; background: var(--code-bg); color: var(--code-fg); border: none;
+    padding: 16px 18px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    resize: vertical; min-height: 80px; outline: none; caret-color: #a5b4fc;
+  }
+  .pg-actions { background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pg-actions .left-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn { background: #f3f4f6; color: var(--text-soft); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #e5e7eb; color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 7px 16px; font-weight: 600; }
+  .btn.primary:hover { background: #4338ca; }
+  .pg-result { border-top: 1px solid var(--border); padding: 14px 16px; background: #fafbfc; font-size: 13px; max-height: 360px; overflow: auto; }
+  .pg-result:empty { display: none; }
+  .pg-result table { width: 100%; background: #fff; }
+  .pg-result th { background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: 11.5px; }
+  .pg-result td { padding: 7px 12px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+  .pg-status { font-size: 12px; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; font-weight: 500; }
+  .pg-status.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pg-status.err { background: var(--err-bg); color: var(--err-fg); font-family: "JetBrains Mono", monospace; }
+
+  /* Module nav at bottom */
+  .module-nav { margin-top: 60px; padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .module-nav a, .module-nav span { color: var(--text-soft); text-decoration: none; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); min-width: 240px; }
+  .module-nav a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .module-nav .label { display: block; font-size: 10.5px; color: var(--text-mute); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .module-nav .title { display: block; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="index.html"><span class="dot"></span>Interactive SQL Book</a>
+  <div class="nav-modules">
+      <a href="module-01.html" class="">1. Retrieving Data</a>
+      <a href="module-02.html" class="">2. Filtering &amp; Sorting</a>
+      <a href="module-03.html" class="">3. Aggregating Data</a>
+      <a href="module-04.html" class="">4. JOINs</a>
+      <a href="module-05.html" class="">5. Advanced SQL</a>
+      <a href="module-06.html" class="">6. Creating &amp; Modifying Tables</a>
+      <a href="module-07.html" class="current">7. Conditional Expressions &amp; Views</a>
+      <a href="module-08.html" class="">8. Importing &amp; Exporting Data</a>
+      <a href="module-09.html" class="">9. PostgreSQL with Python</a>
+      <a href="module-10.html" class="">10. Capstone — Tiffinly</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>In this module</h4>
+    <div id="toc"></div>
+  </aside>
+
+  <main>
+    <div class="module-hero">
+      <div class="meta">Module 7 of 10</div>
+      <h1>Conditional Expressions &amp; Views</h1>
+<div class="summary">The polish. Tools that make queries clearer, safer with NULLs, and reusable. After this module your SQL stops being a sequence of queries and starts being a small library.</div>      <div class="meta-line">
+<strong>Estimated time:</strong> 75–100 minutes · <strong>Prerequisites:</strong> Modules 1–6 complete. Comfort with SELECT, aggregates, JOINs, and the idea of NULL.      </div>
+    </div>
+
+    <h2 id="what-this-module-covers">What this module covers</h2>
+<p>Three small tools and one large pattern. Each fills a gap in the SQL you already know.</p>
+<ul>
+<li><strong>CASE</strong> — if/then/else for columns. The single most-used conditional construct in SQL.</li>
+<li><strong>COALESCE, NULLIF, CAST</strong> — three short functions that handle NULLs and type conversions cleanly.</li>
+<li><strong>Views</strong> — save a query under a name and re-use it like a table. Where SQL stops being one-off and starts being shared infrastructure.</li>
+</ul>
+<h2 id="the-sql-funnel-returns">The SQL funnel returns</h2>
+<p>Module 6 took a break from the funnel because DDL is outside the read-side world. This module brings it back — everything here lives inside the clauses you already know:</p>
+<div class="funnel-wrap"><svg viewBox="0 0 360 256" xmlns="http://www.w3.org/2000/svg" class="funnel "><polygon points="0.0,0 360.0,0 351.42857142857144,32 8.571428571428571,32" fill="#7cb342" fill-opacity="1.0"/><text x="180.0" y="20.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">SELECT cols (AS aliases)</text><polygon points="8.571428571428571,36 351.42857142857144,36 342.85714285714283,68 17.142857142857142,68" fill="#26a69a" fill-opacity="0.3"/><text x="180.0" y="56.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">FROM table</text><polygon points="17.142857142857142,72 342.85714285714283,72 334.2857142857143,104 25.714285714285715,104" fill="#42a5f5" fill-opacity="0.3"/><text x="180.0" y="92.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">WHERE row filter</text><polygon points="25.714285714285715,108 334.2857142857143,108 325.7142857142857,140 34.285714285714285,140" fill="#7e57c2" fill-opacity="0.3"/><text x="180.0" y="128.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">GROUP BY cols</text><polygon points="34.285714285714285,144 325.7142857142857,144 317.14285714285717,176 42.857142857142854,176" fill="#ec407a" fill-opacity="0.3"/><text x="180.0" y="164.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">HAVING group filter</text><polygon points="42.857142857142854,180 317.14285714285717,180 308.57142857142856,212 51.42857142857143,212" fill="#ff9800" fill-opacity="0.3"/><text x="180.0" y="200.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">ORDER BY cols</text><polygon points="51.42857142857143,216 308.57142857142856,216 300.0,248 60.0,248" fill="#78909c" fill-opacity="0.3"/><text x="180.0" y="236.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">LIMIT n</text></svg></div>
+
+<p>CASE, COALESCE, NULLIF, and CAST mostly live inside SELECT (you use them to produce <em>better columns</em> in the result). They also appear in WHERE, ORDER BY, and HAVING. Views are queried FROM, like a table — they sit at the FROM layer.</p>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="1.0"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-71-case">Lesson 7.1 — CASE</h2>
+<p><em>SQL's if/then/else. The single most-used conditional construct in SQL.</em></p>
+<h3 id="why-this-matters">Why this matters</h3>
+<p>CASE lets you compute a column whose value depends on conditions. "If salary is below 50k, label it 'entry'; if below 100k, 'mid'; otherwise 'senior'." That kind of bucketing is everywhere in reports, dashboards, and analytics queries.</p>
+<p>Once you know CASE, you also unlock <strong>conditional aggregates</strong> — counting and summing only rows that meet a condition, without writing a separate query. That pattern alone is worth the lesson.</p>
+<h3 id="two-forms-of-case">Two forms of CASE</h3>
+<p>CASE has two syntactic flavors. They are equivalent for simple equality checks; the <strong>searched form</strong> is more general.</p>
+<h4 id="searched-case-for-arbitrary-conditions">Searched CASE — for arbitrary conditions</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CASE</span><span class="w"></span>
+<span class="w">  </span><span class="k">WHEN</span><span class="w"> </span><span class="n">condition1</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">result1</span><span class="w"></span>
+<span class="w">  </span><span class="k">WHEN</span><span class="w"> </span><span class="n">condition2</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">result2</span><span class="w"></span>
+<span class="w">  </span><span class="p">...</span><span class="w"></span>
+<span class="w">  </span><span class="k">ELSE</span><span class="w"> </span><span class="n">default_result</span><span class="w"></span>
+<span class="k">END</span><span class="w"></span>
+</code></pre></div>
+
+<p>Each WHEN holds any boolean expression. The first one that evaluates true wins.</p>
+<div class="playground" data-pg-idx="0">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Bucket films by length</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title,
+       length,
+       CASE
+         WHEN length &lt; 60  THEN &#x27;short&#x27;
+         WHEN length &lt; 120 THEN &#x27;medium&#x27;
+         ELSE                   &#x27;long&#x27;
+       END AS length_bucket
+FROM film
+ORDER BY length;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="simple-case-for-equality-against-one-expression">Simple CASE — for equality against one expression</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CASE</span><span class="w"> </span><span class="k">column</span><span class="w"></span>
+<span class="w">  </span><span class="k">WHEN</span><span class="w"> </span><span class="n">value1</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">result1</span><span class="w"></span>
+<span class="w">  </span><span class="k">WHEN</span><span class="w"> </span><span class="n">value2</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">result2</span><span class="w"></span>
+<span class="w">  </span><span class="p">...</span><span class="w"></span>
+<span class="w">  </span><span class="k">ELSE</span><span class="w"> </span><span class="n">default_result</span><span class="w"></span>
+<span class="k">END</span><span class="w"></span>
+</code></pre></div>
+
+<p>Less typing when every branch is comparing one column to a literal:</p>
+<div class="playground" data-pg-idx="1">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Rating to audience</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating,
+       CASE rating
+         WHEN &#x27;G&#x27;     THEN &#x27;all ages&#x27;
+         WHEN &#x27;PG&#x27;    THEN &#x27;with parents&#x27;
+         WHEN &#x27;PG-13&#x27; THEN &#x27;teens&#x27;
+         WHEN &#x27;R&#x27;     THEN &#x27;adults&#x27;
+         WHEN &#x27;NC-17&#x27; THEN &#x27;restricted&#x27;
+         ELSE              &#x27;unknown&#x27;
+       END AS audience
+FROM film
+LIMIT 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The simple form is a sugar for the searched form. You can always rewrite a simple CASE as a searched one. You cannot always go the other way — searched CASE handles range checks, NULL checks, multi-column conditions, and anything else a boolean expression supports.</p>
+<h3 id="else-is-optional-but-recommended">ELSE is optional but recommended</h3>
+<p>If no WHEN matches and there is no ELSE, the result is <strong>NULL</strong>:</p>
+<div class="playground" data-pg-idx="2">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Missing ELSE → NULLs creep in</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating,
+       CASE rating
+         WHEN &#x27;G&#x27;  THEN &#x27;all ages&#x27;
+         WHEN &#x27;PG&#x27; THEN &#x27;with parents&#x27;
+       END AS audience
+FROM film
+LIMIT 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Films with rating PG-13, R, or NC-17 get <code>NULL</code> for audience. Sometimes that is what you want; often it is a bug. Make ELSE a habit.</p>
+<h3 id="conditional-aggregates-the-killer-pattern">Conditional aggregates — the killer pattern</h3>
+<p>This is what makes CASE worth its weight in gold. Combine CASE with SUM or COUNT to count or sum only the rows that match a condition:</p>
+<div class="playground" data-pg-idx="3">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Count of films per rating in ONE row</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT
+  SUM(CASE WHEN rating = &#x27;G&#x27;     THEN 1 ELSE 0 END) AS n_g,
+  SUM(CASE WHEN rating = &#x27;PG&#x27;    THEN 1 ELSE 0 END) AS n_pg,
+  SUM(CASE WHEN rating = &#x27;PG-13&#x27; THEN 1 ELSE 0 END) AS n_pg13,
+  SUM(CASE WHEN rating = &#x27;R&#x27;     THEN 1 ELSE 0 END) AS n_r,
+  SUM(CASE WHEN rating = &#x27;NC-17&#x27; THEN 1 ELSE 0 END) AS n_nc17
+FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>This rotates a vertical GROUP BY result into a horizontal "pivot" — one row, one column per category. Without CASE you would need a separate query per rating and stitch them together. With CASE it is a single scan.</p>
+<p>The same idea works with <code>COUNT(CASE WHEN ... THEN 1 END)</code> — COUNT ignores NULLs, so leaving the ELSE off (which produces NULL) also works:</p>
+<div class="playground" data-pg-idx="4">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Same idea with COUNT (no ELSE needed)</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT
+  COUNT(CASE WHEN rating = &#x27;G&#x27;  THEN 1 END) AS n_g,
+  COUNT(CASE WHEN rating = &#x27;PG&#x27; THEN 1 END) AS n_pg
+FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="case-in-where-rare-but-legal">CASE in WHERE — rare but legal</h3>
+<p>You almost never need CASE in WHERE — boolean operators (AND/OR/NOT) cover the same ground more clearly. But it is legal:</p>
+<div class="highlight"><pre><span></span><code><span class="k">WHERE</span><span class="w"> </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="k">role</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;admin&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">END</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="c1">-- equivalent to:</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">role</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;admin&#39;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The second form is always clearer. CASE belongs in SELECT, in ORDER BY for custom sort, or in aggregates. Reach for it sparingly in WHERE.</p>
+<h3 id="case-in-order-by-custom-sort-order">CASE in ORDER BY — custom sort order</h3>
+<p>Want to sort by something that is not alphabetical or numeric? CASE.</p>
+<div class="playground" data-pg-idx="5">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Sort by rating, but in audience order, not alphabetical</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rating
+FROM film
+ORDER BY
+  CASE rating
+    WHEN &#x27;G&#x27;     THEN 1
+    WHEN &#x27;PG&#x27;    THEN 2
+    WHEN &#x27;PG-13&#x27; THEN 3
+    WHEN &#x27;R&#x27;     THEN 4
+    WHEN &#x27;NC-17&#x27; THEN 5
+  END;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Alphabetically the order would be G, NC-17, PG, PG-13, R — confusing. The CASE expression assigns each rating a numeric rank that ORDER BY uses.</p>
+<h3 id="common-mistakes">Common mistakes</h3>
+<h4 id="forgetting-end">Forgetting END</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;a&#39;</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;b&#39;</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="s1">&#39;c&#39;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">...;</span><span class="w">   </span><span class="c1">-- error</span>
+</code></pre></div>
+
+<p>Every CASE needs a matching END. Easy to forget after several WHENs.</p>
+<h4 id="mixing-the-two-forms">Mixing the two forms</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CASE</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;G&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;higher&#39;</span><span class="w"> </span><span class="k">END</span><span class="w">   </span><span class="c1">-- error: cannot use operator in simple CASE</span>
+</code></pre></div>
+
+<p>Simple CASE only does equality. For any other comparison, switch to searched: <code>CASE WHEN rating &gt; 'G' THEN 'higher' END</code>.</p>
+<h4 id="result-type-mismatch">Result type mismatch</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;positive&#39;</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">END</span><span class="w"></span>
+</code></pre></div>
+
+<p>The first branch returns text, the others return integers. PostgreSQL refuses; SQLite coerces silently. All branches of a CASE must return the same type.</p>
+<h4 id="inscrutable-nested-case">Inscrutable nested CASE</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">END</span><span class="w"> </span><span class="k">END</span><span class="w"> </span><span class="k">END</span><span class="w"></span>
+</code></pre></div>
+
+<p>Legal, but unreadable. If you find yourself nesting CASE more than two levels deep, the logic probably belongs in a view or a derived table.</p>
+<h3 id="practice-challenges">Practice challenges</h3>
+<h4 id="challenge-711-bucket-by-length">Challenge 7.1.1 — Bucket by length</h4>
+<p>Categorize each film as 'short' (under 80 min), 'medium' (80–120), or 'long' (over 120). Show the title and the bucket.</p>
+<div class="playground" data-pg-idx="6">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.1.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='CASE WHEN length &lt; 80 THEN &#x27;short&#x27; WHEN length &lt; 120 THEN &#x27;medium&#x27; ELSE &#x27;long&#x27; END.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, length, CASE WHEN length &lt; 80 THEN &#x27;short&#x27; WHEN length &lt; 120 THEN &#x27;medium&#x27; ELSE &#x27;long&#x27; END AS bucket FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-712-conditional-aggregate">Challenge 7.1.2 — Conditional aggregate</h4>
+<p>In ONE query and ONE row, return the count of G-rated and the count of PG-rated films, in two columns called <code>g_count</code> and <code>pg_count</code>.</p>
+<div class="playground" data-pg-idx="7">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.1.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SUM(CASE WHEN rating = &#x27;G&#x27; THEN 1 ELSE 0 END) AS g_count, plus the same for PG.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT SUM(CASE WHEN rating = &#x27;G&#x27; THEN 1 ELSE 0 END) AS g_count, SUM(CASE WHEN rating = &#x27;PG&#x27; THEN 1 ELSE 0 END) AS pg_count FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-713-custom-sort">Challenge 7.1.3 — Custom sort</h4>
+<p>Sort films so that PG-13 comes first, then PG, then everything else. Show title and rating.</p>
+<div class="playground" data-pg-idx="8">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.1.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ORDER BY CASE rating WHEN &#x27;PG-13&#x27; THEN 1 WHEN &#x27;PG&#x27; THEN 2 ELSE 3 END.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, rating FROM film ORDER BY CASE rating WHEN &#x27;PG-13&#x27; THEN 1 WHEN &#x27;PG&#x27; THEN 2 ELSE 3 END;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-714-bug-spotting">Challenge 7.1.4 — Bug spotting</h4>
+<p>What does this produce, and what was probably meant?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;family&#39;</span><span class="w"> </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">category</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions">Solutions</h3>
+<h4 id="solution-711">Solution 7.1.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">80</span><span class="w">   </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;short&#39;</span><span class="w"></span>
+<span class="w">            </span><span class="k">WHEN</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">120</span><span class="w">  </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;medium&#39;</span><span class="w"></span>
+<span class="w">            </span><span class="k">ELSE</span><span class="w">                    </span><span class="s1">&#39;long&#39;</span><span class="w"></span>
+<span class="w">       </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">bucket</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-712">Solution 7.1.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"></span>
+<span class="w">  </span><span class="k">SUM</span><span class="p">(</span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;G&#39;</span><span class="w">  </span><span class="k">THEN</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">END</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">g_count</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="k">SUM</span><span class="p">(</span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PG&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">END</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">pg_count</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-713">Solution 7.1.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">CASE</span><span class="w"> </span><span class="n">rating</span><span class="w"></span>
+<span class="w">  </span><span class="k">WHEN</span><span class="w"> </span><span class="s1">&#39;PG-13&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">  </span><span class="k">WHEN</span><span class="w"> </span><span class="s1">&#39;PG&#39;</span><span class="w">    </span><span class="k">THEN</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">  </span><span class="k">ELSE</span><span class="w">              </span><span class="mi">3</span><span class="w"></span>
+<span class="k">END</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-714">Solution 7.1.4</h4>
+<p>Every film that is not G-rated gets NULL for <code>category</code>. The author probably wanted an ELSE branch — either <code>ELSE 'other'</code> or a more complete set of WHEN clauses. Missing ELSE is the most common CASE bug.</p>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="1.0"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-72-coalesce-nullif-cast">Lesson 7.2 — COALESCE, NULLIF, CAST</h2>
+<p><em>Three short functions. Each solves a specific NULL or type problem cleanly.</em></p>
+<h3 id="coalesce-first-non-null-value">COALESCE — first non-NULL value</h3>
+<p><code>COALESCE(a, b, c, ...)</code> returns the first argument that is not NULL. If they are all NULL, it returns NULL.</p>
+<p>The most common use: "if this column is NULL, show me this default instead":</p>
+<div class="playground" data-pg-idx="9">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Show &#x27;no email&#x27; for customers without one</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT first_name,
+       last_name,
+       COALESCE(email, &#x27;no email on file&#x27;) AS email_or_default
+FROM customer;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You can chain it — first try email, then a phone field, then a default:</p>
+<div class="highlight"><pre><span></span><code><span class="k">COALESCE</span><span class="p">(</span><span class="n">email</span><span class="p">,</span><span class="w"> </span><span class="n">phone</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;no contact info&#39;</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>The second most common use: combining with SUM to turn NULL totals into 0 (as in Module 4.2.4):</p>
+<div class="playground" data-pg-idx="10">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Total per customer — NULL for non-payers becomes 0</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT c.first_name,
+       COALESCE(SUM(p.amount), 0) AS total
+FROM customer c
+LEFT JOIN payment p ON c.customer_id = p.customer_id
+GROUP BY c.customer_id, c.first_name
+ORDER BY total DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Without COALESCE, customers who never paid would show <code>NULL</code> instead of <code>0</code> — usually less useful.</p>
+<div class="admonition note">
+<p class="admonition-title">COALESCE vs ISNULL vs IFNULL</p>
+<p>PostgreSQL uses <code>COALESCE</code>. SQL Server has <code>ISNULL</code>. MySQL and SQLite have <code>IFNULL</code> (which works in this playground too). They all do similar things, but <code>COALESCE</code> is the SQL standard, supports more than two arguments, and works in every database. Default to it.</p>
+</div>
+<h3 id="nullif-turn-a-sentinel-value-into-null">NULLIF — turn a sentinel value into NULL</h3>
+<p><code>NULLIF(a, b)</code> returns NULL if a equals b; otherwise returns a. Sounds odd at first — why would you <em>want</em> a NULL? Two reasons:</p>
+<h4 id="to-avoid-division-by-zero">To avoid division by zero</h4>
+<p><code>x / 0</code> errors (PostgreSQL) or returns NULL/garbage (SQLite). <code>x / NULLIF(divisor, 0)</code> returns NULL instead — usually preferable to an error:</p>
+<div class="playground" data-pg-idx="11">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Average rental rate per film length unit (safe division)</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT title, rental_rate, length,
+       ROUND(rental_rate * 1.0 / NULLIF(length, 0), 4) AS rate_per_minute
+FROM film
+LIMIT 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>If any film had <code>length = 0</code> (none do in our seed), the division would safely return NULL instead of crashing.</p>
+<h4 id="to-mask-sentinel-values">To mask sentinel values</h4>
+<p>Some datasets use <code>-1</code> or <code>'unknown'</code> to mean "no value recorded". <code>NULLIF(rating, 'unknown')</code> turns those sentinels into real NULLs so the rest of your SQL can use IS NULL, COALESCE, and aggregates that ignore NULLs:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">NULLIF</span><span class="p">(</span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;unknown&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film_imported</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="cast-convert-between-types">CAST — convert between types</h3>
+<p><code>CAST(value AS type)</code> explicitly converts a value to a different type. The PostgreSQL shorthand <code>value::type</code> does the same thing but is not portable to other databases.</p>
+<div class="playground" data-pg-idx="12">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Force integer-to-float division</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT 10 / 3              AS integer_division,
+       CAST(10 AS REAL) / 3 AS real_division;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>10 / 3</code> is <code>3</code> (integer division — covered in Module 5.2). <code>CAST(10 AS REAL) / 3</code> is <code>3.333...</code>. CAST is the explicit fix for that whole class of bug.</p>
+<p>Other common conversions:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CAST</span><span class="p">(</span><span class="s1">&#39;123&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">)</span><span class="w">         </span><span class="c1">-- parse string to number</span>
+<span class="k">CAST</span><span class="p">(</span><span class="n">price</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">)</span><span class="w">            </span><span class="c1">-- number to string for concatenation</span>
+<span class="k">CAST</span><span class="p">(</span><span class="s1">&#39;2024-05-30&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">DATE</span><span class="p">)</span><span class="w">     </span><span class="c1">-- text to date</span>
+<span class="k">CAST</span><span class="p">(</span><span class="n">rating</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">)</span><span class="w">           </span><span class="c1">-- ensure text type (defensive)</span>
+</code></pre></div>
+
+<p>PostgreSQL accepts the shorthand:</p>
+<div class="highlight"><pre><span></span><code><span class="s1">&#39;123&#39;</span><span class="p">::</span><span class="nb">INTEGER</span><span class="w"></span>
+<span class="n">price</span><span class="p">::</span><span class="nb">TEXT</span><span class="w"></span>
+<span class="s1">&#39;2024-05-30&#39;</span><span class="p">::</span><span class="nb">DATE</span><span class="w"></span>
+</code></pre></div>
+
+<p>Use the shorthand only in PostgreSQL-only code. <code>CAST(...)</code> works everywhere.</p>
+<h3 id="combining-the-three">Combining the three</h3>
+<p>These functions compose naturally. A realistic example — compute average payment per customer, treating non-payers as 0, and tag whether they are above or below the company average:</p>
+<div class="playground" data-pg-idx="13">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>COALESCE + CASE + AVG together</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">WITH per_customer AS (
+  SELECT c.customer_id,
+         c.first_name,
+         COALESCE(SUM(p.amount), 0) AS total
+  FROM customer c
+  LEFT JOIN payment p ON c.customer_id = p.customer_id
+  GROUP BY c.customer_id, c.first_name
+)
+SELECT first_name,
+       total,
+       CASE
+         WHEN total = 0                                   THEN &#x27;never paid&#x27;
+         WHEN total &lt; (SELECT AVG(total) FROM per_customer) THEN &#x27;below avg&#x27;
+         ELSE                                                  &#x27;above avg&#x27;
+       END AS segment
+FROM per_customer
+ORDER BY total DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>This uses a <em>common table expression</em> (the <code>WITH per_customer AS ...</code> part) — a named subquery you can reference multiple times. We have not formally introduced CTEs; they are essentially "derived tables you give a name to first", and they compose beautifully with everything in this module.</p>
+<h3 id="common-mistakes_1">Common mistakes</h3>
+<h4 id="coalesce-with-mixed-types">COALESCE with mixed types</h4>
+<div class="highlight"><pre><span></span><code><span class="k">COALESCE</span><span class="p">(</span><span class="n">email</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">   </span><span class="c1">-- error: cannot mix text and integer</span>
+</code></pre></div>
+
+<p>All arguments to COALESCE must be the same type (or implicitly compatible). If you need a number when text is missing, cast: <code>COALESCE(CAST(email AS INTEGER), 0)</code>. Usually the right answer is "pick a sensible default of the same type" — for text columns, an empty string <code>''</code> or a label like <code>'unknown'</code>.</p>
+<h4 id="nullif-where-you-meant-coalesce">NULLIF where you meant COALESCE</h4>
+<p><code>NULLIF(a, b)</code> returns NULL when a = b. <code>COALESCE(a, b)</code> returns b when a is NULL. They look similar but do opposite things. Read the name: NULL-IF, COA-LESCE.</p>
+<h4 id="cast-that-loses-data">CAST that loses data</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CAST</span><span class="p">(</span><span class="mi">3</span><span class="p">.</span><span class="mi">7</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">)</span><span class="w">   </span><span class="c1">-- returns 3, not 4 (truncation, not rounding)</span>
+<span class="k">CAST</span><span class="p">(</span><span class="s1">&#39;abc&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">)</span><span class="w"> </span><span class="c1">-- PostgreSQL: error. SQLite: 0.</span>
+</code></pre></div>
+
+<p>CAST truncates and refuses (or silently returns 0). For rounding, use ROUND first. For parsing, validate the input string.</p>
+<h3 id="practice-challenges_1">Practice challenges</h3>
+<h4 id="challenge-721-default-for-null-email">Challenge 7.2.1 — Default for NULL email</h4>
+<p>Return every customer's first_name and email, but show <code>'(none)'</code> instead of NULL.</p>
+<div class="playground" data-pg-idx="14">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.2.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='COALESCE(email, &#x27;(none)&#x27;).'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT first_name, COALESCE(email, &#x27;(none)&#x27;) AS email FROM customer;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-722-safe-division">Challenge 7.2.2 — Safe division</h4>
+<p>For each film, return its rental_rate divided by its length. If a film's length is 0, return NULL (not an error).</p>
+<div class="playground" data-pg-idx="15">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.2.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='rental_rate * 1.0 / NULLIF(length, 0).'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, ROUND(rental_rate * 1.0 / NULLIF(length, 0), 4) AS rate_per_min FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-723-real-division">Challenge 7.2.3 — Real division</h4>
+<p>Return <code>rental_rate / length</code> as a true decimal (not integer-truncated). Don't worry about NULL handling here.</p>
+<div class="playground" data-pg-idx="16">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.2.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Promote one side to REAL with CAST.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT title, CAST(rental_rate AS REAL) / length AS ratio FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-724-bug-spotting">Challenge 7.2.4 — Bug spotting</h4>
+<p>What does this return — and what was the author probably trying to do?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">NULLIF</span><span class="p">(</span><span class="n">email</span><span class="p">,</span><span class="w"> </span><span class="k">NULL</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions_1">Solutions</h3>
+<h4 id="solution-721">Solution 7.2.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="k">COALESCE</span><span class="p">(</span><span class="n">email</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;(none)&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">email</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-722">Solution 7.2.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="n">ROUND</span><span class="p">(</span><span class="n">rental_rate</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">NULLIF</span><span class="p">(</span><span class="k">length</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rate_per_min</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-723">Solution 7.2.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">CAST</span><span class="p">(</span><span class="n">rental_rate</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">REAL</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">ratio</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-724">Solution 7.2.4</h4>
+<p><code>NULLIF(email, NULL)</code> returns NULL when <code>email = NULL</code>. But <code>email = NULL</code> is always NULL (never true), so NULLIF returns <code>email</code> unchanged — useless. The author probably meant <code>COALESCE(email, 'something')</code> (replace NULL with a value) — the inverse operation. Reading the function names carefully would have caught this.</p>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="1.0"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-73-views">Lesson 7.3 — Views</h2>
+<p><em>Save a query under a name. Use it like a table. Reuse it across many queries.</em></p>
+<h3 id="what-a-view-is">What a view is</h3>
+<p>A <strong>view</strong> is a named SELECT statement, saved in the database. You query it the same way you query a table — but every time you do, the underlying SELECT runs fresh.</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">view_name</span><span class="w"> </span><span class="k">AS</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Once created, the view appears in your database alongside tables. You can <code>SELECT * FROM view_name</code>, <code>JOIN</code> it, filter it, group it — everything that works on a table works on a view.</p>
+<h3 id="why-views-matter">Why views matter</h3>
+<p>Three big reasons.</p>
+<p><strong>1. Hide complexity behind a name.</strong> A query that JOINs five tables and computes three derived columns is hard to read and easy to get wrong. Wrap it in a view named <code>customer_lifetime_value</code> and the next query is just <code>SELECT * FROM customer_lifetime_value</code>.</p>
+<p><strong>2. Standardize calculations.</strong> If three reports all compute "active customer" differently, you have a maintenance bug waiting. Define <code>active_customer</code> as a view once, and every report uses the same definition.</p>
+<p><strong>3. Security boundary.</strong> Grant a colleague access to a view that hides PII columns, without giving them access to the underlying table.</p>
+<h3 id="creating-a-view">Creating a view</h3>
+<p>Let us create one for "customer with total spend":</p>
+<div class="playground" data-pg-idx="17">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Create a view: customer_spend</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">CREATE VIEW customer_spend AS
+SELECT c.customer_id,
+       c.first_name,
+       c.last_name,
+       COALESCE(SUM(p.amount), 0) AS total_spent,
+       COUNT(p.payment_id)        AS payment_count
+FROM customer c
+LEFT JOIN payment p ON c.customer_id = p.customer_id
+GROUP BY c.customer_id, c.first_name, c.last_name;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The view is created. No rows are returned yet — <code>CREATE VIEW</code> is DDL, not a query.</p>
+<h3 id="using-a-view">Using a view</h3>
+<p>Now you query it like a table:</p>
+<div class="playground" data-pg-idx="18">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Top spenders, from the view</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT first_name, total_spent
+FROM customer_spend
+ORDER BY total_spent DESC
+LIMIT 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The view definition runs under the hood, and you query its result. The query above is much easier to write — and much easier to read — than the same JOIN + GROUP BY inline.</p>
+<p>You can use the view anywhere a table goes — including in another JOIN:</p>
+<div class="playground" data-pg-idx="19">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Customers who paid more than the average</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT first_name, total_spent
+FROM customer_spend
+WHERE total_spent &gt; (SELECT AVG(total_spent) FROM customer_spend);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Notice the same view is referenced twice. The underlying query runs twice — once per reference — which is fine for our small data. For huge tables, <strong>materialized views</strong> (next section) avoid that recomputation.</p>
+<h3 id="drop-view-and-create-or-replace-view">DROP VIEW and CREATE OR REPLACE VIEW</h3>
+<p>To remove a view:</p>
+<div class="highlight"><pre><span></span><code><span class="k">DROP</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">view_name</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>To redefine an existing view in one step (PostgreSQL):</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">view_name</span><span class="w"> </span><span class="k">AS</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>This is the safe pattern for evolving a view — it changes the definition without dropping and recreating.</p>
+<h3 id="materialized-views-store-the-result">Materialized views — store the result</h3>
+<p>A regular view recomputes every time you query it. A <strong>materialized view</strong> runs the query once, stores the result like a real table, and serves subsequent queries from the cache:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- PostgreSQL only — SQLite does not have materialized views</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">customer_spend_cached</span><span class="w"> </span><span class="k">AS</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">;</span><span class="w"></span>
+
+<span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">customer_spend_cached</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Tradeoff: instant reads (fast) versus stale data until the next REFRESH. Use them for expensive queries that power dashboards and tolerate some staleness.</p>
+<h3 id="when-to-make-a-view">When to make a view</h3>
+<p>A good rule of thumb: <strong>if you have copy-pasted a SELECT three times, make it a view.</strong> The third use is when "I'll just retype it" turns into "wait, did I get the JOIN condition right this time?".</p>
+<p>Some good candidates:</p>
+<ul>
+<li>A query that always does the same JOINs to assemble a "logical entity" (e.g., customer with their address, city, country)</li>
+<li>A query that always applies the same business filter (e.g., <code>active_customers</code> = those with payments in the last 30 days)</li>
+<li>A query that computes a standard metric (e.g., <code>monthly_revenue</code>)</li>
+</ul>
+<h3 id="common-mistakes_2">Common mistakes</h3>
+<h4 id="forgetting-that-views-recompute">Forgetting that views recompute</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">expensive_view</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The view runs its full underlying query — possibly scanning millions of rows — and <em>then</em> filters down to one row. The database optimizer often pushes the filter into the view's query (saving work), but not always. If a view is slow to use, consider a materialized view or rewriting the consuming query.</p>
+<h4 id="views-that-hide-bugs">Views that hide bugs</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">country</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;India&#39;</span><span class="p">;</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">v</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Six months later, someone reads the count and thinks it is "all customers". The view's filter is invisible to anyone who has not read the definition. Name views accurately: <code>indian_customers</code>, not <code>customer_v2</code>.</p>
+<h4 id="forgetting-drop-view-order-with-dependencies">Forgetting DROP VIEW order with dependencies</h4>
+<p>If view B references view A, you cannot drop A while B exists. <code>DROP VIEW A CASCADE</code> (PostgreSQL) drops both. Be careful with CASCADE — it is also how you accidentally drop ten things at once.</p>
+<h4 id="updating-data-through-a-view">Updating data through a view</h4>
+<p>Simple views (single table, no aggregates, no DISTINCT) are sometimes updatable — you can INSERT/UPDATE/DELETE through them and the changes propagate to the underlying table. Most non-trivial views are not updatable. When in doubt, treat views as read-only.</p>
+<h3 id="practice-challenges_2">Practice challenges</h3>
+<h4 id="challenge-731-create-a-view">Challenge 7.3.1 — Create a view</h4>
+<p>Create a view called <code>film_summary</code> that shows each film's title, rating, length, and a derived <code>length_bucket</code> column (use CASE — short under 80, medium 80–120, long over 120).</p>
+<div class="playground" data-pg-idx="20">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.3.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your CREATE VIEW</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='CREATE VIEW film_summary AS SELECT title, rating, length, CASE ... END AS length_bucket FROM film;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='CREATE VIEW film_summary AS SELECT title, rating, length, CASE WHEN length &lt; 80 THEN &#x27;short&#x27; WHEN length &lt; 120 THEN &#x27;medium&#x27; ELSE &#x27;long&#x27; END AS length_bucket FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-732-query-the-view">Challenge 7.3.2 — Query the view</h4>
+<p>Query your <code>film_summary</code> view to count how many films are in each bucket.</p>
+<div class="playground" data-pg-idx="21">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.3.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT length_bucket, COUNT(*) FROM film_summary GROUP BY length_bucket.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT length_bucket, COUNT(*) AS n FROM film_summary GROUP BY length_bucket;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-733-drop-and-recreate">Challenge 7.3.3 — Drop and recreate</h4>
+<p>Drop the view, then recreate it with one extra column: <code>rental_rate</code>.</p>
+<div class="playground" data-pg-idx="22">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.3.3 — drop</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- DROP</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='DROP VIEW film_summary;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='DROP VIEW film_summary;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="23">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 7.3.3 — recreate</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- CREATE again, with rental_rate</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Same CREATE VIEW, plus rental_rate.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='CREATE VIEW film_summary AS SELECT title, rating, length, rental_rate, CASE WHEN length &lt; 80 THEN &#x27;short&#x27; WHEN length &lt; 120 THEN &#x27;medium&#x27; ELSE &#x27;long&#x27; END AS length_bucket FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_2">Solutions</h3>
+<h4 id="solution-731">Solution 7.3.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">film_summary</span><span class="w"> </span><span class="k">AS</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">80</span><span class="w">   </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;short&#39;</span><span class="w"></span>
+<span class="w">            </span><span class="k">WHEN</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">120</span><span class="w">  </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;medium&#39;</span><span class="w"></span>
+<span class="w">            </span><span class="k">ELSE</span><span class="w">                    </span><span class="s1">&#39;long&#39;</span><span class="w"></span>
+<span class="w">       </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">length_bucket</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-732">Solution 7.3.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">length_bucket</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">n</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film_summary</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">length_bucket</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-733">Solution 7.3.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">DROP</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">film_summary</span><span class="p">;</span><span class="w"></span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">film_summary</span><span class="w"> </span><span class="k">AS</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="k">length</span><span class="p">,</span><span class="w"> </span><span class="n">rental_rate</span><span class="p">,</span><span class="w"></span>
+<span class="w">       </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">80</span><span class="w">   </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;short&#39;</span><span class="w"></span>
+<span class="w">            </span><span class="k">WHEN</span><span class="w"> </span><span class="k">length</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">120</span><span class="w">  </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;medium&#39;</span><span class="w"></span>
+<span class="w">            </span><span class="k">ELSE</span><span class="w">                    </span><span class="s1">&#39;long&#39;</span><span class="w"></span>
+<span class="w">       </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">length_bucket</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>In production, prefer <code>CREATE OR REPLACE VIEW</code> over DROP-then-CREATE — atomic, and dependent objects stay valid.</p>
+<hr />
+<h2 id="whats-next">What's next</h2>
+<p>You can now write conditional logic, handle NULLs and types defensively, and package complex queries as views.</p>
+<p>Module 8 covers <strong>importing and exporting data</strong> — getting CSVs and other external data into your database and back out. Lots of SQL careers begin with "I need to load this spreadsheet" and Module 8 makes that a non-event.</p>
+
+    <div class="module-nav">
+        <a href="module-06.html"><span class="label">← Previous · Module 6</span><span class="title">Creating &amp; Modifying Tables</span></a>
+        <a href="module-08.html"><span class="label">Next · Module 8 →</span><span class="title">Importing &amp; Exporting Data</span></a>
+    </div>
+  </main>
+</div>
+
+<script>
+const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
+let dbPromise = null;
+function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+async function getDb() {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const SQL = await initSqlJs({ locateFile: f => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f });
+      const db = new SQL.Database();
+      db.exec(SEED_SQL);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+function renderResult(el, columns, rows, msg) {
+  let html = "";
+  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
+  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
+  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
+  html += "</tbody></table>";
+  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
+  el.innerHTML = html;
+}
+async function runQuery(pg) {
+  const led = pg.querySelector(".led");
+  const ta = pg.querySelector("textarea");
+  const result = pg.querySelector(".pg-result");
+  const sql = ta.value.trim();
+  if (!sql) { result.innerHTML = ""; return; }
+  led.classList.add("loading");
+  try {
+    const db = await getDb();
+    const out = db.exec(sql);
+    if (out.length === 0) renderResult(result, null, null, "Statement executed");
+    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    led.classList.remove("loading","err");
+  } catch (e) {
+    led.classList.remove("loading"); led.classList.add("err");
+    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+const ORIG = new WeakMap();
+document.querySelectorAll(".playground").forEach(pg => {
+  const ta = pg.querySelector("textarea");
+  ORIG.set(pg, ta.value);
+  pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
+  const reset = pg.querySelector('[data-action="reset"]');
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
+  const hint = pg.querySelector('[data-action="hint"]');
+  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  const sol = pg.querySelector('[data-action="solution"]');
+  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+});
+getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
+       .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
+
+// Auto-build sidebar TOC from h2 headings
+const tocEl = document.getElementById("toc");
+document.querySelectorAll("main h2").forEach(h => {
+  if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const a = document.createElement("a");
+  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
+  tocEl.appendChild(a);
+});
+const sections = document.querySelectorAll("main h2[id]");
+function updateActiveToc() {
+  let id = null;
+  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
+  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+}
+window.addEventListener("scroll", updateActiveToc, { passive: true });
+updateActiveToc();
+</script>
+</body>
+</html>

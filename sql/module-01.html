@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 1 — Retrieving Data · Interactive SQL Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+    --warn-bg:#fef3c7; --warn-fg:#92400e; --warn-badge:#f59e0b;
+    --ok-bg:#d1fae5; --ok-fg:#065f46;
+    --err-bg:#fee2e2; --err-fg:#991b1b;
+    --tip-bg:#ede9fe; --tip-fg:#3730a3;
+    --example-bg:#fdf4ff; --example-fg:#86198f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .nav-modules { display: flex; gap: 4px; font-size: 12px; overflow-x: auto; max-width: 60vw; }
+  .topnav .nav-modules a {
+    color: var(--text-mute); text-decoration: none; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .topnav .nav-modules a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .nav-modules a.current { background: var(--accent); color: #fff; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; max-width: 1180px; margin: 0 auto; padding: 28px 28px 80px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 20px; } .sidebar { display: none; } }
+
+  .sidebar { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; padding-right: 8px; }
+  .sidebar h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-mute); margin: 4px 0 12px 0; font-weight: 700; }
+  .sidebar a { display: block; color: var(--text-soft); text-decoration: none; padding: 6px 12px; border-left: 2px solid transparent; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .sidebar a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { min-width: 0; }
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .summary { margin-top: 14px; font-size: 15.5px; line-height: 1.6; color: rgba(255,255,255,0.94); max-width: 620px; }
+  .module-hero .meta-line { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .module-hero .meta-line strong { color: #fff; }
+
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); }
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; font-size: 0.9em;
+  }
+
+  /* Funnel */
+  .funnel-wrap { display: flex; justify-content: center; margin: 24px 0 28px; }
+  .funnel-wrap.mini { justify-content: flex-start; margin: 12px 0; }
+  .funnel { display: block; max-width: 360px; height: auto; }
+  .funnel.mini { max-width: 160px; }
+
+  /* Lesson header (mini-funnel + intro) */
+  .lesson-header { display: flex; align-items: center; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); margin-top: 36px; }
+  .lesson-header .funnel-wrap { margin: 0; flex-shrink: 0; }
+  .lesson-header .intro .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); }
+  .lesson-header .intro h2 { margin: 4px 0 6px; font-size: 22px; }
+  .lesson-header .intro p { margin: 0; font-style: italic; }
+
+  /* Code blocks (Pygments output) */
+  .highlight {
+    background: var(--code-bg) !important; color: var(--code-fg);
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55; overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    border-left: 4px solid var(--accent);
+  }
+  .highlight pre { margin: 0; background: transparent; color: inherit; }
+  .highlight .k, .highlight .kw, .highlight .kr, .highlight .kn, .highlight .kc { color: #f472b6; font-weight: 700; }
+  .highlight .nb { color: #c4b5fd; }
+  .highlight .n, .highlight .nx, .highlight .nv { color: #93c5fd; }
+  .highlight .s, .highlight .s1, .highlight .s2 { color: #fcd34d; }
+  .highlight .mi, .highlight .mf { color: #34d399; }
+  .highlight .o, .highlight .p { color: #94a3b8; }
+  .highlight .c, .highlight .c1, .highlight .cm { color: #64748b; font-style: italic; }
+
+  /* Admonitions (note, tip, warning, example) */
+  .admonition { margin: 20px 0; padding: 14px 18px; border-radius: 10px; border-left: 4px solid; font-size: 14.5px; }
+  .admonition .admonition-title { font-weight: 700; font-size: 12.5px; letter-spacing: 0.4px; text-transform: uppercase; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .admonition p { margin: 6px 0; }
+  .admonition.note { background: var(--tip-bg); color: var(--tip-fg); border-color: var(--accent); }
+  .admonition.note .admonition-title::before { content: "ℹ"; }
+  .admonition.tip { background: #ecfdf5; color: #065f46; border-color: #10b981; }
+  .admonition.tip .admonition-title::before { content: "✓"; }
+  .admonition.warning { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-badge); }
+  .admonition.warning .admonition-title::before { content: "⚠"; }
+  .admonition.danger { background: var(--err-bg); color: var(--err-fg); border-color: #ef4444; }
+  .admonition.danger .admonition-title::before { content: "✕"; }
+  .admonition.example { background: var(--example-bg); color: var(--example-fg); border-color: #c026d3; }
+  .admonition.example .admonition-title::before { content: "▶"; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin: 16px 0; }
+  th { background: var(--text); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-soft); font-size: 14px; }
+  td code { background: var(--accent-soft); padding: 1px 6px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Playground */
+  .playground { margin: 20px 0; border: 1px solid var(--border); background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .pg-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-mute); display: flex; align-items: center; justify-content: space-between; }
+  .pg-header .left { display: flex; align-items: center; gap: 10px; }
+  .pg-header .led { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.7); }
+  .pg-header .led.loading { background: #f59e0b; }
+  .pg-header .led.err { background: #ef4444; }
+  .pg-header .hint { font-size: 11px; color: var(--text-mute); font-weight: 400; }
+  .playground textarea {
+    width: 100%; background: var(--code-bg); color: var(--code-fg); border: none;
+    padding: 16px 18px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    resize: vertical; min-height: 80px; outline: none; caret-color: #a5b4fc;
+  }
+  .pg-actions { background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pg-actions .left-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn { background: #f3f4f6; color: var(--text-soft); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #e5e7eb; color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 7px 16px; font-weight: 600; }
+  .btn.primary:hover { background: #4338ca; }
+  .pg-result { border-top: 1px solid var(--border); padding: 14px 16px; background: #fafbfc; font-size: 13px; max-height: 360px; overflow: auto; }
+  .pg-result:empty { display: none; }
+  .pg-result table { width: 100%; background: #fff; }
+  .pg-result th { background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: 11.5px; }
+  .pg-result td { padding: 7px 12px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+  .pg-status { font-size: 12px; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; font-weight: 500; }
+  .pg-status.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pg-status.err { background: var(--err-bg); color: var(--err-fg); font-family: "JetBrains Mono", monospace; }
+
+  /* Module nav at bottom */
+  .module-nav { margin-top: 60px; padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .module-nav a, .module-nav span { color: var(--text-soft); text-decoration: none; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); min-width: 240px; }
+  .module-nav a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .module-nav .label { display: block; font-size: 10.5px; color: var(--text-mute); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .module-nav .title { display: block; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="index.html"><span class="dot"></span>Interactive SQL Book</a>
+  <div class="nav-modules">
+      <a href="module-01.html" class="current">1. Retrieving Data</a>
+      <a href="module-02.html" class="">2. Filtering &amp; Sorting</a>
+      <a href="module-03.html" class="">3. Aggregating Data</a>
+      <a href="module-04.html" class="">4. JOINs</a>
+      <a href="module-05.html" class="">5. Advanced SQL</a>
+      <a href="module-06.html" class="">6. Creating &amp; Modifying Tables</a>
+      <a href="module-07.html" class="">7. Conditional Expressions &amp; Views</a>
+      <a href="module-08.html" class="">8. Importing &amp; Exporting Data</a>
+      <a href="module-09.html" class="">9. PostgreSQL with Python</a>
+      <a href="module-10.html" class="">10. Capstone — Tiffinly</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>In this module</h4>
+    <div id="toc"></div>
+  </aside>
+
+  <main>
+    <div class="module-hero">
+      <div class="meta">Module 1 of 10</div>
+      <h1>Retrieving Data</h1>
+<div class="summary">Three foundational ways to pull data out of a SQL database. Every query you will ever write builds on these three skills.</div>      <div class="meta-line">
+<strong>Estimated time:</strong> 60–90 minutes · <strong>Prerequisites:</strong> pgAdmin installed, dvdrental sample database loaded — or use the in-page playground      </div>
+    </div>
+
+    <h2 id="what-this-module-covers">What this module covers</h2>
+<p>Three foundational ways to pull data out of a SQL database. Every query you will ever write builds on these three skills.</p>
+<ul>
+<li><strong>SELECT</strong> — the universal command for retrieving any column from any table.</li>
+<li><strong>SELECT DISTINCT</strong> — retrieve only the unique values, ignoring duplicates.</li>
+<li><strong>COUNT</strong> — count rows, with subtle but important behavior around NULLs and duplicates.</li>
+</ul>
+<h2 id="the-sql-funnel">The SQL funnel</h2>
+<p>Every SQL query you write follows the same syntactic stack. You write the clauses in a fixed order from top to bottom, and each layer narrows the result further than the one above it. Memorize this funnel and you have memorized the structure of SQL.</p>
+<div class="funnel-wrap"><svg viewBox="0 0 360 256" xmlns="http://www.w3.org/2000/svg" class="funnel "><polygon points="0.0,0 360.0,0 351.42857142857144,32 8.571428571428571,32" fill="#7cb342" fill-opacity="1.0"/><text x="180.0" y="20.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">SELECT cols (AS aliases)</text><polygon points="8.571428571428571,36 351.42857142857144,36 342.85714285714283,68 17.142857142857142,68" fill="#26a69a" fill-opacity="0.3"/><text x="180.0" y="56.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">FROM table</text><polygon points="17.142857142857142,72 342.85714285714283,72 334.2857142857143,104 25.714285714285715,104" fill="#42a5f5" fill-opacity="0.3"/><text x="180.0" y="92.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">WHERE row filter</text><polygon points="25.714285714285715,108 334.2857142857143,108 325.7142857142857,140 34.285714285714285,140" fill="#7e57c2" fill-opacity="0.3"/><text x="180.0" y="128.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">GROUP BY cols</text><polygon points="34.285714285714285,144 325.7142857142857,144 317.14285714285717,176 42.857142857142854,176" fill="#ec407a" fill-opacity="0.3"/><text x="180.0" y="164.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">HAVING group filter</text><polygon points="42.857142857142854,180 317.14285714285717,180 308.57142857142856,212 51.42857142857143,212" fill="#ff9800" fill-opacity="0.3"/><text x="180.0" y="200.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">ORDER BY cols</text><polygon points="51.42857142857143,216 308.57142857142856,216 300.0,248 60.0,248" fill="#78909c" fill-opacity="0.3"/><text x="180.0" y="236.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">LIMIT n</text></svg></div>
+
+<p>Module 1 lives entirely at the top of the funnel — the SELECT layer. We will not touch WHERE, GROUP BY, or anything below it. That is intentional: master the act of <em>retrieving</em> data first, then learn how to filter it.</p>
+<div class="admonition note">
+<p class="admonition-title">How to read these notes</p>
+<p>Each lesson begins with a "you are here" panel showing where the current concept sits in the funnel. The same diagram recurs across every SQL module, so you always know your position in the bigger picture.</p>
+<p>Code is shown in monospace with keywords in purple. Tables in examples use the dvdrental sample database — the same one used by the original Udemy SQL bootcamp, so any external exercises will work directly.</p>
+<p>Each lesson ends with practice challenges and worked solutions. Try the challenge before peeking.</p>
+</div>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="1.0"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-11-select">Lesson 1.1 — SELECT</h2>
+<p><em>The single most-used statement in SQL. Pull any columns from any table.</em></p>
+<h3 id="why-this-matters">Why this matters</h3>
+<p>SELECT is the statement you will type more than any other in SQL. Reading data is what databases are built for, and almost every analysis, dashboard, report, and API call ultimately resolves into a SELECT query somewhere.</p>
+<p>Once SELECT clicks, the rest of SQL — WHERE, GROUP BY, JOIN, subqueries — is just additions to this single core skeleton.</p>
+<h3 id="the-shape-of-a-query">The shape of a query</h3>
+<p>Every basic SELECT query answers two questions:</p>
+<ul>
+<li><strong>Which columns</strong> do I want back?</li>
+<li><strong>From which table</strong> do they come?</li>
+</ul>
+<p>That is the entire idea. The syntax mirrors it directly:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">column_name</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="k">table_name</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<div class="admonition note">
+<p class="admonition-title">How PostgreSQL actually reads this</p>
+<p>You write SELECT first, but the engine resolves FROM first. It must know which table it is dealing with before it can look up your columns. This is why a typo in the table name surfaces before a typo in the column name.</p>
+</div>
+<h3 id="pulling-one-column">Pulling one column</h3>
+<p>Start small. Ask for one column from one table:</p>
+<div class="playground" data-pg-idx="0">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Try it: one column</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT first_name FROM actor;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You get back one column of every first name in the actor table.</p>
+<div class="admonition example">
+<p class="admonition-title">Try these on the dvdrental database</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">category</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+</div>
+<h3 id="pulling-many-columns">Pulling many columns</h3>
+<p>Separate column names with commas. They come back in the order you list them — not the order they sit in the table:</p>
+<div class="playground" data-pg-idx="1">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Custom column order</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT last_name, first_name FROM actor;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition tip">
+<p class="admonition-title">Order is a feature, not a constraint</p>
+<p>When building reports or feeding data into another tool, list columns in the order you want them displayed. Do not rely on the table's internal column order — it can change as the schema evolves.</p>
+</div>
+<h3 id="selecting-every-column-with">Selecting every column with <code>*</code></h3>
+<p>The asterisk is shorthand for "every column in this table, in the order the table defines them."</p>
+<div class="playground" data-pg-idx="2">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Star (every column)</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT * FROM city;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>It is convenient when you are exploring an unfamiliar table and want a quick look at its shape. It is the wrong choice almost everywhere else.</p>
+<div class="admonition warning">
+<p class="admonition-title">Avoid SELECT * in real queries</p>
+<ul>
+<li>It returns every column, including ones you do not need — wasting bandwidth between the database and your application.</li>
+<li>It hides intent. A reader cannot tell which columns your code actually depends on.</li>
+<li>It breaks silently when the schema changes. A new column added upstream can suddenly appear in your output and downstream parsers may misalign.</li>
+</ul>
+<p>Prefer naming columns explicitly, even when there are many of them.</p>
+</div>
+<h3 id="style-and-readability">Style and readability</h3>
+<p>SQL is lenient. Capitalization, spacing, and semicolons are mostly optional — but consistent style is what makes a query readable six months later.</p>
+<table>
+<thead>
+<tr>
+<th>Convention</th>
+<th>Required?</th>
+<th>Why bother</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UPPERCASE keywords</td>
+<td>No</td>
+<td>SELECT, FROM, WHERE stand out from your column and table names at a glance.</td>
+</tr>
+<tr>
+<td>Trailing semicolon</td>
+<td>No</td>
+<td>Marks the end of the statement clearly — essential when you chain queries.</td>
+</tr>
+<tr>
+<td>One clause per line</td>
+<td>No</td>
+<td>Makes diffs in version control readable and edits less error-prone.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="common-beginner-mistakes">Common beginner mistakes</h3>
+<h4 id="missing-comma-between-columns">Missing comma between columns</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="n">last_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">actor</span><span class="p">;</span><span class="w">   </span><span class="c1">-- silent rename!</span>
+</code></pre></div>
+
+<p>Without the comma, SQL interprets <code>last_name</code> as an <em>alias</em> for <code>first_name</code> and returns only one column. The query runs without error — the worst kind of bug.</p>
+<h4 id="trailing-comma">Trailing comma</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">last_name</span><span class="p">,</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">actor</span><span class="p">;</span><span class="w">   </span><span class="c1">-- syntax error</span>
+</code></pre></div>
+
+<p>A comma after the last column is a syntax error. Watch for it especially when editing column lists.</p>
+<h4 id="forgetting-from">Forgetting FROM</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">;</span><span class="w">   </span><span class="c1">-- error: missing FROM-clause entry</span>
+</code></pre></div>
+
+<p>Every column reference needs a table. There are exceptions for expressions and built-in functions, but for real data you always need FROM.</p>
+<h3 id="practice-challenges">Practice challenges</h3>
+<p>Try each before peeking at the solution.</p>
+<h4 id="challenge-111-one-column">Challenge 1.1.1 — One column</h4>
+<p>Return every customer's email address. Nothing else.</p>
+<div class="playground" data-pg-idx="3">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.1.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Use SELECT, the column name, and FROM customer.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT email FROM customer;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-112-custom-column-order">Challenge 1.1.2 — Custom column order</h4>
+<p>Return last name first, then first name, for every actor.</p>
+<div class="playground" data-pg-idx="4">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.1.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Two columns, separated by a comma. Order matters.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT last_name, first_name FROM actor;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-113-bug-spotting">Challenge 1.1.3 — Bug spotting</h4>
+<p>A teammate sends this query and says "it only returns one column, why?"</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="n">last_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="challenge-114-code-review">Challenge 1.1.4 — Code review</h4>
+<p>Rewrite to follow the style conventions:</p>
+<div class="highlight"><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="n">first_name</span><span class="p">,</span><span class="n">last_name</span><span class="p">,</span><span class="n">email</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions">Solutions</h3>
+<h4 id="solution-111">Solution 1.1.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-112">Solution 1.1.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">last_name</span><span class="p">,</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">actor</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The column order you list is the order returned.</p>
+<h4 id="solution-113">Solution 1.1.3</h4>
+<p>The comma between <code>first_name</code> and <code>last_name</code> is missing. Without it, SQL treats <code>last_name</code> as an alias for <code>first_name</code>. Fix:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">last_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-114">Solution 1.1.4</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">last_name</span><span class="p">,</span><span class="w"> </span><span class="n">email</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="1.0"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-12-select-distinct">Lesson 1.2 — SELECT DISTINCT</h2>
+<p><em>Strip duplicate values from your result. Still at the SELECT layer of the funnel.</em></p>
+<h3 id="the-problem-distinct-solves">The problem DISTINCT solves</h3>
+<p>Real tables almost always contain duplicate values in some columns. The film table has thousands of rows, but only five distinct rating values (G, PG, PG-13, R, NC-17). If you only want to know which ratings exist, plain SELECT is wasteful:</p>
+<div class="playground" data-pg-idx="5">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>The wasteful way</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT rating FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You wanted five rows. You got fifteen. DISTINCT fixes this in one keyword.</p>
+<h3 id="syntax">Syntax</h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="k">column_name</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="k">table_name</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>DISTINCT goes immediately after SELECT and before the column list. It applies to whatever follows it.</p>
+<div class="playground" data-pg-idx="6">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>DISTINCT on one column</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT DISTINCT rating FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition example">
+<p class="admonition-title">See it work on dvdrental</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w">       </span><span class="c1">-- returns 5 rows</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">category</span><span class="p">;</span><span class="w">     </span><span class="c1">-- returns 16 distinct categories</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">country</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">city</span><span class="p">;</span><span class="w">      </span><span class="c1">-- one row per country</span>
+</code></pre></div>
+
+</div>
+<h3 id="distinct-across-multiple-columns">DISTINCT across multiple columns</h3>
+<p>You can apply DISTINCT to a combination of columns. The result is one row per unique <em>combination</em> — not per unique value in each column separately:</p>
+<div class="playground" data-pg-idx="7">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>DISTINCT across two columns</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT DISTINCT rating, rental_duration FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>This returns rows like (G, 3), (G, 4), (PG, 3), (PG, 5), etc. — every unique pair, not every unique rating or every unique duration.</p>
+<div class="admonition note">
+<p class="admonition-title">DISTINCT applies to the whole row, not just one column</p>
+<p>A common misconception is that DISTINCT only deduplicates the first column. It does not. It treats the entire selected tuple as the unit of uniqueness.</p>
+</div>
+<h3 id="common-use-cases">Common use cases</h3>
+<p>DISTINCT is most useful for three kinds of questions:</p>
+<ul>
+<li><strong>What categories exist?</strong> — list every unique rating, genre, country, status, etc.</li>
+<li><strong>How varied is this column?</strong> — is the column nearly all the same value, or genuinely diverse?</li>
+<li><strong>Are there unexpected values?</strong> — a quick sanity check before deeper analysis.</li>
+</ul>
+<h3 id="common-mistakes">Common mistakes</h3>
+<h4 id="expecting-distinct-to-apply-to-one-column-when-several-are-listed">Expecting DISTINCT to apply to one column when several are listed</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">rating</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- This returns ~15 rows, not 5.</span>
+<span class="c1">-- Why? Every title is unique, so every pair (rating, title) is also unique.</span>
+</code></pre></div>
+
+<p>If you wanted just the five distinct ratings, drop the title column.</p>
+<h4 id="using-distinct-to-fix-a-bad-join">Using DISTINCT to fix a bad join</h4>
+<p>If a JOIN produces duplicate rows, slapping DISTINCT on the front silences the symptom but hides the real problem — a missing join condition or a one-to-many relationship you did not account for. Investigate the join, do not paper over it.</p>
+<h4 id="distinct-vs-group-by-confusion">DISTINCT vs GROUP BY confusion</h4>
+<p>GROUP BY also deduplicates and is more powerful (it lets you aggregate). For simple "give me unique values" questions, DISTINCT is shorter and clearer. You will meet GROUP BY in Module 3.</p>
+<h3 id="practice-challenges_1">Practice challenges</h3>
+<h4 id="challenge-121-unique-ratings">Challenge 1.2.1 — Unique ratings</h4>
+<p>Return every distinct rating value in the film table.</p>
+<div class="playground" data-pg-idx="8">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.2.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT DISTINCT, one column, FROM film.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT DISTINCT rating FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-122-output-prediction">Challenge 1.2.2 — Output prediction</h4>
+<p>Given a payment table where <code>customer_id</code> repeats many times and <code>amount</code> also repeats many times, how many rows will this return?</p>
+<div class="playground" data-pg-idx="9">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.2.2 — predict, then run</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT DISTINCT customer_id, amount FROM payment;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-123-code-review">Challenge 1.2.3 — Code review</h4>
+<p>A junior dev runs this and complains there are too many rows. What is wrong?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">last_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p><em>(Hint: this might actually be correct — what should you check?)</em></p>
+<h3 id="solutions_1">Solutions</h3>
+<h4 id="solution-121">Solution 1.2.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">rating</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-122">Solution 1.2.2</h4>
+<p>One row for every unique (customer_id, amount) pair. If customer 5 paid $4.99 ten times, that becomes one row. If customer 5 paid $4.99 once and $9.99 once, that is two rows. The count depends on the data, not on the row count of the source table.</p>
+<h4 id="solution-123">Solution 1.2.3</h4>
+<p>The query is fine. The issue is that two different customers can share the same first_name + last_name. DISTINCT only collapses <em>exact</em> duplicates. If you want truly unique customers, select customer_id too — or accept that names are not unique identifiers.</p>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="1.0"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="0.3"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-13-count">Lesson 1.3 — COUNT</h2>
+<p><em>Your first aggregate function. Lives inside SELECT, takes a column or <code>*</code>.</em></p>
+<h3 id="why-we-count">Why we count</h3>
+<p>Before any analysis, you almost always want to know how big the dataset is. How many customers? How many orders this month? How many distinct products? COUNT answers all of these.</p>
+<p>COUNT is your first encounter with an <strong>aggregate function</strong> — a function that takes many rows of input and returns one row of output. Aggregates feel different from regular SELECT, and learning the mental shift now makes Module 3 (GROUP BY) much smoother.</p>
+<h3 id="three-flavors-of-count">Three flavors of COUNT</h3>
+<p>COUNT comes in three forms that look almost identical and behave very differently:</p>
+<table>
+<thead>
+<tr>
+<th>Form</th>
+<th>Counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>COUNT(*)</code></td>
+<td>Every row, including rows where every column is NULL.</td>
+</tr>
+<tr>
+<td><code>COUNT(column)</code></td>
+<td>Rows where that specific column is NOT NULL.</td>
+</tr>
+<tr>
+<td><code>COUNT(DISTINCT column)</code></td>
+<td>Unique non-NULL values in that column.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="count-total-rows">COUNT(*) — total rows</h3>
+<p>The most common form. Asks "how many rows are in this table?"</p>
+<div class="playground" data-pg-idx="10">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>COUNT(*) — total rows</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT COUNT(*) FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>COUNT(*) is fast — PostgreSQL has efficient ways to count rows without inspecting any column values. Use it whenever you just want a row total.</p>
+<h3 id="countcolumn-non-null-rows">COUNT(column) — non-NULL rows</h3>
+<p>Looks similar but means something different. Counts only rows where the named column has a value (is not NULL).</p>
+<div class="playground" data-pg-idx="11">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>COUNT(column) — non-NULL only</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT COUNT(email) FROM customer;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>In our customer table, two customers have NULL email and eight have one — so <code>COUNT(email)</code> returns <strong>8</strong>, while <code>COUNT(*)</code> returns <strong>10</strong>.</p>
+<div class="admonition warning">
+<p class="admonition-title">The NULL trap</p>
+<p><code>COUNT(column)</code> silently ignores NULL rows. If you are checking data completeness, that is exactly what you want — the difference between <code>COUNT(*)</code> and <code>COUNT(email)</code> tells you how many emails are missing.</p>
+<p>But if you just want a row total, never write <code>COUNT(column_that_can_be_null)</code>. It will under-count without warning. Use <code>COUNT(*)</code> instead.</p>
+</div>
+<h3 id="countdistinct-column-unique-values">COUNT(DISTINCT column) — unique values</h3>
+<p>Combines the lessons of Module 1.2 and 1.3. Counts how many unique non-NULL values exist in a column.</p>
+<div class="playground" data-pg-idx="12">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>COUNT(DISTINCT) — uniques</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT COUNT(DISTINCT rating) FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>This returns <strong>5</strong> — the count of distinct ratings. The single most useful combination in exploratory data analysis. "How many distinct X are there?" is a question you will ask constantly.</p>
+<h3 id="naming-the-result">Naming the result</h3>
+<p>By default the result column is named <code>count</code> — which is unhelpful in a report. Use <code>AS</code> to give it a meaningful name:</p>
+<div class="playground" data-pg-idx="13">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Aliasing the count</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT COUNT(*) AS total_films FROM film;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition tip">
+<p class="admonition-title">AS is your first taste of column aliasing</p>
+<p>AS lets you rename a column in the result without changing the underlying data. You will use it constantly with aggregates and JOINs. For now: <code>AS new_name</code> goes right after the expression you want to rename.</p>
+</div>
+<h3 id="common-mistakes_1">Common mistakes</h3>
+<h4 id="confusing-count-with-countcolumn">Confusing COUNT(*) with COUNT(column)</h4>
+<p>Reviewing someone's code and seeing <code>COUNT(specific_column)</code> is a flag to check whether they meant "total rows" or "rows with a value". 90% of the time they meant the first and should have written <code>COUNT(*)</code>.</p>
+<h4 id="counting-in-the-where-clause">Counting in the WHERE clause</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w">   </span><span class="c1">-- error</span>
+</code></pre></div>
+
+<p>You cannot use COUNT inside WHERE. WHERE filters rows <em>before</em> aggregation, so the count does not exist yet. To filter on a count, you need HAVING — which works only with GROUP BY (Module 3).</p>
+<h4 id="forgetting-as-in-reports">Forgetting AS in reports</h4>
+<p>A column named "count" in a CSV export gets confusing fast. Always alias aggregates in any output that someone else will read.</p>
+<h3 id="practice-challenges_2">Practice challenges</h3>
+<h4 id="challenge-131-total-rows">Challenge 1.3.1 — Total rows</h4>
+<p>How many films are in the film table?</p>
+<div class="playground" data-pg-idx="14">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.3.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='COUNT(*) gives a row total.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT COUNT(*) AS total_films FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-132-distinct-values">Challenge 1.3.2 — Distinct values</h4>
+<p>How many different MPAA ratings appear in the film table?</p>
+<div class="playground" data-pg-idx="15">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.3.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Combine COUNT with DISTINCT.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT COUNT(DISTINCT rating) AS rating_count FROM film;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-133-null-detection">Challenge 1.3.3 — NULL detection</h4>
+<p>Write a single query that returns both the total customer count and the count of customers who have an email. <em>(Hint: you can put two COUNTs in one SELECT, separated by a comma.)</em></p>
+<div class="playground" data-pg-idx="16">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.3.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='COUNT(*) for total, COUNT(email) for non-NULL, both in the same SELECT.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT COUNT(*) AS total, COUNT(email) AS with_email FROM customer;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-134-output-prediction">Challenge 1.3.4 — Output prediction</h4>
+<p>Given that the customer table has 10 rows and 8 of them have a non-NULL email, what do these return?</p>
+<div class="playground" data-pg-idx="17">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 1.3.4 — predict, then run</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT COUNT(*)              AS a,
+       COUNT(email)          AS b,
+       COUNT(DISTINCT email) AS c
+FROM customer;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_2">Solutions</h3>
+<h4 id="solution-131">Solution 1.3.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_films</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-132">Solution 1.3.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">rating</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rating_count</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-133">Solution 1.3.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">email</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">with_email</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The difference <code>total - with_email</code> tells you how many customers are missing an email.</p>
+<h4 id="solution-134">Solution 1.3.4</h4>
+<p><code>a = 10</code>, <code>b = 8</code>, <code>c = 8</code>. <code>b</code> and <code>c</code> are the same because every present email happens to be unique. If two customers shared an email, <code>b</code> would still be 8 but <code>c</code> would be 7.</p>
+<hr />
+<h2 id="whats-next">What's next</h2>
+<p>Module 2 introduces <strong>WHERE</strong> — your first filter. Once you can pick <em>which rows</em> to retrieve, the entire shape of SQL opens up.</p>
+
+    <div class="module-nav">
+<span></span>        <a href="module-02.html"><span class="label">Next · Module 2 →</span><span class="title">Filtering &amp; Sorting</span></a>
+    </div>
+  </main>
+</div>
+
+<script>
+const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
+let dbPromise = null;
+function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+async function getDb() {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const SQL = await initSqlJs({ locateFile: f => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f });
+      const db = new SQL.Database();
+      db.exec(SEED_SQL);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+function renderResult(el, columns, rows, msg) {
+  let html = "";
+  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
+  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
+  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
+  html += "</tbody></table>";
+  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
+  el.innerHTML = html;
+}
+async function runQuery(pg) {
+  const led = pg.querySelector(".led");
+  const ta = pg.querySelector("textarea");
+  const result = pg.querySelector(".pg-result");
+  const sql = ta.value.trim();
+  if (!sql) { result.innerHTML = ""; return; }
+  led.classList.add("loading");
+  try {
+    const db = await getDb();
+    const out = db.exec(sql);
+    if (out.length === 0) renderResult(result, null, null, "Statement executed");
+    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    led.classList.remove("loading","err");
+  } catch (e) {
+    led.classList.remove("loading"); led.classList.add("err");
+    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+const ORIG = new WeakMap();
+document.querySelectorAll(".playground").forEach(pg => {
+  const ta = pg.querySelector("textarea");
+  ORIG.set(pg, ta.value);
+  pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
+  const reset = pg.querySelector('[data-action="reset"]');
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
+  const hint = pg.querySelector('[data-action="hint"]');
+  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  const sol = pg.querySelector('[data-action="solution"]');
+  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+});
+getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
+       .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
+
+// Auto-build sidebar TOC from h2 headings
+const tocEl = document.getElementById("toc");
+document.querySelectorAll("main h2").forEach(h => {
+  if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const a = document.createElement("a");
+  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
+  tocEl.appendChild(a);
+});
+const sections = document.querySelectorAll("main h2[id]");
+function updateActiveToc() {
+  let id = null;
+  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
+  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+}
+window.addEventListener("scroll", updateActiveToc, { passive: true });
+updateActiveToc();
+</script>
+</body>
+</html>

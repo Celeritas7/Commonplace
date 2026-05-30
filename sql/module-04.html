@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 4 — JOINs · Interactive SQL Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+    --warn-bg:#fef3c7; --warn-fg:#92400e; --warn-badge:#f59e0b;
+    --ok-bg:#d1fae5; --ok-fg:#065f46;
+    --err-bg:#fee2e2; --err-fg:#991b1b;
+    --tip-bg:#ede9fe; --tip-fg:#3730a3;
+    --example-bg:#fdf4ff; --example-fg:#86198f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .nav-modules { display: flex; gap: 4px; font-size: 12px; overflow-x: auto; max-width: 60vw; }
+  .topnav .nav-modules a {
+    color: var(--text-mute); text-decoration: none; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .topnav .nav-modules a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .nav-modules a.current { background: var(--accent); color: #fff; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; max-width: 1180px; margin: 0 auto; padding: 28px 28px 80px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 20px; } .sidebar { display: none; } }
+
+  .sidebar { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; padding-right: 8px; }
+  .sidebar h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-mute); margin: 4px 0 12px 0; font-weight: 700; }
+  .sidebar a { display: block; color: var(--text-soft); text-decoration: none; padding: 6px 12px; border-left: 2px solid transparent; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .sidebar a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { min-width: 0; }
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .summary { margin-top: 14px; font-size: 15.5px; line-height: 1.6; color: rgba(255,255,255,0.94); max-width: 620px; }
+  .module-hero .meta-line { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .module-hero .meta-line strong { color: #fff; }
+
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); }
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; font-size: 0.9em;
+  }
+
+  /* Funnel */
+  .funnel-wrap { display: flex; justify-content: center; margin: 24px 0 28px; }
+  .funnel-wrap.mini { justify-content: flex-start; margin: 12px 0; }
+  .funnel { display: block; max-width: 360px; height: auto; }
+  .funnel.mini { max-width: 160px; }
+
+  /* Lesson header (mini-funnel + intro) */
+  .lesson-header { display: flex; align-items: center; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); margin-top: 36px; }
+  .lesson-header .funnel-wrap { margin: 0; flex-shrink: 0; }
+  .lesson-header .intro .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); }
+  .lesson-header .intro h2 { margin: 4px 0 6px; font-size: 22px; }
+  .lesson-header .intro p { margin: 0; font-style: italic; }
+
+  /* Code blocks (Pygments output) */
+  .highlight {
+    background: var(--code-bg) !important; color: var(--code-fg);
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55; overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    border-left: 4px solid var(--accent);
+  }
+  .highlight pre { margin: 0; background: transparent; color: inherit; }
+  .highlight .k, .highlight .kw, .highlight .kr, .highlight .kn, .highlight .kc { color: #f472b6; font-weight: 700; }
+  .highlight .nb { color: #c4b5fd; }
+  .highlight .n, .highlight .nx, .highlight .nv { color: #93c5fd; }
+  .highlight .s, .highlight .s1, .highlight .s2 { color: #fcd34d; }
+  .highlight .mi, .highlight .mf { color: #34d399; }
+  .highlight .o, .highlight .p { color: #94a3b8; }
+  .highlight .c, .highlight .c1, .highlight .cm { color: #64748b; font-style: italic; }
+
+  /* Admonitions (note, tip, warning, example) */
+  .admonition { margin: 20px 0; padding: 14px 18px; border-radius: 10px; border-left: 4px solid; font-size: 14.5px; }
+  .admonition .admonition-title { font-weight: 700; font-size: 12.5px; letter-spacing: 0.4px; text-transform: uppercase; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .admonition p { margin: 6px 0; }
+  .admonition.note { background: var(--tip-bg); color: var(--tip-fg); border-color: var(--accent); }
+  .admonition.note .admonition-title::before { content: "ℹ"; }
+  .admonition.tip { background: #ecfdf5; color: #065f46; border-color: #10b981; }
+  .admonition.tip .admonition-title::before { content: "✓"; }
+  .admonition.warning { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-badge); }
+  .admonition.warning .admonition-title::before { content: "⚠"; }
+  .admonition.danger { background: var(--err-bg); color: var(--err-fg); border-color: #ef4444; }
+  .admonition.danger .admonition-title::before { content: "✕"; }
+  .admonition.example { background: var(--example-bg); color: var(--example-fg); border-color: #c026d3; }
+  .admonition.example .admonition-title::before { content: "▶"; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin: 16px 0; }
+  th { background: var(--text); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-soft); font-size: 14px; }
+  td code { background: var(--accent-soft); padding: 1px 6px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Playground */
+  .playground { margin: 20px 0; border: 1px solid var(--border); background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .pg-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-mute); display: flex; align-items: center; justify-content: space-between; }
+  .pg-header .left { display: flex; align-items: center; gap: 10px; }
+  .pg-header .led { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.7); }
+  .pg-header .led.loading { background: #f59e0b; }
+  .pg-header .led.err { background: #ef4444; }
+  .pg-header .hint { font-size: 11px; color: var(--text-mute); font-weight: 400; }
+  .playground textarea {
+    width: 100%; background: var(--code-bg); color: var(--code-fg); border: none;
+    padding: 16px 18px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    resize: vertical; min-height: 80px; outline: none; caret-color: #a5b4fc;
+  }
+  .pg-actions { background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pg-actions .left-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn { background: #f3f4f6; color: var(--text-soft); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #e5e7eb; color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 7px 16px; font-weight: 600; }
+  .btn.primary:hover { background: #4338ca; }
+  .pg-result { border-top: 1px solid var(--border); padding: 14px 16px; background: #fafbfc; font-size: 13px; max-height: 360px; overflow: auto; }
+  .pg-result:empty { display: none; }
+  .pg-result table { width: 100%; background: #fff; }
+  .pg-result th { background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: 11.5px; }
+  .pg-result td { padding: 7px 12px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+  .pg-status { font-size: 12px; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; font-weight: 500; }
+  .pg-status.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pg-status.err { background: var(--err-bg); color: var(--err-fg); font-family: "JetBrains Mono", monospace; }
+
+  /* Module nav at bottom */
+  .module-nav { margin-top: 60px; padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .module-nav a, .module-nav span { color: var(--text-soft); text-decoration: none; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); min-width: 240px; }
+  .module-nav a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .module-nav .label { display: block; font-size: 10.5px; color: var(--text-mute); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .module-nav .title { display: block; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="index.html"><span class="dot"></span>Interactive SQL Book</a>
+  <div class="nav-modules">
+      <a href="module-01.html" class="">1. Retrieving Data</a>
+      <a href="module-02.html" class="">2. Filtering &amp; Sorting</a>
+      <a href="module-03.html" class="">3. Aggregating Data</a>
+      <a href="module-04.html" class="current">4. JOINs</a>
+      <a href="module-05.html" class="">5. Advanced SQL</a>
+      <a href="module-06.html" class="">6. Creating &amp; Modifying Tables</a>
+      <a href="module-07.html" class="">7. Conditional Expressions &amp; Views</a>
+      <a href="module-08.html" class="">8. Importing &amp; Exporting Data</a>
+      <a href="module-09.html" class="">9. PostgreSQL with Python</a>
+      <a href="module-10.html" class="">10. Capstone — Tiffinly</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>In this module</h4>
+    <div id="toc"></div>
+  </aside>
+
+  <main>
+    <div class="module-hero">
+      <div class="meta">Module 4 of 10</div>
+      <h1>JOINs</h1>
+<div class="summary">Pull data from two or more tables in one query. JOINs are where SQL stops being a query language and starts feeling like working with a network of related ideas.</div>      <div class="meta-line">
+<strong>Estimated time:</strong> 90–120 minutes · <strong>Prerequisites:</strong> Modules 1–3 complete. Comfort with WHERE, aliasing, and the idea that columns have types.      </div>
+    </div>
+
+    <h2 id="what-this-module-covers">What this module covers</h2>
+<p>Until now, every query touched one table. Real databases hold data in many tables — and the interesting questions almost always need information from more than one of them.</p>
+<ul>
+<li><strong>INNER JOIN</strong> — keep only rows that match in both tables. The default and most common join.</li>
+<li><strong>OUTER JOINs</strong> (LEFT, RIGHT, FULL) — keep unmatched rows too, filling the gaps with NULL.</li>
+<li><strong>UNION</strong> — stack rows from two queries on top of each other (different from JOIN, which puts them side-by-side).</li>
+</ul>
+<p>JOINs are the single biggest "click" moment in SQL. After this module, you can answer questions like "which customers have made payments and what films did they rent?" in one query.</p>
+<h2 id="why-joins-exist-normalization-in-60-seconds">Why JOINs exist — normalization in 60 seconds</h2>
+<p>Look at our <code>payment</code> table:</p>
+<div class="playground" data-pg-idx="0">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Peek at payments — note: no customer name</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT * FROM payment LIMIT 5;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Every payment has a <code>customer_id</code> but no customer name. The name lives in the <code>customer</code> table, and <code>customer_id</code> is the bridge between them. This split is deliberate — it is called <strong>normalization</strong>:</p>
+<ul>
+<li>Each fact lives in exactly one place. A customer's name is in <code>customer</code>, full stop. Never duplicated across every payment they made.</li>
+<li>Updates are cheap and safe. If Aniket changes his name, you update one row in <code>customer</code> — every payment automatically reflects the new name.</li>
+<li>Tables stay small and focused. <code>payment</code> has 14 rows of <em>payments</em>; it does not bloat into a denormalized log of every customer detail.</li>
+</ul>
+<p>The cost: to see a customer's name next to their payment, you must <code>JOIN customer ON customer.customer_id = payment.customer_id</code>. That join is what this module teaches.</p>
+<h2 id="the-sql-funnel-joins-live-in-from">The SQL funnel — JOINs live in FROM</h2>
+<p>JOINs are part of the FROM clause. The funnel does not move for this module — we are still at the top, broadening <em>what</em> SELECT pulls from:</p>
+<div class="funnel-wrap"><svg viewBox="0 0 360 256" xmlns="http://www.w3.org/2000/svg" class="funnel "><polygon points="0.0,0 360.0,0 351.42857142857144,32 8.571428571428571,32" fill="#7cb342" fill-opacity="0.3"/><text x="180.0" y="20.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">SELECT cols (AS aliases)</text><polygon points="8.571428571428571,36 351.42857142857144,36 342.85714285714283,68 17.142857142857142,68" fill="#26a69a" fill-opacity="1.0"/><text x="180.0" y="56.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">FROM table</text><polygon points="17.142857142857142,72 342.85714285714283,72 334.2857142857143,104 25.714285714285715,104" fill="#42a5f5" fill-opacity="0.3"/><text x="180.0" y="92.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">WHERE row filter</text><polygon points="25.714285714285715,108 334.2857142857143,108 325.7142857142857,140 34.285714285714285,140" fill="#7e57c2" fill-opacity="0.3"/><text x="180.0" y="128.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">GROUP BY cols</text><polygon points="34.285714285714285,144 325.7142857142857,144 317.14285714285717,176 42.857142857142854,176" fill="#ec407a" fill-opacity="0.3"/><text x="180.0" y="164.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">HAVING group filter</text><polygon points="42.857142857142854,180 317.14285714285717,180 308.57142857142856,212 51.42857142857143,212" fill="#ff9800" fill-opacity="0.3"/><text x="180.0" y="200.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">ORDER BY cols</text><polygon points="51.42857142857143,216 308.57142857142856,216 300.0,248 60.0,248" fill="#78909c" fill-opacity="0.3"/><text x="180.0" y="236.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="700" fill="rgba(255,255,255,0.85)">LIMIT n</text></svg></div>
+
+<p>The trick is that FROM stops being a single table and becomes "the result of combining tables".</p>
+<div class="admonition note">
+<p class="admonition-title">The shape of every JOIN</p>
+<p>Every JOIN you will ever write follows this skeleton:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w">  </span><span class="n">columns</span><span class="w"></span>
+<span class="k">FROM</span><span class="w">    </span><span class="n">left_table</span><span class="w"></span>
+<span class="k">JOIN</span><span class="w">    </span><span class="n">right_table</span><span class="w">  </span><span class="k">ON</span><span class="w">  </span><span class="n">left_table</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">right_table</span><span class="p">.</span><span class="n">id</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w">   </span><span class="p">...</span><span class="w">                 </span><span class="c1">-- optional</span>
+</code></pre></div>
+
+<p>The <code>ON</code> clause is the matching rule. Almost always it equates two columns — usually a primary key on one side and a foreign key on the other. Memorize this shape.</p>
+</div>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="1.0"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-41-inner-join">Lesson 4.1 — INNER JOIN</h2>
+<p><em>Keep only rows that have a match in both tables. The default join.</em></p>
+<h3 id="visual-what-inner-join-keeps">Visual: what INNER JOIN keeps</h3>
+<div style="display: flex; justify-content: center; gap: 12px; margin: 20px 0;">
+<svg viewBox="0 0 240 140" width="240" height="140" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="80" cy="70" r="55" fill="#93c5fd" fill-opacity="0.4" stroke="#4f46e5" stroke-width="2"/>
+  <circle cx="160" cy="70" r="55" fill="#fcd34d" fill-opacity="0.4" stroke="#d97706" stroke-width="2"/>
+  <path d="M 120 25 A 55 55 0 0 1 120 115 A 55 55 0 0 1 120 25" fill="#7c3aed" fill-opacity="0.7"/>
+  <text x="50" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#1e3a8a">A</text>
+  <text x="190" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#92400e">B</text>
+  <text x="120" y="135" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#4c1d95">INNER JOIN</text>
+</svg>
+</div>
+
+<p>The dark purple area — rows that appear in <em>both</em> tables — is what comes back. Everything else is dropped.</p>
+<h3 id="the-shape">The shape</h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w">  </span><span class="n">columns</span><span class="w"></span>
+<span class="k">FROM</span><span class="w">    </span><span class="n">left_table</span><span class="w"></span>
+<span class="k">INNER</span><span class="w"> </span><span class="k">JOIN</span><span class="w">  </span><span class="n">right_table</span><span class="w">  </span><span class="k">ON</span><span class="w">  </span><span class="n">left_table</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">right_table</span><span class="p">.</span><span class="k">key</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The word <code>INNER</code> is optional. Plain <code>JOIN</code> means <code>INNER JOIN</code>.</p>
+<div class="playground" data-pg-idx="1">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Every payment, with the customer&#x27;s name</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT customer.first_name, customer.last_name, payment.amount
+FROM customer
+JOIN payment ON customer.customer_id = payment.customer_id;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You get 14 rows — the number of payments. Each payment row has been paired with its matching customer row.</p>
+<h3 id="what-about-customers-with-no-payments">What about customers with no payments?</h3>
+<p>INNER JOIN drops them. We have 10 customers and 14 payments, but 3 customers (Chen, Lucas, Anna) have never paid. They do not appear in the result because there is no row in <code>payment</code> to match against. LEFT JOIN solves that — Lesson 4.2.</p>
+<h3 id="aliasing-tables">Aliasing tables</h3>
+<p>Typing <code>customer.first_name</code> and <code>payment.amount</code> over and over gets old. Use table aliases — pick a short letter or two, declare it right after the table name:</p>
+<div class="playground" data-pg-idx="2">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Same query, aliased</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT c.first_name, c.last_name, p.amount
+FROM customer c
+JOIN payment p ON c.customer_id = p.customer_id;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Conventional aliases: <code>c</code> for customer, <code>p</code> for payment. Whatever you pick, be consistent inside a query.</p>
+<div class="admonition warning">
+<p class="admonition-title">Always qualify shared column names</p>
+<p>If both tables have a column named <code>customer_id</code>, you cannot write <code>SELECT customer_id</code> — SQL does not know which one you mean and throws an "ambiguous column" error. Always qualify: <code>c.customer_id</code> or <code>p.customer_id</code>.</p>
+<p>For columns that exist in only one table, qualification is optional — but doing it consistently makes queries readable.</p>
+</div>
+<h3 id="join-where-group-by-in-one-query">JOIN + WHERE + GROUP BY in one query</h3>
+<p>JOINs compose with everything you have already learned. Here is a full-funnel query:</p>
+<div class="playground" data-pg-idx="3">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Total paid per customer, named</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT c.first_name, c.last_name, SUM(p.amount) AS total
+FROM customer c
+JOIN payment p ON c.customer_id = p.customer_id
+GROUP BY c.customer_id, c.first_name, c.last_name
+ORDER BY total DESC;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The result lists each customer who has paid, with their total spend, biggest spender first.</p>
+<h3 id="joining-three-tables">Joining three tables</h3>
+<p>The pattern extends to any number of tables. Each JOIN brings in one more:</p>
+<div class="playground" data-pg-idx="4">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Films with their categories</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT f.title, c.name AS category
+FROM film f
+JOIN film_category fc ON f.film_id = fc.film_id
+JOIN category c       ON fc.category_id = c.category_id;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>film_category</code> is a <em>bridge table</em> — a common pattern when two tables have a many-to-many relationship (one film can have many categories, one category can have many films). We pass through it to get from <code>film</code> to <code>category</code>.</p>
+<h3 id="common-mistakes">Common mistakes</h3>
+<h4 id="forgetting-the-on-clause">Forgetting the ON clause</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="p">;</span><span class="w">   </span><span class="c1">-- error or cross product</span>
+</code></pre></div>
+
+<p>Without ON, you get either an error (PostgreSQL) or a Cartesian product — every customer paired with every payment, all 10 × 14 = 140 rows of meaningless data. Always include ON.</p>
+<h4 id="joining-on-the-wrong-column">Joining on the wrong column</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">payment_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>This runs. It might even return some rows (if a customer_id happens to equal a payment_id). Every row will be wrong. The bug is silent. <strong>Always check that ON references the right column on each side</strong> — usually a primary key matched to a foreign key.</p>
+<h4 id="ambiguous-columns">Ambiguous columns</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- error: column reference &quot;customer_id&quot; is ambiguous</span>
+</code></pre></div>
+
+<p>Qualify the column: <code>SELECT c.customer_id</code> (or <code>p.customer_id</code> — they are equal, so either works after a join on equality).</p>
+<h3 id="practice-challenges">Practice challenges</h3>
+<h4 id="challenge-411-two-table-join">Challenge 4.1.1 — Two-table join</h4>
+<p>Return each payment's <code>amount</code> along with the customer's <code>first_name</code>. Order by amount descending.</p>
+<div class="playground" data-pg-idx="5">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.1.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='JOIN customer to payment on customer_id, then ORDER BY amount DESC.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT c.first_name, p.amount FROM customer c JOIN payment p ON c.customer_id = p.customer_id ORDER BY p.amount DESC;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-412-three-table-join">Challenge 4.1.2 — Three-table join</h4>
+<p>Return each rental's <code>rental_date</code> along with the film's <code>title</code> and the customer's <code>first_name</code>.</p>
+<div class="playground" data-pg-idx="6">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.1.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='rental joins to film via film_id and to customer via customer_id.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT r.rental_date, f.title, c.first_name FROM rental r JOIN film f ON r.film_id = f.film_id JOIN customer c ON r.customer_id = c.customer_id;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-413-join-group-by">Challenge 4.1.3 — JOIN + GROUP BY</h4>
+<p>How many payments has each customer made? Show first_name and the count, biggest first.</p>
+<div class="playground" data-pg-idx="7">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.1.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='JOIN, GROUP BY first_name (or customer_id), COUNT, ORDER BY count DESC.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT c.first_name, COUNT(*) AS payment_count FROM customer c JOIN payment p ON c.customer_id = p.customer_id GROUP BY c.customer_id, c.first_name ORDER BY payment_count DESC;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-414-bug-spotting">Challenge 4.1.4 — Bug spotting</h4>
+<p>What is wrong with this query?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">customer</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">customer</span><span class="p">.</span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions">Solutions</h3>
+<h4 id="solution-411">Solution 4.1.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"></span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-412">Solution 4.1.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">rental_date</span><span class="p">,</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">rental</span><span class="w"> </span><span class="n">r</span><span class="w"></span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="n">f</span><span class="w">     </span><span class="k">ON</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">film_id</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">film_id</span><span class="w"></span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Notice the alignment — lining up <code>JOIN ... ON ... = ...</code> makes multi-table joins much more readable.</p>
+<h4 id="solution-413">Solution 4.1.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">payment_count</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"></span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">payment_count</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>We group by <code>customer_id</code> too (not just <code>first_name</code>) in case two customers share a first name — same idea as Module 3.2 Challenge 1.2.3.</p>
+<h4 id="solution-414">Solution 4.1.4</h4>
+<p>The <code>ON</code> clause references the same table on both sides: <code>customer.customer_id = customer.customer_id</code>. That is always true, so every customer is matched with every payment — a 140-row Cartesian product, not the 14-row join you wanted. Fix:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">customer</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">payment</span><span class="p">.</span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="1.0"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-42-outer-joins-left-right-full">Lesson 4.2 — OUTER JOINs (LEFT, RIGHT, FULL)</h2>
+<p><em>Keep unmatched rows too. The most-asked-about JOIN in interviews.</em></p>
+<h3 id="visual-the-three-outer-joins">Visual: the three outer joins</h3>
+<div style="display: flex; justify-content: center; gap: 18px; margin: 20px 0; flex-wrap: wrap;">
+<div style="text-align:center">
+<svg viewBox="0 0 240 140" width="200" height="120" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="80" cy="70" r="55" fill="#7c3aed" fill-opacity="0.7" stroke="#4f46e5" stroke-width="2"/>
+  <circle cx="160" cy="70" r="55" fill="#fcd34d" fill-opacity="0.4" stroke="#d97706" stroke-width="2"/>
+  <path d="M 120 25 A 55 55 0 0 1 120 115 A 55 55 0 0 1 120 25" fill="#7c3aed" fill-opacity="0.7"/>
+  <text x="50" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#fff">A</text>
+  <text x="190" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#92400e">B</text>
+  <text x="120" y="135" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#4c1d95">LEFT JOIN</text>
+</svg>
+<div style="font-size:12px;color:#6b7280;font-style:italic">all of A + matches in B</div>
+</div>
+<div style="text-align:center">
+<svg viewBox="0 0 240 140" width="200" height="120" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="80" cy="70" r="55" fill="#93c5fd" fill-opacity="0.4" stroke="#4f46e5" stroke-width="2"/>
+  <circle cx="160" cy="70" r="55" fill="#7c3aed" fill-opacity="0.7" stroke="#d97706" stroke-width="2"/>
+  <path d="M 120 25 A 55 55 0 0 1 120 115 A 55 55 0 0 1 120 25" fill="#7c3aed" fill-opacity="0.7"/>
+  <text x="50" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#1e3a8a">A</text>
+  <text x="190" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#fff">B</text>
+  <text x="120" y="135" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#4c1d95">RIGHT JOIN</text>
+</svg>
+<div style="font-size:12px;color:#6b7280;font-style:italic">all of B + matches in A</div>
+</div>
+<div style="text-align:center">
+<svg viewBox="0 0 240 140" width="200" height="120" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="80" cy="70" r="55" fill="#7c3aed" fill-opacity="0.7" stroke="#4f46e5" stroke-width="2"/>
+  <circle cx="160" cy="70" r="55" fill="#7c3aed" fill-opacity="0.7" stroke="#d97706" stroke-width="2"/>
+  <text x="50" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#fff">A</text>
+  <text x="190" y="74" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#fff">B</text>
+  <text x="120" y="135" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#4c1d95">FULL JOIN</text>
+</svg>
+<div style="font-size:12px;color:#6b7280;font-style:italic">all of A + all of B</div>
+</div>
+</div>
+
+<p>The dark purple area is what comes back. Wherever there is no match on one side, the columns from that side come back as <strong>NULL</strong>.</p>
+<h3 id="left-join-the-workhorse">LEFT JOIN — the workhorse</h3>
+<p>This is the join you will reach for second most after INNER. "Give me every X, plus their Y if they have one":</p>
+<div class="playground" data-pg-idx="8">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Every customer + their payments (if any)</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT c.first_name, c.last_name, p.amount
+FROM customer c
+LEFT JOIN payment p ON c.customer_id = p.customer_id;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You get 17 rows: the 14 customer-payment matches, plus 3 rows for Chen, Lucas, and Anna (who have never paid). Their <code>amount</code> column is NULL.</p>
+<p>The word <code>OUTER</code> is optional. <code>LEFT JOIN</code> and <code>LEFT OUTER JOIN</code> are identical.</p>
+<h3 id="finding-rows-that-have-no-match">Finding rows that have no match</h3>
+<p>A LEFT JOIN with a <code>WHERE x IS NULL</code> filter is the standard "find the orphans" pattern:</p>
+<div class="playground" data-pg-idx="9">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Customers who have never made a payment</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT c.first_name, c.last_name
+FROM customer c
+LEFT JOIN payment p ON c.customer_id = p.customer_id
+WHERE p.payment_id IS NULL;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You get only Chen, Lucas, and Anna — the 3 customers without payments. This is one of the most useful queries in any analytics toolkit. Variations: "users who never logged in", "products never ordered", "categories with no films".</p>
+<div class="playground" data-pg-idx="10">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Films that have never been rented</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT f.title
+FROM film f
+LEFT JOIN rental r ON f.film_id = r.film_id
+WHERE r.rental_id IS NULL;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="right-join-same-shape-mirrored">RIGHT JOIN — same shape, mirrored</h3>
+<p><code>A RIGHT JOIN B</code> is equivalent to <code>B LEFT JOIN A</code>. Same rows, same NULLs, same logic — just written with the tables in the opposite order.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- These two return the same rows:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">RIGHT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">LEFT</span><span class="w">  </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<div class="admonition tip">
+<p class="admonition-title">Most SQL writers never use RIGHT JOIN</p>
+<p>Conventionally, you put the "main" table first and LEFT JOIN the secondary tables onto it. This reads naturally — "customers, plus their payments" — and is easier to extend with more joins.</p>
+<p>If you find yourself wanting RIGHT JOIN, swap the table order and use LEFT JOIN instead. Same result, cleaner read.</p>
+</div>
+<h3 id="full-join-everything-from-both-sides">FULL JOIN — everything from both sides</h3>
+<p><code>FULL OUTER JOIN</code> (often just <code>FULL JOIN</code>) keeps every row from both tables. Where there is no match, the missing side is NULL.</p>
+<div class="playground" data-pg-idx="11">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Every customer and every payment, matched where possible</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT c.first_name, p.amount
+FROM customer c
+FULL JOIN payment p ON c.customer_id = p.customer_id;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Less common in practice — you usually have a "main" table and a "lookup" table, and LEFT JOIN expresses that better. FULL JOIN shines when both sides are equal citizens: comparing two snapshots of the same data ("which IDs are in this morning's file but not last night's?", and vice versa, in one query).</p>
+<h3 id="the-anti-join-recap">The "anti-join" recap</h3>
+<p>These are so useful they deserve their own name. Use a LEFT/RIGHT/FULL JOIN with <code>WHERE other.key IS NULL</code> to find unmatched rows.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- A&#39;s that have no matching B</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">A</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">B</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">B</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">-- B&#39;s that have no matching A</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="k">RIGHT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">A</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">B</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">A</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- or equivalently:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">B</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">A</span><span class="p">.</span><span class="k">key</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="common-mistakes_1">Common mistakes</h3>
+<h4 id="confusing-inner-join-result-with-left-join-result">Confusing INNER JOIN result with LEFT JOIN result</h4>
+<p>You ran a LEFT JOIN and the result has the same row count as INNER. This means every left row found a match — <em>not</em> a bug, just the data. To verify there are unmatched rows, count them: <code>WHERE right.key IS NULL</code>.</p>
+<h4 id="null-columns-from-the-unmatched-side">NULL columns from the unmatched side</h4>
+<p>After a LEFT JOIN, the right-side columns can be NULL. Filtering on them later with <code>=</code> will silently drop those rows:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"></span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- Wait — Chen, Lucas, Anna are missing again!</span>
+</code></pre></div>
+
+<p>The <code>WHERE p.amount &gt; 0</code> evaluates to NULL for unmatched rows (NULL &gt; 0 is NULL, not true), so they drop. You may have meant <code>WHERE p.amount &gt; 0 OR p.amount IS NULL</code>. Or just use INNER JOIN if you do not want the unmatched rows.</p>
+<h4 id="left-join-with-the-smaller-table-on-the-left">LEFT JOIN with the smaller table on the left</h4>
+<div class="highlight"><pre><span></span><code><span class="c1">-- We want &quot;every film + how many times it was rented&quot;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">rental_id</span><span class="p">,</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">title</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">rental</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">film_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">film_id</span><span class="p">;</span><span class="w">   </span><span class="c1">-- wrong direction</span>
+</code></pre></div>
+
+<p>This drops films that were never rented (films 14 and 15) because <code>rental</code> is on the left. The "main" table — the one whose rows you want all of — must be on the left. Fix: put <code>film</code> on the left.</p>
+<h3 id="practice-challenges_1">Practice challenges</h3>
+<h4 id="challenge-421-every-customer-with-payment-if-any">Challenge 4.2.1 — Every customer, with payment if any</h4>
+<p>Return every customer's first_name and amount paid (or NULL if they have not paid). Sort by first_name.</p>
+<div class="playground" data-pg-idx="12">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.2.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='customer on the left, LEFT JOIN payment.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT c.first_name, p.amount FROM customer c LEFT JOIN payment p ON c.customer_id = p.customer_id ORDER BY c.first_name;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-422-anti-join-orphan-films">Challenge 4.2.2 — Anti-join: orphan films</h4>
+<p>Return the titles of films that have no rental record.</p>
+<div class="playground" data-pg-idx="13">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.2.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='LEFT JOIN with WHERE rental.rental_id IS NULL.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT f.title FROM film f LEFT JOIN rental r ON f.film_id = r.film_id WHERE r.rental_id IS NULL;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-423-categories-with-no-films">Challenge 4.2.3 — Categories with no films</h4>
+<p>Return the names of categories that have no films associated.</p>
+<div class="playground" data-pg-idx="14">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.2.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='category LEFT JOIN film_category WHERE film_category.film_id IS NULL.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT c.name FROM category c LEFT JOIN film_category fc ON c.category_id = fc.category_id WHERE fc.film_id IS NULL;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-424-total-per-customer-including-zeros">Challenge 4.2.4 — Total per customer (including zeros)</h4>
+<p>Return each customer's first_name and their total payment amount. Customers who have not paid should show 0, not NULL. <em>(Hint: <code>COALESCE(SUM(p.amount), 0)</code>.)</em></p>
+<div class="playground" data-pg-idx="15">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.2.4</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='LEFT JOIN + SUM + COALESCE for the NULL → 0 conversion.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT c.first_name, COALESCE(SUM(p.amount), 0) AS total FROM customer c LEFT JOIN payment p ON c.customer_id = p.customer_id GROUP BY c.customer_id, c.first_name ORDER BY total DESC;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-425-code-review">Challenge 4.2.5 — Code review</h4>
+<p>A teammate wrote this and says it returns the same as INNER JOIN. Why?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"></span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions_1">Solutions</h3>
+<h4 id="solution-421">Solution 4.2.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"></span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-422">Solution 4.2.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">title</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="n">f</span><span class="w"></span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">rental</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">film_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">film_id</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="n">rental_id</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-423">Solution 4.2.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">name</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="k">c</span><span class="w"></span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">film_category</span><span class="w"> </span><span class="n">fc</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">category_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fc</span><span class="p">.</span><span class="n">category_id</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">fc</span><span class="p">.</span><span class="n">film_id</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-424">Solution 4.2.4</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="k">COALESCE</span><span class="p">(</span><span class="k">SUM</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span><span class="w"></span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"> </span><span class="k">c</span><span class="w"></span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"></span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">first_name</span><span class="w"></span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p><code>COALESCE(a, b)</code> returns the first non-NULL argument. You will meet it more formally in Module 7 (Conditional Expressions), but it earns its keep here: turning NULL totals into 0 for customers who never paid.</p>
+<h4 id="solution-425">Solution 4.2.5</h4>
+<p><code>WHERE p.amount IS NOT NULL</code> drops every row where the right side was NULL — which is precisely the rows LEFT JOIN added. The query effectively becomes an INNER JOIN. A filter on the right-side columns in WHERE is the most common way to accidentally turn a LEFT JOIN back into an INNER JOIN.</p>
+<p>If you want a true LEFT JOIN with a filter on the right side, put the filter in the ON clause instead:</p>
+<div class="highlight"><pre><span></span><code><span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">payment</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">customer_id</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"></span>
+</code></pre></div>
+
+<p>This filters which payments match — but still keeps every customer.</p>
+<hr />
+<div class="funnel-wrap mini"><svg viewBox="0 0 160 132" xmlns="http://www.w3.org/2000/svg" class="funnel mini"><polygon points="0.0,0 160.0,0 156.0,16 4.0,16" fill="#7cb342" fill-opacity="0.3"/><polygon points="4.0,18 156.0,18 152.0,34 8.0,34" fill="#26a69a" fill-opacity="1.0"/><polygon points="8.0,36 152.0,36 148.0,52 12.0,52" fill="#42a5f5" fill-opacity="0.3"/><polygon points="12.0,54 148.0,54 144.0,70 16.0,70" fill="#7e57c2" fill-opacity="0.3"/><polygon points="16.0,72 144.0,72 140.0,88 20.0,88" fill="#ec407a" fill-opacity="0.3"/><polygon points="20.0,90 140.0,90 136.0,106 24.0,106" fill="#ff9800" fill-opacity="0.3"/><polygon points="24.0,108 136.0,108 132.0,124 28.0,124" fill="#78909c" fill-opacity="0.3"/></svg></div>
+
+<h2 id="lesson-43-union">Lesson 4.3 — UNION</h2>
+<p><em>Stack rows from two queries on top of each other. Not a JOIN — a separate idea.</em></p>
+<h3 id="join-vs-union-different-shapes">JOIN vs UNION — different shapes</h3>
+<p>This is the single most important distinction:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Combines tables</th>
+<th>Result columns</th>
+<th>Result rows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JOIN</td>
+<td>side-by-side</td>
+<td>A + B columns</td>
+<td>rows where keys match (or all, depending on type)</td>
+</tr>
+<tr>
+<td>UNION</td>
+<td>one on top of other</td>
+<td>columns of A (must match B)</td>
+<td>all rows from A + all rows from B</td>
+</tr>
+</tbody>
+</table>
+<p>JOINs answer "what do these rows look like <em>combined</em>?". UNIONs answer "what does it look like if I treat both row sets as one bigger set?".</p>
+<h3 id="visual">Visual</h3>
+<div style="display:flex;justify-content:center;margin:20px 0">
+<svg viewBox="0 0 360 160" width="100%" style="max-width:360px" xmlns="http://www.w3.org/2000/svg">
+  <!-- Top query -->
+  <rect x="20" y="20" width="140" height="40" rx="6" fill="#fff" stroke="#4f46e5" stroke-width="2"/>
+  <text x="90" y="44" text-anchor="middle" font-family="JetBrains Mono, Consolas" font-size="11" fill="#4f46e5">SELECT ... FROM A</text>
+
+  <text x="180" y="46" text-anchor="middle" font-family="Inter" font-size="22" font-weight="700" fill="#7c3aed">+</text>
+
+  <rect x="200" y="20" width="140" height="40" rx="6" fill="#fff" stroke="#7c3aed" stroke-width="2"/>
+  <text x="270" y="44" text-anchor="middle" font-family="JetBrains Mono, Consolas" font-size="11" fill="#7c3aed">SELECT ... FROM B</text>
+
+  <text x="180" y="80" text-anchor="middle" font-family="Inter" font-size="12" font-weight="600" fill="#6b7280">UNION</text>
+
+  <!-- Result -->
+  <rect x="80" y="95" width="200" height="55" rx="6" fill="#ede9fe" stroke="#4f46e5" stroke-width="2"/>
+  <text x="180" y="120" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#1e3a8a">Rows from A</text>
+  <text x="180" y="138" text-anchor="middle" font-family="Inter" font-size="11" font-weight="700" fill="#4c1d95">followed by rows from B</text>
+</svg>
+</div>
+
+<h3 id="the-shape_1">The shape</h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">col1</span><span class="p">,</span><span class="w"> </span><span class="n">col2</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">A</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">col1</span><span class="p">,</span><span class="w"> </span><span class="n">col2</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">B</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Rules:
+1. The two SELECTs must return the <strong>same number of columns</strong>
+2. The columns must have <strong>compatible types</strong> in the same positions
+3. The column names of the <em>first</em> SELECT become the result's column names</p>
+<h3 id="union-vs-union-all">UNION vs UNION ALL</h3>
+<ul>
+<li><code>UNION</code> removes duplicate rows (collapses rows that match across all columns).</li>
+<li><code>UNION ALL</code> keeps every row, duplicates included.</li>
+</ul>
+<p><code>UNION ALL</code> is faster (no deduplication step). Use it whenever you know there are no duplicates, or you want to keep them.</p>
+<div class="playground" data-pg-idx="16">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Every customer_id that appears in customer OR payment</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT customer_id FROM customer
+UNION
+SELECT customer_id FROM payment;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="17">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Same data, but keep every occurrence</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT customer_id FROM customer
+UNION ALL
+SELECT customer_id FROM payment;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>UNION returns 10 rows (the 10 distinct customer_ids). UNION ALL returns 24 (10 from customer + 14 from payment, no deduplication).</p>
+<h3 id="a-realistic-use-case">A realistic use case</h3>
+<p>Imagine your sales come from two channels — online and in-store — and they are recorded in separate tables. UNION ALL lets you analyze them as one combined stream without copying data around:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">order_id</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;online&#39;</span><span class="w">   </span><span class="k">AS</span><span class="w"> </span><span class="n">channel</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">online_orders</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"> </span><span class="k">ALL</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">order_id</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;in_store&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">channel</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">store_orders</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The hardcoded <code>'online'</code>/<code>'in_store'</code> literal becomes a column in the result, tagging where each row came from. This pattern — adding a constant column to disambiguate sources — is essential when UNIONing similar tables.</p>
+<h3 id="common-mistakes_2">Common mistakes</h3>
+<h4 id="column-count-mismatch">Column count mismatch</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="n">last_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w">   </span><span class="c1">-- error: each UNION query must have the same number of columns</span>
+</code></pre></div>
+
+<p>Fix: pick a column count and stick with it across both SELECTs.</p>
+<h4 id="column-type-mismatch">Column type mismatch</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w">     </span><span class="c1">-- integer</span>
+<span class="k">UNION</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="w">  </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w">    </span><span class="c1">-- text</span>
+</code></pre></div>
+
+<p>Some databases error. Some implicitly cast everything to text. Either way, the result is junk. Make sure the i-th column of each SELECT has the same meaning and type.</p>
+<h4 id="using-union-when-you-meant-join">Using UNION when you meant JOIN</h4>
+<p>If you find yourself wanting to "combine" customer and payment, you probably want JOIN, not UNION. UNION stacks them; JOIN matches them up.</p>
+<h4 id="using-union-when-you-meant-union-all">Using UNION when you meant UNION ALL</h4>
+<p>If you know there are no duplicates (e.g. UNIONing rows from two different tables that share no IDs), <code>UNION ALL</code> is faster and clearer. Reach for <code>UNION</code> only when you actually want deduplication.</p>
+<h3 id="practice-challenges_2">Practice challenges</h3>
+<h4 id="challenge-431-simple-union">Challenge 4.3.1 — Simple UNION</h4>
+<p>Return every distinct customer_id that appears in either the customer table or the payment table.</p>
+<div class="playground" data-pg-idx="18">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.3.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT customer_id FROM customer UNION SELECT customer_id FROM payment.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT customer_id FROM customer UNION SELECT customer_id FROM payment;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-432-tagged-union-all">Challenge 4.3.2 — Tagged UNION ALL</h4>
+<p>Combine actor first_names and customer first_names into one list, with a column showing the source (<code>'actor'</code> or <code>'customer'</code>). Use UNION ALL.</p>
+<div class="playground" data-pg-idx="19">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.3.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Two SELECTs each with first_name and a hardcoded literal as the second column.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT first_name, &#x27;actor&#x27; AS source FROM actor UNION ALL SELECT first_name, &#x27;customer&#x27; AS source FROM customer;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-433-union-vs-join">Challenge 4.3.3 — UNION vs JOIN</h4>
+<p>You want every customer's first_name <em>and</em> their last_name in one column called <code>name</code>. UNION or JOIN — which is right?</p>
+<div class="playground" data-pg-idx="20">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 4.3.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your query</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='The two values come from the same row. That is a hint.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT first_name AS name FROM customer UNION ALL SELECT last_name AS name FROM customer;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-434-bug-spotting">Challenge 4.3.4 — Bug spotting</h4>
+<p>Why does this query error?</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions_2">Solutions</h3>
+<h4 id="solution-431">Solution 4.3.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-432">Solution 4.3.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;actor&#39;</span><span class="w">    </span><span class="k">AS</span><span class="w"> </span><span class="k">source</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">actor</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"> </span><span class="k">ALL</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;customer&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">source</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-433">Solution 4.3.3</h4>
+<p>UNION is right — you want two values from the same row stacked into one column:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"> </span><span class="k">ALL</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">last_name</span><span class="w">  </span><span class="k">AS</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>A JOIN would not make sense here — there is only one table involved, and you want the values in <em>one</em> column, not side-by-side.</p>
+<h4 id="solution-434">Solution 4.3.4</h4>
+<p>Column count mismatch: 2 columns in the first SELECT, 1 in the second. Either drop a column from the first or add a placeholder to the second:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="n">customer_id</span><span class="p">,</span><span class="w"> </span><span class="n">first_name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer</span><span class="w"></span>
+<span class="k">UNION</span><span class="w"></span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">        </span><span class="n">amount</span><span class="w">     </span><span class="k">FROM</span><span class="w"> </span><span class="n">payment</span><span class="p">;</span><span class="w">   </span><span class="c1">-- compiles, but the result is weird; ask whether you really wanted UNION</span>
+</code></pre></div>
+
+<p>The fact that fixing the column count produces nonsense is itself a hint: this probably should have been a JOIN, not a UNION.</p>
+<hr />
+<h2 id="whats-next">What's next</h2>
+<p>You can now ask the questions that matter — questions that span tables.</p>
+<p>Module 5 takes a step into <strong>advanced SQL</strong>: timestamps and date functions, subqueries (queries inside queries), and self-joins (joining a table to itself). After Module 5 you will have everything you need to write the queries that show up in real analytics, dashboards, and back-end services.</p>
+
+    <div class="module-nav">
+        <a href="module-03.html"><span class="label">← Previous · Module 3</span><span class="title">Aggregating Data</span></a>
+        <a href="module-05.html"><span class="label">Next · Module 5 →</span><span class="title">Advanced SQL</span></a>
+    </div>
+  </main>
+</div>
+
+<script>
+const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
+let dbPromise = null;
+function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+async function getDb() {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const SQL = await initSqlJs({ locateFile: f => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f });
+      const db = new SQL.Database();
+      db.exec(SEED_SQL);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+function renderResult(el, columns, rows, msg) {
+  let html = "";
+  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
+  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
+  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
+  html += "</tbody></table>";
+  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
+  el.innerHTML = html;
+}
+async function runQuery(pg) {
+  const led = pg.querySelector(".led");
+  const ta = pg.querySelector("textarea");
+  const result = pg.querySelector(".pg-result");
+  const sql = ta.value.trim();
+  if (!sql) { result.innerHTML = ""; return; }
+  led.classList.add("loading");
+  try {
+    const db = await getDb();
+    const out = db.exec(sql);
+    if (out.length === 0) renderResult(result, null, null, "Statement executed");
+    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    led.classList.remove("loading","err");
+  } catch (e) {
+    led.classList.remove("loading"); led.classList.add("err");
+    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+const ORIG = new WeakMap();
+document.querySelectorAll(".playground").forEach(pg => {
+  const ta = pg.querySelector("textarea");
+  ORIG.set(pg, ta.value);
+  pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
+  const reset = pg.querySelector('[data-action="reset"]');
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
+  const hint = pg.querySelector('[data-action="hint"]');
+  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  const sol = pg.querySelector('[data-action="solution"]');
+  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+});
+getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
+       .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
+
+// Auto-build sidebar TOC from h2 headings
+const tocEl = document.getElementById("toc");
+document.querySelectorAll("main h2").forEach(h => {
+  if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const a = document.createElement("a");
+  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
+  tocEl.appendChild(a);
+});
+const sections = document.querySelectorAll("main h2[id]");
+function updateActiveToc() {
+  let id = null;
+  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
+  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+}
+window.addEventListener("scroll", updateActiveToc, { passive: true });
+updateActiveToc();
+</script>
+</body>
+</html>

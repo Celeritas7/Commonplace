@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 6 — Creating &amp; Modifying Tables · Interactive SQL Book</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+    --warn-bg:#fef3c7; --warn-fg:#92400e; --warn-badge:#f59e0b;
+    --ok-bg:#d1fae5; --ok-fg:#065f46;
+    --err-bg:#fee2e2; --err-fg:#991b1b;
+    --tip-bg:#ede9fe; --tip-fg:#3730a3;
+    --example-bg:#fdf4ff; --example-fg:#86198f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .nav-modules { display: flex; gap: 4px; font-size: 12px; overflow-x: auto; max-width: 60vw; }
+  .topnav .nav-modules a {
+    color: var(--text-mute); text-decoration: none; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap;
+  }
+  .topnav .nav-modules a:hover { background: var(--accent-soft); color: var(--accent); }
+  .topnav .nav-modules a.current { background: var(--accent); color: #fff; }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 36px; max-width: 1180px; margin: 0 auto; padding: 28px 28px 80px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 20px; } .sidebar { display: none; } }
+
+  .sidebar { position: sticky; top: 70px; align-self: start; max-height: calc(100vh - 90px); overflow-y: auto; font-size: 13.5px; padding-right: 8px; }
+  .sidebar h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-mute); margin: 4px 0 12px 0; font-weight: 700; }
+  .sidebar a { display: block; color: var(--text-soft); text-decoration: none; padding: 6px 12px; border-left: 2px solid transparent; margin: 2px 0; border-radius: 0 6px 6px 0; }
+  .sidebar a:hover { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+  .sidebar a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  main { min-width: 0; }
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .summary { margin-top: 14px; font-size: 15.5px; line-height: 1.6; color: rgba(255,255,255,0.94); max-width: 620px; }
+  .module-hero .meta-line { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,0.85); }
+  .module-hero .meta-line strong { color: #fff; }
+
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); }
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; font-size: 0.9em;
+  }
+
+  /* Funnel */
+  .funnel-wrap { display: flex; justify-content: center; margin: 24px 0 28px; }
+  .funnel-wrap.mini { justify-content: flex-start; margin: 12px 0; }
+  .funnel { display: block; max-width: 360px; height: auto; }
+  .funnel.mini { max-width: 160px; }
+
+  /* Lesson header (mini-funnel + intro) */
+  .lesson-header { display: flex; align-items: center; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); margin-top: 36px; }
+  .lesson-header .funnel-wrap { margin: 0; flex-shrink: 0; }
+  .lesson-header .intro .kicker { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); }
+  .lesson-header .intro h2 { margin: 4px 0 6px; font-size: 22px; }
+  .lesson-header .intro p { margin: 0; font-style: italic; }
+
+  /* Code blocks (Pygments output) */
+  .highlight {
+    background: var(--code-bg) !important; color: var(--code-fg);
+    padding: 16px 20px; border-radius: 10px; margin: 16px 0;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13.5px; line-height: 1.55; overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.12);
+    border-left: 4px solid var(--accent);
+  }
+  .highlight pre { margin: 0; background: transparent; color: inherit; }
+  .highlight .k, .highlight .kw, .highlight .kr, .highlight .kn, .highlight .kc { color: #f472b6; font-weight: 700; }
+  .highlight .nb { color: #c4b5fd; }
+  .highlight .n, .highlight .nx, .highlight .nv { color: #93c5fd; }
+  .highlight .s, .highlight .s1, .highlight .s2 { color: #fcd34d; }
+  .highlight .mi, .highlight .mf { color: #34d399; }
+  .highlight .o, .highlight .p { color: #94a3b8; }
+  .highlight .c, .highlight .c1, .highlight .cm { color: #64748b; font-style: italic; }
+
+  /* Admonitions (note, tip, warning, example) */
+  .admonition { margin: 20px 0; padding: 14px 18px; border-radius: 10px; border-left: 4px solid; font-size: 14.5px; }
+  .admonition .admonition-title { font-weight: 700; font-size: 12.5px; letter-spacing: 0.4px; text-transform: uppercase; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; }
+  .admonition p { margin: 6px 0; }
+  .admonition.note { background: var(--tip-bg); color: var(--tip-fg); border-color: var(--accent); }
+  .admonition.note .admonition-title::before { content: "ℹ"; }
+  .admonition.tip { background: #ecfdf5; color: #065f46; border-color: #10b981; }
+  .admonition.tip .admonition-title::before { content: "✓"; }
+  .admonition.warning { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-badge); }
+  .admonition.warning .admonition-title::before { content: "⚠"; }
+  .admonition.danger { background: var(--err-bg); color: var(--err-fg); border-color: #ef4444; }
+  .admonition.danger .admonition-title::before { content: "✕"; }
+  .admonition.example { background: var(--example-bg); color: var(--example-fg); border-color: #c026d3; }
+  .admonition.example .admonition-title::before { content: "▶"; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); margin: 16px 0; }
+  th { background: var(--text); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-soft); font-size: 14px; }
+  td code { background: var(--accent-soft); padding: 1px 6px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Playground */
+  .playground { margin: 20px 0; border: 1px solid var(--border); background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .pg-header { background: #f9fafb; border-bottom: 1px solid var(--border); padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-mute); display: flex; align-items: center; justify-content: space-between; }
+  .pg-header .left { display: flex; align-items: center; gap: 10px; }
+  .pg-header .led { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.7); }
+  .pg-header .led.loading { background: #f59e0b; }
+  .pg-header .led.err { background: #ef4444; }
+  .pg-header .hint { font-size: 11px; color: var(--text-mute); font-weight: 400; }
+  .playground textarea {
+    width: 100%; background: var(--code-bg); color: var(--code-fg); border: none;
+    padding: 16px 18px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    resize: vertical; min-height: 80px; outline: none; caret-color: #a5b4fc;
+  }
+  .pg-actions { background: #fff; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .pg-actions .left-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn { background: #f3f4f6; color: var(--text-soft); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; font-family: inherit; }
+  .btn:hover { background: #e5e7eb; color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); padding: 7px 16px; font-weight: 600; }
+  .btn.primary:hover { background: #4338ca; }
+  .pg-result { border-top: 1px solid var(--border); padding: 14px 16px; background: #fafbfc; font-size: 13px; max-height: 360px; overflow: auto; }
+  .pg-result:empty { display: none; }
+  .pg-result table { width: 100%; background: #fff; }
+  .pg-result th { background: var(--accent-soft); color: var(--accent); padding: 8px 12px; font-size: 11.5px; }
+  .pg-result td { padding: 7px 12px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+  .pg-status { font-size: 12px; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; font-weight: 500; }
+  .pg-status.ok { background: var(--ok-bg); color: var(--ok-fg); }
+  .pg-status.err { background: var(--err-bg); color: var(--err-fg); font-family: "JetBrains Mono", monospace; }
+
+  /* Module nav at bottom */
+  .module-nav { margin-top: 60px; padding-top: 28px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .module-nav a, .module-nav span { color: var(--text-soft); text-decoration: none; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--paper); min-width: 240px; }
+  .module-nav a:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .module-nav .label { display: block; font-size: 10.5px; color: var(--text-mute); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .module-nav .title { display: block; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="brand" href="index.html"><span class="dot"></span>Interactive SQL Book</a>
+  <div class="nav-modules">
+      <a href="module-01.html" class="">1. Retrieving Data</a>
+      <a href="module-02.html" class="">2. Filtering &amp; Sorting</a>
+      <a href="module-03.html" class="">3. Aggregating Data</a>
+      <a href="module-04.html" class="">4. JOINs</a>
+      <a href="module-05.html" class="">5. Advanced SQL</a>
+      <a href="module-06.html" class="current">6. Creating &amp; Modifying Tables</a>
+      <a href="module-07.html" class="">7. Conditional Expressions &amp; Views</a>
+      <a href="module-08.html" class="">8. Importing &amp; Exporting Data</a>
+      <a href="module-09.html" class="">9. PostgreSQL with Python</a>
+      <a href="module-10.html" class="">10. Capstone — Tiffinly</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h4>In this module</h4>
+    <div id="toc"></div>
+  </aside>
+
+  <main>
+    <div class="module-hero">
+      <div class="meta">Module 6 of 10</div>
+      <h1>Creating &amp; Modifying Tables</h1>
+<div class="summary">So far we have only read data. Now you become the one who builds the database — designing tables, putting data in, changing it, and evolving the schema as needs change.</div>      <div class="meta-line">
+<strong>Estimated time:</strong> 100–130 minutes · <strong>Prerequisites:</strong> Modules 1–5 complete. Comfort with SELECT, JOIN, and the idea of NULL.      </div>
+    </div>
+
+    <h2 id="what-this-module-covers">What this module covers</h2>
+<p>Until now, you were a <em>reader</em> of databases — someone who consumed data that someone else designed and loaded. This module flips that. You design the tables, you load the data, you change it, and when requirements shift, you evolve the schema without breaking anything.</p>
+<ul>
+<li><strong>Designing tables</strong> — picking data types, primary and foreign keys, constraints that prevent bad data getting in</li>
+<li><strong>DML — Data Manipulation Language</strong> — INSERT new rows, UPDATE existing ones, DELETE the ones you no longer need</li>
+<li><strong>Schema evolution</strong> — ALTER an existing table to add/rename/drop columns; DROP a whole table when it has outlived its purpose</li>
+</ul>
+<p>These commands are called <strong>DDL</strong> (Data Definition Language — CREATE, ALTER, DROP) and <strong>DML</strong> (Data Manipulation Language — INSERT, UPDATE, DELETE). Together they cover everything <em>except</em> reading, which is SELECT (sometimes called DQL).</p>
+<h2 id="a-different-kind-of-sql">A different kind of SQL</h2>
+<p>Everything before this module was <strong>idempotent</strong> — running the same SELECT twice gives the same answer; nothing in the database changes. Everything in this module is <strong>mutating</strong> — running an UPDATE or DELETE changes the database. If you run it twice, the second run may do nothing (good) or destroy more data (very bad).</p>
+<p>This shift in mental model is what makes DDL/DML feel risky to newcomers. Treat it that way — until you have habits like "WHERE first, then DELETE" — and you will not have a horror story to tell.</p>
+<div class="admonition note">
+<p class="admonition-title">The funnel takes a break this module</p>
+<p>The SQL funnel (SELECT, WHERE, GROUP BY, ORDER BY, LIMIT) was a visual aid for <em>reading</em> data. DDL and DML are outside that world entirely — they have their own shapes. We'll return to the funnel in Module 7.</p>
+<p>In its place, the recurring image for this module is the <strong>table lifecycle</strong>: a table is created, fills with rows, gets edited and reshaped, and is eventually dropped. Every DDL and DML command moves a table from one stage of its life to the next.</p>
+</div>
+<div style="display:flex;justify-content:center;margin:20px 0">
+<svg viewBox="0 0 720 130" width="100%" style="max-width:720px" xmlns="http://www.w3.org/2000/svg">
+  <!-- Stages -->
+  <rect x="10"  y="50" width="120" height="40" rx="8" fill="#fff" stroke="#9ca3af" stroke-width="2"/>
+  <text x="70"  y="74" text-anchor="middle" font-family="Inter" font-size="12" font-weight="700" fill="#6b7280">no table</text>
+
+  <rect x="200" y="50" width="120" height="40" rx="8" fill="#ede9fe" stroke="#4f46e5" stroke-width="2"/>
+  <text x="260" y="74" text-anchor="middle" font-family="Inter" font-size="12" font-weight="700" fill="#4f46e5">empty table</text>
+
+  <rect x="400" y="50" width="120" height="40" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="460" y="74" text-anchor="middle" font-family="Inter" font-size="12" font-weight="700" fill="#15803d">table with rows</text>
+
+  <rect x="590" y="50" width="120" height="40" rx="8" fill="#fff" stroke="#9ca3af" stroke-width="2"/>
+  <text x="650" y="74" text-anchor="middle" font-family="Inter" font-size="12" font-weight="700" fill="#6b7280">no table</text>
+
+  <!-- Arrows -->
+  <path d="M130 70 L195 70" stroke="#4f46e5" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="162" y="60" text-anchor="middle" font-family="JetBrains Mono, Consolas" font-size="11" font-weight="700" fill="#4f46e5">CREATE</text>
+
+  <path d="M320 70 L395 70" stroke="#16a34a" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="357" y="60" text-anchor="middle" font-family="JetBrains Mono, Consolas" font-size="11" font-weight="700" fill="#15803d">INSERT</text>
+
+  <path d="M520 70 L585 70" stroke="#9ca3af" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="552" y="60" text-anchor="middle" font-family="JetBrains Mono, Consolas" font-size="11" font-weight="700" fill="#6b7280">DROP</text>
+
+  <!-- Self-loop on middle stage -->
+  <path d="M460 90 Q460 115 480 115 Q500 115 500 90" stroke="#d97706" stroke-width="2" fill="none" marker-end="url(#arrO)"/>
+  <text x="480" y="128" text-anchor="middle" font-family="JetBrains Mono, Consolas" font-size="10" font-weight="700" fill="#d97706">UPDATE · DELETE</text>
+
+  <!-- ALTER as a label on the empty/full stages -->
+  <path d="M260 90 Q260 110 280 110 Q300 110 300 90" stroke="#7c3aed" stroke-width="2" fill="none" marker-end="url(#arrP)"/>
+  <text x="280" y="124" text-anchor="middle" font-family="JetBrains Mono, Consolas" font-size="10" font-weight="700" fill="#7c3aed">ALTER</text>
+
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><polygon points="0 0, 6 3, 0 6" fill="#4f46e5"/></marker>
+    <marker id="arrO" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><polygon points="0 0, 6 3, 0 6" fill="#d97706"/></marker>
+    <marker id="arrP" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><polygon points="0 0, 6 3, 0 6" fill="#7c3aed"/></marker>
+  </defs>
+</svg>
+</div>
+
+<hr />
+<h2 id="lesson-61-designing-tables">Lesson 6.1 — Designing tables</h2>
+<p><em>Types, keys, constraints. The decisions you make here will shape every query against the table forever.</em></p>
+<h3 id="data-types">Data types</h3>
+<p>Every column has a type, and the type controls what can go in. Pick wrongly and you either lose data (truncated strings) or waste space and time (numbers stored as text). The PostgreSQL types you will reach for 95% of the time:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INTEGER</code></td>
+<td>Whole numbers — ids, counts, ages</td>
+</tr>
+<tr>
+<td><code>BIGINT</code></td>
+<td>Very large whole numbers (over 2 billion)</td>
+</tr>
+<tr>
+<td><code>NUMERIC(p, s)</code> / <code>DECIMAL</code></td>
+<td>Exact decimals — money, percentages</td>
+</tr>
+<tr>
+<td><code>REAL</code> / <code>DOUBLE PRECISION</code></td>
+<td>Floating-point — measurements, scientific</td>
+</tr>
+<tr>
+<td><code>TEXT</code></td>
+<td>Variable-length string — preferred default</td>
+</tr>
+<tr>
+<td><code>VARCHAR(n)</code></td>
+<td>String with maximum length n</td>
+</tr>
+<tr>
+<td><code>BOOLEAN</code></td>
+<td>TRUE / FALSE</td>
+</tr>
+<tr>
+<td><code>DATE</code></td>
+<td>Calendar date</td>
+</tr>
+<tr>
+<td><code>TIMESTAMP</code></td>
+<td>Date + time</td>
+</tr>
+<tr>
+<td><code>UUID</code></td>
+<td>Globally-unique identifier (PostgreSQL only)</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">Use TEXT for strings, NUMERIC for money</p>
+<p>PostgreSQL gives <code>TEXT</code> and <code>VARCHAR(n)</code> the same performance. <code>TEXT</code> is more flexible — no arbitrary length limit. Reach for <code>VARCHAR(n)</code> only when the limit is a real business constraint (e.g., 2-letter country codes).</p>
+<p>For money, <strong>never use <code>FLOAT</code> or <code>DOUBLE</code></strong> — floating-point math gives wrong answers for cents. <code>NUMERIC(10, 2)</code> (10 digits total, 2 after the decimal) gives exact decimal arithmetic. SQLite is more forgiving here but the rule still applies.</p>
+</div>
+<h3 id="primary-keys">Primary keys</h3>
+<p>A <strong>primary key</strong> is the column (or combination) that uniquely identifies each row. Almost every table should have one. Without a primary key:</p>
+<ul>
+<li>You cannot tell which row to UPDATE or DELETE when two rows look identical.</li>
+<li>Other tables cannot reference rows in this one.</li>
+<li>Many tools assume one exists and behave strangely without it.</li>
+</ul>
+<p>The conventional pattern is an integer <code>id</code> column that auto-increments:</p>
+<div class="playground" data-pg-idx="0">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>A minimal table with a primary key</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">CREATE TABLE student (
+  id     INTEGER PRIMARY KEY,
+  name   TEXT NOT NULL,
+  age    INTEGER
+);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>INTEGER PRIMARY KEY</code> in SQLite auto-increments by default. In PostgreSQL, the modern equivalent is <code>id INT GENERATED ALWAYS AS IDENTITY</code> or the older <code>id SERIAL</code>.</p>
+<p>You only get one primary key per table, but it can span multiple columns (a <strong>composite key</strong>):</p>
+<div class="highlight"><pre><span></span><code><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">student_id</span><span class="p">,</span><span class="w"> </span><span class="n">course_id</span><span class="p">)</span><span class="w"></span>
+</code></pre></div>
+
+<p>We use this in the dvdrental <code>film_category</code> bridge table — each (film, category) pair is unique.</p>
+<h3 id="foreign-keys">Foreign keys</h3>
+<p>A <strong>foreign key</strong> is a column that references another table's primary key. It says "this value must be one that exists over there".</p>
+<div class="playground" data-pg-idx="1">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Add an enrollment table referencing student</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">CREATE TABLE enrollment (
+  id          INTEGER PRIMARY KEY,
+  student_id  INTEGER REFERENCES student(id),
+  course      TEXT NOT NULL,
+  grade       TEXT
+);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>student_id</code> must be the id of an existing student. If you try to insert an enrollment for student_id 999 when no such student exists, the database refuses.</p>
+<div class="admonition tip">
+<p class="admonition-title">Foreign keys catch the bugs your application would have missed</p>
+<p>Without a foreign key constraint, your application code is responsible for never writing an enrollment for a nonexistent student. With one, the database guarantees it — even if a buggy script tries.</p>
+<p>This is the single most useful guard you can put on your data. Add foreign keys for every column that <em>should</em> reference another table, not just the ones where you remember to.</p>
+</div>
+<h3 id="constraints-beyond-the-type">Constraints — beyond the type</h3>
+<p>Types stop you from storing text in an INTEGER column. Constraints stop you from storing <em>wrong</em> data of the right type — like a negative age or a duplicate email.</p>
+<table>
+<thead>
+<tr>
+<th>Constraint</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NOT NULL</code></td>
+<td>Column may not be NULL</td>
+</tr>
+<tr>
+<td><code>UNIQUE</code></td>
+<td>No two rows may have the same value</td>
+</tr>
+<tr>
+<td><code>PRIMARY KEY</code></td>
+<td>NOT NULL + UNIQUE, plus marks this as <em>the</em> identifier</td>
+</tr>
+<tr>
+<td><code>REFERENCES x(y)</code></td>
+<td>Foreign key — value must exist in <code>x.y</code></td>
+</tr>
+<tr>
+<td><code>CHECK (expr)</code></td>
+<td>Custom rule that must evaluate true for every row</td>
+</tr>
+<tr>
+<td><code>DEFAULT v</code></td>
+<td>Value used when INSERT omits this column</td>
+</tr>
+</tbody>
+</table>
+<p>Put them all together — this is what a real production table looks like:</p>
+<div class="playground" data-pg-idx="2">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>A well-constrained employee table</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">CREATE TABLE employee (
+  id         INTEGER PRIMARY KEY,
+  email      TEXT NOT NULL UNIQUE,
+  name       TEXT NOT NULL,
+  salary     NUMERIC(10, 2) NOT NULL CHECK (salary &gt;= 0),
+  hire_date  DATE NOT NULL DEFAULT CURRENT_DATE,
+  manager_id INTEGER REFERENCES employee(id)
+);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Reading top to bottom: every employee has an id, a unique non-null email, a non-null name, a non-negative salary, a hire_date that defaults to today, and an optional manager who must be another employee.</p>
+<h3 id="the-full-create-table-shape">The full CREATE TABLE shape</h3>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">table_name</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">column_1</span><span class="w">   </span><span class="k">TYPE</span><span class="w"> </span><span class="p">[</span><span class="k">constraints</span><span class="p">],</span><span class="w"></span>
+<span class="w">  </span><span class="n">column_2</span><span class="w">   </span><span class="k">TYPE</span><span class="w"> </span><span class="p">[</span><span class="k">constraints</span><span class="p">],</span><span class="w"></span>
+<span class="w">  </span><span class="p">...</span><span class="w"></span>
+<span class="w">  </span><span class="c1">-- table-level constraints (optional):</span>
+<span class="w">  </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">col_a</span><span class="p">,</span><span class="w"> </span><span class="n">col_b</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">col</span><span class="p">)</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">other_table</span><span class="p">(</span><span class="n">other_col</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">some_condition</span><span class="p">)</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<p>Column constraints (like <code>NOT NULL</code> or single-column <code>UNIQUE</code>) go on the column. Multi-column constraints (composite PK, multi-column UNIQUE, table-level CHECK) go at the bottom.</p>
+<h3 id="common-mistakes">Common mistakes</h3>
+<h4 id="using-float-for-money">Using FLOAT for money</h4>
+<p>Already covered — use NUMERIC. The bugs from FLOAT cents are subtle and hard to track down.</p>
+<h4 id="forgetting-not-null">Forgetting NOT NULL</h4>
+<p>If you intend a column to always have a value, <em>say so</em>. NOT NULL is the cheapest defense against bad data. Adding it after the fact requires a migration that handles existing NULLs.</p>
+<h4 id="skipping-the-primary-key">Skipping the primary key</h4>
+<p>A table without a primary key is a hot mess waiting to happen. Add <code>id INTEGER PRIMARY KEY</code> as a default reflex. You will almost never regret it.</p>
+<h4 id="foreign-keys-to-nothing">Foreign keys to nothing</h4>
+<p><code>student_id INTEGER REFERENCES student(id)</code> only protects you if the constraint is <em>enforced</em>. In SQLite, foreign keys are off by default — you have to <code>PRAGMA foreign_keys = ON</code> per connection. PostgreSQL enforces them always.</p>
+<h3 id="practice-challenges">Practice challenges</h3>
+<h4 id="challenge-611-a-simple-product-table">Challenge 6.1.1 — A simple product table</h4>
+<p>Create a <code>product</code> table with: <code>id</code> (integer primary key), <code>name</code> (text, not null), <code>price</code> (numeric, not null, must be ≥ 0), <code>category</code> (text, defaults to 'uncategorized').</p>
+<div class="playground" data-pg-idx="3">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.1.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your CREATE TABLE</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='CREATE TABLE product (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price NUMERIC(10,2) NOT NULL CHECK(price &gt;= 0), category TEXT DEFAULT &#x27;uncategorized&#x27;);'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='CREATE TABLE product (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price NUMERIC(10,2) NOT NULL CHECK(price &gt;= 0), category TEXT DEFAULT &#x27;uncategorized&#x27;);'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-612-a-table-with-a-foreign-key">Challenge 6.1.2 — A table with a foreign key</h4>
+<p>Create an <code>order_item</code> table that references the <code>product</code> table you just made. Columns: <code>id</code> (PK), <code>product_id</code> (foreign key to product.id), <code>quantity</code> (integer, ≥ 1).</p>
+<div class="playground" data-pg-idx="4">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.1.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your CREATE TABLE</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='REFERENCES product(id) and CHECK(quantity &gt;= 1).'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='CREATE TABLE order_item (id INTEGER PRIMARY KEY, product_id INTEGER REFERENCES product(id), quantity INTEGER NOT NULL CHECK(quantity &gt;= 1));'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-613-bug-spotting">Challenge 6.1.3 — Bug spotting</h4>
+<p>What is wrong with this schema?</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_line</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">product_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">product</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="n">price</span><span class="w">      </span><span class="nb">FLOAT</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">qty</span><span class="w">        </span><span class="nb">INTEGER</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h3 id="solutions">Solutions</h3>
+<h4 id="solution-611">Solution 6.1.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w">        </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w">      </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">price</span><span class="w">     </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">price</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="n">category</span><span class="w">  </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;uncategorized&#39;</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-612">Solution 6.1.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_item</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w">         </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">product_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">product</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="n">quantity</span><span class="w">   </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">quantity</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-613">Solution 6.1.3</h4>
+<p>Three issues:
+1. <strong>No primary key</strong> — there is no way to uniquely identify a row, so UPDATE/DELETE on a specific row is impossible.
+2. <strong><code>FLOAT</code> for price</strong> — floating-point math gives wrong answers for money. Use <code>NUMERIC(10, 2)</code>.
+3. <strong>No NOT NULL anywhere</strong> — every column can be NULL. Is a row with <code>product_id = NULL, price = NULL, qty = NULL</code> actually valid? Probably not. Most of these should be NOT NULL.</p>
+<p>A safer version:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_line</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w">         </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">product_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">product</span><span class="p">(</span><span class="n">id</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="n">price</span><span class="w">      </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">price</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="n">qty</span><span class="w">        </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">qty</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<h2 id="lesson-62-insert-update-delete">Lesson 6.2 — INSERT, UPDATE, DELETE</h2>
+<p><em>The three commands that change row data. Order matters: write before SELECT, then WHERE.</em></p>
+<h3 id="setup-make-sure-the-product-table-exists">Setup — make sure the product table exists</h3>
+<p>Lesson 6.2 builds on the <code>product</code> table from 6.1. Run this once to make sure it's there in your playground session. (If you already created it above, this is a no-op.)</p>
+<div class="playground" data-pg-idx="5">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Setup: create product table if needed</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">DROP TABLE IF EXISTS product;
+CREATE TABLE product (
+  id        INTEGER PRIMARY KEY,
+  name      TEXT NOT NULL,
+  price     NUMERIC(10, 2) NOT NULL CHECK (price &gt;= 0),
+  category  TEXT DEFAULT &#x27;uncategorized&#x27;
+);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="insert-putting-data-in">INSERT — putting data in</h3>
+<p>The most common form:</p>
+<div class="highlight"><pre><span></span><code><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="k">table_name</span><span class="w"> </span><span class="p">(</span><span class="n">col1</span><span class="p">,</span><span class="w"> </span><span class="n">col2</span><span class="p">,</span><span class="w"> </span><span class="n">col3</span><span class="p">)</span><span class="w"></span>
+<span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="n">val1</span><span class="p">,</span><span class="w"> </span><span class="n">val2</span><span class="p">,</span><span class="w"> </span><span class="n">val3</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<p>You list the columns you want to fill, then list the matching values. The order of columns in the INSERT does not have to match the table's column order — they pair up positionally.</p>
+<div class="playground" data-pg-idx="6">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Insert one product</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">INSERT INTO product (id, name, price, category) VALUES
+  (1, &#x27;Notebook&#x27;, 4.99, &#x27;stationery&#x27;);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="7">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Read it back</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT * FROM product;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="inserting-multiple-rows">Inserting multiple rows</h3>
+<p>You can stack value tuples to insert many rows in one statement:</p>
+<div class="playground" data-pg-idx="8">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Bulk insert</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">INSERT INTO product (id, name, price, category) VALUES
+  (2, &#x27;Pen&#x27;,        1.25, &#x27;stationery&#x27;),
+  (3, &#x27;Mouse pad&#x27;,  8.50, &#x27;electronics&#x27;),
+  (4, &#x27;Coffee mug&#x27;, 6.00, &#x27;kitchen&#x27;),
+  (5, &#x27;Headphones&#x27;, 49.99, &#x27;electronics&#x27;);</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="9">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>All five products</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT * FROM product;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>This is much faster than five separate INSERTs because the database does the work in one transaction.</p>
+<h3 id="omitting-columns">Omitting columns</h3>
+<p>If a column has a <code>DEFAULT</code> (or allows NULL), you can leave it out of the INSERT:</p>
+<div class="playground" data-pg-idx="10">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>No category supplied — DEFAULT kicks in</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">INSERT INTO product (id, name, price) VALUES (6, &#x27;Stapler&#x27;, 12.00);
+SELECT * FROM product WHERE id = 6;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p><code>category</code> came back as <code>'uncategorized'</code> — the default we set in CREATE TABLE.</p>
+<h3 id="insert-select-copy-data-from-another-table">INSERT … SELECT — copy data from another table</h3>
+<p>A powerful variant: instead of literal values, the source can be a SELECT. The columns of the SELECT must match the columns of the INSERT in order and type.</p>
+<div class="highlight"><pre><span></span><code><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">archive_film</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">film</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">release_year</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">2000</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>This copies every old film into an archive table in one query.</p>
+<h3 id="update-changing-rows">UPDATE — changing rows</h3>
+<div class="highlight"><pre><span></span><code><span class="k">UPDATE</span><span class="w"> </span><span class="k">table_name</span><span class="w"></span>
+<span class="k">SET</span><span class="w"> </span><span class="n">column1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value1</span><span class="p">,</span><span class="w"> </span><span class="n">column2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">value2</span><span class="w"></span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">condition</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>The WHERE is <em>technically</em> optional — but <strong>almost always required</strong>. UPDATE without WHERE changes every row in the table. That has destroyed more data than any other SQL mistake.</p>
+<div class="playground" data-pg-idx="11">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Raise all stationery prices by 20%</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">UPDATE product
+SET price = price * 1.20
+WHERE category = &#x27;stationery&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="12">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>See the result</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT id, name, price, category FROM product WHERE category = &#x27;stationery&#x27;;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>You can update multiple columns at once:</p>
+<div class="playground" data-pg-idx="13">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Multi-column update</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">UPDATE product
+SET name = &#x27;Premium Pen&#x27;, price = 2.00
+WHERE id = 2;
+
+SELECT * FROM product WHERE id = 2;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="admonition warning">
+<p class="admonition-title">Safety habit: SELECT first, then UPDATE</p>
+<p>Before you run any UPDATE, run the SELECT version of the WHERE first:</p>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;stationery&#39;</span><span class="p">;</span><span class="w">   </span><span class="c1">-- check the rows</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">20</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;stationery&#39;</span><span class="p">;</span><span class="w">  </span><span class="c1">-- now update them</span>
+</code></pre></div>
+
+<p>This catches the most common mistake — UPDATE with a too-broad WHERE, or no WHERE at all. Five seconds of SELECT can save hours of restoring from backup.</p>
+</div>
+<h3 id="delete-removing-rows">DELETE — removing rows</h3>
+<div class="highlight"><pre><span></span><code><span class="k">DELETE</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="k">table_name</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">condition</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Same warning as UPDATE: <strong>DELETE without WHERE removes every row in the table</strong>. The empty table remains; the rows are gone.</p>
+<div class="playground" data-pg-idx="14">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Delete one product</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">DELETE FROM product WHERE id = 6;
+SELECT * FROM product;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The stapler we inserted is gone.</p>
+<div class="admonition danger">
+<p class="admonition-title">The SELECT-first habit applies double for DELETE</p>
+<p><code>SELECT *</code> with the planned WHERE before every DELETE. There is no Ctrl-Z. Even with backups, restoring is hours of pain compared to five seconds of typing.</p>
+</div>
+<h3 id="what-about-returning">What about RETURNING?</h3>
+<p>PostgreSQL has a useful extension: every INSERT, UPDATE, and DELETE can return the affected rows.</p>
+<div class="highlight"><pre><span></span><code><span class="k">DELETE</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="n">RETURNING</span><span class="w"> </span><span class="o">*</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- gets back the row that was just deleted</span>
+</code></pre></div>
+
+<p>SQLite supports this from version 3.35 onwards. Useful for confirming what changed without a separate SELECT.</p>
+<h3 id="common-mistakes_1">Common mistakes</h3>
+<h4 id="update-or-delete-without-where">UPDATE or DELETE without WHERE</h4>
+<p>Covered above. The instinct should be "WHERE first" — write the WHERE before the UPDATE.</p>
+<h4 id="update-that-violates-a-constraint">UPDATE that violates a constraint</h4>
+<div class="highlight"><pre><span></span><code><span class="k">UPDATE</span><span class="w"> </span><span class="n">employee</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">salary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mi">100</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"></span>
+<span class="c1">-- error: CHECK constraint failed: salary &gt;= 0</span>
+</code></pre></div>
+
+<p>Constraints from CREATE TABLE keep enforcing themselves through every UPDATE. This is the whole point of constraints — they refuse to let your data go bad.</p>
+<h4 id="inserting-a-foreign-key-that-does-not-exist">Inserting a foreign key that does not exist</h4>
+<div class="highlight"><pre><span></span><code><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">order_item</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">product_id</span><span class="p">,</span><span class="w"> </span><span class="n">quantity</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">999</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span><span class="w"></span>
+<span class="c1">-- error: FOREIGN KEY constraint failed</span>
+</code></pre></div>
+
+<p><code>product_id 999</code> does not exist in the product table. Foreign key constraints stop the insert. Good — exactly what you want.</p>
+<h4 id="forgetting-that-update-full-row-rewrite">Forgetting that UPDATE = full row rewrite</h4>
+<p>In most databases (including PostgreSQL), <code>UPDATE … SET x = 5</code> doesn't just write <code>x</code>; it rewrites the whole row internally. For huge rows or massive batch updates, that has performance implications. Not something to worry about until you have a real performance problem.</p>
+<h3 id="practice-challenges_1">Practice challenges</h3>
+<h4 id="challenge-621-insert-into-your-product-table">Challenge 6.2.1 — Insert into your product table</h4>
+<p>Insert one more product: id 7, name 'USB Cable', price 9.99, category 'electronics'.</p>
+<div class="playground" data-pg-idx="15">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.2.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your INSERT</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='INSERT INTO product (id, name, price, category) VALUES (...);'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='INSERT INTO product (id, name, price, category) VALUES (7, &#x27;USB Cable&#x27;, 9.99, &#x27;electronics&#x27;);'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-622-verify">Challenge 6.2.2 — Verify</h4>
+<p>Show every product, ordered by price descending.</p>
+<div class="playground" data-pg-idx="16">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.2.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your SELECT</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='Plain SELECT with ORDER BY price DESC.'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT * FROM product ORDER BY price DESC;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-623-update">Challenge 6.2.3 — UPDATE</h4>
+<p>Set every electronics product to have a 10% discount (multiply price by 0.90).</p>
+<div class="playground" data-pg-idx="17">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.2.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your UPDATE</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='UPDATE product SET price = price * 0.90 WHERE category = &#x27;electronics&#x27;;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='UPDATE product SET price = price * 0.90 WHERE category = &#x27;electronics&#x27;;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-624-delete">Challenge 6.2.4 — DELETE</h4>
+<p>Delete every product with a price under $5.</p>
+<div class="playground" data-pg-idx="18">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.2.4</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your DELETE</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='DELETE FROM product WHERE price &lt; 5;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='DELETE FROM product WHERE price &lt; 5;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-625-confirm">Challenge 6.2.5 — Confirm</h4>
+<p>Show what is left.</p>
+<div class="playground" data-pg-idx="19">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.2.5</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your SELECT</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT * FROM product;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT * FROM product;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_1">Solutions</h3>
+<h4 id="solution-621">Solution 6.2.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="p">,</span><span class="w"> </span><span class="n">category</span><span class="p">)</span><span class="w"></span>
+<span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;USB Cable&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;electronics&#39;</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-622">Solution 6.2.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-623">Solution 6.2.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">UPDATE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">90</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;electronics&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-624">Solution 6.2.4</h4>
+<div class="highlight"><pre><span></span><code><span class="k">DELETE</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-625">Solution 6.2.5</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<h2 id="lesson-63-schema-evolution-alter-and-drop">Lesson 6.3 — Schema evolution: ALTER and DROP</h2>
+<p><em>The only constant is change. ALTER and DROP let your tables follow requirements without breaking anything.</em></p>
+<h3 id="the-two-truths-about-schema-change">The two truths about schema change</h3>
+<ol>
+<li>Real applications evolve. The columns you need next year are not the columns you needed last year.</li>
+<li>Existing data is precious. Schema changes that <em>destroy</em> data are usually wrong; schema changes that <em>preserve and migrate</em> it are usually right.</li>
+</ol>
+<p>That tension is the whole story of ALTER. It is also why production database migrations are reviewed more carefully than almost any other change.</p>
+<h3 id="alter-table-adding-a-column">ALTER TABLE — adding a column</h3>
+<div class="playground" data-pg-idx="20">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Add a stock_count column to product</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">ALTER TABLE product ADD COLUMN stock_count INTEGER DEFAULT 0;
+SELECT * FROM product LIMIT 3;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>Every existing row gets the default (or NULL if no default is specified). Adding a column with a DEFAULT is fast — most databases handle it without touching every existing row.</p>
+<h3 id="alter-table-dropping-a-column">ALTER TABLE — dropping a column</h3>
+<div class="playground" data-pg-idx="21">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Drop the category column</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">ALTER TABLE product DROP COLUMN category;
+SELECT * FROM product LIMIT 3;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The data in that column is gone. Backup first if it might be needed.</p>
+<h3 id="alter-table-renaming">ALTER TABLE — renaming</h3>
+<div class="playground" data-pg-idx="22">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Rename a column</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">ALTER TABLE product RENAME COLUMN name TO product_name;
+SELECT * FROM product LIMIT 3;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="23">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Rename a whole table</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">ALTER TABLE product RENAME TO catalog_item;
+SELECT * FROM catalog_item LIMIT 3;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>(Note for clarity in the rest of this lesson, we will continue calling it <code>product</code> — but the rename worked.)</p>
+<h3 id="changing-types-and-constraints">Changing types and constraints</h3>
+<p>Each database has its own quirks here. PostgreSQL supports rich <code>ALTER TABLE</code> syntax:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- PostgreSQL</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">ALTER</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="k">TYPE</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span><span class="w"></span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">ALTER</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">ALTER</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="k">DROP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span><span class="w"></span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">CONSTRAINT</span><span class="w"> </span><span class="n">product_price_positive</span><span class="w"> </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">price</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">DROP</span><span class="w"> </span><span class="k">CONSTRAINT</span><span class="w"> </span><span class="n">product_price_positive</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>SQLite is more restrictive — older versions could only add columns, not modify them. Modern SQLite supports renaming and a handful of changes, but for serious type changes the SQLite idiom is: create a new table, copy rows over, drop the old, rename the new. PostgreSQL handles this in one statement.</p>
+<div class="admonition tip">
+<p class="admonition-title">Migrations in production</p>
+<p>When a schema change runs against a large production database, two things matter:</p>
+<ol>
+<li><strong>It should not lock the table for long</strong> — users can be reading and writing during the migration.</li>
+<li><strong>It should be reversible</strong> — if something goes wrong, you can roll back.</li>
+</ol>
+<p>PostgreSQL has tools like <code>CREATE INDEX CONCURRENTLY</code> and patterns like "add a new column, backfill, switch reads, drop old column" for safe online migrations. This is a deep topic; the key habit is to <em>plan migrations as multi-step deployments</em>, not single statements.</p>
+</div>
+<h3 id="drop-table-removing-the-table">DROP TABLE — removing the table</h3>
+<div class="highlight"><pre><span></span><code><span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">table_name</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<div class="playground" data-pg-idx="24">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Drop a table we no longer need (using catalog_item, since we renamed)</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">DROP TABLE catalog_item;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<div class="playground" data-pg-idx="25">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Confirm — should error</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">SELECT * FROM catalog_item;</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      
+      
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<p>The table and all its data are gone. There is also <code>DROP TABLE IF EXISTS table_name;</code> which silently does nothing if the table is not there — useful in scripts.</p>
+<div class="admonition danger">
+<p class="admonition-title">DROP is irreversible</p>
+<p>DROP TABLE has no undo, no WHERE clause. The entire table — schema, all rows, all indexes — disappears. The only "safety net" is backups.</p>
+<p>Habit: never type <code>DROP TABLE x</code> without first typing <code>SELECT COUNT(*) FROM x</code> to remind yourself how much data you are about to vaporize.</p>
+</div>
+<h3 id="truncate-empty-a-table-fast">TRUNCATE — empty a table fast</h3>
+<p><code>TRUNCATE TABLE table_name</code> removes all rows but keeps the table. It is much faster than <code>DELETE FROM table_name</code> because it does not log every row deletion. PostgreSQL supports it; SQLite does not (use <code>DELETE FROM table_name</code> instead).</p>
+<h3 id="common-mistakes_2">Common mistakes</h3>
+<h4 id="alter-that-locks-production">ALTER that locks production</h4>
+<p><code>ALTER TABLE huge_table ADD COLUMN foo TEXT DEFAULT 'x'</code> may rewrite every row depending on the database — locking the table for minutes or hours on a busy production system. Always test ALTER timing against a production-sized dataset before running it for real.</p>
+<h4 id="drop-table-in-the-wrong-environment">DROP TABLE in the wrong environment</h4>
+<p>The number-one production database incident: someone meant to DROP a table in <code>dev</code> and was connected to <code>prod</code>. Always confirm which connection you are on before any DROP or DELETE.</p>
+<h4 id="forgetting-that-foreign-keys-block-drop">Forgetting that foreign keys block DROP</h4>
+<p>If <code>order_item</code> has a foreign key to <code>product</code>, you cannot drop <code>product</code> while orders reference it. Either drop <code>order_item</code> first, or use <code>DROP TABLE product CASCADE</code> (PostgreSQL) which drops dependent objects too — powerful and dangerous.</p>
+<h3 id="practice-challenges_2">Practice challenges</h3>
+<h4 id="challenge-631-add-a-column">Challenge 6.3.1 — Add a column</h4>
+<p>The product table no longer exists (we dropped it). Re-create it with: <code>id</code> (PK), <code>name</code> (text not null), <code>price</code> (numeric not null).</p>
+<div class="playground" data-pg-idx="26">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.3.1</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your CREATE</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='CREATE TABLE product (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price NUMERIC(10,2) NOT NULL);'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='CREATE TABLE product (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price NUMERIC(10,2) NOT NULL);'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-632-insert-a-few-rows">Challenge 6.3.2 — Insert a few rows</h4>
+<p>Insert three products of your choice.</p>
+<div class="playground" data-pg-idx="27">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.3.2</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your INSERT</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='INSERT INTO product (id, name, price) VALUES (1, &#x27;A&#x27;, 10), (2, &#x27;B&#x27;, 20), (3, &#x27;C&#x27;, 30);'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='INSERT INTO product (id, name, price) VALUES (1, &#x27;Apple&#x27;, 1.00), (2, &#x27;Banana&#x27;, 0.50), (3, &#x27;Cherry&#x27;, 3.00);'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-633-add-a-column-with-a-default">Challenge 6.3.3 — Add a column with a default</h4>
+<p>Add a <code>currency</code> column to the product table that defaults to <code>'USD'</code>.</p>
+<div class="playground" data-pg-idx="28">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.3.3</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your ALTER</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ALTER TABLE product ADD COLUMN currency TEXT DEFAULT &#x27;USD&#x27;;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='ALTER TABLE product ADD COLUMN currency TEXT DEFAULT &#x27;USD&#x27;;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-634-verify">Challenge 6.3.4 — Verify</h4>
+<p>Confirm every existing row got <code>currency = 'USD'</code>.</p>
+<div class="playground" data-pg-idx="29">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.3.4</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your SELECT</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='SELECT * FROM product;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='SELECT * FROM product;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-635-drop-a-column">Challenge 6.3.5 — Drop a column</h4>
+<p>Drop the <code>currency</code> column.</p>
+<div class="playground" data-pg-idx="30">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.3.5</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your ALTER</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='ALTER TABLE product DROP COLUMN currency;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='ALTER TABLE product DROP COLUMN currency;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h4 id="challenge-636-drop-the-table">Challenge 6.3.6 — Drop the table</h4>
+<p>Drop the entire product table.</p>
+<div class="playground" data-pg-idx="31">
+  <div class="pg-header">
+    <div class="left"><span class="led loading"></span><span>Challenge 6.3.6</span></div>
+    <span class="hint">SQLite · dvdrental schema</span>
+  </div>
+  <textarea spellcheck="false">-- your DROP</textarea>
+  <div class="pg-actions">
+    <div class="left-actions">
+      <button class="btn" data-action="reset">Reset</button>
+      <button class='btn' data-action='hint' data-hint='DROP TABLE product;'>Show hint</button>
+      <button class='btn' data-action='solution' data-solution='DROP TABLE product;'>Show solution</button>
+    </div>
+    <button class="btn primary" data-action="run">Run query →</button>
+  </div>
+  <div class="pg-result"></div>
+</div>
+
+<h3 id="solutions_2">Solutions</h3>
+<h4 id="solution-631">Solution 6.3.1</h4>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w">    </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w">  </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">price</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-632">Solution 6.3.2</h4>
+<div class="highlight"><pre><span></span><code><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Apple&#39;</span><span class="p">,</span><span class="w">  </span><span class="mi">1</span><span class="p">.</span><span class="mi">00</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Banana&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">50</span><span class="p">),</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Cherry&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">.</span><span class="mi">00</span><span class="p">);</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-633">Solution 6.3.3</h4>
+<div class="highlight"><pre><span></span><code><span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">currency</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;USD&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-634">Solution 6.3.4</h4>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">product</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<p>Every existing row should show <code>currency = 'USD'</code>.</p>
+<h4 id="solution-635">Solution 6.3.5</h4>
+<div class="highlight"><pre><span></span><code><span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="k">DROP</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">currency</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<h4 id="solution-636">Solution 6.3.6</h4>
+<div class="highlight"><pre><span></span><code><span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product</span><span class="p">;</span><span class="w"></span>
+</code></pre></div>
+
+<hr />
+<h2 id="whats-next">What's next</h2>
+<p>You have now done the full life cycle: read data, filter it, summarize it, combine tables, transform values — and now design, populate, edit, and evolve the schema itself. That is the entire core of SQL.</p>
+<p>Module 7 introduces <strong>conditional expressions</strong> — <code>CASE</code>, <code>COALESCE</code>, <code>CAST</code>, <code>NULLIF</code>, and <code>VIEWS</code>. These are the polish: tools that make queries clearer and reusable. After Module 7, your SQL will look more like senior-engineer SQL — fewer NULL surprises, fewer hardcoded values, more named views that hide complexity behind a simple name.</p>
+
+    <div class="module-nav">
+        <a href="module-05.html"><span class="label">← Previous · Module 5</span><span class="title">Advanced SQL</span></a>
+        <a href="module-07.html"><span class="label">Next · Module 7 →</span><span class="title">Conditional Expressions &amp; Views</span></a>
+    </div>
+  </main>
+</div>
+
+<script>
+const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
+let dbPromise = null;
+function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+async function getDb() {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const SQL = await initSqlJs({ locateFile: f => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f });
+      const db = new SQL.Database();
+      db.exec(SEED_SQL);
+      return db;
+    })();
+  }
+  return dbPromise;
+}
+function renderResult(el, columns, rows, msg) {
+  let html = "";
+  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
+  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
+  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
+  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
+  html += "</tbody></table>";
+  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
+  el.innerHTML = html;
+}
+async function runQuery(pg) {
+  const led = pg.querySelector(".led");
+  const ta = pg.querySelector("textarea");
+  const result = pg.querySelector(".pg-result");
+  const sql = ta.value.trim();
+  if (!sql) { result.innerHTML = ""; return; }
+  led.classList.add("loading");
+  try {
+    const db = await getDb();
+    const out = db.exec(sql);
+    if (out.length === 0) renderResult(result, null, null, "Statement executed");
+    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    led.classList.remove("loading","err");
+  } catch (e) {
+    led.classList.remove("loading"); led.classList.add("err");
+    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+  }
+}
+const ORIG = new WeakMap();
+document.querySelectorAll(".playground").forEach(pg => {
+  const ta = pg.querySelector("textarea");
+  ORIG.set(pg, ta.value);
+  pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
+  const reset = pg.querySelector('[data-action="reset"]');
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
+  const hint = pg.querySelector('[data-action="hint"]');
+  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  const sol = pg.querySelector('[data-action="solution"]');
+  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+});
+getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
+       .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
+
+// Auto-build sidebar TOC from h2 headings
+const tocEl = document.getElementById("toc");
+document.querySelectorAll("main h2").forEach(h => {
+  if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const a = document.createElement("a");
+  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
+  tocEl.appendChild(a);
+});
+const sections = document.querySelectorAll("main h2[id]");
+function updateActiveToc() {
+  let id = null;
+  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
+  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+}
+window.addEventListener("scroll", updateActiveToc, { passive: true });
+updateActiveToc();
+</script>
+</body>
+</html>
