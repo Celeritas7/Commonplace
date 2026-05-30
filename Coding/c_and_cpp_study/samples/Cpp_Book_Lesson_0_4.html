@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 0.4 — Thinking Like a Programmer · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .mindset { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  .mindset-col { padding: 20px; border-radius: 18px; border: 2px solid var(--bg3); transition: all 0.25s var(--bouncy); }
+  .mindset-col.user { background: linear-gradient(135deg, #fef9c3, #fef3c7); border-color: var(--yellow); }
+  .mindset-col.prog { background: linear-gradient(135deg, #ede9fe, white); border-color: var(--purple); }
+  .mindset-col:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .mindset-col h4 { margin: 0 0 12px; font-size: 17px; display: flex; align-items: center; gap: 10px; }
+  .mindset-col.user h4 { color: #92400e; }
+  .mindset-col.prog h4 { color: var(--purple-deep); }
+  .mindset-col ul { margin: 0; padding-left: 4px; list-style: none; }
+  .mindset-col li { padding-left: 28px; position: relative; margin-bottom: 8px; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
+  .mindset-col.user li::before { content: "🙂"; position: absolute; left: 0; }
+  .mindset-col.prog li::before { content: "🤖"; position: absolute; left: 0; }
+  @media (max-width: 600px) { .mindset { grid-template-columns: 1fr; } }
+
+  .shift-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 16px 0; }
+  .shift-card { background: white; border: 2px solid var(--bg3); border-radius: 16px; padding: 18px 22px; display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; transition: all 0.25s var(--bouncy); }
+  .shift-card:hover { transform: translateY(-3px); border-color: var(--purple); box-shadow: var(--shadow); }
+  .shift-from, .shift-to { font-size: 14.5px; line-height: 1.4; }
+  .shift-from { color: var(--ink-soft); text-align: right; padding-right: 4px; }
+  .shift-from strong { display: block; font-size: 12px; color: var(--ink-dim); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; }
+  .shift-to { color: var(--ink); }
+  .shift-to strong { display: block; font-size: 12px; color: var(--purple-deep); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; }
+  .shift-arrow { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); flex-shrink: 0; }
+  @media (max-width: 600px) { .shift-card { grid-template-columns: 1fr; gap: 8px; } .shift-from { text-align: left; padding-right: 0; } .shift-arrow { width: 32px; height: 32px; font-size: 14px; margin: 0 auto; } }
+
+  .tree-area { background: linear-gradient(135deg, #faf5ff, #fdf4ff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .tree-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .tree-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .tree-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .tree-node { margin-bottom: 6px; }
+  .tree-node-content { display: flex; align-items: center; gap: 10px; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 10px 14px; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .tree-node-content:hover { border-color: var(--purple); transform: translateX(3px); box-shadow: var(--shadow-sm); }
+  .tree-node.expanded > .tree-node-content { background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-color: var(--purple); }
+  .tree-node.leaf > .tree-node-content { cursor: default; background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); }
+  .tree-node.leaf > .tree-node-content:hover { transform: none; }
+  .tree-icon { font-size: 18px; flex-shrink: 0; }
+  .tree-text { flex: 1; font-size: 14.5px; color: var(--ink); }
+  .tree-btn-expand { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; border-radius: 8px; padding: 4px 10px; font: inherit; font-weight: 700; font-size: 11px; cursor: pointer; letter-spacing: 0.4px; }
+  .tree-btn-expand:hover { transform: scale(1.05); }
+  .tree-node.expanded .tree-btn-expand, .tree-node.leaf .tree-btn-expand { display: none; }
+  .tree-children { margin-left: 28px; margin-top: 6px; padding-left: 14px; border-left: 2px dashed var(--purple-light); display: none; }
+  .tree-node.expanded > .tree-children { display: block; animation: slide-down 0.4s var(--bouncy); }
+  @keyframes slide-down { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .tree-depth-1 .tree-node-content { background: #faf5ff; }
+  .tree-depth-2 .tree-node-content { background: #f3e8ff; }
+  .tree-finish { margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, var(--bg1), white); border: 2px dashed var(--purple-light); border-radius: 12px; text-align: center; font-size: 14px; color: var(--ink-soft); transition: all 0.4s; }
+  .tree-finish.done { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); border-style: solid; color: #166534; font-weight: 700; }
+
+  .quiz { background: linear-gradient(135deg, #fce7f3, #f3e8ff); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--pink); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--pink); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/><circle cx="50" cy="36" r="3.5" fill="#ec4899"/>
+      <text x="40" y="56" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="10" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="64" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="32" y="60" width="16" height="6" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="26" y="66" width="28" height="8" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Today: the programmer mindset. Very different from a user's brain. Let me show you. ✨
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK · 0.4</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 4 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">⭐ PART 0 · BEFORE YOU CODE</span>
+    <h1>Thinking Like a Programmer</h1>
+    <p class="hero-sub">You've been a software user your whole life. Becoming a programmer means flipping the way you think about a few specific things. Let's name them.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="7" r="4" fill="#fde047" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="54" rx="18" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+      <rect x="26" y="33" width="48" height="22" rx="10" fill="#1e1b4b" stroke="#1e1b4b" stroke-width="2"/>
+      <circle cx="38" cy="44" r="4" fill="#06b6d4"/><circle cx="62" cy="44" r="4" fill="#ec4899"/>
+      <text x="50" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="12" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="80" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="40" y="74" width="20" height="8" rx="2" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="32" y="82" width="36" height="10" rx="3" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-pix="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Two brains, same person 🧠</h2>
+    <div class="new-content">
+      Here's a thing nobody tells you up front: <strong>becoming a programmer isn't about learning syntax</strong>. C++ has more syntax than most languages, sure — but you can pick up the essentials in a few weeks. The hard part is rewiring how you approach problems.
+    </div>
+    <p>Every day of your life, you've been a <em>software user</em>. You click, you tap, you swipe. When something doesn't work, you complain, restart, or look for a different button. That's a perfectly fine way to be a user.</p>
+    <p>A programmer faces the same screen with a different brain. When something doesn't work, the programmer asks "why?" and starts taking it apart. When something doesn't exist, the programmer asks "could I build it?" and starts sketching. That's the shift we're naming today — and C++ in particular rewards this thinking style.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-pix="1">
+    <div class="step-label"><span class="step-num">2</span> User vs programmer — side by side</div>
+    <h2>How the same situation looks through two different brains 👀</h2>
+    <div class="new-content">
+      Imagine an app crashed when you tried to upload a photo. Here's how a user reacts vs how a programmer reacts. Both reactions are valid — they're just different jobs.
+    </div>
+    <div class="mindset">
+      <div class="mindset-col user">
+        <h4>The user brain</h4>
+        <ul>
+          <li>"Ugh, this app is broken again."</li>
+          <li>"Let me try restarting it."</li>
+          <li>"Maybe the photo's too big — I'll pick a smaller one."</li>
+          <li>"If it still doesn't work, I'll give up and use a different app."</li>
+          <li>"That's the developer's problem, not mine."</li>
+        </ul>
+      </div>
+      <div class="mindset-col prog">
+        <h4>The programmer brain</h4>
+        <ul>
+          <li>"Why did it crash <em>exactly</em> there?"</li>
+          <li>"What was different about that photo? File size? Format? EXIF data? Permissions?"</li>
+          <li>"What does the code do <em>just before</em> the crash?"</li>
+          <li>"Can I reproduce it on demand?"</li>
+          <li>"If I were writing this, how would I handle this case?"</li>
+        </ul>
+      </div>
+    </div>
+    <p>Notice the second column is mostly <em>questions</em>. The programmer brain isn't smarter — it's just trained to keep asking questions instead of giving up.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-pix="2">
+    <div class="step-label"><span class="step-num">3</span> The three big shifts</div>
+    <h2>The mindset upgrades that change everything 🔄</h2>
+    <div class="new-content">
+      These are the three transitions that turn confused beginners into capable programmers. C++ in particular rewards all three, because the language gives you so much control — and with control comes responsibility.
+    </div>
+    <div class="shift-grid">
+      <div class="shift-card">
+        <div class="shift-from"><strong>From</strong>"I assume the computer will figure it out."</div>
+        <div class="shift-arrow">→</div>
+        <div class="shift-to"><strong>To</strong>"The computer is <em>brutally literal</em>. I have to spell out every type, every case, every lifetime."</div>
+      </div>
+      <div class="shift-card">
+        <div class="shift-from"><strong>From</strong>"Works on my machine = it works."</div>
+        <div class="shift-arrow">→</div>
+        <div class="shift-to"><strong>To</strong>"It works when I've thought about every <em>case</em> — including the weird ones, the empty inputs, the gigabyte-sized inputs."</div>
+      </div>
+      <div class="shift-card">
+        <div class="shift-from"><strong>From</strong>"This problem is too big — I'll never solve it."</div>
+        <div class="shift-arrow">→</div>
+        <div class="shift-to"><strong>To</strong>"I'll break it into pieces small enough to solve one at a time. Then I'll compose them with C++'s tools."</div>
+      </div>
+    </div>
+    <p>That last one — <strong>decomposition</strong> — is the most important skill you'll ever learn. And it happens to map beautifully onto C++ classes, functions, and modules. Let's practice it next.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-pix="3">
+    <div class="step-label"><span class="step-num">4</span> The superpower: decomposition</div>
+    <h2>Big problems are just small problems stacked up 🧩</h2>
+    <div class="new-content">
+      Programmers don't solve big problems. They solve <em>tiny</em> problems, hundreds of them, that combined turn out to be big. The trick is splitting the big one into the tiny ones — that's called <strong>decomposition</strong>.
+    </div>
+    <p>The pattern: take any task, ask "what are the 3 or 4 sub-steps?", then take each sub-step and ask the same question. Repeat until each sub-step is so simple you could just <em>do</em> it.</p>
+    <p>You already do this all the time without noticing. "Make tea" is a single thought to you — but if you had to teach an alien how to make tea, you'd find yourself listing steps: get water, boil water, put tea in a cup, pour the water, wait, drink. Each of those can be broken down further. <em>Get water</em> is really: find the kettle, open the tap, fill the kettle, close the tap.</p>
+    <p>Programming is exactly this pattern. In C++, those final small steps often become individual <em>functions</em>; groups of related ones become <em>classes</em>; groups of related classes become <em>namespaces</em> or <em>modules</em>. The structure of your code mirrors the structure of your decomposition.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-pix="4">
+    <div class="step-label"><span class="step-num">5</span> Try it — break it down</div>
+    <h2>The decomposition tree 🌳</h2>
+    <div class="new-content">
+      Start with "Make a cup of tea." Click <strong>Break it down</strong> on each step to peel back another layer. See how many tiny steps live inside one simple thought. Each expansion = <strong>+5 XP</strong>.
+    </div>
+    <div class="tree-area">
+      <div class="tree-header">
+        <div class="tree-title">🍵 Make a cup of tea</div>
+        <div class="tree-counter"><strong id="treeCount">0</strong> revealed</div>
+      </div>
+      <div id="treeRoot"></div>
+      <div class="tree-finish" id="treeFinish">
+        Click each "Break it down" button to see the next layer. There are 14 hidden sub-steps in total.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-pix="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>Which is programmer thinking? 🎯</h2>
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You're writing a C++ function that calculates someone's age from their birthday. Which approach is "thinking like a programmer"?</div>
+      <button class="opt" data-correct="false">Write the easy case first and ship it. People with weird birthdays can deal with it.</button>
+      <button class="opt" data-correct="false">Look up someone else's age calculator on the internet and copy it without reading.</button>
+      <button class="opt" data-correct="true">Ask: what about leap years? Feb 29 birthdays? Future dates? Invalid dates? Time zones? <em>Then</em> design the function signature.</button>
+      <button class="opt" data-correct="false">Avoid the problem by asking users to enter their age directly instead.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP if you nail it first try.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-pix="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Traps new programmers fall into 🚧</h2>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"I should be able to just write it from the start."</strong>
+        <small>Almost nobody does. Experienced C++ programmers spend most of their time <em>thinking</em>, sketching types, and decomposing — actual typing is a smaller fraction than you'd guess. If you're stuck staring at a blank screen, the problem usually isn't your typing skill; it's that you haven't broken the problem down enough yet.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"If I don't know the answer, I'm not cut out for this."</strong>
+        <small>Wrong. Programming is mostly <em>not knowing the answer yet</em>. The skill is in tolerating that feeling long enough to break the problem into pieces small enough that you <em>do</em> know the answer for each one.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"It compiled and ran once — it's done."</strong>
+        <small>The user brain says "ran successfully = it works." The programmer brain says "ran successfully <em>this time</em>, on <em>this input</em>." Especially in C++, where undefined behavior can lurk silently. Until you've thought about edge cases — empty containers, null pointers, exceptions, gigabyte inputs — you're not done. You're just lucky.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-pix="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Practice the shift 💪</h2>
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Decompose three everyday tasks.</strong> Pick "brush your teeth," "send a text," and "make a sandwich." For each one, write 4–6 sub-steps. Then for one of those sub-steps, write 3 sub-sub-steps. Notice how it never quite bottoms out.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Edge-case hunt.</strong> Pick the calculator on your phone. Spend 5 minutes trying to break it. Divide by zero, type an empty expression, paste a 10,000-character string, switch orientation mid-calculation. Note what happens. This is the kind of thinking a C++ programmer does <em>before</em> shipping, not after a customer complains.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Teach the alien.</strong> Imagine you have to teach a being from another planet (who has no common sense, only follows literal instructions) how to tie shoelaces. Write the instructions. Now hand them to a human friend and ask them to follow them <em>exactly</em>. Watch them fail. Rewrite. This is the actual job — and it's exactly what a compiler does to your code.
+    </div>
+  </section>
+
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>Becoming a programmer is mostly a <strong>mindset shift</strong>, not a syntax-learning exercise.</li>
+      <li>The user brain assumes things work. The programmer brain asks <em>why, when, and what if</em>.</li>
+      <li>Three big shifts: <strong>assume the computer is literal</strong> · <strong>think in cases, not single answers</strong> · <strong>break big problems into tiny ones</strong>.</li>
+      <li><strong>Decomposition</strong> is the superpower — and in C++, it maps directly onto functions, classes, and namespaces.</li>
+      <li>Being stuck or not knowing the answer is normal — it's most of the job. The skill is staying with the discomfort long enough to break the problem down further.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_0_3.html" class="nav-btn prev">
+      <small>← Previous</small>
+      0.3  Why C++? Where it lives today
+    </a>
+    <a href="Cpp_Book_Lesson_0_5.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      0.5  Read, write, run, fix, repeat
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Today: the programmer mindset. Very different from a user's brain. Let me show you. ✨",
+    "User brain: 'ugh, broken.' Programmer brain: 'why, exactly?' That's the whole shift.",
+    "These three shifts. Once you've got them, C++ syntax follows naturally.",
+    "Decomposition → functions → classes → namespaces. It's the whole structure of C++.",
+    "Click 'Break it down' — peel back the layers and watch how deep it goes!",
+    "Read carefully. Only one answer thinks in cases — the others cut corners.",
+    "These trap everyone at first. C++ trips you up faster because there's more to know.",
+    "The alien exercise is the best one. Try it. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 0.4 complete! +50 bonus XP'); addXP(50); }, 400);
+    }
+  }
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPix = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.pix;
+        if (i !== currentPix) { currentPix = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  const TREE = {
+    text: "Make a cup of tea", icon: "🍵",
+    children: [
+      { text: "Get water", icon: "💧", children: [
+        { text: "Find the kettle" }, { text: "Open the tap" },
+        { text: "Fill the kettle" }, { text: "Close the tap" }
+      ]},
+      { text: "Boil the water", icon: "🔥", children: [
+        { text: "Place kettle on stove (or plug in)" },
+        { text: "Turn on heat" }, { text: "Wait for boiling" }, { text: "Turn off heat" }
+      ]},
+      { text: "Prepare cup and tea", icon: "🫖", children: [
+        { text: "Get a clean cup" }, { text: "Get a tea bag" }, { text: "Place tea bag in cup" }
+      ]},
+      { text: "Pour and serve", icon: "🥄", children: [
+        { text: "Pour boiled water into cup" }, { text: "Wait 3 minutes to steep" }, { text: "Remove tea bag" }
+      ]}
+    ]
+  };
+  let revealedNodes = 0;
+  const TOTAL_LEAVES = 14;
+  const treeRoot = document.getElementById('treeRoot');
+  const treeCount = document.getElementById('treeCount');
+  const treeFinish = document.getElementById('treeFinish');
+
+  function buildNode(data, depth = 0) {
+    const node = document.createElement('div');
+    node.className = 'tree-node tree-depth-' + depth;
+    if (!data.children) node.classList.add('leaf');
+    const content = document.createElement('div');
+    content.className = 'tree-node-content';
+    const icon = document.createElement('span');
+    icon.className = 'tree-icon'; icon.textContent = data.icon || '📌';
+    const text = document.createElement('span');
+    text.className = 'tree-text'; text.textContent = data.text;
+    content.appendChild(icon); content.appendChild(text);
+    if (data.children) {
+      const btn = document.createElement('button');
+      btn.className = 'tree-btn-expand'; btn.textContent = 'Break it down ▼';
+      content.appendChild(btn);
+      const children = document.createElement('div');
+      children.className = 'tree-children';
+      data.children.forEach(c => children.appendChild(buildNode(c, depth + 1)));
+      node.appendChild(content); node.appendChild(children);
+      content.addEventListener('click', () => {
+        if (node.classList.contains('expanded')) return;
+        node.classList.add('expanded');
+        revealedNodes += data.children.length;
+        treeCount.textContent = revealedNodes;
+        treeCount.style.transform = 'scale(1.3)';
+        setTimeout(() => treeCount.style.transform = 'scale(1)', 200);
+        const r = node.getBoundingClientRect();
+        addXP(5, r.left + r.width/2, r.top);
+        bumpStreak();
+        if (revealedNodes >= TOTAL_LEAVES) {
+          treeFinish.classList.add('done');
+          treeFinish.innerHTML = '🎉 <strong>All 14 sub-steps revealed!</strong> "Make tea" turned out to be <em>14 things</em>. In C++, each of those leaves might be a function. Groups of them might be a class. That\'s how programs get structured.';
+          setTimeout(() => { burst(); addXP(30, window.innerWidth/2, window.innerHeight/2, '🎉 Tree complete! +30 XP'); }, 200);
+        }
+      });
+    } else {
+      node.appendChild(content);
+    }
+    return node;
+  }
+  treeRoot.appendChild(buildNode(TREE));
+  treeRoot.querySelector('.tree-node').classList.add('expanded');
+
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> Thinking in <em>cases</em> — leap years, time zones, weird input — is the programmer move. The other options take shortcuts.'
+        : '✓ <strong style="color: var(--green)">Got it.</strong> Programmer thinking = ask "what could go wrong?" <em>before</em> writing code.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Look for the answer that asks the most questions before writing code.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

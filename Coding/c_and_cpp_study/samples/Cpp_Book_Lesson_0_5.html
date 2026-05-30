@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 0.5 — Read, Write, Run, Fix, Repeat · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .acts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 18px 0; }
+  .act { padding: 18px 14px; border-radius: 16px; text-align: center; transition: all 0.25s var(--bouncy); border: 2px solid; }
+  .act:hover { transform: translateY(-5px); box-shadow: var(--shadow); }
+  .act.read { background: linear-gradient(180deg, #fef9c3, white); border-color: var(--yellow); }
+  .act.write { background: linear-gradient(180deg, #dbeafe, white); border-color: var(--blue); }
+  .act.run { background: linear-gradient(180deg, #dcfce7, white); border-color: var(--green); }
+  .act.fix { background: linear-gradient(180deg, #fee2e2, white); border-color: var(--red); }
+  .act.repeat { background: linear-gradient(180deg, #f3e8ff, white); border-color: var(--purple); }
+  .act-icon { font-size: 32px; margin-bottom: 6px; }
+  .act-name { font-weight: 700; font-size: 14.5px; color: var(--ink); margin-bottom: 4px; }
+  .act-desc { font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
+  @media (max-width: 700px) { .acts { grid-template-columns: repeat(2, 1fr); } }
+
+  .breakdown { background: linear-gradient(135deg, #faf5ff, white); border: 2px dashed var(--purple-light); border-radius: 18px; padding: 22px; margin: 18px 0; }
+  .breakdown h4 { margin: 0 0 16px; color: var(--purple-deep); font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; text-align: center; }
+  .bar-row { display: grid; grid-template-columns: 80px 1fr 50px; gap: 12px; align-items: center; margin-bottom: 12px; font-size: 14px; }
+  .bar-label { font-weight: 600; color: var(--ink); text-align: right; }
+  .bar-track { background: rgba(0,0,0,0.06); border-radius: 10px; height: 22px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 10px; transition: width 1s var(--bouncy); width: 0%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .bar-pct { font-weight: 700; color: var(--ink-soft); font-family: var(--mono); font-size: 13px; }
+  .bar-read .bar-fill { background: linear-gradient(90deg, var(--yellow), #f59e0b); }
+  .bar-write .bar-fill { background: linear-gradient(90deg, var(--blue), #1d4ed8); }
+  .bar-run .bar-fill { background: linear-gradient(90deg, var(--green), #16a34a); }
+  .bar-fix .bar-fill { background: linear-gradient(90deg, var(--red), #b91c1c); }
+  .bar-other .bar-fill { background: linear-gradient(90deg, var(--purple), var(--purple-deep)); }
+
+  .loop-svg-wrap { background: linear-gradient(135deg, #faf5ff, white); border-radius: 18px; padding: 24px; margin: 18px 0; text-align: center; border: 2px solid var(--purple-light); }
+  .loop-svg { width: 100%; max-width: 460px; height: auto; }
+
+  .scn-area { background: linear-gradient(135deg, #faf5ff, #fdf4ff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .scn-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .scn-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .scn-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .scn-counter strong { font-size: 18px; }
+  .scn-card { background: white; border: 2px solid var(--bg3); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; transition: all 0.3s var(--bouncy); }
+  .scn-card.answered.right { background: linear-gradient(135deg, #dcfce7, white); border-color: var(--green); }
+  .scn-card.answered.wrong { background: linear-gradient(135deg, #fee2e2, white); border-color: var(--red); }
+  .scn-prompt { font-weight: 600; font-size: 15.5px; margin-bottom: 12px; color: var(--ink); line-height: 1.5; }
+  .scn-prompt code { font-family: var(--mono); }
+  .scn-prompt::before { content: "🎬"; margin-right: 8px; }
+  .scn-options { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+  @media (max-width: 700px) { .scn-options { grid-template-columns: repeat(3, 1fr); } }
+  .scn-opt { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 8px; font: inherit; font-weight: 600; font-size: 12.5px; cursor: pointer; text-align: center; transition: all 0.2s var(--bouncy); color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .scn-opt:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .scn-opt:disabled { cursor: default; opacity: 0.6; }
+  .scn-opt.picked-right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.4s var(--bouncy); }
+  .scn-opt.picked-wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  .scn-opt.correct-answer { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .scn-opt-emoji { font-size: 18px; }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .scn-feedback { font-size: 13.5px; color: var(--ink-soft); padding-top: 6px; min-height: 18px; line-height: 1.4; }
+  .scn-feedback.show { padding: 10px 12px; background: rgba(255,255,255,0.7); border-radius: 8px; margin-top: 8px; }
+  .scn-finish { margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, var(--bg1), white); border: 2px dashed var(--purple-light); border-radius: 12px; text-align: center; font-size: 14px; color: var(--ink-soft); transition: all 0.4s; }
+  .scn-finish.done { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); border-style: solid; color: #166534; font-weight: 700; }
+
+  .quiz { background: linear-gradient(135deg, #fce7f3, #f3e8ff); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--pink); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--pink); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/><circle cx="50" cy="36" r="3.5" fill="#ec4899"/>
+      <text x="40" y="56" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="10" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="64" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="32" y="60" width="16" height="6" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="26" y="66" width="28" height="8" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Last lesson of Part 0! Now you'll see the actual rhythm of writing C++. 🔁
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK · 0.5</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 5 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">⭐ PART 0 · BEFORE YOU CODE</span>
+    <h1>Read, Write, Run, Fix, Repeat</h1>
+    <p class="hero-sub">There are basically only five things you do as a programmer. Every working day, every project, every lesson coming up — these five are it. Master the rhythm and the rest follows.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="7" r="4" fill="#fde047" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="54" rx="18" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+      <rect x="26" y="33" width="48" height="22" rx="10" fill="#1e1b4b" stroke="#1e1b4b" stroke-width="2"/>
+      <circle cx="38" cy="44" r="4" fill="#06b6d4"/><circle cx="62" cy="44" r="4" fill="#ec4899"/>
+      <text x="50" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="12" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="80" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="40" y="74" width="20" height="8" rx="2" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="32" y="82" width="36" height="10" rx="3" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-pix="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>The honest job description 📋</h2>
+    <div class="new-content">
+      Movies and TV make programming look like a single act: someone types furiously, sweat on the brow, and bam — the program works. That's not how it goes. <strong>Real programming is a tight little loop of five activities</strong>, and the people who get good are the ones who don't fight the loop.
+    </div>
+    <p>This lesson is short — but it might be the most important one in Part 0. If you internalize the loop now, you won't be surprised when writing C++ turns out to be 30% writing and 70% everything else. That surprise sinks a lot of beginners.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-pix="1">
+    <div class="step-label"><span class="step-num">2</span> The five activities</div>
+    <h2>This is the whole job 🎯</h2>
+    <div class="new-content">
+      That's it. Five things. Every programmer, from a beginner to a 25-year veteran maintaining Chromium, spends their working day doing these five activities in some mix. Hover any card.
+    </div>
+    <div class="acts">
+      <div class="act read">
+        <div class="act-icon">📖</div><div class="act-name">Read</div>
+        <div class="act-desc">Existing code, docs, error messages, other people's work</div>
+      </div>
+      <div class="act write">
+        <div class="act-icon">✍️</div><div class="act-name">Write</div>
+        <div class="act-desc">New code, modifications, comments, tests</div>
+      </div>
+      <div class="act run">
+        <div class="act-icon">▶️</div><div class="act-name">Run</div>
+        <div class="act-desc">Compile, execute, see what actually happens</div>
+      </div>
+      <div class="act fix">
+        <div class="act-icon">🔧</div><div class="act-name">Fix</div>
+        <div class="act-desc">Debug when it doesn't behave (and it won't)</div>
+      </div>
+      <div class="act repeat">
+        <div class="act-icon">🔁</div><div class="act-name">Repeat</div>
+        <div class="act-desc">Tighten the loop. Go again. Until done.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-pix="2">
+    <div class="step-label"><span class="step-num">3</span> The proportions will surprise you</div>
+    <h2>How a programmer's hour actually breaks down ⏱️</h2>
+    <div class="new-content">
+      Beginners imagine programming is "mostly writing." It isn't. A rough — but representative — breakdown of where the time goes for an experienced C++ developer:
+    </div>
+    <div class="breakdown">
+      <h4>Time spent in each activity</h4>
+      <div class="bar-row bar-read"><div class="bar-label">📖 Read</div><div class="bar-track"><div class="bar-fill" data-pct="40"></div></div><div class="bar-pct">~40%</div></div>
+      <div class="bar-row bar-write"><div class="bar-label">✍️ Write</div><div class="bar-track"><div class="bar-fill" data-pct="20"></div></div><div class="bar-pct">~20%</div></div>
+      <div class="bar-row bar-run"><div class="bar-label">▶️ Run</div><div class="bar-track"><div class="bar-fill" data-pct="10"></div></div><div class="bar-pct">~10%</div></div>
+      <div class="bar-row bar-fix"><div class="bar-label">🔧 Fix</div><div class="bar-track"><div class="bar-fill" data-pct="25"></div></div><div class="bar-pct">~25%</div></div>
+      <div class="bar-row bar-other"><div class="bar-label">💭 Think</div><div class="bar-track"><div class="bar-fill" data-pct="5"></div></div><div class="bar-pct">~5%</div></div>
+    </div>
+    <p>Reading dominates. You read existing code to understand it, read documentation to figure out how to use a library, read compiler errors to figure out what went wrong (C++ errors can be <em>long</em> — they're really worth learning to read), and read your <em>own</em> code from yesterday to remember what you were doing. Reading skill is at least as valuable as writing skill.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-pix="3">
+    <div class="step-label"><span class="step-num">4</span> It's a loop, not a sequence</div>
+    <h2>The tight loop that defines the work 🔁</h2>
+    <div class="new-content">
+      The five activities don't happen once and then you're done. They cycle, fast, in a tight loop. Good C++ programmers can complete a full read-write-run-fix-repeat cycle in seconds — sometimes 30 cycles per hour. Beginners often spend hours stuck because their loop is too slow.
+    </div>
+    <div class="loop-svg-wrap">
+      <svg class="loop-svg" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(80, 60)">
+          <circle r="36" fill="#fef9c3" stroke="#facc15" stroke-width="3"/>
+          <text y="-2" text-anchor="middle" font-size="22">📖</text>
+          <text y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">READ</text>
+        </g>
+        <g transform="translate(320, 60)">
+          <circle r="36" fill="#dbeafe" stroke="#3b82f6" stroke-width="3"/>
+          <text y="-2" text-anchor="middle" font-size="22">✍️</text>
+          <text y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">WRITE</text>
+        </g>
+        <g transform="translate(360, 175)">
+          <circle r="36" fill="#dcfce7" stroke="#22c55e" stroke-width="3"/>
+          <text y="-2" text-anchor="middle" font-size="22">▶️</text>
+          <text y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">RUN</text>
+        </g>
+        <g transform="translate(200, 230)">
+          <circle r="36" fill="#fee2e2" stroke="#ef4444" stroke-width="3"/>
+          <text y="-2" text-anchor="middle" font-size="22">🔧</text>
+          <text y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#1a202c">FIX</text>
+        </g>
+        <g transform="translate(200, 140)">
+          <circle r="38" fill="white" stroke="#8b5cf6" stroke-width="3" stroke-dasharray="4 3"/>
+          <text y="-4" text-anchor="middle" font-size="22">🔁</text>
+          <text y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#6d28d9">REPEAT</text>
+        </g>
+        <path d="M 115 60 Q 200 30 285 60" stroke="#8b5cf6" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+        <path d="M 350 95 Q 380 135 360 145" stroke="#8b5cf6" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+        <path d="M 340 205 Q 290 240 240 230" stroke="#8b5cf6" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+        <path d="M 165 220 Q 90 200 90 95" stroke="#8b5cf6" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6"/>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+    <p>A good programmer doesn't try to write 200 lines and then run them once. They write 5 lines, run, see if it works, fix if not, write 5 more. <strong>Tiny laps around the loop, many times</strong>. That's the rhythm. C++ in particular rewards short cycles because the compiler is your best ally — short loops let it catch type errors and bad casts seconds after you make them.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-pix="4">
+    <div class="step-label"><span class="step-num">5</span> Try it — what are you doing right now?</div>
+    <h2>Spot the activity in each scene 🎬</h2>
+    <div class="new-content">
+      Below are 6 micro-scenarios from an hour of C++ programming. For each one, pick which of the 5 activities is happening. First-try correct = <strong>+10 XP</strong>. Wrong guess still earns <strong>+3 XP</strong> for trying.
+    </div>
+    <div class="scn-area">
+      <div class="scn-header">
+        <div class="scn-title">🎯 Read it, classify it</div>
+        <div class="scn-counter"><strong id="scnCount">0</strong> / 6 correct</div>
+      </div>
+      <div id="scnList"></div>
+      <div class="scn-finish" id="scnFinish">
+        Tag each scene with the activity that fits best. You'll start recognizing the loop in your own work.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-pix="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>Quick check 🎯</h2>
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">Your C++ program won't compile — there's a 40-line error message. A beginner instinct is to immediately try changing random things until it builds. Why is that usually a bad move?</div>
+      <button class="opt" data-correct="false">Because changing code takes too long.</button>
+      <button class="opt" data-correct="false">Because the compiler is unreliable about errors.</button>
+      <button class="opt" data-correct="true">Because they skipped the READ step. C++ error messages contain the exact info needed to fix the bug — random changes throw the info away and often introduce new bugs.</button>
+      <button class="opt" data-correct="false">Because experienced programmers never edit code without git.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-pix="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Beginner traps in the loop 🚧</h2>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Errors mean I'm failing."</strong>
+        <small>Errors are <em>feedback</em>, not failure. A C++ error message is the compiler telling you exactly what it didn't understand. Senior programmers see compiler errors all day; what they've learned is to <em>read them carefully</em> instead of panicking. C++ errors are notoriously long — read from the top.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"I'll write the whole class, then compile it."</strong>
+        <small>This is the slow-loop trap. Big-bang releases have big-bang bugs. Write a tiny piece (one method, one function), compile, see it work, then build on it. Tight loops let the C++ compiler catch type errors seconds after you make them.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Asking for help means I'm not a real programmer."</strong>
+        <small>Reading other people's code, documentation (cppreference.com is your friend), and Stack Overflow answers <em>is part of the READ step</em>. Real C++ programmers do it every day. Refusing to read = trying to invent the STL from scratch. Don't.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-pix="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Practice the rhythm 💪</h2>
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Time yourself.</strong> Next time you do <em>any</em> repetitive task (cooking, organizing photos, replying to emails), notice the loop you're in. What's your read step? Write step? Fix step? Repeat step? You already loop — programming just makes it explicit.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Read someone else's C++.</strong> Find a small open-source C++ program on GitHub (search "small C++ example" or "C++ beginner project"). Pick one with under 200 lines. Spend 15 minutes <em>just reading it</em>. Don't try to understand everything. Notice what makes sense, what doesn't. Reading C++ is the most underrated skill — and the one you'll spend most time on.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Read a real C++ error message.</strong> Open any online C++ compiler (godbolt.org / wandbox.org). Type something deliberately wrong — like <code>std::vector&lt;int&gt; v; v.push_back("hello");</code> — and read the error. C++ errors can be 30+ lines for one mistake. The skill is finding the actual problem line. This is half of the FIX step.
+    </div>
+  </section>
+
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>Programming is five activities: <strong>Read, Write, Run, Fix, Repeat</strong>.</li>
+      <li>Writing is the small part. Reading and fixing together usually take more time than typing new code.</li>
+      <li>It's a <strong>tight loop</strong>, not a sequence. Lap many times per hour. C++ compilers reward tight loops — they catch type errors instantly.</li>
+      <li>Errors and bugs are <strong>feedback, not failure</strong>. Senior programmers see them all day; what's different is how they read them.</li>
+      <li>You've reached the end of Part 0. From the next lesson, we install a modern C++ compiler and write our first real C++ code. 🚀</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_0_4.html" class="nav-btn prev">
+      <small>← Previous</small>
+      0.4  Thinking like a programmer
+    </a>
+    <a href="../index.html" class="nav-btn next">
+      <small>End of Part 0 →</small>
+      Back to the launcher
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Last lesson of Part 0! Now you'll see the actual rhythm of writing C++. 🔁",
+    "Five activities. That's everything, structurally. Get used to the names.",
+    "Spoiler: reading wins. Especially for C++. Compiler errors are <em>long</em>. 📖",
+    "Tight little laps. The compiler is your best ally when the loop is short.",
+    "Tag each scene. You'll start recognizing the loop in your own thinking!",
+    "Read carefully — only one answer respects the loop. 🎯",
+    "Don't fear errors. C++ errors look scary but contain exactly what you need.",
+    "The stretch exercise is the best. Read a real long error message. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Part 0 complete! +100 XP'); addXP(100); }, 400);
+    }
+  }
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPix = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.pix;
+        if (i !== currentPix) { currentPix = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  const breakdownObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        document.querySelectorAll('.bar-fill').forEach(b => {
+          const pct = b.dataset.pct;
+          setTimeout(() => b.style.width = pct + '%', 100);
+        });
+        breakdownObs.disconnect();
+      }
+    });
+  }, { threshold: 0.4 });
+  const breakdownEl = document.querySelector('.breakdown');
+  if (breakdownEl) breakdownObs.observe(breakdownEl);
+
+  const SCN = [
+    { prompt: "You're parsing a 30-line C++ error that starts with <code>no matching function for call to 'std::vector&lt;int&gt;::push_back(const char [6])'</code>.", correct: 'read', explain: "You're decoding what the compiler is saying. That's reading. The next move will be FIX, but right now you're parsing the message." },
+    { prompt: "You type <code>std::vector&lt;int&gt; numbers;</code> at the top of <code>main()</code>.", correct: 'write', explain: "You're producing new code. Pure WRITE." },
+    { prompt: "You hit Cmd-Shift-B (or <code>g++ main.cpp &amp;&amp; ./a.out</code>) and watch the terminal.", correct: 'run', explain: "You're compiling and executing. That's RUN." },
+    { prompt: "The output is empty when you expected numbers, so you add <code>std::cout &lt;&lt; \"size: \" &lt;&lt; v.size() &lt;&lt; \"\\n\";</code> to investigate.", correct: 'fix', explain: "Adding debug output to chase down unexpected behavior is the FIX step. You're investigating, not adding features." },
+    { prompt: "You finally got the first version working. Now you start on the next feature: sorting the vector.", correct: 'repeat', explain: "One full loop done. Going again is REPEAT — and it's just as important as the first four." },
+    { prompt: "You open cppreference.com to look up exactly what arguments <code>std::sort</code> takes.", correct: 'read', explain: "Looking up docs is READ. So is scanning Stack Overflow and reading the C++ standard." }
+  ];
+  const SCN_OPTIONS = [
+    { id: 'read', label: 'READ', emoji: '📖' },
+    { id: 'write', label: 'WRITE', emoji: '✍️' },
+    { id: 'run', label: 'RUN', emoji: '▶️' },
+    { id: 'fix', label: 'FIX', emoji: '🔧' },
+    { id: 'repeat', label: 'REPEAT', emoji: '🔁' }
+  ];
+  const scnList = document.getElementById('scnList');
+  const scnCount = document.getElementById('scnCount');
+  const scnFinish = document.getElementById('scnFinish');
+  let scnRight = 0, scnAnswered = 0;
+  SCN.forEach((sc) => {
+    const card = document.createElement('div');
+    card.className = 'scn-card';
+    const prompt = document.createElement('div');
+    prompt.className = 'scn-prompt'; prompt.innerHTML = sc.prompt;
+    const opts = document.createElement('div');
+    opts.className = 'scn-options';
+    const feedback = document.createElement('div');
+    feedback.className = 'scn-feedback';
+    SCN_OPTIONS.forEach(o => {
+      const btn = document.createElement('button');
+      btn.className = 'scn-opt'; btn.dataset.opt = o.id;
+      btn.innerHTML = `<span class="scn-opt-emoji">${o.emoji}</span><span>${o.label}</span>`;
+      btn.addEventListener('click', () => {
+        if (card.classList.contains('answered')) return;
+        card.classList.add('answered');
+        const isRight = o.id === sc.correct;
+        if (isRight) {
+          btn.classList.add('picked-right');
+          card.classList.add('right');
+          scnRight++;
+          bumpStreak();
+          const r = btn.getBoundingClientRect();
+          addXP(10, r.left + r.width/2, r.top);
+        } else {
+          btn.classList.add('picked-wrong');
+          card.classList.add('wrong');
+          breakStreak();
+          opts.querySelectorAll('.scn-opt').forEach(b => { if (b.dataset.opt === sc.correct) b.classList.add('correct-answer'); });
+          const r = btn.getBoundingClientRect();
+          addXP(3, r.left + r.width/2, r.top);
+        }
+        opts.querySelectorAll('.scn-opt').forEach(b => b.disabled = true);
+        feedback.classList.add('show');
+        feedback.innerHTML = (isRight ? '✓ ' : '✗ Correct answer: ' + sc.correct.toUpperCase() + '. ') + sc.explain;
+        scnAnswered++;
+        scnCount.textContent = scnRight;
+        scnCount.style.transform = 'scale(1.3)';
+        setTimeout(() => scnCount.style.transform = 'scale(1)', 200);
+        if (scnAnswered === SCN.length) {
+          scnFinish.classList.add('done');
+          const msg = scnRight === SCN.length
+            ? '🎉 <strong>Perfect score!</strong> You\'re already reading the loop fluently.'
+            : `🎯 <strong>${scnRight} / ${SCN.length} correct.</strong> Now you\'ve got names for what programmers actually do.`;
+          scnFinish.innerHTML = msg;
+          setTimeout(() => { burst(); addXP(20, window.innerWidth/2, window.innerHeight/2, '🎉 Classifier done! +20 XP'); }, 200);
+        }
+      });
+      opts.appendChild(btn);
+    });
+    card.appendChild(prompt); card.appendChild(opts); card.appendChild(feedback);
+    scnList.appendChild(card);
+  });
+
+  const qOpts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  qOpts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> C++ errors are <em>verbose on purpose</em>. They contain the exact fix. READ first, FIX with intent — don\'t guess.'
+        : '✓ <strong style="color: var(--green)">Got it.</strong> The compiler\'s error has the answer. Random changes throw it away.';
+      qOpts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. The real reason involves what info you <em>lose</em> by guessing.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

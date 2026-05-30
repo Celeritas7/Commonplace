@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 0.1 — What is a Program? · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background:
+      radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%),
+      radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%),
+      var(--bg1);
+    background-attachment: fixed;
+    color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh;
+  }
+
+  /* ===== XP HUD ===== */
+  .hud {
+    position: fixed; top: 16px; right: 16px;
+    background: var(--card); border-radius: 18px;
+    padding: 10px 16px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 12px;
+    z-index: 50; border: 2px solid var(--orange-light);
+  }
+  .hud-mascot {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; animation: bob 2.2s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak {
+    background: linear-gradient(135deg, var(--yellow), var(--orange));
+    color: white; padding: 4px 10px; border-radius: 12px;
+    font-size: 13px; font-weight: 700;
+  }
+
+  /* ===== Bit the mascot (floating companion) ===== */
+  .bit-companion {
+    position: fixed; bottom: 24px; left: 24px;
+    z-index: 40; display: flex; align-items: flex-end; gap: 12px;
+    max-width: 340px; pointer-events: none;
+  }
+  .bit-avatar {
+    width: 64px; height: 64px; flex-shrink: 0;
+    background: white; border-radius: 50%;
+    border: 3px solid var(--orange);
+    box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto;
+    animation: bob 3s ease-in-out infinite;
+  }
+  .bit-bubble {
+    background: white;
+    border: 2px solid var(--orange-light);
+    border-radius: 16px 16px 16px 4px;
+    padding: 10px 14px;
+    box-shadow: var(--shadow);
+    font-size: 14px; font-weight: 500;
+    color: var(--ink); line-height: 1.45;
+    pointer-events: auto;
+    position: relative;
+    animation: bit-in 0.5s var(--bouncy);
+  }
+  .bit-bubble::after {
+    content: ""; position: absolute;
+    bottom: 10px; left: -10px;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 6px 10px 6px 0;
+    border-color: transparent var(--orange-light) transparent transparent;
+  }
+  @keyframes bit-in {
+    0% { opacity: 0; transform: translateX(-20px) scale(0.8); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  .bit-name {
+    font-weight: 700; color: var(--orange-deep);
+    font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase;
+    display: block; margin-bottom: 2px;
+  }
+  @media (max-width: 700px) {
+    .bit-companion { max-width: 240px; bottom: 12px; left: 12px; }
+    .bit-avatar { width: 50px; height: 50px; }
+    .bit-bubble { font-size: 13px; }
+  }
+
+  /* ===== Page layout ===== */
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500;
+  }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar {
+    flex: 1; max-width: 200px; height: 8px;
+    background: rgba(249, 115, 22, 0.15); border-radius: 4px;
+    margin: 0 16px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--orange), var(--pink));
+    border-radius: 4px;
+    transition: width 0.6s var(--bouncy);
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+  }
+
+  /* ===== Hero ===== */
+  .hero {
+    background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%);
+    border-radius: 28px; padding: 38px 36px;
+    color: white; box-shadow: var(--shadow-lg);
+    margin-bottom: 28px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; top: -30px; right: -30px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%);
+    border-radius: 50%; animation: float 8s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag {
+    display: inline-block; background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px;
+  }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot {
+    position: absolute; bottom: -10px; right: 24px;
+    width: 110px; height: 110px;
+    animation: tilt 4s ease-in-out infinite;
+  }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  /* ===== Sections ===== */
+  section.lesson-section {
+    background: var(--card); border-radius: 24px;
+    padding: 28px 32px; margin-bottom: 18px;
+    box-shadow: var(--shadow-sm);
+    border: 2px solid transparent;
+    transition: border-color 0.3s, transform 0.3s; position: relative;
+  }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+
+  .step-label {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08));
+    color: var(--orange-deep);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px;
+  }
+  .step-num {
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    color: white; width: 28px; height: 28px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4);
+  }
+  h2 {
+    font-size: 26px; margin: 0 0 14px; font-weight: 700;
+    letter-spacing: -0.3px; color: var(--ink);
+  }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono {
+    font-family: var(--mono); font-size: 0.92em;
+    background: linear-gradient(135deg, #fef3c7, #fed7aa);
+    padding: 2px 8px; border-radius: 6px;
+    color: var(--orange-deep); font-weight: 600;
+  }
+
+  /* ===== Your-words callout — quotes user's existing book ===== */
+  .from-book {
+    background: linear-gradient(135deg, #fef9c3, #fef3c7);
+    border-left: 4px solid var(--yellow);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px 14px 22px;
+    margin: 14px 0;
+    position: relative;
+    font-style: italic;
+    color: var(--ink);
+  }
+  .from-book::before {
+    content: "📖 FROM YOUR NOTES";
+    position: absolute; top: -10px; left: 14px;
+    background: var(--yellow); color: var(--ink);
+    padding: 2px 10px; border-radius: 10px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.6px; font-style: normal;
+  }
+
+  /* ===== Bullet card list (used for "Uses of C") ===== */
+  .use-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 12px; margin: 16px 0;
+  }
+  .use-card {
+    background: linear-gradient(135deg, #fff, #fff7ed);
+    border: 2px solid var(--bg3);
+    border-radius: 14px; padding: 16px 18px;
+    transition: all 0.25s var(--bouncy);
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .use-card:hover {
+    transform: translateY(-4px); border-color: var(--orange);
+    box-shadow: var(--shadow);
+  }
+  .use-card-icon { font-size: 28px; flex-shrink: 0; }
+  .use-card-body strong { display: block; color: var(--ink); margin-bottom: 2px; font-weight: 700; }
+  .use-card-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
+  @media (max-width: 600px) { .use-grid { grid-template-columns: 1fr; } }
+
+  /* ===== Pipeline ===== */
+  .pipeline {
+    display: flex; align-items: stretch; justify-content: space-between;
+    gap: 10px; margin: 20px 0 12px; flex-wrap: wrap;
+  }
+  .stage {
+    flex: 1 1 0; min-width: 130px;
+    background: linear-gradient(180deg, var(--bg1), white);
+    border: 3px solid var(--bg3); border-radius: 18px;
+    padding: 18px 12px; text-align: center;
+    cursor: pointer; transition: all 0.25s var(--bouncy); position: relative;
+  }
+  .stage:hover { border-color: var(--orange); transform: translateY(-6px) scale(1.04); box-shadow: var(--shadow); }
+  .stage.active {
+    border-color: var(--pink);
+    background: linear-gradient(180deg, #ffe4e6, white);
+    box-shadow: var(--shadow); animation: pop 0.5s var(--bouncy);
+  }
+  @keyframes pop { 0% {transform:scale(0.95);} 50% {transform:scale(1.08);} 100% {transform:scale(1);} }
+  .stage.active::after {
+    content: "★"; position: absolute; top: -10px; right: -10px;
+    background: var(--yellow); color: white;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    animation: spin-in 0.4s var(--bouncy);
+  }
+  @keyframes spin-in { 0% {transform:rotate(-180deg) scale(0);} 100% {transform:rotate(0) scale(1);} }
+  .stage-icon { font-size: 32px; margin-bottom: 6px; display: block; }
+  .stage-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .stage-sub { font-size: 11px; color: var(--ink-dim); font-family: var(--mono); margin-top: 2px; }
+  .arrow {
+    color: var(--orange); font-size: 22px; flex: 0 0 auto; align-self: center;
+    animation: pulse-arrow 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-arrow { 0%,100% { opacity: 0.5; transform: translateX(0);} 50% { opacity: 1; transform: translateX(3px);} }
+  .stage-detail {
+    margin-top: 18px; padding: 20px 22px;
+    background: linear-gradient(135deg, #fff7ed, #fef3c7);
+    border-radius: 16px; min-height: 80px;
+    border: 2px dashed var(--orange-light);
+  }
+  .stage-detail h4 { margin: 0 0 6px; color: var(--orange-deep); font-size: 16px; }
+  .stage-detail p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+  /* ===== Classify game ===== */
+  .classify-area {
+    background: linear-gradient(135deg, #fff7ed, #fffbeb);
+    border-radius: 18px; padding: 22px; margin-top: 14px;
+    border: 2px dashed var(--orange-light);
+  }
+  .item-bank {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    padding: 16px; background: white; border-radius: 12px;
+    margin-bottom: 16px; min-height: 70px; border: 2px solid var(--bg3);
+  }
+  .item {
+    background: white; border: 2px solid var(--bg3);
+    padding: 10px 16px; border-radius: 14px;
+    font-size: 14px; font-weight: 500;
+    cursor: grab; user-select: none;
+    transition: all 0.2s var(--bouncy);
+    box-shadow: var(--shadow-sm); color: var(--ink);
+  }
+  .item:hover { border-color: var(--orange); transform: translateY(-2px) scale(1.03); box-shadow: var(--shadow); }
+  .item.dragging { opacity: 0.4; transform: scale(0.95); }
+  .item.correct { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .item.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .drop-zones { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .dz {
+    background: white; border: 3px dashed var(--bg3); border-radius: 16px;
+    padding: 16px; min-height: 110px; transition: all 0.2s;
+  }
+  .dz.hover { border-color: var(--orange); border-style: solid; background: linear-gradient(135deg, #fef3c7, white); transform: scale(1.02); }
+  .dz-title { font-weight: 700; margin-bottom: 10px; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+  .dz[data-zone="prog"] .dz-title { color: var(--green); }
+  .dz[data-zone="not"] .dz-title { color: var(--red); }
+  .dz-items { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* ===== Quiz ===== */
+  .quiz {
+    background: linear-gradient(135deg, #f3e8ff, #fce7f3);
+    border-radius: 18px; padding: 22px; margin-top: 14px;
+    border: 2px solid var(--purple);
+  }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    background: white; color: var(--ink); border: 2px solid var(--bg3);
+    padding: 12px 16px; border-radius: 14px;
+    margin-bottom: 10px; font: inherit; cursor: pointer;
+    transition: all 0.2s var(--bouncy); font-weight: 500;
+  }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback {
+    margin-top: 12px; font-size: 14.5px; min-height: 24px;
+    color: var(--ink-soft); padding: 8px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.6);
+  }
+
+  /* ===== Mistakes ===== */
+  .mistake {
+    display: flex; gap: 14px; padding: 14px 18px;
+    background: linear-gradient(135deg, #fff1f2, white);
+    border-radius: 14px; margin-bottom: 12px;
+    border-left: 5px solid var(--red);
+    transition: transform 0.3s var(--bouncy);
+  }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon {
+    font-size: 26px; flex-shrink: 0; width: 44px; height: 44px;
+    background: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+  /* ===== Exercises ===== */
+  .exercise {
+    background: linear-gradient(135deg, #ecfeff, white);
+    border-radius: 14px; padding: 16px 20px; margin-bottom: 12px;
+    border-left: 5px solid var(--teal);
+    transition: transform 0.3s var(--bouncy);
+  }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px;
+    letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase;
+  }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+
+  /* ===== Recap ===== */
+  .recap {
+    background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple));
+    color: white; border-radius: 24px;
+    padding: 28px 32px; margin-top: 22px;
+    box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+  }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; display: flex; align-items: center; gap: 10px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+
+  /* ===== Nav ===== */
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn {
+    flex: 1; background: white; border: 2px solid var(--bg3);
+    border-radius: 18px; padding: 18px 22px;
+    color: var(--ink); text-decoration: none;
+    font-size: 14px; font-weight: 500;
+    transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm);
+  }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ===== XP popup ===== */
+  .xp-pop {
+    position: fixed; pointer-events: none;
+    font-weight: 700; font-size: 18px; color: var(--orange-deep);
+    animation: xp-rise 1.3s var(--bouncy) forwards;
+    z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+  }
+  @keyframes xp-rise {
+    0% { opacity: 0; transform: translateY(0) scale(0.5); }
+    20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-80px) scale(0.9); }
+  }
+
+  /* ===== Confetti ===== */
+  .confetti {
+    position: fixed; width: 12px; height: 12px;
+    pointer-events: none; z-index: 200;
+    animation: confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  .toast {
+    position: fixed; top: 80px; left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    color: white; padding: 14px 28px;
+    border-radius: 20px; font-weight: 700;
+    box-shadow: var(--shadow-lg); z-index: 60;
+    transition: transform 0.5s var(--bouncy);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ====== XP HUD ====== -->
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+
+<!-- Level-up toast -->
+<div class="toast" id="toast">Level up! +10 XP</div>
+
+<!-- ====== Bit the floating mascot companion ====== -->
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3">
+        <line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/>
+        <line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/>
+        <line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/>
+        <line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/>
+      </g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/>
+      <circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+      <circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Hi! I'm Bit — your friendly CPU chip. Scroll, and I'll chime in as we go. 👋
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK · 0.1</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 1 / 55</span>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <span class="hero-tag">⭐ PART 0 · BEFORE YOU CODE</span>
+    <h1>What is Programming?<br>What is C?</h1>
+    <p class="hero-sub">Before you write a single line of C, let's get clear on what programming actually <em>is</em> — using the way you already explained it in your notes.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3">
+        <line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/>
+        <line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/>
+        <line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/>
+        <line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/>
+      </g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/>
+      <circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+      <circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1. What is Programming? (FROM YOUR NOTES) -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> What is Programming?</div>
+    <h2>Talking to a computer 💬</h2>
+
+    <div class="from-book">
+      Computer Programming is a medium for us to communicate with computers. Just like we use "Hindi" or "English" to communicate with each other, programming is a way for us to deliver our instructions to the computer.
+    </div>
+
+    <p>That's the one-sentence answer, straight from your notes. Let's unpack it a little.</p>
+    <p>When you and a friend talk in Hindi or English, your friend understands you because both of you agreed (long ago) on what each word means. A computer doesn't speak Hindi or English. It only "speaks" in extremely simple instructions — "add these two numbers," "store this value here," "jump to that step." A <strong>programming language</strong> like C is a shared agreement between you and the computer: <em>you write in C, a tool translates it into the simple instructions the computer actually understands.</em></p>
+  </section>
+
+  <!-- 2. What is C? (FROM YOUR NOTES) -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> What is C?</div>
+    <h2>The language you're about to learn</h2>
+
+    <div class="from-book">
+      C is a programming language.<br>
+      C is one of the oldest and finest programming languages.<br>
+      C was developed by Dennis Ritchie at AT&amp;T's Bell Labs, USA in <strong>1972</strong>.
+    </div>
+
+    <p>Three things to file away from that:</p>
+    <ul style="margin: 0 0 14px 24px; color: var(--ink-soft);">
+      <li><strong>It's old</strong> — older than most software you use. That's not a problem; it's a sign that it works.</li>
+      <li><strong>It's still everywhere</strong> — operating systems, embedded devices, game engines, databases. You'll see why in the next section.</li>
+      <li><strong>It's small</strong> — the whole language fits in your head once you've learned it. Compare that to languages with hundreds of features bolted on.</li>
+    </ul>
+  </section>
+
+  <!-- 3. Uses of C (FROM YOUR NOTES, with hover detail) -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Where C is used</div>
+    <h2>Why bother with C in {{currentYear}}?</h2>
+
+    <div class="from-book">
+      C Language is used to program a wide variety of Systems. Some of the uses of C are as follows:
+    </div>
+
+    <p>Hover any card to see an example you've probably used today.</p>
+
+    <div class="use-grid">
+      <div class="use-card">
+        <div class="use-card-icon">🖥️</div>
+        <div class="use-card-body">
+          <strong>Operating systems</strong>
+          <small>Major parts of Windows, Linux, and macOS are written in C. The kernel of Linux is almost entirely C.</small>
+        </div>
+      </div>
+      <div class="use-card">
+        <div class="use-card-icon">🖨️</div>
+        <div class="use-card-body">
+          <strong>Device drivers</strong>
+          <small>The software that lets your printer, tablet, or webcam talk to your computer — that's C territory.</small>
+        </div>
+      </div>
+      <div class="use-card">
+        <div class="use-card-icon">📷</div>
+        <div class="use-card-body">
+          <strong>Embedded systems</strong>
+          <small>Microwaves, cameras, cars, smart bulbs. Tiny chips with limited memory, where C's speed and small footprint matter.</small>
+        </div>
+      </div>
+      <div class="use-card">
+        <div class="use-card-icon">🎮</div>
+        <div class="use-card-body">
+          <strong>Games</strong>
+          <small>Where latency is critical — the computer has to react instantly to user input — C (and C++) still dominates.</small>
+        </div>
+      </div>
+    </div>
+
+    <p>If your phone, laptop, microwave, or car decided to refuse anything written in C, none of them would boot. That's how foundational it is.</p>
+  </section>
+
+  <!-- 4. How code becomes a running program -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> How code becomes a running program</div>
+    <h2>The journey from your file to the CPU 🚀</h2>
+
+    <div class="from-book">
+      Compilation is the process of translating high-level source code written in programming languages like C into machine code, which is the low-level code that a computer's CPU can execute directly. Machine code consists of binary instructions specific to a computer's architecture.
+    </div>
+
+    <p>That's exactly right. Tap each stage to see what happens — each tap is +5 XP.</p>
+
+    <div class="pipeline" id="pipeline">
+      <div class="stage" data-stage="0">
+        <span class="stage-icon">💡</span>
+        <div class="stage-title">Your idea</div>
+        <div class="stage-sub">"add two numbers"</div>
+      </div>
+      <span class="arrow">→</span>
+      <div class="stage" data-stage="1">
+        <span class="stage-icon">📝</span>
+        <div class="stage-title">Source code</div>
+        <div class="stage-sub">hello.c</div>
+      </div>
+      <span class="arrow">→</span>
+      <div class="stage" data-stage="2">
+        <span class="stage-icon">⚙️</span>
+        <div class="stage-title">Compiler</div>
+        <div class="stage-sub">gcc</div>
+      </div>
+      <span class="arrow">→</span>
+      <div class="stage" data-stage="3">
+        <span class="stage-icon">📦</span>
+        <div class="stage-title">Executable</div>
+        <div class="stage-sub">a.out</div>
+      </div>
+      <span class="arrow">→</span>
+      <div class="stage" data-stage="4">
+        <span class="stage-icon">🖥️</span>
+        <div class="stage-title">CPU runs it</div>
+        <div class="stage-sub">that's me!</div>
+      </div>
+    </div>
+
+    <div class="stage-detail" id="stageDetail">
+      <h4>👆 Tap a stage above</h4>
+      <p>Each box is a step in the journey from "I want the computer to do X" to "X is happening on screen."</p>
+    </div>
+  </section>
+
+  <!-- 5. Try it: classify -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Try it — sort these out</div>
+    <h2>Which of these are programs? 🤔</h2>
+    <p>Drag each item into the right bucket. Correct answers = +10 XP and a streak bonus.</p>
+
+    <div class="classify-area">
+      <div class="item-bank" id="itemBank">
+        <div class="item" draggable="true" data-ans="prog">🌐 A web browser</div>
+        <div class="item" draggable="true" data-ans="not">📰 A printed newspaper</div>
+        <div class="item" draggable="true" data-ans="prog">🖥️ The Linux kernel</div>
+        <div class="item" draggable="true" data-ans="not">📸 A photograph</div>
+        <div class="item" draggable="true" data-ans="prog">🚦 Traffic-light controller</div>
+        <div class="item" draggable="true" data-ans="not">🛒 A grocery list on paper</div>
+        <div class="item" draggable="true" data-ans="prog">📡 Microwave firmware</div>
+        <div class="item" draggable="true" data-ans="not">🎵 A song recording</div>
+      </div>
+      <div class="drop-zones">
+        <div class="dz" data-zone="prog">
+          <div class="dz-title">✅ Is a program</div>
+          <div class="dz-items"></div>
+        </div>
+        <div class="dz" data-zone="not">
+          <div class="dz-title">❌ Not a program</div>
+          <div class="dz-items"></div>
+        </div>
+      </div>
+      <p style="margin-top:14px; font-size:14.5px; color: var(--ink-soft)" id="dragHint">💡 <em>Hint:</em> A program is a set of <strong>instructions</strong>. Things that just <em>contain</em> information (a list, a photo) are not programs.</p>
+    </div>
+  </section>
+
+  <!-- 6. Predict -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>Pick the best answer 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">Based on your notes, which of these best describes what a C compiler does?</div>
+      <button class="opt" data-correct="false">It runs your C code line by line, like a translator at a meeting.</button>
+      <button class="opt" data-correct="true">It translates your high-level C source code into machine code — binary instructions the CPU can run directly.</button>
+      <button class="opt" data-correct="false">It checks your spelling and grammar, then sends the code to the cloud to run.</button>
+      <button class="opt" data-correct="false">It is a special piece of hardware built into modern CPUs.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP if you get it first try.</div>
+    </div>
+  </section>
+
+  <!-- 7. Common mistakes -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Three traps to avoid 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"The CPU understands C."</strong>
+        <small>It doesn't. As your notes say, the <em>compiler</em> translates C into machine code. That machine code — not your C — is what the CPU runs.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"C is outdated."</strong>
+        <small>It's old, but it's still inside the OS you're reading this on, the browser you're using, and probably your microwave. "Old" and "outdated" aren't the same thing.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Machine code is the same on every computer."</strong>
+        <small>Your notes flag this: machine code is <em>specific to a computer's architecture</em>. A binary built for your laptop won't run on a Raspberry Pi without recompiling.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Exercises -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Try these before moving on 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Find five programs you've used today.</strong> For each, write one sentence on what set of instructions you think it's carrying out underneath.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>The recipe game.</strong> Pick something you do every morning (make tea, brush teeth). Write it as a numbered list of 8–12 steps, so precise that a robot with no common sense could follow it. Notice the things you had to spell out that a human would just "know."
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Spot the abstraction.</strong> A C compiler is itself a program — written in C. How is that possible? You don't need the full answer yet — just sit with the puzzle. (The trick has a name: <em>bootstrapping</em>. We'll come back to it.)
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li><strong>Programming</strong> is a way to deliver instructions to a computer, just like Hindi or English is a way to talk to a friend.</li>
+      <li><strong>C</strong> is a programming language designed by Dennis Ritchie in 1972 — old, small, and still everywhere.</li>
+      <li>C is used in <strong>operating systems, drivers, embedded systems, and games</strong> — anywhere speed and direct hardware access matter.</li>
+      <li>You don't write machine code by hand. You write C, and the <strong>compiler</strong> translates it into machine code the CPU can run.</li>
+      <li>Machine code is <strong>architecture-specific</strong> — a binary for one chip doesn't necessarily run on another.</li>
+    </ul>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav-foot">
+    <a href="#" class="nav-btn disabled">
+      <small>← Previous</small>
+      Start of book
+    </a>
+    <a href="C_Book_Lesson_0_2.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      0.2  What computers actually do
+    </a>
+  </div>
+
+</div>
+
+<script>
+  // ====== Bit's lines per section ======
+  const BIT_LINES = [
+    "Hi! I'm Bit — your friendly CPU chip. I'll pop up with hints as you go. 👋",
+    "Hindi, English, C — they're all just <strong>shared agreements</strong>. C is how you and I agree to talk.",
+    "1972! I'm old, but I'm fast. Don't let the age fool you. ⚡",
+    "Look around right now — there's a 99% chance C is running somewhere within 3 feet of you.",
+    "<strong>That's me!</strong> 👉 I'm the CPU at the end of the pipeline. I only speak machine code.",
+    "Quick rule: if it gives <em>instructions</em>, it's a program. If it just <em>sits there</em>, it's not.",
+    "First-try answers = max XP. Read carefully before clicking! 🎯",
+    "Don't worry about memorizing these traps — you'll see them in practice and learn to spot 'em.",
+    "You've got this! Try at least the Easy exercise before moving on. 💪"
+  ];
+
+  // ====== XP / streak ======
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount;
+    xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) {
+    toast.textContent = text; toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+  function bumpStreak() {
+    streak++;
+    streakEl.style.display = 'inline-block';
+    streakEl.textContent = `🔥 ${streak}`;
+    streakEl.style.transform = 'scale(1.3)';
+    setTimeout(() => streakEl.style.transform = 'scale(1)', 200);
+  }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson complete! +50 bonus XP'); addXP(50); updateBit(BIT_LINES.length - 1); }, 400);
+    }
+  }
+
+  // ====== Bit speech updater ======
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => {
+      bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`;
+      bitBubble.style.opacity = '1';
+    }, 250);
+  }
+
+  // observe sections — also drives Bit's lines
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const bIdx = +e.target.dataset.bit;
+        if (bIdx !== currentBit) { currentBit = bIdx; updateBit(bIdx); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ====== Pipeline ======
+  const stageInfo = [
+    { t: '💡 Your idea', body: "It all starts in your head. Maybe you want to add two numbers, build a calculator, or write a game. The idea is fuzzy and human — no computer can act on it yet." },
+    { t: '📝 Source code', body: "You write the idea in C, in a plain text file ending in <code>.c</code>. This is what humans call <em>source code</em> — readable to you, but not yet runnable." },
+    { t: '⚙️ Compiler (gcc)', body: "As your notes put it, the compiler <em>translates high-level source code into machine code</em>. If it spots a typo or grammar error in your C, you find out here." },
+    { t: '📦 Executable', body: "The result is an <em>executable</em> file — on Linux/macOS often <code>a.out</code>, on Windows <code>program.exe</code>. This file contains the binary instructions the CPU will run." },
+    { t: '🖥️ CPU runs it (that\'s me!)', body: "You tell the operating system to run the executable. I (the CPU) start reading those instructions one by one — billions per second. Output appears on screen, files get written, things happen." }
+  ];
+  const stages = document.querySelectorAll('.stage');
+  const detail = document.getElementById('stageDetail');
+  const clickedStages = new Set();
+  stages.forEach(s => s.addEventListener('click', () => {
+    stages.forEach(x => x.classList.remove('active'));
+    s.classList.add('active');
+    const idx = +s.dataset.stage;
+    const info = stageInfo[idx];
+    detail.innerHTML = `<h4>${info.t}</h4><p>${info.body}</p>`;
+    if (!clickedStages.has(idx)) {
+      clickedStages.add(idx);
+      const r = s.getBoundingClientRect();
+      addXP(5, r.left + r.width/2, r.top);
+      if (clickedStages.size === 5) {
+        showToast('🌟 All stages explored! +20 XP');
+        addXP(20);
+      }
+    }
+  }));
+
+  // ====== Drag & drop ======
+  const items = document.querySelectorAll('.item');
+  const zones = document.querySelectorAll('.dz');
+  let dragged = null;
+
+  items.forEach(it => {
+    it.addEventListener('dragstart', () => { dragged = it; it.classList.add('dragging'); });
+    it.addEventListener('dragend', () => it.classList.remove('dragging'));
+    it.addEventListener('click', () => {
+      items.forEach(x => x.style.outline = '');
+      it.style.outline = '3px solid var(--orange)';
+      dragged = it;
+    });
+  });
+  zones.forEach(z => {
+    z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('hover'); });
+    z.addEventListener('dragleave', () => z.classList.remove('hover'));
+    z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('hover'); placeItem(z); });
+    z.addEventListener('click', () => { if (dragged && dragged.parentElement.classList.contains('item-bank')) placeItem(z); });
+  });
+  function placeItem(zone) {
+    if (!dragged) return;
+    const correctZone = dragged.dataset.ans;
+    const targetZone = zone.dataset.zone;
+    const target = zone.querySelector('.dz-items');
+    const r = dragged.getBoundingClientRect();
+    if (correctZone === targetZone) {
+      dragged.classList.add('correct');
+      dragged.classList.remove('wrong');
+      target.appendChild(dragged);
+      dragged.draggable = false;
+      dragged.style.cursor = 'default';
+      dragged.style.outline = '';
+      addXP(10, r.left + r.width/2, r.top);
+      bumpStreak();
+      checkComplete();
+    } else {
+      dragged.classList.add('wrong');
+      breakStreak();
+      setTimeout(() => dragged && dragged.classList.remove('wrong'), 500);
+    }
+    dragged = null;
+  }
+  function checkComplete() {
+    const remaining = document.querySelectorAll('#itemBank .item').length;
+    if (remaining === 0) {
+      document.getElementById('dragHint').innerHTML = '🎉 <strong style="color: var(--green)">All sorted!</strong> The pattern: a program is a set of <em>instructions</em>. Static information (lists, photos, recordings) is not.';
+      burst();
+      addXP(20, window.innerWidth/2, window.innerHeight/2, '🎉 Sort complete! +20 XP');
+    }
+  }
+
+  // ====== Quiz ======
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Nailed it first try!</strong> Your notes had it right — the compiler translates high-level C into machine code, and only that runs on the CPU.'
+        : '✓ <strong style="color: var(--green)">Got it.</strong> Translation from C to machine code is the compiler\'s whole job.';
+      opts.forEach(x => x.disabled = true);
+      const xpAmt = firstTry ? 15 : 5;
+      addXP(xpAmt, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Try another option — you still earn XP for getting there!';
+      firstTry = false;
+      breakStreak();
+    }
+  }));
+
+  // ====== Confetti ======
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+
+  // Year placeholder in section 3
+  document.body.innerHTML = document.body.innerHTML.replace('{{currentYear}}', new Date().getFullYear());
+</script>
+</body>
+</html>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 0.2 — What Computers Actually Do · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background:
+      radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%),
+      radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%),
+      var(--bg1);
+    background-attachment: fixed;
+    color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh;
+  }
+  .hud {
+    position: fixed; top: 16px; right: 16px;
+    background: var(--card); border-radius: 18px;
+    padding: 10px 16px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 12px;
+    z-index: 50; border: 2px solid var(--purple-light);
+  }
+  .hud-mascot {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; animation: bob 2.2s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak {
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    color: white; padding: 4px 10px; border-radius: 12px;
+    font-size: 13px; font-weight: 700;
+  }
+
+  /* Pixel mascot */
+  .pixel-companion {
+    position: fixed; bottom: 24px; left: 24px;
+    z-index: 40; display: flex; align-items: flex-end; gap: 12px;
+    max-width: 340px; pointer-events: none;
+  }
+  .pixel-avatar {
+    width: 64px; height: 64px; flex-shrink: 0;
+    background: white; border-radius: 50%;
+    border: 3px solid var(--purple);
+    box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto; animation: bob 3s ease-in-out infinite;
+  }
+  .pixel-bubble {
+    background: white;
+    border: 2px solid var(--purple-light);
+    border-radius: 16px 16px 16px 4px;
+    padding: 10px 14px; box-shadow: var(--shadow);
+    font-size: 14px; font-weight: 500;
+    color: var(--ink); line-height: 1.45;
+    pointer-events: auto; position: relative;
+    animation: pixel-in 0.5s var(--bouncy);
+  }
+  .pixel-bubble::after {
+    content: ""; position: absolute;
+    bottom: 10px; left: -10px;
+    width: 0; height: 0;
+    border-style: solid; border-width: 6px 10px 6px 0;
+    border-color: transparent var(--purple-light) transparent transparent;
+  }
+  @keyframes pixel-in {
+    0% { opacity: 0; transform: translateX(-20px) scale(0.8); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  .pixel-name {
+    font-weight: 700; color: var(--purple-deep);
+    font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase;
+    display: block; margin-bottom: 2px;
+  }
+  @media (max-width: 700px) {
+    .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; }
+    .pixel-avatar { width: 50px; height: 50px; }
+    .pixel-bubble { font-size: 13px; }
+  }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500;
+  }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar {
+    flex: 1; max-width: 200px; height: 8px;
+    background: rgba(139, 92, 246, 0.15); border-radius: 4px;
+    margin: 0 16px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--purple), var(--cyan));
+    border-radius: 4px; transition: width 0.6s var(--bouncy);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%);
+    border-radius: 28px; padding: 38px 36px;
+    color: white; box-shadow: var(--shadow-lg);
+    margin-bottom: 28px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; top: -30px; right: -30px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%);
+    border-radius: 50%; animation: float 8s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag {
+    display: inline-block; background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px;
+  }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot {
+    position: absolute; bottom: -10px; right: 24px;
+    width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite;
+  }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section {
+    background: var(--card); border-radius: 24px;
+    padding: 28px 32px; margin-bottom: 18px;
+    box-shadow: var(--shadow-sm);
+    border: 2px solid transparent;
+    transition: border-color 0.3s, transform 0.3s; position: relative;
+  }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08));
+    color: var(--purple-deep);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px;
+  }
+  .step-num {
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    color: white; width: 28px; height: 28px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px;
+    box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+  }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono {
+    font-family: var(--mono); font-size: 0.92em;
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    padding: 2px 8px; border-radius: 6px;
+    color: var(--purple-deep); font-weight: 600;
+  }
+
+  .new-content {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border-left: 4px solid var(--cyan);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px 14px 22px; margin: 14px 0;
+    position: relative; color: var(--ink);
+  }
+  .new-content::before {
+    content: "✨ NEWLY WRITTEN";
+    position: absolute; top: -10px; left: 14px;
+    background: var(--cyan); color: white;
+    padding: 2px 10px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+  }
+
+  /* CPU & Memory diagram */
+  .cpu-mem-diagram {
+    background: linear-gradient(135deg, #faf5ff, #fdf4ff);
+    border: 2px dashed var(--purple-light);
+    border-radius: 18px; padding: 22px; margin: 18px 0;
+  }
+  .cpu-mem-diagram h4 {
+    margin: 0 0 14px; color: var(--purple-deep);
+    font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase;
+    text-align: center;
+  }
+  .cpu-mem-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 20px; align-items: center;
+  }
+  @media (max-width: 600px) { .cpu-mem-grid { grid-template-columns: 1fr; } }
+  .cpu-box {
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    color: white; border-radius: 18px;
+    padding: 24px; text-align: center;
+    box-shadow: var(--shadow); position: relative;
+  }
+  .cpu-box-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; opacity: 0.9; }
+  .cpu-box h3 { margin: 4px 0 14px; font-size: 22px; }
+  .cpu-svg { width: 80px; height: 80px; margin: 0 auto; display: block; }
+  .cpu-job { font-size: 13.5px; opacity: 0.95; margin: 0; line-height: 1.5; }
+  .mem-box {
+    background: white; border: 2px solid var(--bg3);
+    border-radius: 18px; padding: 18px; box-shadow: var(--shadow-sm);
+  }
+  .mem-box-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--ink-dim); text-align: center; }
+  .mem-box h3 { margin: 4px 0 12px; font-size: 22px; text-align: center; color: var(--ink); }
+  .mem-cells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+  .mem-cell {
+    background: linear-gradient(180deg, #ede9fe, #ddd6fe);
+    border: 1.5px solid var(--purple-light);
+    border-radius: 8px;
+    aspect-ratio: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 12px; color: var(--ink);
+  }
+  .mem-cell-addr { font-size: 9px; color: var(--ink-dim); }
+  .mem-cell-val { font-weight: 700; font-size: 14px; }
+
+  /* Simulator */
+  .sim {
+    background: linear-gradient(135deg, #fff, #faf5ff);
+    border: 2px solid var(--purple);
+    border-radius: 20px; padding: 22px;
+    margin-top: 14px; box-shadow: var(--shadow);
+  }
+  .sim-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+  }
+  .sim-title {
+    font-size: 17px; font-weight: 700; color: var(--purple-deep);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sim-controls { display: flex; gap: 8px; }
+  .sim-btn {
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    color: white; border: none; border-radius: 12px;
+    padding: 10px 18px; font: inherit; font-weight: 600; font-size: 14px;
+    cursor: pointer; box-shadow: var(--shadow-sm);
+    transition: all 0.2s var(--bouncy);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .sim-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .sim-btn.reset {
+    background: white; color: var(--purple-deep); border: 2px solid var(--purple-light);
+  }
+  .sim-body {
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px;
+  }
+  @media (max-width: 700px) { .sim-body { grid-template-columns: 1fr; } }
+  .sim-instructions, .sim-mem {
+    background: white; border: 2px solid var(--bg3);
+    border-radius: 14px; padding: 14px;
+  }
+  .sim-instructions h5, .sim-mem h5 { margin: 0 0 10px; font-size: 13px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .sim-ins {
+    padding: 10px 14px; margin-bottom: 6px;
+    background: var(--bg1); border-radius: 8px;
+    font-family: var(--mono); font-size: 13.5px;
+    color: var(--ink); display: flex; align-items: center; gap: 10px;
+    transition: all 0.3s var(--bouncy);
+    border: 2px solid transparent;
+  }
+  .sim-ins .ins-num {
+    font-size: 11px; font-weight: 700; color: var(--ink-dim);
+    background: white; padding: 2px 6px; border-radius: 4px;
+    border: 1px solid var(--bg3);
+  }
+  .sim-ins.current {
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    border-color: var(--purple);
+    transform: translateX(6px);
+    box-shadow: var(--shadow);
+  }
+  .sim-ins.done { opacity: 0.5; }
+  .sim-ins.done::after { content: " ✓"; color: var(--green); font-weight: 700; }
+  .sim-cells { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .sim-cell {
+    background: var(--bg1); border-radius: 8px;
+    padding: 10px 14px; display: flex; justify-content: space-between;
+    align-items: center; font-family: var(--mono); font-size: 13px;
+    transition: all 0.4s var(--bouncy);
+    border: 2px solid transparent;
+  }
+  .sim-cell .name { font-weight: 700; color: var(--ink); }
+  .sim-cell .val {
+    background: white; padding: 2px 10px; border-radius: 6px;
+    border: 1px solid var(--bg3); font-weight: 700;
+  }
+  .sim-cell.empty .val { color: var(--ink-dim); }
+  .sim-cell.flash {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    border-color: var(--green);
+    transform: scale(1.04);
+  }
+  .sim-status {
+    margin-top: 12px; padding: 10px 14px;
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    border-radius: 10px; font-size: 14px; color: var(--ink-soft);
+    min-height: 22px; font-weight: 500;
+  }
+  .sim-status.done {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #166534; font-weight: 700;
+  }
+
+  /* Concept cards */
+  .concept-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin: 16px 0;
+  }
+  .concept-card {
+    background: linear-gradient(135deg, white, var(--bg1));
+    border: 2px solid var(--bg3); border-radius: 14px;
+    padding: 16px; text-align: center;
+    transition: all 0.25s var(--bouncy);
+  }
+  .concept-card:hover { transform: translateY(-4px); border-color: var(--purple); box-shadow: var(--shadow); }
+  .concept-card-icon { font-size: 36px; margin-bottom: 6px; }
+  .concept-card h4 { margin: 4px 0 6px; color: var(--ink); font-size: 16px; }
+  .concept-card p { margin: 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; }
+  @media (max-width: 600px) { .concept-grid { grid-template-columns: 1fr; } }
+
+  /* Quiz */
+  .quiz {
+    background: linear-gradient(135deg, #fce7f3, #f3e8ff);
+    border-radius: 18px; padding: 22px; margin-top: 14px;
+    border: 2px solid var(--pink);
+  }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    background: white; color: var(--ink); border: 2px solid var(--bg3);
+    padding: 12px 16px; border-radius: 14px;
+    margin-bottom: 10px; font: inherit; cursor: pointer;
+    transition: all 0.2s var(--bouncy); font-weight: 500;
+  }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--pink); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback {
+    margin-top: 12px; font-size: 14.5px; min-height: 24px;
+    color: var(--ink-soft); padding: 8px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.6);
+  }
+
+  .mistake {
+    display: flex; gap: 14px; padding: 14px 18px;
+    background: linear-gradient(135deg, #fff1f2, white);
+    border-radius: 14px; margin-bottom: 12px;
+    border-left: 5px solid var(--red);
+    transition: transform 0.3s var(--bouncy);
+  }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon {
+    font-size: 26px; flex-shrink: 0; width: 44px; height: 44px;
+    background: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+  .exercise {
+    background: linear-gradient(135deg, #ecfeff, white);
+    border-radius: 14px; padding: 16px 20px; margin-bottom: 12px;
+    border-left: 5px solid var(--cyan);
+    transition: transform 0.3s var(--bouncy);
+  }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px;
+    letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase;
+  }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+
+  .recap {
+    background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan));
+    color: white; border-radius: 24px;
+    padding: 28px 32px; margin-top: 22px;
+    box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+  }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn {
+    flex: 1; background: white; border: 2px solid var(--bg3);
+    border-radius: 18px; padding: 18px 22px;
+    color: var(--ink); text-decoration: none;
+    font-size: 14px; font-weight: 500;
+    transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm);
+  }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+
+  .xp-pop {
+    position: fixed; pointer-events: none;
+    font-weight: 700; font-size: 18px; color: var(--purple-deep);
+    animation: xp-rise 1.3s var(--bouncy) forwards;
+    z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+  }
+  @keyframes xp-rise {
+    0% { opacity: 0; transform: translateY(0) scale(0.5); }
+    20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-80px) scale(0.9); }
+  }
+  .confetti {
+    position: fixed; width: 12px; height: 12px;
+    pointer-events: none; z-index: 200;
+    animation: confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+  .toast {
+    position: fixed; top: 80px; left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    color: white; padding: 14px 28px;
+    border-radius: 20px; font-weight: 700;
+    box-shadow: var(--shadow-lg); z-index: 60;
+    transition: transform 0.5s var(--bouncy);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#ec4899"/>
+      <text x="40" y="56" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="10" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="64" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="32" y="60" width="16" height="6" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="26" y="66" width="28" height="8" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Today we peek under my hood. You'll learn the cartoon-level picture of what a CPU actually does. Let's go. ✨
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK · 0.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 2 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">⭐ PART 0 · BEFORE YOU CODE</span>
+    <h1>What Computers Actually Do</h1>
+    <p class="hero-sub">Open up the hood and look inside. You'll meet the CPU, memory, and the simple loop that powers everything from web browsers to Mars rovers.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="7" r="4" fill="#fde047" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="54" rx="18" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+      <rect x="26" y="33" width="48" height="22" rx="10" fill="#1e1b4b" stroke="#1e1b4b" stroke-width="2"/>
+      <circle cx="38" cy="44" r="4" fill="#06b6d4"/>
+      <circle cx="62" cy="44" r="4" fill="#ec4899"/>
+      <text x="50" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="12" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="80" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="40" y="74" width="20" height="8" rx="2" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="32" y="82" width="36" height="10" rx="3" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-pix="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Lift the hood for a minute 🔧</h2>
+
+    <div class="new-content">
+      In the last lesson you learned a program is a list of instructions a computer carries out. That raises the obvious next question: <strong>what does the computer actually do with those instructions?</strong>
+    </div>
+
+    <p>You don't need to understand every transistor — that's electrical engineering. But you do need a <em>cartoon</em> picture of what's going on inside, because every C++ concept you'll meet later (variables, references, RAII, smart pointers) only makes sense once you have that picture.</p>
+
+    <p>Here's the whole thing in one sentence: <strong>a computer is a fast worker (the CPU) that reads tiny instructions from a wall of numbered boxes (memory), one at a time, forever.</strong> Let's unpack each piece.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-pix="1">
+    <div class="step-label"><span class="step-num">2</span> Meet the CPU</div>
+    <h2>The worker that does the work 👷</h2>
+
+    <div class="new-content">
+      The <strong>CPU</strong> (Central Processing Unit) is the chip that actually runs your program. It can only do a small number of tiny things — but it does them <em>extremely fast</em>, billions of times per second.
+    </div>
+
+    <div class="cpu-mem-diagram">
+      <h4>Meet your hardware</h4>
+      <div class="cpu-mem-grid">
+        <div class="cpu-box">
+          <div class="cpu-box-label">THE WORKER</div>
+          <h3>CPU</h3>
+          <svg class="cpu-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+            <line x1="40" y1="4" x2="40" y2="12" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="40" cy="3" r="2.5" fill="#fde047" stroke="#fff" stroke-width="1.5"/>
+            <rect x="14" y="14" width="52" height="48" rx="14" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+            <rect x="22" y="26" width="36" height="18" rx="7" fill="#1e1b4b"/>
+            <circle cx="32" cy="35" r="3" fill="#06b6d4"/>
+            <circle cx="48" cy="35" r="3" fill="#ec4899"/>
+            <text x="40" y="54" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="#6d28d9">++</text>
+          </svg>
+          <p class="cpu-job">I read instructions from memory and carry them out, one by one. Very, very fast.</p>
+        </div>
+        <div class="mem-box">
+          <div class="mem-box-label">THE WAREHOUSE</div>
+          <h3>Memory (RAM)</h3>
+          <div class="mem-cells">
+            <div class="mem-cell"><div class="mem-cell-addr">0x00</div><div class="mem-cell-val">42</div></div>
+            <div class="mem-cell"><div class="mem-cell-addr">0x01</div><div class="mem-cell-val">'H'</div></div>
+            <div class="mem-cell"><div class="mem-cell-addr">0x02</div><div class="mem-cell-val">7</div></div>
+            <div class="mem-cell"><div class="mem-cell-addr">0x03</div><div class="mem-cell-val">'i'</div></div>
+            <div class="mem-cell"><div class="mem-cell-addr">0x04</div><div class="mem-cell-val">99</div></div>
+            <div class="mem-cell"><div class="mem-cell-addr">0x05</div><div class="mem-cell-val">0</div></div>
+            <div class="mem-cell"><div class="mem-cell-addr">0x06</div><div class="mem-cell-val">3</div></div>
+            <div class="mem-cell"><div class="mem-cell-addr">0x07</div><div class="mem-cell-val">'!'</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p>What can the CPU actually <em>do</em>? Just a handful of things, really:</p>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <div class="concept-card-icon">📥</div>
+        <h4>Load</h4>
+        <p>"Bring me the value from memory box #42."</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-card-icon">📤</div>
+        <h4>Store</h4>
+        <p>"Put this value into memory box #42."</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-card-icon">➕</div>
+        <h4>Add / subtract</h4>
+        <p>"Add these two numbers I just loaded."</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-card-icon">⚖️</div>
+        <h4>Compare</h4>
+        <p>"Is this number bigger than that one?"</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-card-icon">↪️</div>
+        <h4>Jump</h4>
+        <p>"Skip ahead to instruction #57."</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-card-icon">🔁</div>
+        <h4>Repeat</h4>
+        <p>"Now do all of that again. Forever."</p>
+      </div>
+    </div>
+
+    <p>That's it. Every web browser, every game, every operating system — all built out of these tiny operations. The magic is in <em>how many</em> happen, and <em>how fast</em>.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-pix="2">
+    <div class="step-label"><span class="step-num">3</span> Meet memory</div>
+    <h2>A long row of numbered boxes 📦</h2>
+
+    <div class="new-content">
+      <strong>Memory</strong> (or RAM, for "Random Access Memory") is where the CPU keeps everything it's currently working with. Picture a giant wall of tiny boxes, each one numbered from <code>0</code> upward. Each box holds a small value — a number, a letter, a piece of an instruction.
+    </div>
+
+    <p>Two things make memory powerful, and they'll come up again and again as you learn C++:</p>
+
+    <ul style="margin: 0 0 14px 24px; color: var(--ink-soft);">
+      <li><strong>Every box has an address</strong> — a number that uniquely identifies it. The CPU uses the address to say "fetch box #42" or "write to box #1000."</li>
+      <li><strong>Access is "random"</strong> — the CPU can jump directly to any box without scanning the ones in between. That's where the "R" in RAM comes from.</li>
+    </ul>
+
+    <p>When you write <code>int x = 5;</code> later, what you're really saying is "set aside a box in memory, label it <code>x</code> in my head, and put the number 5 inside it." Variables are just human-friendly names for memory boxes. This is also why C++ has <em>references</em> and <em>pointers</em> — they're tools to talk directly about those memory addresses.</p>
+
+    <p>One more thing worth knowing: memory is <strong>volatile</strong>. When you turn off the computer, everything in RAM is wiped. That's why files have to be saved to disk — disks (or SSDs) keep their contents even with the power off, but they're <em>much</em> slower than RAM. Modern computers shuttle data between the two constantly.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-pix="3">
+    <div class="step-label"><span class="step-num">4</span> The loop that powers everything</div>
+    <h2>The fetch-execute cycle 🔁</h2>
+
+    <div class="new-content">
+      Here's what the CPU does, billions of times per second, from the moment you press the power button until you shut down:
+    </div>
+
+    <ol style="margin: 0 0 14px 24px; color: var(--ink-soft);">
+      <li><strong>Fetch</strong> — go to memory, read the next instruction.</li>
+      <li><strong>Decode</strong> — figure out what kind of instruction it is (load? add? jump?).</li>
+      <li><strong>Execute</strong> — actually do it (load the value, add the numbers, jump to a new address).</li>
+      <li><strong>Repeat</strong> — go back to step 1.</li>
+    </ol>
+
+    <p>That's it. Every program on your computer is just <em>this loop</em>, running fast enough to feel continuous. A 3 GHz CPU does this around <strong>3 billion times per second</strong>. The reason a game feels smooth, or a video plays without skipping, or your typing appears instantly — all of it is that loop running far faster than you can perceive.</p>
+
+    <p>The CPU keeps a tiny number called the <strong>program counter</strong> that says "next instruction is at address X." After each instruction, the counter ticks forward by one — unless a <em>jump</em> instruction tells it to go somewhere else. That's literally how loops, function calls, and decisions work at the lowest level.</p>
+
+    <p>One reason C++ is famous for being <em>fast</em>: it compiles to machine code that maps very directly onto these CPU operations. There's no interpreter, no garbage collector, no virtual machine in between you and the chip.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-pix="4">
+    <div class="step-label"><span class="step-num">5</span> Try it — step through a tiny program</div>
+    <h2>Watch a program actually run 🎬</h2>
+
+    <div class="new-content">
+      Here's a simple program. Press <strong>Step</strong> to advance one instruction at a time. Watch how the memory cells fill in. Each successful step = <strong>+5 XP</strong>.
+    </div>
+
+    <div class="sim">
+      <div class="sim-header">
+        <div class="sim-title">⚙️ Pixel's tiny CPU simulator</div>
+        <div class="sim-controls">
+          <button class="sim-btn" id="stepBtn">▶ Step</button>
+          <button class="sim-btn" id="runBtn">⏩ Run all</button>
+          <button class="sim-btn reset" id="resetBtn">↻ Reset</button>
+        </div>
+      </div>
+
+      <div class="sim-body">
+        <div class="sim-instructions">
+          <h5>Program (4 instructions)</h5>
+          <div class="sim-ins" data-ins="0"><span class="ins-num">1</span> Load 5 into x</div>
+          <div class="sim-ins" data-ins="1"><span class="ins-num">2</span> Load 3 into y</div>
+          <div class="sim-ins" data-ins="2"><span class="ins-num">3</span> Add x + y, store in result</div>
+          <div class="sim-ins" data-ins="3"><span class="ins-num">4</span> Print result</div>
+        </div>
+
+        <div class="sim-mem">
+          <h5>Memory</h5>
+          <div class="sim-cells">
+            <div class="sim-cell empty" data-cell="x"><span class="name">x</span> <span class="val">—</span></div>
+            <div class="sim-cell empty" data-cell="y"><span class="name">y</span> <span class="val">—</span></div>
+            <div class="sim-cell empty" data-cell="result"><span class="name">result</span> <span class="val">—</span></div>
+            <div class="sim-cell empty" data-cell="output"><span class="name">output</span> <span class="val">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sim-status" id="simStatus">Press <strong>Step</strong> to start. The CPU is waiting at instruction #1.</div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-pix="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">A CPU clocked at 1 GHz runs roughly 1 billion instructions per second. If your program is 100 instructions long, about how long does it take to run (ignoring memory delays)?</div>
+      <button class="opt" data-correct="false">About 1 second.</button>
+      <button class="opt" data-correct="false">About 1 millisecond (0.001 second).</button>
+      <button class="opt" data-correct="true">About 100 nanoseconds (0.0000001 second).</button>
+      <button class="opt" data-correct="false">It depends on the programming language.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP if you get it first try.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-pix="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Three traps to avoid 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Memory and disk are the same thing."</strong>
+        <small>They're not. RAM is fast but loses everything when the power goes off. Disk (or SSD) is slower but keeps your files forever. They're two different physical things in your computer.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"The CPU is smart."</strong>
+        <small>It really isn't. It only does the handful of operations we listed — load, store, add, compare, jump. All the "intelligence" you see (web search, games, GPT) is millions of those simple steps stitched together by clever programmers.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"A variable is a label."</strong>
+        <small>Close, but more precisely: <em>a variable is a name your program gives to a memory address</em>. The CPU doesn't know about names — it only knows addresses. The C++ compiler is what converts your friendly names into the numeric addresses the CPU actually uses. This is exactly why C++ has tools like references and pointers — to talk about those addresses directly.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-pix="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Try these before moving on 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Translate to CPU-speak.</strong> Rewrite "What's the average of 10 and 20?" as a list of 5 or fewer tiny CPU operations (load, store, add, compare, jump, repeat).
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Memory math.</strong> A modern laptop typically has 16 GB of RAM. That's about 16,000,000,000 (16 billion) of those little boxes. If each box could hold one English letter, how many full novels (say, 500,000 letters each) could you fit in RAM at once? Does the answer surprise you?
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Zero-cost abstraction.</strong> C++ is known for "zero-cost abstractions" — high-level features that don't slow down your program. Given what you now know about how a CPU works, why is that surprising? And why is it possible? (Hint: think about <em>when</em> the abstraction gets resolved — at compile time vs run time.)
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>A computer has two main parts you care about right now: the <strong>CPU</strong> (the worker) and <strong>memory / RAM</strong> (the wall of numbered boxes).</li>
+      <li>The CPU only knows a handful of operations: <strong>load, store, add, compare, jump, repeat</strong>.</li>
+      <li>It runs the <strong>fetch–decode–execute</strong> loop billions of times per second.</li>
+      <li>Memory is <strong>addressable</strong> (every box has a number) and <strong>volatile</strong> (it wipes when the power goes off).</li>
+      <li>A <strong>variable</strong> in C++ is a friendly name your program gives to a memory address. The CPU only sees addresses; the compiler does the renaming.</li>
+      <li>C++ compiles directly to machine code that maps onto these CPU operations — no interpreter, no VM in between. That's where its speed comes from.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_0_1_v3.html" class="nav-btn prev">
+      <small>← Previous</small>
+      0.1  What is a program?
+    </a>
+    <a href="Cpp_Book_Lesson_0_3.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      0.3  Why C++? Where it lives today
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Today we peek under my hood. You'll learn the cartoon-level picture of what a CPU actually does. Let's go. ✨",
+    "The CPU is the worker. Small toolkit, fast hands. That's the whole story.",
+    "Memory and the CPU pass data back and forth every nanosecond. They're inseparable.",
+    "Fetch–decode–execute. About 3 billion times a second on a modern chip. Try to feel that. 🤯",
+    "Hit <strong>Step</strong> below. Watch what happens in memory. This is the real picture.",
+    "Tiny operations × huge speed = everything. Math doesn't lie.",
+    "These three traps trip everyone up at first. Now you'll spot them.",
+    "Zero-cost abstractions — the bonus exercise — is a phrase you'll hear a lot in C++ land. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) {
+    toast.textContent = text; toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+  function bumpStreak() {
+    streak++;
+    streakEl.style.display = 'inline-block';
+    streakEl.textContent = `🔥 ${streak}`;
+    streakEl.style.transform = 'scale(1.3)';
+    setTimeout(() => streakEl.style.transform = 'scale(1)', 200);
+  }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 0.2 complete! +50 bonus XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => {
+      pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`;
+      pixelBubble.style.opacity = '1';
+    }, 250);
+  }
+  let currentPix = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.pix;
+        if (i !== currentPix) { currentPix = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // CPU Simulator
+  const simState = {
+    pc: 0,
+    mem: { x: null, y: null, result: null, output: null },
+    done: false
+  };
+  const SIM_INSTRUCTIONS = [
+    { action: (s) => { s.mem.x = 5; }, status: "Loaded 5 into <code>x</code>." },
+    { action: (s) => { s.mem.y = 3; }, status: "Loaded 3 into <code>y</code>." },
+    { action: (s) => { s.mem.result = s.mem.x + s.mem.y; }, status: "Added <code>x + y</code> = 8, stored in <code>result</code>." },
+    { action: (s) => { s.mem.output = s.mem.result; }, status: "Printed: <strong>8</strong> 🎉" }
+  ];
+  const insEls = document.querySelectorAll('.sim-ins');
+  const cellEls = {
+    x: document.querySelector('[data-cell="x"]'),
+    y: document.querySelector('[data-cell="y"]'),
+    result: document.querySelector('[data-cell="result"]'),
+    output: document.querySelector('[data-cell="output"]')
+  };
+  const statusEl = document.getElementById('simStatus');
+  const stepBtn = document.getElementById('stepBtn');
+  const runBtn = document.getElementById('runBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  function renderSim() {
+    insEls.forEach((el, i) => {
+      el.classList.remove('current', 'done');
+      if (i < simState.pc) el.classList.add('done');
+      if (i === simState.pc && !simState.done) el.classList.add('current');
+    });
+    Object.keys(cellEls).forEach(key => {
+      const el = cellEls[key];
+      const val = simState.mem[key];
+      const valEl = el.querySelector('.val');
+      if (val === null) { el.classList.add('empty'); valEl.textContent = '—'; }
+      else { el.classList.remove('empty'); valEl.textContent = val; }
+    });
+    stepBtn.disabled = simState.done;
+    runBtn.disabled = simState.done;
+  }
+  function highlightCell(key) {
+    const el = cellEls[key]; if (!el) return;
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 600);
+  }
+  function step() {
+    if (simState.done) return;
+    const ins = SIM_INSTRUCTIONS[simState.pc];
+    ins.action(simState);
+    const cellKey = ['x', 'y', 'result', 'output'][simState.pc];
+    statusEl.innerHTML = `<strong>Step ${simState.pc + 1}:</strong> ${ins.status}`;
+    statusEl.classList.remove('done');
+    simState.pc++;
+    if (simState.pc >= SIM_INSTRUCTIONS.length) {
+      simState.done = true;
+      statusEl.classList.add('done');
+      statusEl.innerHTML = `🎉 <strong>Program finished!</strong> The CPU executed all 4 instructions.`;
+      setTimeout(() => { burst(); addXP(30, window.innerWidth/2, 200, '🎉 Simulator complete! +30 XP'); }, 200);
+    }
+    renderSim();
+    highlightCell(cellKey);
+    const r = stepBtn.getBoundingClientRect();
+    addXP(5, r.left + r.width/2, r.top);
+  }
+  function runAll() {
+    if (simState.done) return;
+    runBtn.disabled = true;
+    let count = 0;
+    const interval = setInterval(() => {
+      step(); count++;
+      if (simState.done || count >= SIM_INSTRUCTIONS.length) clearInterval(interval);
+    }, 800);
+  }
+  function resetSim() {
+    simState.pc = 0;
+    simState.mem = { x: null, y: null, result: null, output: null };
+    simState.done = false;
+    statusEl.classList.remove('done');
+    statusEl.innerHTML = `Press <strong>Step</strong> to start. The CPU is waiting at instruction #1.`;
+    renderSim();
+  }
+  stepBtn.addEventListener('click', step);
+  runBtn.addEventListener('click', runAll);
+  resetBtn.addEventListener('click', resetSim);
+  renderSim();
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> 100 instructions at 1 billion/sec = 100 nanoseconds. C++ programs feel "instant" because the compiled code runs at this speed — no interpreter slowing it down.'
+        : '✓ <strong style="color: var(--green)">Got it.</strong> 100 instructions ÷ 1 billion per second = 100 nanoseconds.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Try again — divide 100 by 1 billion. (Hint: nanoseconds, not seconds!)';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

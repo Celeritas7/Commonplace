@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 0.3 — Why C? · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background:
+      radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%),
+      radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%),
+      var(--bg1);
+    background-attachment: fixed;
+    color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh;
+  }
+
+  .hud {
+    position: fixed; top: 16px; right: 16px;
+    background: var(--card); border-radius: 18px;
+    padding: 10px 16px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 12px;
+    z-index: 50; border: 2px solid var(--orange-light);
+  }
+  .hud-mascot {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; animation: bob 2.2s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak {
+    background: linear-gradient(135deg, var(--yellow), var(--orange));
+    color: white; padding: 4px 10px; border-radius: 12px;
+    font-size: 13px; font-weight: 700;
+  }
+
+  .bit-companion {
+    position: fixed; bottom: 24px; left: 24px;
+    z-index: 40; display: flex; align-items: flex-end; gap: 12px;
+    max-width: 340px; pointer-events: none;
+  }
+  .bit-avatar {
+    width: 64px; height: 64px; flex-shrink: 0;
+    background: white; border-radius: 50%;
+    border: 3px solid var(--orange);
+    box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto;
+    animation: bob 3s ease-in-out infinite;
+  }
+  .bit-bubble {
+    background: white;
+    border: 2px solid var(--orange-light);
+    border-radius: 16px 16px 16px 4px;
+    padding: 10px 14px;
+    box-shadow: var(--shadow);
+    font-size: 14px; font-weight: 500;
+    color: var(--ink); line-height: 1.45;
+    pointer-events: auto; position: relative;
+    animation: bit-in 0.5s var(--bouncy);
+  }
+  .bit-bubble::after {
+    content: ""; position: absolute;
+    bottom: 10px; left: -10px;
+    width: 0; height: 0;
+    border-style: solid; border-width: 6px 10px 6px 0;
+    border-color: transparent var(--orange-light) transparent transparent;
+  }
+  @keyframes bit-in {
+    0% { opacity: 0; transform: translateX(-20px) scale(0.8); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  .bit-name {
+    font-weight: 700; color: var(--orange-deep);
+    font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase;
+    display: block; margin-bottom: 2px;
+  }
+  @media (max-width: 700px) {
+    .bit-companion { max-width: 240px; bottom: 12px; left: 12px; }
+    .bit-avatar { width: 50px; height: 50px; }
+    .bit-bubble { font-size: 13px; }
+  }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500;
+  }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar {
+    flex: 1; max-width: 200px; height: 8px;
+    background: rgba(249, 115, 22, 0.15); border-radius: 4px;
+    margin: 0 16px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--orange), var(--pink));
+    border-radius: 4px;
+    transition: width 0.6s var(--bouncy);
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%);
+    border-radius: 28px; padding: 38px 36px;
+    color: white; box-shadow: var(--shadow-lg);
+    margin-bottom: 28px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; top: -30px; right: -30px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%);
+    border-radius: 50%; animation: float 8s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag {
+    display: inline-block; background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px;
+  }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot {
+    position: absolute; bottom: -10px; right: 24px;
+    width: 110px; height: 110px;
+    animation: tilt 4s ease-in-out infinite;
+  }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section {
+    background: var(--card); border-radius: 24px;
+    padding: 28px 32px; margin-bottom: 18px;
+    box-shadow: var(--shadow-sm);
+    border: 2px solid transparent;
+    transition: border-color 0.3s; position: relative;
+  }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+
+  .step-label {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08));
+    color: var(--orange-deep);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px;
+  }
+  .step-num {
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    color: white; width: 28px; height: 28px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4);
+  }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono {
+    font-family: var(--mono); font-size: 0.92em;
+    background: linear-gradient(135deg, #fef3c7, #fed7aa);
+    padding: 2px 8px; border-radius: 6px;
+    color: var(--orange-deep); font-weight: 600;
+  }
+  strong { color: var(--ink); }
+
+  .new-content {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border-left: 4px solid var(--cyan);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px 14px 22px; margin: 14px 0;
+    position: relative; color: var(--ink);
+  }
+  .new-content::before {
+    content: "✨ NEWLY WRITTEN";
+    position: absolute; top: -10px; left: 14px;
+    background: var(--cyan); color: white;
+    padding: 2px 10px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.6px;
+  }
+
+  /* ===== Reason cards (the case for C) ===== */
+  .reason-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin: 18px 0;
+  }
+  .reason-card {
+    background: linear-gradient(135deg, white, var(--bg1));
+    border: 2px solid var(--bg3); border-radius: 18px;
+    padding: 20px 22px;
+    transition: all 0.3s var(--bouncy);
+    position: relative; overflow: hidden;
+  }
+  .reason-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--orange);
+    box-shadow: var(--shadow);
+  }
+  .reason-card::after {
+    content: ""; position: absolute;
+    top: -20px; right: -20px;
+    width: 80px; height: 80px;
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.1), transparent 70%);
+    border-radius: 50%;
+  }
+  .reason-num {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    color: white;
+    width: 32px; height: 32px; border-radius: 8px;
+    text-align: center; line-height: 32px;
+    font-weight: 800; font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .reason-card h4 { margin: 4px 0 8px; color: var(--ink); font-size: 17px; }
+  .reason-card p { margin: 0; font-size: 14.5px; color: var(--ink-soft); line-height: 1.5; }
+  @media (max-width: 600px) { .reason-grid { grid-template-columns: 1fr; } }
+
+  /* ===== Day-in-the-life timeline (the big interactive) ===== */
+  .journey {
+    background: linear-gradient(135deg, #fff7ed, #fffbeb);
+    border: 2px solid var(--orange);
+    border-radius: 20px; padding: 22px;
+    margin-top: 14px; box-shadow: var(--shadow);
+  }
+  .journey-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+  }
+  .journey-title {
+    font-size: 17px; font-weight: 700; color: var(--orange-deep);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .journey-counter {
+    background: white; color: var(--orange-deep);
+    padding: 6px 14px; border-radius: 20px;
+    font-weight: 700; font-size: 14px;
+    border: 2px solid var(--orange-light);
+  }
+  .journey-counter strong { font-size: 18px; }
+  .journey-timeline {
+    position: relative; padding-left: 14px;
+  }
+  .journey-timeline::before {
+    content: ""; position: absolute;
+    left: 0; top: 12px; bottom: 12px; width: 3px;
+    background: linear-gradient(180deg, var(--orange), var(--pink), var(--purple));
+    border-radius: 2px;
+  }
+  .journey-event {
+    display: flex; gap: 14px; margin-bottom: 10px;
+    position: relative;
+  }
+  .journey-event::before {
+    content: ""; position: absolute;
+    left: -18px; top: 18px;
+    width: 14px; height: 14px;
+    background: white; border: 3px solid var(--orange);
+    border-radius: 50%; z-index: 2;
+    transition: all 0.3s var(--bouncy);
+  }
+  .journey-event.revealed::before {
+    background: var(--green); border-color: var(--green);
+    transform: scale(1.2);
+  }
+  .event-time {
+    flex: 0 0 70px;
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    color: var(--orange-deep);
+    padding-top: 14px;
+  }
+  .event-card {
+    flex: 1;
+    background: white;
+    border: 2px solid var(--bg3); border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.3s var(--bouncy);
+    cursor: pointer;
+  }
+  .event-card:hover {
+    border-color: var(--orange);
+    transform: translateX(4px);
+  }
+  .journey-event.revealed .event-card {
+    border-color: var(--green);
+    background: linear-gradient(135deg, white, #f0fdf4);
+  }
+  .event-header {
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    font-weight: 600; color: var(--ink);
+  }
+  .event-icon { font-size: 22px; }
+  .event-name { flex: 1; font-size: 15px; }
+  .event-toggle {
+    color: var(--ink-dim); font-size: 14px;
+    transition: transform 0.3s var(--bouncy);
+  }
+  .journey-event.revealed .event-toggle {
+    transform: rotate(180deg);
+    color: var(--green);
+  }
+  .event-detail {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s;
+    padding: 0 16px;
+    font-size: 14.5px; color: var(--ink-soft);
+    line-height: 1.55;
+    background: linear-gradient(135deg, #fef3c7, #fff7ed);
+  }
+  .event-detail strong { color: var(--orange-deep); }
+  .journey-event.revealed .event-detail {
+    max-height: 250px;
+    padding: 14px 16px;
+    border-top: 1px dashed var(--orange-light);
+  }
+  .journey-finish {
+    margin-top: 16px; padding: 14px 18px;
+    background: linear-gradient(135deg, var(--bg1), white);
+    border: 2px dashed var(--orange-light);
+    border-radius: 12px;
+    text-align: center;
+    font-size: 14.5px; color: var(--ink-soft);
+    transition: all 0.4s;
+  }
+  .journey-finish.done {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    border-color: var(--green); border-style: solid;
+    color: #166534; font-weight: 700;
+  }
+
+  /* ===== Skill cards ===== */
+  .skill-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    margin: 16px 0;
+  }
+  .skill-card {
+    background: linear-gradient(135deg, #fff, var(--bg1));
+    border: 2px solid var(--bg3); border-radius: 14px;
+    padding: 16px 18px;
+    display: flex; gap: 12px; align-items: flex-start;
+    transition: all 0.25s var(--bouncy);
+  }
+  .skill-card:hover { transform: translateY(-3px); border-color: var(--purple); box-shadow: var(--shadow); }
+  .skill-icon { font-size: 28px; flex-shrink: 0; }
+  .skill-body strong { display: block; color: var(--ink); margin-bottom: 4px; font-size: 15px; }
+  .skill-body small { color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; }
+  @media (max-width: 600px) { .skill-grid { grid-template-columns: 1fr; } }
+
+  /* ===== Quiz ===== */
+  .quiz {
+    background: linear-gradient(135deg, #f3e8ff, #fce7f3);
+    border-radius: 18px; padding: 22px; margin-top: 14px;
+    border: 2px solid var(--purple);
+  }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    background: white; color: var(--ink); border: 2px solid var(--bg3);
+    padding: 12px 16px; border-radius: 14px;
+    margin-bottom: 10px; font: inherit; cursor: pointer;
+    transition: all 0.2s var(--bouncy); font-weight: 500;
+  }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback {
+    margin-top: 12px; font-size: 14.5px; min-height: 24px;
+    color: var(--ink-soft); padding: 8px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.6);
+  }
+
+  .mistake {
+    display: flex; gap: 14px; padding: 14px 18px;
+    background: linear-gradient(135deg, #fff1f2, white);
+    border-radius: 14px; margin-bottom: 12px;
+    border-left: 5px solid var(--red);
+    transition: transform 0.3s var(--bouncy);
+  }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon {
+    font-size: 26px; flex-shrink: 0; width: 44px; height: 44px;
+    background: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+
+  .exercise {
+    background: linear-gradient(135deg, #ecfeff, white);
+    border-radius: 14px; padding: 16px 20px; margin-bottom: 12px;
+    border-left: 5px solid var(--teal);
+    transition: transform 0.3s var(--bouncy);
+  }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px;
+    letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase;
+  }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+
+  .recap {
+    background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple));
+    color: white; border-radius: 24px;
+    padding: 28px 32px; margin-top: 22px;
+    box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+  }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn {
+    flex: 1; background: white; border: 2px solid var(--bg3);
+    border-radius: 18px; padding: 18px 22px;
+    color: var(--ink); text-decoration: none;
+    font-size: 14px; font-weight: 500;
+    transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm);
+  }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+
+  .xp-pop {
+    position: fixed; pointer-events: none;
+    font-weight: 700; font-size: 18px; color: var(--orange-deep);
+    animation: xp-rise 1.3s var(--bouncy) forwards;
+    z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+  }
+  @keyframes xp-rise {
+    0% { opacity: 0; transform: translateY(0) scale(0.5); }
+    20% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-80px) scale(0.9); }
+  }
+  .confetti {
+    position: fixed; width: 12px; height: 12px;
+    pointer-events: none; z-index: 200;
+    animation: confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+  .toast {
+    position: fixed; top: 80px; left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    color: white; padding: 14px 28px;
+    border-radius: 20px; font-weight: 700;
+    box-shadow: var(--shadow-lg); z-index: 60;
+    transition: transform 0.5s var(--bouncy);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3">
+        <line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/>
+        <line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/>
+        <line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/>
+        <line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/>
+      </g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/>
+      <circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+      <circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Time for the elephant in the room — why C, not Python? I've got a pretty good pitch. 🤖
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK · 0.3</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 3 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">⭐ PART 0 · BEFORE YOU CODE</span>
+    <h1>Why C? Where C Lives in the Modern World</h1>
+    <p class="hero-sub">C is 50+ years old. Easier languages exist. So why learn it? Spoiler: because almost every "easier language" you could pick is itself built on top of C.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3">
+        <line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/>
+        <line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/>
+        <line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/>
+        <line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/>
+      </g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/>
+      <circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+      <circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1. Why this matters -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>The honest question: should you even bother? 🤔</h2>
+
+    <div class="new-content">
+      Maybe you've heard people say C is old, complicated, dangerous, or replaced by "better" languages. Some of that is true. Most of it misses the point. Before we spend the next 50+ lessons on this language, let's settle: <strong>what does C give you that nothing else does?</strong>
+    </div>
+
+    <p>Short answer: C is the language closest to the hardware that you can still write comfortably as a human. Almost every other language you'll meet — Python, JavaScript, Java, Ruby — runs on top of something written in C. So when you learn C, you're not learning a niche tool. You're learning the layer the whole programming world sits on.</p>
+  </section>
+
+  <!-- 2. The case for C -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The case for C</div>
+    <h2>Four reasons C is still standing 💪</h2>
+
+    <div class="new-content">
+      Each of these is a reason C didn't fade away when newer languages arrived. Hover any card to see it lift.
+    </div>
+
+    <div class="reason-grid">
+      <div class="reason-card">
+        <span class="reason-num">1</span>
+        <h4>It's fast</h4>
+        <p>C compiles to native machine code with almost no overhead. There's no interpreter, no garbage collector slowing things down. When milliseconds matter — operating systems, games, trading systems — C is often the answer.</p>
+      </div>
+      <div class="reason-card">
+        <span class="reason-num">2</span>
+        <h4>It's small</h4>
+        <p>The whole language fits in a thin book. About 30 keywords. That makes it possible to fully understand — and to run on tiny chips with 64 KB of memory, where Python or Java can't fit.</p>
+      </div>
+      <div class="reason-card">
+        <span class="reason-num">3</span>
+        <h4>It's portable</h4>
+        <p>A well-written C program compiles on essentially every operating system and CPU architecture that exists — from your phone to a Mars rover. Few languages can claim that.</p>
+      </div>
+      <div class="reason-card">
+        <span class="reason-num">4</span>
+        <h4>It's the foundation</h4>
+        <p>The Python interpreter is written in C. So is Ruby's. So is JavaScript's V8 engine (mostly C++, but founded on C ideas). Linux is C. Most of macOS and Windows is C. C is the bedrock under "modern" programming.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. The day-in-the-life interactive -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> A day in your life, secretly powered by C</div>
+    <h2>Tap each moment to see what C is doing 👇</h2>
+
+    <div class="new-content">
+      Each box below is a moment in a typical day. You probably don't think about C at any of them — but it's there, quietly running. Tap to reveal what specifically. Each reveal = <strong>+8 XP</strong>.
+    </div>
+
+    <div class="journey">
+      <div class="journey-header">
+        <div class="journey-title">📅 A Tuesday in your life</div>
+        <div class="journey-counter"><strong id="journeyCount">0</strong> / 8 revealed</div>
+      </div>
+
+      <div class="journey-timeline" id="journeyTimeline">
+        <div class="journey-event" data-event="0">
+          <div class="event-time">7:00 AM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">⏰</span>
+              <span class="event-name">Your phone's alarm goes off</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              <strong>The Linux kernel</strong> (in Android) and <strong>the XNU kernel</strong> (in iOS) are both written almost entirely in C. They're the layer that wakes your phone up, decides which app gets CPU time, and talks to the speaker that plays your alarm sound.
+            </div>
+          </div>
+        </div>
+
+        <div class="journey-event" data-event="1">
+          <div class="event-time">7:30 AM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">☕</span>
+              <span class="event-name">Microwave reheats your breakfast</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              The microcontroller running your microwave — typically an 8-bit or 16-bit chip with kilobytes of memory — runs <strong>firmware written in C</strong>. It reads the buttons, counts the seconds, drives the display, and turns the magnetron on and off. Same story for your washing machine, coffee maker, and dishwasher.
+            </div>
+          </div>
+        </div>
+
+        <div class="journey-event" data-event="2">
+          <div class="event-time">8:15 AM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">🚗</span>
+              <span class="event-name">You start the car</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              A modern car has between 50 and 150 little computers called <strong>ECUs</strong> (Engine Control Units). Almost all of them run firmware written in C — usually under MISRA-C, a strict subset designed for safety-critical systems. They manage fuel injection, anti-lock braking, airbag deployment, and the touchscreen on the dashboard.
+            </div>
+          </div>
+        </div>
+
+        <div class="journey-event" data-event="3">
+          <div class="event-time">9:00 AM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">🐍</span>
+              <span class="event-name">You open Python to do some data work</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              You're writing Python — but <strong>CPython, the interpreter that runs your Python code, is written in C</strong>. When you call <code>len(list)</code> or <code>numpy.sum(arr)</code>, you're calling C code under the hood. NumPy, SciPy, and pandas are all C (and Fortran) underneath. Python is fast for you to write, but it's only fast to run because C is doing the heavy lifting.
+            </div>
+          </div>
+        </div>
+
+        <div class="journey-event" data-event="4">
+          <div class="event-time">12:00 PM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">📞</span>
+              <span class="event-name">You make a video call</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              The <strong>codecs</strong> that compress your voice and video on the fly — H.264, H.265, Opus, AAC — are written in C. They have to run in real time on whatever chip your laptop or phone has. That's a job only a language like C can do, year after year, on every device.
+            </div>
+          </div>
+        </div>
+
+        <div class="journey-event" data-event="5">
+          <div class="event-time">3:00 PM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">💾</span>
+              <span class="event-name">You save a file to disk</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              The <strong>filesystem driver</strong> (ext4 on Linux, NTFS on Windows, APFS on Mac) is written in C. It's what knows how to chop your file into blocks, find free space on the disk, and remember where everything lives. If this code had a bug, you'd lose data — which is why it's been C for 40 years.
+            </div>
+          </div>
+        </div>
+
+        <div class="journey-event" data-event="6">
+          <div class="event-time">8:00 PM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">📺</span>
+              <span class="event-name">You stream a movie on your TV</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              Your smart TV runs Linux (C). The video decoder chip's firmware is C. The network stack pulling bits down from Netflix's servers is C. The HDMI controller is C. Five different layers of C cooperate to put each frame on your screen, 60 times per second.
+            </div>
+          </div>
+        </div>
+
+        <div class="journey-event" data-event="7">
+          <div class="event-time">11:00 PM</div>
+          <div class="event-card">
+            <div class="event-header">
+              <span class="event-icon">🔋</span>
+              <span class="event-name">You plug in your phone to charge</span>
+              <span class="event-toggle">▼</span>
+            </div>
+            <div class="event-detail">
+              Inside the charging brick is a tiny chip running C firmware that negotiates voltage with your phone. Inside the phone, a power management IC (PMIC) — also running C — decides how to safely route current to the battery without overheating it. The whole "fast charge" handshake is C, talking to C.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="journey-finish" id="journeyFinish">
+        Reveal all 8 to count the C in your day. The honest count is usually <em>way</em> higher than people guess.
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Skills C teaches -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> What learning C teaches you</div>
+    <h2>The hidden bonus: a different brain 🧠</h2>
+
+    <div class="new-content">
+      Even if you eventually spend your career writing Python or JavaScript, the things C makes you think about will improve every line of code you write in any language.
+    </div>
+
+    <div class="skill-grid">
+      <div class="skill-card">
+        <div class="skill-icon">🔍</div>
+        <div class="skill-body">
+          <strong>How memory actually works</strong>
+          <small>Python hides it. JavaScript hides it. C makes you face it. After C, you'll understand why your Python list operation is slow, or why your JavaScript app uses 2 GB of RAM.</small>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">⚡</div>
+        <div class="skill-body">
+          <strong>Why fast code is fast</strong>
+          <small>C teaches you what the CPU actually likes — contiguous memory, predictable branches, small loops. That intuition is gold no matter what language you ultimately use.</small>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">🧩</div>
+        <div class="skill-body">
+          <strong>How "high-level" languages are built</strong>
+          <small>You'll see how a string, a list, a hashmap, a garbage collector actually work, because in C you have to build them. Suddenly Python's <code>dict</code> stops being magic.</small>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-icon">🛡️</div>
+        <div class="skill-body">
+          <strong>Defensive programming habits</strong>
+          <small>C will bite you if you're sloppy. That teaches you to check your assumptions, validate input, and think about every edge case — habits that pay off in <em>every</em> language.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Predict -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Predict</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">A friend says: "C is dead — everything is JavaScript now." Pick the most accurate response.</div>
+      <button class="opt" data-correct="false">"True. Nobody writes new C anymore."</button>
+      <button class="opt" data-correct="false">"C is only used in the embedded systems hobby community."</button>
+      <button class="opt" data-correct="true">"Actually the JavaScript engine your code runs on (V8, SpiderMonkey, JavaScriptCore) is written in C/C++. So is the operating system underneath. C is everywhere — usually invisible."</button>
+      <button class="opt" data-correct="false">"You're right — let's switch to JavaScript instead."</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP if you get it first try.</div>
+    </div>
+  </section>
+
+  <!-- 6. Common mistakes -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Common mistakes</div>
+    <h2>Myths people tell about C 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"C is obsolete."</strong>
+        <small>The Linux kernel alone is ~30 million lines of active, evolving C. New C standards (C11, C17, C23) keep coming. The TIOBE language ranking puts C in the global top 5 most years. "Obsolete" isn't the word.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"You need to be a hardware expert to learn C."</strong>
+        <small>You don't. You just need patience with the idea that the computer is dumb and literal. C makes that literalism visible. That's a teachable mindset, not a degree.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Modern languages have replaced C for systems work."</strong>
+        <small>Rust is gaining ground for new systems projects. But the existing 50 years of operating systems, drivers, libraries, embedded firmware, and infrastructure is C. A "replacement" that ignores billions of lines of working code isn't really a replacement.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Exercises -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Your turn</div>
+    <h2>Try these before moving on 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Spot the C around you.</strong> Look around the room you're in right now. Count five things you can see that almost certainly have C running inside them (even if you can't see the chip). Write the list down.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>The C iceberg.</strong> Pick one piece of software you use daily (a browser, an editor, a game). Spend 10 minutes searching online for "is &lt;that app&gt; written in C?" or "what language is &lt;that app&gt;?" — and trace the dependencies one level down. (Example: VS Code is JavaScript/TypeScript… but it runs on Electron, which runs on Chromium, which is mostly C++/C…)
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>The bootstrap problem revisited.</strong> Read the Wikipedia entry on "self-hosting" in computing. How did the very first C compiler get built — before any C compiler existed? (You'll need to learn what "bootstrapping" means in compilers. It's a beautiful puzzle.)
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>C is still everywhere — operating system kernels, embedded firmware, codecs, language interpreters, network stacks. Most of it is invisible to end users.</li>
+      <li>Four reasons C is still standing: <strong>fast, small, portable, foundational</strong>.</li>
+      <li>Almost every "modern" language you might pick (Python, JavaScript, Ruby, PHP) has a C implementation under it.</li>
+      <li>Learning C teaches you how memory works, why fast code is fast, and how higher-level languages are built. Those mental models pay off in every language you'll ever use.</li>
+      <li>"C is dead" is a myth. The Linux kernel alone is millions of lines of active C, with no sign of slowing down.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_0_2.html" class="nav-btn prev">
+      <small>← Previous</small>
+      0.2  What computers actually do
+    </a>
+    <a href="C_Book_Lesson_0_4.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      0.4  Thinking like a programmer
+    </a>
+  </div>
+
+</div>
+
+<script>
+  // ===== Bit lines =====
+  const BIT_LINES = [
+    "Time for the elephant in the room — why C, not Python? I've got a pretty good pitch. 🤖",
+    "Four reasons. Read 'em and weep, modern languages. 💪",
+    "Look around. I'm running in <em>more</em> things than you think. Each tap = proof.",
+    "Even if you switch to Python forever, learning me makes you a better programmer. Promise.",
+    "Read the answers carefully. One is suspiciously detailed for a reason. 🎯",
+    "Don't let the haters get to you. I'm older than the web AND going strong.",
+    "Three exercises. Try at least the medium one — it'll open your eyes. 💪"
+  ];
+
+  // ===== XP / streak =====
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 7;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) {
+    toast.textContent = text; toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+  function bumpStreak() {
+    streak++;
+    streakEl.style.display = 'inline-block';
+    streakEl.textContent = `🔥 ${streak}`;
+    streakEl.style.transform = 'scale(1.3)';
+    setTimeout(() => streakEl.style.transform = 'scale(1)', 200);
+  }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 0.3 complete! +50 bonus XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => {
+      bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`;
+      bitBubble.style.opacity = '1';
+    }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Day-in-the-life journey =====
+  const events = document.querySelectorAll('.journey-event');
+  const counter = document.getElementById('journeyCount');
+  const finish = document.getElementById('journeyFinish');
+  let revealedCount = 0;
+  events.forEach(ev => {
+    ev.addEventListener('click', () => {
+      if (ev.classList.contains('revealed')) return;
+      ev.classList.add('revealed');
+      revealedCount++;
+      counter.textContent = revealedCount;
+      counter.style.transform = 'scale(1.3)';
+      setTimeout(() => counter.style.transform = 'scale(1)', 200);
+      const r = ev.getBoundingClientRect();
+      addXP(8, r.left + r.width/2, r.top + 30);
+      bumpStreak();
+      if (revealedCount === events.length) {
+        finish.classList.add('done');
+        finish.innerHTML = '🎉 <strong>All 8 revealed!</strong> Roughly speaking, C is involved in every single thing your computer or phone does. Most people had no idea.';
+        burst();
+        addXP(40, window.innerWidth/2, window.innerHeight/2, '🎉 All revealed! +40 bonus XP');
+      }
+    });
+  });
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> JavaScript runs on engines that are themselves written in C/C++. "What language is X written in?" → almost always trails back to C eventually.'
+        : '✓ <strong style="color: var(--green)">Got it.</strong> JS engines are C/C++; OS is C; C sits beneath the modern web.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Think one layer deeper — what is JavaScript itself running on?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>
