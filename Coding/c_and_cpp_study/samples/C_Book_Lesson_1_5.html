@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1.5 — Reading Compiler Errors Without Panic · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  /* ===== Error anatomy interactive ===== */
+  .anat-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .anat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+  .anat-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .anat-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .anat-counter strong { font-size: 18px; }
+  .anat-source { background: var(--terminal); color: #e2e8f0; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 13px; margin-bottom: 4px; line-height: 1.7; position: relative; }
+  .anat-source .filename { position: absolute; top: 10px; right: 14px; background: rgba(255,255,255,0.1); color: #cbd5e1; padding: 2px 10px; border-radius: 6px; font-size: 11px; letter-spacing: 0.5px; font-weight: 700; }
+  .anat-source .preproc { color: #f9a8d4; }
+  .anat-source .kw { color: #c4b5fd; }
+  .anat-source .fn { color: #fbbf24; }
+  .anat-source .str { color: #86efac; }
+  .anat-source .num { color: #fde047; }
+  .anat-source .ln-num { color: #64748b; margin-right: 14px; user-select: none; min-width: 16px; display: inline-block; }
+  .anat-source .bug-line { background: rgba(239, 68, 68, 0.15); }
+  .anat-arrow { text-align: center; color: var(--orange); font-size: 18px; margin: 6px 0; }
+  .anat-error { background: var(--terminal); color: #fca5a5; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 13px; line-height: 1.7; margin-bottom: 16px; overflow-x: auto; position: relative; }
+  .anat-error .err-line { display: block; white-space: pre; }
+  .err-part { cursor: pointer; padding: 1px 3px; border-radius: 3px; transition: all 0.2s; border-bottom: 1px dotted rgba(255,255,255,0.3); }
+  .err-part:hover { background: rgba(249, 115, 22, 0.25); border-bottom-color: var(--orange); }
+  .err-part.active { background: rgba(249, 115, 22, 0.5); color: #fef3c7; border-bottom-color: var(--orange); }
+  .err-part.explored { border-bottom-color: var(--green); }
+  .err-part.explored::after { content: "✓"; color: #86efac; margin-left: 3px; font-size: 10px; }
+  .err-fname { color: #fde68a; }
+  .err-pos { color: #93c5fd; }
+  .err-sev { color: #fca5a5; font-weight: 700; }
+  .err-msg { color: #fecaca; }
+  .err-caret { color: #86efac; font-weight: 700; }
+  .err-hint { color: #67e8f9; }
+  .anat-panel { background: white; border: 2px solid var(--orange-light); border-radius: 14px; padding: 18px 20px; min-height: 100px; }
+  .anat-panel h4 { margin: 0 0 8px; font-size: 16px; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .anat-panel .anat-tag { background: var(--orange); color: white; font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 700; letter-spacing: 0.5px; }
+  .anat-panel p { margin: 0 0 8px; font-size: 14.5px; color: var(--ink-soft); line-height: 1.55; }
+  .anat-panel p:last-child { margin-bottom: 0; }
+  .anat-finish { margin-top: 14px; padding: 12px 16px; background: linear-gradient(135deg, var(--bg1), white); border: 2px dashed var(--orange-light); border-radius: 10px; text-align: center; font-size: 14px; color: var(--ink-soft); transition: all 0.4s; }
+  .anat-finish.done { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); border-style: solid; color: #166534; font-weight: 700; }
+
+  /* ===== Common patterns ===== */
+  .pat-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 16px 0; }
+  .pat-card { background: white; border: 2px solid var(--bg3); border-radius: 14px; padding: 14px 16px; transition: all 0.25s var(--bouncy); display: grid; grid-template-columns: 32px 1fr; gap: 14px; align-items: start; }
+  .pat-card:hover { transform: translateX(4px); border-color: var(--orange); box-shadow: var(--shadow); }
+  .pat-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+  .pat-body strong { display: block; color: var(--ink); margin-bottom: 4px; font-size: 15px; }
+  .pat-body .pat-msg { font-family: var(--mono); font-size: 12.5px; background: linear-gradient(135deg, #fef2f2, #fee2e2); color: #991b1b; padding: 4px 8px; border-radius: 6px; display: inline-block; margin: 4px 0; }
+  .pat-body small { color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; display: block; margin-top: 4px; }
+
+  /* ===== Cascading errors block ===== */
+  .cascade-side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .cascade-card { background: white; border: 2px solid var(--bg3); border-radius: 14px; padding: 14px; }
+  .cascade-card.bad { border-color: var(--red); }
+  .cascade-card.good { border-color: var(--green); }
+  .cascade-card h5 { margin: 0 0 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .cascade-card.bad h5 { color: var(--red); }
+  .cascade-card.good h5 { color: var(--green); }
+  .cascade-card pre { margin: 0; padding: 10px 12px; background: var(--terminal); color: #cbd5e1; border-radius: 8px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; overflow-x: auto; }
+  @media (max-width: 600px) { .cascade-side { grid-template-columns: 1fr; } }
+
+  /* ===== Quiz / mistakes / exercises ===== */
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #fca5a5; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.5; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Errors aren't enemies — they're hints! Last lesson of Part I: learn to read them like a sentence. 📖
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK · 1.5</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 10 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🛠️ PART I · SETTING UP</span>
+    <h1>Reading Compiler Errors Without Panic</h1>
+    <p class="hero-sub">Errors are not the enemy — they're the compiler trying to help you. This final lesson of Part I teaches you to decode any GCC error message: what each part means, why fixing the <em>first</em> one is the rule, and the five patterns you'll see again and again.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Errors are the compiler talking to you 🗣️</h2>
+
+    <div class="new-content">
+      You will see thousands of compiler errors in your programming life. <strong>Thousands.</strong> The faster you can read them, the faster you fix bugs. There's no skill in Part I more valuable than this one — and once you have it, errors stop feeling like personal attacks and start feeling like helpful suggestions.
+    </div>
+
+    <p>Beginner programmers see a red wall of text and panic. Experienced programmers glance at the first line, know exactly what's wrong, and fix it in 10 seconds. The difference between the two isn't intelligence — it's pattern recognition. This lesson hands you the patterns.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> Anatomy of an error message</div>
+    <h2>Click each part of this real GCC error 🔍</h2>
+
+    <div class="new-content">
+      Below is a real error you'd get from GCC if you wrote a slightly broken <code>hello.c</code>. Each <em>underlined</em> piece is clickable. Click to learn what it means. Each first click = <strong>+6 XP</strong>.
+    </div>
+
+    <div class="anat-area">
+      <div class="anat-header">
+        <div class="anat-title">🔍 Decode this error</div>
+        <div class="anat-counter"><strong id="anatCount">0</strong> / 6 parts explored</div>
+      </div>
+
+      <div class="anat-source">
+        <span class="filename">hello.c (the buggy source)</span>
+<span class="ln-num">1</span><span class="preproc">#include</span> <span class="preproc">&lt;stdio.h&gt;</span>
+<span class="ln-num">2</span>
+<span class="ln-num">3</span><span class="kw">int</span> <span class="fn">main</span>() {
+<span class="ln-num">4</span>    <span class="bug-line"><span class="fn">printf</span>(<span class="str">"Hello, world!\n"</span>)</span>   <span style="color: #fca5a5;">← missing ;</span>
+<span class="ln-num">5</span>    <span class="kw">return</span> <span class="num">0</span>;
+<span class="ln-num">6</span>}
+      </div>
+
+      <div class="anat-arrow">↓ run <code style="background: none; color: #94a3b8;">gcc hello.c</code> ↓</div>
+
+      <div class="anat-error">
+<span class="err-line"><span class="err-part err-fname" data-id="1">hello.c</span>: In function <span class="err-part" data-id="2">'main'</span>:</span>
+<span class="err-line"><span class="err-part err-fname" data-id="1">hello.c</span>:<span class="err-part err-pos" data-id="3">5:5</span>: <span class="err-part err-sev" data-id="4">error</span>: <span class="err-part err-msg" data-id="5">expected ';' before 'return'</span></span>
+<span class="err-line">    5 |     return 0;</span>
+<span class="err-line">      |     <span class="err-part err-caret" data-id="6">^~~~~~</span></span>
+      </div>
+
+      <div class="anat-panel" id="anatPanel">
+        <h4>👆 Click any underlined part above</h4>
+        <p>Compiler errors look intimidating, but they follow a strict format. Once you can name each piece, the wall of text becomes a sentence.</p>
+      </div>
+
+      <div class="anat-finish" id="anatFinish">
+        Click each of the 6 parts to complete the tour.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> The five patterns you'll see most</div>
+    <h2>Memorize these shapes 📌</h2>
+
+    <div class="new-content">
+      99% of the errors you'll meet in your first year are variations of these five. Each one has a tell — once you spot the tell, you know roughly what to fix.
+    </div>
+
+    <div class="pat-grid">
+      <div class="pat-card">
+        <div class="pat-num">1</div>
+        <div class="pat-body">
+          <strong>Missing semicolon</strong>
+          <div class="pat-msg">error: expected ';' before '...'</div>
+          <small>You forgot a <code>;</code>. The fix is almost always on the line <em>above</em> the one the compiler points at — it kept reading hoping for a <code>;</code> and gave up later. Stage: compiler.</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">2</div>
+        <div class="pat-body">
+          <strong>Unknown identifier (undeclared)</strong>
+          <div class="pat-msg">error: 'foo' undeclared (first use in this function)</div>
+          <small>You used a name the compiler hasn't seen — typo, missing <code>#include</code>, or you forgot to define a variable / function. Stage: compiler.</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">3</div>
+        <div class="pat-body">
+          <strong>Type mismatch</strong>
+          <div class="pat-msg">warning: incompatible pointer types passing 'int *' to 'char *'</div>
+          <small>You handed a value of one type where the function expected another. The fix is usually to cast, fix the variable's type, or use a different function. Often shows up as a <em>warning</em>, not an error — but warnings can still bite at runtime. Stage: compiler.</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">4</div>
+        <div class="pat-body">
+          <strong>Undefined reference</strong>
+          <div class="pat-msg">undefined reference to `foo'</div>
+          <small>The compiler accepted everything, but the <strong>linker</strong> couldn't find an actual implementation of <code>foo</code>. Usually means: you declared the function but never wrote the body, or you forgot to link a library. Stage: linker. (See lesson 1.4.)</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">5</div>
+        <div class="pat-body">
+          <strong>Unmatched brace / paren</strong>
+          <div class="pat-msg">error: expected declaration or statement at end of input</div>
+          <small>You opened a <code>{</code> or <code>(</code> without closing it. The compiler reads to end-of-file looking for the close, then complains. Editor indentation usually shows you where. Stage: compiler.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Rule One: fix the first error</div>
+    <h2>The cascading-errors trap 🌊</h2>
+
+    <div class="new-content">
+      When the compiler sees an error, it doesn't always stop — it tries to keep going, and that often produces a cascade of <em>fake</em> errors triggered by the first real one. Beginners read the long list, panic at the total count, and try to fix all of them. Don't.
+    </div>
+
+    <p><strong>The rule:</strong> fix the <em>first</em> error, recompile, then deal with whatever's left. Usually the cascade evaporates the moment you fix the root cause.</p>
+
+    <div class="cascade-side">
+      <div class="cascade-card bad">
+        <h5>🌊 What you see (panic-inducing)</h5>
+        <pre>hello.c:4:33: error: expected ';' before 'return'
+hello.c:5:5: error: expected expression
+hello.c:5:12: error: 'return' undeclared
+hello.c:6:1: error: expected ';' before '}' token
+hello.c:6:1: error: expected statement before '}'
+hello.c: At top level:
+hello.c:7:1: error: expected identifier or '('</pre>
+      </div>
+      <div class="cascade-card good">
+        <h5>✓ The actual problem</h5>
+        <pre>hello.c:4 — missing semicolon
+            after printf(...).
+
+After fixing that ONE thing,
+every other error disappears.
+
+That's the cascade: 6 errors
+shown, only 1 was real.</pre>
+      </div>
+    </div>
+
+    <p>From now on, when you see 20 errors: ignore 19 of them, focus on the topmost one. Fix it. Recompile. Repeat.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Predict</div>
+    <h2>What's the actual bug? 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You see this error message:
+<pre>hello.c:5:5: error: 'prinft' undeclared (first use in this function)
+    5 |     prinft("Hello\n");
+      |     ^~~~~~
+      |     printf</pre>
+What's the actual bug?</div>
+      <button class="opt" data-correct="false">The header <code>&lt;stdio.h&gt;</code> is missing.</button>
+      <button class="opt" data-correct="true">Typo: you wrote <code>prinft</code> instead of <code>printf</code>. GCC even suggests the fix on the last line.</button>
+      <button class="opt" data-correct="false">You forgot a semicolon.</button>
+      <button class="opt" data-correct="false">The function <code>printf</code> needs to be declared somewhere.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Common mistakes</div>
+    <h2>How beginners mis-read errors 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Reading from the bottom up.</strong>
+        <small>The first error is the one that triggered the avalanche. Reading the last error first usually means you're looking at fake errors. <em>Always</em> read top to bottom. Fix the top one. Recompile. See what's left.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Ignoring warnings because they're "not errors."</strong>
+        <small>A warning means "your code compiled, but I think you made a mistake." Most warnings turn into runtime crashes — uninitialized variables, format-string mismatches, dangling pointers. <em>Treat warnings as errors.</em> Compile with <code>-Wall -Werror</code> in serious projects.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Searching the error online before reading it.</strong>
+        <small>The error tells you the filename, the line, the column, and often a suggested fix. Read it for 30 seconds before pasting it into a search engine. Half the time you'll fix it yourself — and that builds the skill that makes you faster every time.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Your turn</div>
+    <h2>Practice reading errors 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Generate three errors on purpose.</strong> Take your <code>hello.c</code>. (1) Remove the semicolon after <code>printf</code>. Compile. Read the error. Restore. (2) Remove the <code>#include &lt;stdio.h&gt;</code>. Compile. Read. Restore. (3) Misspell <code>printf</code> as <code>prinft</code>. Compile. Read. Each one's error message has a tell — note which it is.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Cascade chase.</strong> Take a slightly bigger program (say, one with 3 or 4 lines inside main). Delete the semicolon after the first line. Compile. Count how many error lines GCC produces. Now fix only the topmost one and recompile. Note how the count drops dramatically. This is the cascade effect in real life.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Turn on all the warnings.</strong> Compile <code>hello.c</code> with <code>gcc -Wall -Wextra -Wpedantic hello.c -o hello</code>. These extra flags ask GCC to flag everything it finds suspicious. Now write a program that uses an uninitialized variable — like <code>int x; printf("%d\n", x);</code> — and see what happens with vs without <code>-Wall</code>. The warning that appears is one of the most useful catches in all of C.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap — and Part I is complete! 🎉</h3>
+    <ul>
+      <li>Every GCC error has the same structure: <strong>filename:line:column: severity: message</strong>, followed by a source snippet with a caret <code>^~~~~</code> pointing at the column.</li>
+      <li>Modern GCC often gives a <strong>"did you mean..."</strong> suggestion underneath. Read it first.</li>
+      <li><strong>Rule One:</strong> fix the first error, recompile, then look again. Most of what looks like 20 errors is one real one cascading.</li>
+      <li>Five patterns cover 99% of beginner errors: <em>missing ;, unknown identifier, type mismatch, undefined reference, unmatched brace</em>.</li>
+      <li>Take warnings seriously. Use <code>-Wall</code>.</li>
+      <li><strong>Part I done.</strong> You can install a compiler, set up an editor, write a program, understand the build, and read errors. From Part II onward we go into the language itself — variables, types, operators.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_1_4.html" class="nav-btn prev">
+      <small>← Previous</small>
+      1.4  What happens when you press "run"
+    </a>
+    <a href="C_Book_Lesson_2_1.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      2.1  Variables and identifiers
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Errors aren't enemies — they're hints! Last lesson of Part I: learn to read them like a sentence. 📖",
+    "Beginners panic at red text. Pros read the first line and move on. The difference is pattern recognition.",
+    "Click each part of this real error — +6 XP each. After this you can decode any GCC error. 🔍",
+    "Five patterns cover almost every error you'll see in your first year. Memorize the shapes.",
+    "RULE ONE: fix the FIRST error. Recompile. Most of the others were fake.",
+    "Pick the answer — modern GCC even suggests the fix! 🎯",
+    "These three traps are how beginners stay beginners. Now you'll skip past them.",
+    "Try the medium! Watch a cascade collapse to one real error. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 7;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Part I complete! +100 XP'); addXP(100); }, 400); } }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) { const line = BIT_LINES[idx] || BIT_LINES[0]; bitBubble.style.opacity = '0'; setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250); }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.bit; if (i !== currentBit) { currentBit = i; updateBit(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Error anatomy =====
+  const ANAT = {
+    '1': {
+      title: 'The filename',
+      tag: 'WHICH FILE',
+      body: `<p>The very first thing on each error line is the <strong>filename</strong> where the error was found. In big projects with many files, this tells you which one to open. For a single-file program like <code>hello.c</code>, it'll always be the same.</p><p>Notice the filename appears <em>twice</em> in this error block: once at the top (with the function context), and again on the actual error line. That's GCC trying to be helpful — different errors in different files can show up in the same compile, and the prefix lets you tell them apart.</p>`
+    },
+    '2': {
+      title: "The function context",
+      tag: 'WHICH FUNCTION',
+      body: `<p>GCC tells you which function the error was inside — here, <code>'main'</code>. In a larger program with many functions, this saves you from having to manually figure out which one the line number lives in.</p><p>If the error is in a header you included, you'll see something like <em>"In file included from hello.c:1, from /usr/include/stdio.h:..."</em> — that's GCC walking you up the include chain.</p>`
+    },
+    '3': {
+      title: 'Line and column',
+      tag: 'WHERE EXACTLY',
+      body: `<p>The format is always <code>line:column</code>. Here, <code>5:5</code> means line 5, column 5. <strong>This is your starting point</strong> — open the file, jump to that line, look at that column.</p><p>VS Code (and most editors) lets you click the error message and it teleports you to that exact position. Get good at this — it'll save you years over your career.</p><p>One subtlety: <strong>the line number is where GCC <em>noticed</em> the problem, not always where the problem actually lives</strong>. Missing semicolons are a classic example — the error appears on the next non-blank line, even though the fix is one line up.</p>`
+    },
+    '4': {
+      title: 'Severity',
+      tag: 'HOW BAD',
+      body: `<p>One of three words appears here:</p><ul style="margin: 0 0 8px 18px; font-size: 14.5px; color: var(--ink-soft);"><li><strong style="color: var(--red);">error</strong> — compilation fails. No executable produced. Must fix.</li><li><strong style="color: #ca8a04;">warning</strong> — compilation succeeded, but GCC suspects a real problem. The executable is built, but you should still investigate.</li><li><strong style="color: var(--blue);">note</strong> — extra info attached to another error or warning. Often points at a related declaration.</li></ul><p>Beginners often ignore warnings because "the program ran." That's a mistake. Most warnings are runtime bugs that haven't bitten yet.</p>`
+    },
+    '5': {
+      title: 'The actual message',
+      tag: 'WHAT WENT WRONG',
+      body: `<p>This is the meat — GCC's best guess at what's wrong. <em>"expected ';' before 'return'"</em> means: <em>"I was reading along, expected to see a semicolon, but instead saw <code>return</code>."</em></p><p>The format is usually <em>"expected X before Y"</em> or <em>"X undeclared"</em> or <em>"incompatible types for X"</em>. Once you've seen each pattern a few times you'll recognize them at a glance.</p><p>For this error: the missing semicolon is on line 4. GCC didn't notice it until line 5, where it expected one thing and found another. <strong>That's the cardinal rule of missing semicolons — the fix is usually on the line above the one the compiler points at.</strong></p>`
+    },
+    '6': {
+      title: 'The caret pointer',
+      tag: 'EXACTLY HERE',
+      body: `<p>This is GCC pointing at the column where it noticed the problem. The <code>^</code> aligns with the first character of the trouble spot; the <code>~~~~</code> underlines the rest of the token. Some errors also show a <em>suggested replacement</em> below the caret, like:</p><pre style="background: #1f2937; color: #86efac; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; margin: 6px 0;">    5 |     return 0
+      |             ^
+      |             ;</pre><p>That little <code>;</code> below the caret is GCC's <em>"did you mean to put a semicolon here?"</em> hint. Modern GCC is increasingly good at these — read every line below the caret.</p>`
+    }
+  };
+  const parts = document.querySelectorAll('.err-part');
+  const panel = document.getElementById('anatPanel');
+  const anatCounter = document.getElementById('anatCount');
+  const anatFinish = document.getElementById('anatFinish');
+  const exploredAnat = new Set();
+  // unique-IDs across the doc — first part appears twice (same id), only count once
+  const uniqueIds = new Set();
+  parts.forEach(p => { if (p.dataset.id) uniqueIds.add(p.dataset.id); });
+  const totalUnique = uniqueIds.size;
+  parts.forEach(p => {
+    p.addEventListener('click', (e) => {
+      const id = p.dataset.id;
+      const a = ANAT[id];
+      if (!a) return;
+      parts.forEach(x => x.classList.remove('active'));
+      // activate all parts with same id (filename appears twice)
+      document.querySelectorAll(`.err-part[data-id="${id}"]`).forEach(x => x.classList.add('active'));
+      panel.innerHTML = `<h4><span class="anat-tag">${a.tag}</span> ${a.title}</h4>${a.body}`;
+      if (!exploredAnat.has(id)) {
+        exploredAnat.add(id);
+        document.querySelectorAll(`.err-part[data-id="${id}"]`).forEach(x => x.classList.add('explored'));
+        anatCounter.textContent = exploredAnat.size;
+        anatCounter.style.transform = 'scale(1.3)';
+        setTimeout(() => anatCounter.style.transform = 'scale(1)', 200);
+        addXP(6, e.clientX, e.clientY);
+        bumpStreak();
+        if (exploredAnat.size === totalUnique) {
+          anatFinish.classList.add('done');
+          anatFinish.innerHTML = '🎉 <strong>All 6 parts explored!</strong> You can now decode any GCC error message. This skill compounds — every error from here on gets easier.';
+          setTimeout(() => { burst(); addXP(30, window.innerWidth/2, window.innerHeight/2, '🎉 Anatomy mastered! +30 XP'); }, 200);
+        }
+      }
+    });
+  });
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> Modern GCC reads <code>prinft</code>, notices it\'s very close to <code>printf</code>, and suggests the fix right under the caret. <em>Always look below the caret line.</em>' : '✓ <strong style="color: var(--green)">Got it.</strong> Classic typo. GCC even shows the fix.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Look at the suggested fix at the bottom of the error message.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>

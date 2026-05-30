@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.1 — Variables, Types, and auto · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .code-block { background: var(--terminal); color: #e2e8f0; border-radius: 12px; padding: 14px 18px; font-family: var(--mono); font-size: 13px; overflow-x: auto; position: relative; margin: 10px 0; line-height: 1.65; }
+  .code-block pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+  .code-block .kw { color: #c4b5fd; }
+  .code-block .fn { color: #fbbf24; }
+  .code-block .str { color: #86efac; }
+  .code-block .num { color: #fde047; }
+  .code-block .com { color: #64748b; font-style: italic; }
+  .code-block .name { color: #f9a8d4; }
+  .code-block .ns { color: #67e8f9; }
+
+  .type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+  .type-card { background: linear-gradient(135deg, white, var(--bg1)); border: 2px solid var(--bg3); border-radius: 14px; padding: 16px 18px; transition: all 0.25s var(--bouncy); }
+  .type-card:hover { transform: translateY(-3px); border-color: var(--purple); box-shadow: var(--shadow); }
+  .type-card h4 { margin: 0 0 4px; font-family: var(--mono); font-size: 15px; color: var(--purple-deep); }
+  .type-card .type-purpose { font-size: 13px; color: var(--ink-dim); margin-bottom: 8px; font-weight: 600; }
+  .type-card .type-eg { background: var(--terminal); color: #e2e8f0; border-radius: 8px; padding: 6px 10px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; }
+  .type-card .type-eg .kw { color: #c4b5fd; }
+  .type-card .type-eg .num { color: #fde047; }
+  .type-card .type-eg .str { color: #86efac; }
+  .type-card .type-eg .ns { color: #67e8f9; }
+
+  .auto-callout { background: linear-gradient(135deg, #ddd6fe, #c4b5fd); border: 2px solid var(--purple); border-radius: 16px; padding: 18px 22px; margin: 16px 0; position: relative; }
+  .auto-callout::before { content: "🌟 C++11"; position: absolute; top: -10px; left: 14px; background: var(--purple-deep); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .auto-callout h4 { margin: 4px 0 8px; color: var(--purple-deep); font-size: 17px; }
+  .auto-callout p { margin: 0 0 10px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+  .auto-callout p:last-child { margin-bottom: 0; }
+
+  .valid-area { background: linear-gradient(135deg, #faf5ff, #fdf4ff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .valid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .valid-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .valid-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .valid-counter strong { font-size: 18px; }
+  .name-input-wrap { position: relative; margin-bottom: 14px; }
+  .name-input { width: 100%; padding: 14px 18px 14px 50px; font: inherit; font-family: var(--mono); font-size: 16px; border: 3px solid var(--bg3); border-radius: 12px; background: white; color: var(--ink); transition: all 0.25s; }
+  .name-input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
+  .name-input.valid { border-color: var(--green); background: linear-gradient(135deg, #f0fdf4, white); }
+  .name-input.invalid { border-color: var(--red); background: linear-gradient(135deg, #fff1f2, white); }
+  .name-input-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-family: var(--mono); font-size: 16px; color: var(--ink-dim); pointer-events: none; font-weight: 700; }
+  .valid-result { padding: 12px 16px; border-radius: 10px; font-size: 14.5px; line-height: 1.5; margin-bottom: 14px; background: var(--bg1); color: var(--ink-soft); border: 2px solid transparent; }
+  .valid-result.ok { background: linear-gradient(135deg, #dcfce7, #ecfdf5); border-color: var(--green); color: #166534; }
+  .valid-result.bad { background: linear-gradient(135deg, #fee2e2, #fff1f2); border-color: var(--red); color: #991b1b; }
+  .valid-result strong { color: inherit; font-weight: 700; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .presets-label { font-size: 13px; font-weight: 600; color: var(--ink-dim); margin-right: 4px; }
+  .preset { background: white; border: 2px solid var(--bg3); border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 13px; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .preset:hover { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .preset.tried { background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-color: var(--purple-light); }
+
+  .quiz { background: linear-gradient(135deg, #fce7f3, #f3e8ff); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--pink); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--pink); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/><circle cx="50" cy="36" r="3.5" fill="#ec4899"/>
+      <text x="40" y="56" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="10" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="64" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="32" y="60" width="16" height="6" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="26" y="66" width="28" height="8" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Welcome to Part II! Variables — plus the modern <code>auto</code> trick that C++ adds on top. ✨
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK · 2.1</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 11 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II · THE BUILDING BLOCKS</span>
+    <h1>Variables, Types, and <code style="background: rgba(0,0,0,0.2); color: white; padding: 2px 10px; border-radius: 6px; font-size: 0.85em;">auto</code></h1>
+    <p class="hero-sub">A variable is a named place where your program remembers a value. C++ gives you the same idea as C — plus one big modern addition: <code>auto</code>, which asks the compiler to figure out the type for you.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="7" r="4" fill="#fde047" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="54" rx="18" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+      <rect x="26" y="33" width="48" height="22" rx="10" fill="#1e1b4b" stroke="#1e1b4b" stroke-width="2"/>
+      <circle cx="38" cy="44" r="4" fill="#06b6d4"/><circle cx="62" cy="44" r="4" fill="#ec4899"/>
+      <text x="50" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="12" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="80" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="40" y="74" width="20" height="8" rx="2" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="32" y="82" width="36" height="10" rx="3" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-pix="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Programs need to remember things 🧠</h2>
+
+    <div class="new-content">
+      In lesson 0.2 you met memory — the wall of numbered boxes the CPU works with. <strong>Variables are how you give those boxes friendly names</strong>. Instead of "the int at address 0x7ffe8a3c," you say "the variable <code>age</code>." The compiler does the address-bookkeeping; you just think in names and types.
+    </div>
+
+    <p>Every C++ program uses variables — for inputs, counters, intermediate results, state. Today: declare them, name them, and meet C++'s signature improvement over C: <code>auto</code> for type inference.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-pix="1">
+    <div class="step-label"><span class="step-num">2</span> What a variable is</div>
+    <h2>The container analogy 🫙</h2>
+
+    <div class="new-content">
+      A variable is a <strong>named container</strong> in memory that stores a value of a specific type. Think of it like a labeled spice jar: the label is the name, the shape determines what fits inside (only one kind of thing), and the contents can be refilled.
+    </div>
+
+    <p>The "of a specific type" part matters more in C++ than most languages. Where Python lets you put anything anywhere — <code>x = 5</code> then <code>x = "hello"</code> with no fuss — C++ insists you declare up front: <em>this variable holds integers, and only integers</em>. That strictness is one of the things that makes C++ fast and safe.</p>
+
+    <p>The simplest possible variable in C++:</p>
+
+    <div class="code-block">
+      <pre><span class="kw">int</span> <span class="name">age</span> = <span class="num">25</span>;       <span class="com">// container labeled "age" holds the integer 25</span>
+<span class="kw">double</span> <span class="name">price</span> = <span class="num">9.99</span>;   <span class="com">// container labeled "price" holds the decimal 9.99</span>
+<span class="kw">char</span> <span class="name">grade</span> = <span class="str">'A'</span>;     <span class="com">// container labeled "grade" holds the character 'A'</span></pre>
+    </div>
+
+    <p>Three different <em>kinds</em> of value, three different types. Pick the type that matches the data — that's how C++ thinks.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-pix="2">
+    <div class="step-label"><span class="step-num">3</span> The basic types</div>
+    <h2>What fits in each container 📦</h2>
+
+    <div class="new-content">
+      C++ inherits C's basic types, and adds a proper <code>bool</code> type, plus <code>std::string</code> for text (which we'll meet properly in lesson 2.3). Here are the five you'll see most.
+    </div>
+
+    <div class="type-grid">
+      <div class="type-card">
+        <h4>int</h4>
+        <div class="type-purpose">Whole numbers</div>
+        <div class="type-eg"><span class="kw">int</span> age = <span class="num">25</span>;
+<span class="kw">int</span> count = <span class="num">-7</span>;</div>
+      </div>
+      <div class="type-card">
+        <h4>double</h4>
+        <div class="type-purpose">Decimal numbers (default float type in C++)</div>
+        <div class="type-eg"><span class="kw">double</span> price = <span class="num">9.99</span>;
+<span class="kw">double</span> pi = <span class="num">3.14159</span>;</div>
+      </div>
+      <div class="type-card">
+        <h4>bool</h4>
+        <div class="type-purpose">true or false (a real type, not 0/1)</div>
+        <div class="type-eg"><span class="kw">bool</span> done = <span class="kw">true</span>;
+<span class="kw">bool</span> ok = <span class="kw">false</span>;</div>
+      </div>
+      <div class="type-card">
+        <h4>char</h4>
+        <div class="type-purpose">A single character</div>
+        <div class="type-eg"><span class="kw">char</span> grade = <span class="str">'A'</span>;
+<span class="kw">char</span> letter = <span class="str">'z'</span>;</div>
+      </div>
+      <div class="type-card">
+        <h4>std::string</h4>
+        <div class="type-purpose">Text (a sequence of characters)</div>
+        <div class="type-eg"><span class="ns">std</span>::<span class="kw">string</span> name =
+    <span class="str">"Aniket"</span>;</div>
+      </div>
+    </div>
+
+    <p>Two differences from C worth flagging: <strong><code>bool</code></strong> (real type, with <code>true</code> and <code>false</code> as keywords — much nicer than C's <code>_Bool</code>) and <strong><code>std::string</code></strong> (a proper string type that knows its own length, can grow, and supports <code>+</code> concatenation — far easier than C's null-terminated <code>char</code> arrays). We use both freely from here on.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-pix="3">
+    <div class="step-label"><span class="step-num">4</span> Declaring and initializing</div>
+    <h2>Three steps, usually in one line 📝</h2>
+
+    <div class="new-content">
+      The pattern is the same as C: <strong>declare → assign → use</strong>. C++ adds a few new <em>ways</em> to initialize — pick whichever you find readable.
+    </div>
+
+    <div class="code-block">
+      <pre><span class="com">// 1. The C-style way (still works)</span>
+<span class="kw">int</span> <span class="name">a</span> = <span class="num">25</span>;
+
+<span class="com">// 2. The "uniform initialization" syntax (C++11) — preferred by many</span>
+<span class="kw">int</span> <span class="name">b</span>{<span class="num">25</span>};
+<span class="kw">double</span> <span class="name">c</span>{<span class="num">3.14</span>};
+<span class="ns">std</span>::<span class="kw">string</span> <span class="name">d</span>{<span class="str">"hello"</span>};
+
+<span class="com">// 3. Function-call style (also works)</span>
+<span class="kw">int</span> <span class="name">e</span>(<span class="num">25</span>);
+
+<span class="com">// All three of these declare an int with value 25.
+// The {} form has one nice property: it catches narrowing conversions.</span>
+<span class="kw">int</span> <span class="name">f</span>{<span class="num">3.14</span>};   <span class="com">// compiler ERROR — can't narrow double to int silently</span>
+<span class="kw">int</span> <span class="name">g</span> = <span class="num">3.14</span>;  <span class="com">// compiles fine, silently truncates to 3 😬</span></pre>
+    </div>
+
+    <p>The <code>{}</code> form (called <em>brace initialization</em> or <em>uniform initialization</em>) is the modern recommendation — it works for every type the same way, and it catches a class of silent bugs by refusing narrowing conversions. We'll use it throughout the rest of the book.</p>
+
+    <p><strong>Always initialize.</strong> Like in C, declaring a variable without giving it a value leaves it holding garbage. The empty <code>{}</code> form is also valid and means "zero-initialize" — <code>int x{};</code> gives <code>x = 0</code> reliably.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-pix="4">
+    <div class="step-label"><span class="step-num">5</span> The auto trick</div>
+    <h2>Let the compiler write the type for you 🌟</h2>
+
+    <div class="auto-callout">
+      <h4>auto — type inference</h4>
+      <p>C++11 introduced the <code>auto</code> keyword. It tells the compiler: <em>"figure out the type from the value on the right; don't make me write it."</em> The compiler still picks <strong>one specific type</strong> — there's no runtime cost. It's just a typing-saving feature.</p>
+      <p>Compare these two equivalent lines:</p>
+    </div>
+
+    <div class="code-block">
+      <pre><span class="com">// Without auto — you write the type explicitly</span>
+<span class="ns">std</span>::<span class="kw">vector</span>&lt;<span class="ns">std</span>::<span class="kw">string</span>&gt;::<span class="kw">iterator</span> <span class="name">it</span> = <span class="name">names</span>.begin();
+
+<span class="com">// With auto — the compiler figures it out</span>
+<span class="kw">auto</span> <span class="name">it</span> = <span class="name">names</span>.begin();   <span class="com">// it's exactly the same type, less typing</span>
+
+<span class="com">// More everyday examples:</span>
+<span class="kw">auto</span> <span class="name">age</span> = <span class="num">25</span>;            <span class="com">// auto = int</span>
+<span class="kw">auto</span> <span class="name">price</span> = <span class="num">9.99</span>;         <span class="com">// auto = double</span>
+<span class="kw">auto</span> <span class="name">name</span> = <span class="ns">std</span>::<span class="kw">string</span>{<span class="str">"Aniket"</span>};  <span class="com">// auto = std::string</span>
+<span class="kw">auto</span> <span class="name">letter</span> = <span class="str">'A'</span>;          <span class="com">// auto = char</span></pre>
+    </div>
+
+    <p><strong>When to use <code>auto</code>:</strong> use it freely when the type is obvious from the right-hand side, and especially when the type would be long or annoying to spell out (iterators, lambda types, template results). Don't use it when it would obscure the type and confuse a reader (<code>auto x = compute();</code> — what's that?).</p>
+
+    <p>One subtle catch: <code>auto x = 3.14;</code> gives you a <code>double</code>, not a <code>float</code> — because in C++, unsuffixed decimal literals default to <code>double</code>. If you specifically wanted a float, write <code>auto x = 3.14f;</code>.</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-pix="5">
+    <div class="step-label"><span class="step-num">6</span> Naming rules + Try it</div>
+    <h2>What's a legal variable name in C++? 🔤</h2>
+
+    <div class="new-content">
+      C++ naming rules are essentially identical to C:
+      <br>• First character: letter or underscore
+      <br>• Subsequent: letters, digits, or underscores
+      <br>• Case matters
+      <br>• Can't be a reserved keyword (C++ has more keywords than C — <code>class</code>, <code>template</code>, <code>auto</code>, <code>nullptr</code>, <code>constexpr</code>, etc.)
+    </div>
+
+    <p>Try the live validator below. It checks C++ rules including the additional C++ keywords. Each <em>new</em> name tested = <strong>+3 XP</strong>.</p>
+
+    <div class="valid-area">
+      <div class="valid-header">
+        <div class="valid-title">🔤 C++ name validator</div>
+        <div class="valid-counter"><strong id="validCount">0</strong> tested</div>
+      </div>
+
+      <div class="name-input-wrap">
+        <span class="name-input-prefix">auto</span>
+        <input type="text" class="name-input" id="nameInput" placeholder="Type a name..." autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="valid-result" id="validResult">
+        Enter a name. Try <code>myAge</code>, <code>class</code>, <code>constexpr</code>, or whatever you like.
+      </div>
+
+      <div class="presets">
+        <span class="presets-label">Try:</span>
+        <button class="preset" data-name="myAge">myAge</button>
+        <button class="preset" data-name="first_name">first_name</button>
+        <button class="preset" data-name="_count">_count</button>
+        <button class="preset" data-name="2nd_player">2nd_player</button>
+        <button class="preset" data-name="hello world">hello world</button>
+        <button class="preset" data-name="class">class</button>
+        <button class="preset" data-name="constexpr">constexpr</button>
+        <button class="preset" data-name="user-name">user-name</button>
+        <button class="preset" data-name="nullptr">nullptr</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-pix="6">
+    <div class="step-label"><span class="step-num">7</span> Predict</div>
+    <h2>What's the type of <code>x</code>? 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You write this line in C++20:
+<pre><span style="color: #c4b5fd;">auto</span> x = <span style="color: #fde047;">3.14</span>;</pre>
+What's the type of <code>x</code>?</div>
+      <button class="opt" data-correct="false"><code>float</code></button>
+      <button class="opt" data-correct="true"><code>double</code></button>
+      <button class="opt" data-correct="false"><code>int</code> (truncated to 3)</button>
+      <button class="opt" data-correct="false">The compiler refuses to compile without an explicit type.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-pix="7">
+    <div class="step-label"><span class="step-num">8</span> Common mistakes</div>
+    <h2>Three traps with C++ variables 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"<code>auto x;</code> — that should give me an auto-typed variable."</strong>
+        <small>It can't. <code>auto</code> means "infer the type from the initializer" — without an initializer, there's nothing to infer from. The compiler errors. Always write <code>auto x = ...;</code> with a value, or use an explicit type like <code>int x;</code>.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"<code>auto x = 3.14;</code> gives me a float."</strong>
+        <small>It gives you a <code>double</code>. In C++, decimal literals default to <code>double</code>. If you specifically want a <code>float</code>, use the <code>f</code> suffix: <code>auto x = 3.14f;</code>. (You'll rarely want <code>float</code> over <code>double</code> anyway — <code>double</code> is fine for almost everything.)</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"<code>int x = 3.14;</code> is fine."</strong>
+        <small>Compiles, but silently truncates to <code>3</code>, losing the decimal. The brace-init form <code>int x{3.14};</code> would <em>refuse</em> to compile and force you to make the truncation explicit. This is one reason modern C++ prefers brace initialization — it catches a whole class of silent bugs.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section class="lesson-section" data-section="8" data-pix="8">
+    <div class="step-label"><span class="step-num">9</span> Your turn</div>
+    <h2>Variables in your own C++ 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Modify <code>hello.cpp</code> to use variables.</strong> Replace the literal in <code>std::cout</code> with three variables: a <code>std::string</code> name, an <code>int</code> age, a <code>double</code> height in meters. Print: <code>"Aniket is 30 years old and 1.78 meters tall."</code> using chained <code>&lt;&lt;</code>. Hint: <code>std::cout &lt;&lt; name &lt;&lt; " is " &lt;&lt; age &lt;&lt; " years old..."</code>
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Try every initialization syntax.</strong> Declare the same variable four different ways and print all four to confirm they hold the same value:
+      <div style="background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-family: var(--mono); font-size: 12.5px; margin: 6px 0;">int a = 25;<br>int b(25);<br>int b2{25};<br>auto c = 25;</div>
+      All four should print <code>25</code>. Then try <code>int d{3.14};</code> and read the error.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>The auto surprise.</strong> On <a href="https://godbolt.org/" target="_blank" rel="noopener">godbolt.org</a>, write <code>auto x = "hello";</code>. What type is <code>x</code>? It's <em>not</em> <code>std::string</code> — it's <code>const char*</code> (a C-style string). Now write <code>auto y = std::string{"hello"};</code> — what's <code>y</code>'s type? Use <code>typeid(x).name()</code> from <code>&lt;typeinfo&gt;</code> to confirm, or just hover over <code>x</code> in VS Code and read the tooltip. Understanding <em>what auto deduces</em> is half of using it well.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>A <strong>variable</strong> is a named container in memory. Each one has a fixed <strong>type</strong> declared up front.</li>
+      <li>Five basic types you'll meet most: <code>int</code>, <code>double</code>, <code>bool</code>, <code>char</code>, <code>std::string</code>.</li>
+      <li>Three initialization syntaxes: <code>int a = 25;</code>, <code>int a{25};</code> (preferred), <code>int a(25);</code>. The <code>{}</code> form catches narrowing conversions.</li>
+      <li><strong><code>auto</code></strong> (C++11) lets the compiler infer the type from the initializer. Free, no runtime cost. Use it freely when the type is obvious.</li>
+      <li>Naming rules: start with letter or <code>_</code>; rest can be letters/digits/<code>_</code>; case matters; can't be a C++ keyword.</li>
+      <li>Always initialize. Use <code>int x{};</code> for "zero-initialize" — beats undefined garbage.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_1_5.html" class="nav-btn prev">
+      <small>← Previous</small>
+      1.5  Reading C++ compiler errors
+    </a>
+    <a href="Cpp_Book_Lesson_2_2.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      2.2  Basic types — sizes &amp; ranges
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Welcome to Part II! Variables — plus the modern <code>auto</code> trick that C++ adds on top. ✨",
+    "Container + label + type. Strict typing is one reason C++ is fast.",
+    "Five types you'll see most. Notice the real <code>bool</code> and <code>std::string</code> — both nicer than C's versions.",
+    "Three init syntaxes. The <code>{}</code> form is the modern recommendation — it catches narrowing!",
+    "<code>auto</code> is C++11's signature add. Read the deduction rules carefully — there are gotchas. 🌟",
+    "Type C++ names. Same rules as C plus more keywords (class, template, constexpr...). 🔤",
+    "Read carefully — there's a clear C++ default for decimal literals. 🎯",
+    "These three traps catch every C++ beginner once. Watch for the brace-init bug.",
+    "Try the stretch! Surprising auto deductions are the most-asked C++ interview question. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 9;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Lesson 2.1 complete! +50 XP'); addXP(50); }, 400); } }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) { const line = PIXEL_LINES[idx] || PIXEL_LINES[0]; pixelBubble.style.opacity = '0'; setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250); }
+  let currentPix = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.pix; if (i !== currentPix) { currentPix = i; updatePixel(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // C++ keywords (extended from C)
+  const KEYWORDS = ['alignas','alignof','and','and_eq','asm','auto','bitand','bitor','bool','break','case','catch','char','char8_t','char16_t','char32_t','class','compl','concept','const','consteval','constexpr','constinit','const_cast','continue','co_await','co_return','co_yield','decltype','default','delete','do','double','dynamic_cast','else','enum','explicit','export','extern','false','float','for','friend','goto','if','inline','int','long','mutable','namespace','new','noexcept','not','not_eq','nullptr','operator','or','or_eq','private','protected','public','register','reinterpret_cast','requires','return','short','signed','sizeof','static','static_assert','static_cast','struct','switch','template','this','thread_local','throw','true','try','typedef','typeid','typename','union','unsigned','using','virtual','void','volatile','wchar_t','while','xor','xor_eq'];
+
+  function validateName(name) {
+    if (!name) return { ok: false, reason: "<strong>Empty name.</strong> A variable needs at least one character." };
+    if (/^[0-9]/.test(name)) return { ok: false, reason: `<strong>Starts with a digit (<code>${escapeHtml(name[0])}</code>).</strong> First character must be a letter (a–z, A–Z) or underscore (<code>_</code>).` };
+    if (!/^[a-zA-Z_]/.test(name)) return { ok: false, reason: `<strong>Bad first character (<code>${escapeHtml(name[0])}</code>).</strong> First character must be a letter (a–z, A–Z) or underscore (<code>_</code>). No spaces, no symbols.` };
+    const badMatch = name.match(/[^a-zA-Z0-9_]/);
+    if (badMatch) {
+      const ch = badMatch[0];
+      let what = ch === ' ' ? "space" : ch === '-' ? "hyphen (<code>-</code>)" : ch === '.' ? "dot (<code>.</code>)" : `<code>${escapeHtml(ch)}</code>`;
+      return { ok: false, reason: `<strong>Invalid character: ${what}.</strong> Only letters, digits, and underscores allowed.` };
+    }
+    if (KEYWORDS.includes(name)) return { ok: false, reason: `<strong><code>${escapeHtml(name)}</code> is a reserved C++ keyword.</strong> Can't be used as a variable name. C++ has ~90 reserved words — many more than C.` };
+    if (name.length > 1024) return { ok: false, reason: `<strong>Too long (${name.length} characters).</strong> No reasonable C++ name should be this long.` };
+    return { ok: true, reason: `<strong>Legal C++ identifier!</strong> You could write <code>auto ${escapeHtml(name)} = 0;</code> right now and the compiler would accept it.` };
+  }
+  function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  const input = document.getElementById('nameInput');
+  const result = document.getElementById('validResult');
+  const validCounter = document.getElementById('validCount');
+  const tested = new Set();
+  function checkName(name) {
+    const r = validateName(name);
+    input.classList.toggle('valid', r.ok && name.length > 0);
+    input.classList.toggle('invalid', !r.ok && name.length > 0);
+    if (name.length === 0) {
+      result.className = 'valid-result';
+      result.innerHTML = 'Enter a name. Try <code>myAge</code>, <code>class</code>, <code>constexpr</code>, or whatever you like.';
+      return;
+    }
+    result.className = 'valid-result ' + (r.ok ? 'ok' : 'bad');
+    result.innerHTML = (r.ok ? '✓ ' : '✗ ') + r.reason;
+    if (!tested.has(name)) {
+      tested.add(name);
+      validCounter.textContent = tested.size;
+      validCounter.style.transform = 'scale(1.3)';
+      setTimeout(() => validCounter.style.transform = 'scale(1)', 200);
+      const xpAmt = r.ok ? 5 : 3;
+      const rect = input.getBoundingClientRect();
+      addXP(xpAmt, rect.right - 30, rect.top + 10);
+      if (r.ok) bumpStreak();
+    }
+  }
+  input.addEventListener('input', () => checkName(input.value));
+
+  document.querySelectorAll('.preset').forEach(p => {
+    p.addEventListener('click', () => {
+      input.value = p.dataset.name;
+      p.classList.add('tried');
+      checkName(p.dataset.name);
+      input.focus();
+    });
+  });
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> Decimal literals in C++ default to <code>double</code> (not float). To get a float, write <code>3.14f</code>. To get an int, write <code>auto x = 3;</code>.' : '✓ <strong style="color: var(--green)">Got it.</strong> <code>3.14</code> is a double literal, so <code>auto</code> deduces <code>double</code>.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Think about what C++ unsuffixed decimal literals default to.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>

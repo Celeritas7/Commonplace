@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1.5 — Reading C++ Compiler Errors · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .anat-area { background: linear-gradient(135deg, #faf5ff, #fdf4ff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .anat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+  .anat-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .anat-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .anat-counter strong { font-size: 18px; }
+  .anat-source { background: var(--terminal); color: #e2e8f0; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 13px; margin-bottom: 4px; line-height: 1.7; position: relative; }
+  .anat-source .filename { position: absolute; top: 10px; right: 14px; background: rgba(255,255,255,0.1); color: #cbd5e1; padding: 2px 10px; border-radius: 6px; font-size: 11px; letter-spacing: 0.5px; font-weight: 700; }
+  .anat-source .preproc { color: #f9a8d4; }
+  .anat-source .kw { color: #c4b5fd; }
+  .anat-source .fn { color: #fbbf24; }
+  .anat-source .str { color: #86efac; }
+  .anat-source .num { color: #fde047; }
+  .anat-source .ns { color: #67e8f9; }
+  .anat-source .ln-num { color: #64748b; margin-right: 14px; user-select: none; min-width: 16px; display: inline-block; }
+  .anat-source .bug-line { background: rgba(239, 68, 68, 0.15); }
+  .anat-arrow { text-align: center; color: var(--purple); font-size: 18px; margin: 6px 0; }
+  .anat-error { background: var(--terminal); color: #fca5a5; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 13px; line-height: 1.7; margin-bottom: 16px; overflow-x: auto; position: relative; }
+  .anat-error .err-line { display: block; white-space: pre; }
+  .err-part { cursor: pointer; padding: 1px 3px; border-radius: 3px; transition: all 0.2s; border-bottom: 1px dotted rgba(255,255,255,0.3); }
+  .err-part:hover { background: rgba(139, 92, 246, 0.35); border-bottom-color: var(--purple); }
+  .err-part.active { background: rgba(139, 92, 246, 0.55); color: #f3e8ff; border-bottom-color: var(--purple); }
+  .err-part.explored { border-bottom-color: var(--green); }
+  .err-part.explored::after { content: "✓"; color: #86efac; margin-left: 3px; font-size: 10px; }
+  .err-fname { color: #fde68a; }
+  .err-pos { color: #93c5fd; }
+  .err-sev { color: #fca5a5; font-weight: 700; }
+  .err-msg { color: #fecaca; }
+  .err-caret { color: #86efac; font-weight: 700; }
+  .err-hint { color: #67e8f9; }
+  .anat-panel { background: white; border: 2px solid var(--purple-light); border-radius: 14px; padding: 18px 20px; min-height: 100px; }
+  .anat-panel h4 { margin: 0 0 8px; font-size: 16px; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .anat-panel .anat-tag { background: var(--purple); color: white; font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 700; letter-spacing: 0.5px; }
+  .anat-panel p { margin: 0 0 8px; font-size: 14.5px; color: var(--ink-soft); line-height: 1.55; }
+  .anat-panel p:last-child { margin-bottom: 0; }
+  .anat-finish { margin-top: 14px; padding: 12px 16px; background: linear-gradient(135deg, var(--bg1), white); border: 2px dashed var(--purple-light); border-radius: 10px; text-align: center; font-size: 14px; color: var(--ink-soft); transition: all 0.4s; }
+  .anat-finish.done { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); border-style: solid; color: #166534; font-weight: 700; }
+
+  .pat-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 16px 0; }
+  .pat-card { background: white; border: 2px solid var(--bg3); border-radius: 14px; padding: 14px 16px; transition: all 0.25s var(--bouncy); display: grid; grid-template-columns: 32px 1fr; gap: 14px; align-items: start; }
+  .pat-card:hover { transform: translateX(4px); border-color: var(--purple); box-shadow: var(--shadow); }
+  .pat-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+  .pat-body strong { display: block; color: var(--ink); margin-bottom: 4px; font-size: 15px; }
+  .pat-body .pat-msg { font-family: var(--mono); font-size: 12.5px; background: linear-gradient(135deg, #fef2f2, #fee2e2); color: #991b1b; padding: 4px 8px; border-radius: 6px; display: inline-block; margin: 4px 0; }
+  .pat-body small { color: var(--ink-soft); font-size: 13.5px; line-height: 1.5; display: block; margin-top: 4px; }
+
+  .cascade-side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .cascade-card { background: white; border: 2px solid var(--bg3); border-radius: 14px; padding: 14px; }
+  .cascade-card.bad { border-color: var(--red); }
+  .cascade-card.good { border-color: var(--green); }
+  .cascade-card h5 { margin: 0 0 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .cascade-card.bad h5 { color: var(--red); }
+  .cascade-card.good h5 { color: var(--green); }
+  .cascade-card pre { margin: 0; padding: 10px 12px; background: var(--terminal); color: #cbd5e1; border-radius: 8px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; overflow-x: auto; }
+  @media (max-width: 600px) { .cascade-side { grid-template-columns: 1fr; } }
+
+  .quiz { background: linear-gradient(135deg, #fce7f3, #f3e8ff); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--pink); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 12px; background: var(--terminal); color: #fca5a5; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.5; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--pink); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/><circle cx="50" cy="36" r="3.5" fill="#ec4899"/>
+      <text x="40" y="56" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="10" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="64" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="32" y="60" width="16" height="6" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="26" y="66" width="28" height="8" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    C++ errors are LONG. There's a method. Last lesson of Part I — let's make them manageable. ✨
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK · 1.5</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 10 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🛠️ PART I · SETTING UP</span>
+    <h1>Reading C++ Compiler Errors</h1>
+    <p class="hero-sub">C++ errors are infamously long — a single mistake can produce 50 lines of output. There's a method. This final Part I lesson hands you the anatomy, the 5 patterns, and the survival tips for template errors.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="7" r="4" fill="#fde047" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="54" rx="18" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+      <rect x="26" y="33" width="48" height="22" rx="10" fill="#1e1b4b" stroke="#1e1b4b" stroke-width="2"/>
+      <circle cx="38" cy="44" r="4" fill="#06b6d4"/><circle cx="62" cy="44" r="4" fill="#ec4899"/>
+      <text x="50" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="12" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="80" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="40" y="74" width="20" height="8" rx="2" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="32" y="82" width="36" height="10" rx="3" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-pix="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>C++ errors are bigger — but they follow rules 📜</h2>
+
+    <div class="new-content">
+      You're going to see <em>thousands</em> of g++ errors in your C++ life. C++ errors are notoriously verbose — templates can produce 50-line errors for one typo. But every C++ error follows the same anatomy, and 99% of beginner errors fall into five patterns. Learn the shape and the panic goes away.
+    </div>
+
+    <p>The difference between a struggling beginner and a productive C++ developer is mostly this: the developer glances at the first error line, knows what's wrong, fixes it in 30 seconds. The beginner reads the full 50 lines, gets overwhelmed, and gives up. This lesson is the bridge.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-pix="1">
+    <div class="step-label"><span class="step-num">2</span> Anatomy of a C++ error</div>
+    <h2>Click each part of this real g++ error 🔍</h2>
+
+    <div class="new-content">
+      Below is a real error you'd get from g++ if you wrote a slightly broken <code>hello.cpp</code>. The classic beginner mistake: <strong>forgot the <code>std::</code> prefix</strong>. Each <em>underlined</em> piece is clickable — click to learn what it means. Each first-time click = <strong>+6 XP</strong>.
+    </div>
+
+    <div class="anat-area">
+      <div class="anat-header">
+        <div class="anat-title">🔍 Decode this error</div>
+        <div class="anat-counter"><strong id="anatCount">0</strong> / 7 parts explored</div>
+      </div>
+
+      <div class="anat-source">
+        <span class="filename">hello.cpp (the buggy source)</span>
+<span class="ln-num">1</span><span class="preproc">#include</span> <span class="preproc">&lt;iostream&gt;</span>
+<span class="ln-num">2</span>
+<span class="ln-num">3</span><span class="kw">int</span> <span class="fn">main</span>() {
+<span class="ln-num">4</span>    <span class="bug-line"><span class="fn">cout</span> &lt;&lt; <span class="str">"Hello!\n"</span>;</span>   <span style="color: #fca5a5;">← missing std::</span>
+<span class="ln-num">5</span>    <span class="kw">return</span> <span class="num">0</span>;
+<span class="ln-num">6</span>}
+      </div>
+
+      <div class="anat-arrow">↓ run <code style="background: none; color: #94a3b8;">g++ -std=c++20 hello.cpp</code> ↓</div>
+
+      <div class="anat-error">
+<span class="err-line"><span class="err-part err-fname" data-id="1">hello.cpp</span>: In function <span class="err-part" data-id="2">'int main()'</span>:</span>
+<span class="err-line"><span class="err-part err-fname" data-id="1">hello.cpp</span>:<span class="err-part err-pos" data-id="3">4:5</span>: <span class="err-part err-sev" data-id="4">error</span>: <span class="err-part err-msg" data-id="5">'cout' was not declared in this scope</span>; <span class="err-part err-hint" data-id="6">did you mean 'std::cout'?</span></span>
+<span class="err-line">    4 |     cout &lt;&lt; "Hello!\n";</span>
+<span class="err-line">      |     <span class="err-part err-caret" data-id="7">^~~~</span></span>
+<span class="err-line">      |     std::cout</span>
+      </div>
+
+      <div class="anat-panel" id="anatPanel">
+        <h4>👆 Click any underlined part above</h4>
+        <p>C++ errors look intimidating but follow a strict format. Modern g++ is also unusually helpful — notice the "did you mean..." hint? Read that line first.</p>
+      </div>
+
+      <div class="anat-finish" id="anatFinish">
+        Click each of the 7 parts to complete the tour.
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-pix="2">
+    <div class="step-label"><span class="step-num">3</span> The five patterns you'll see most</div>
+    <h2>Memorize these shapes 📌</h2>
+
+    <div class="new-content">
+      99% of the errors you'll meet in your first year of C++ are variations of these five. Each has a tell — once you spot the tell, you know roughly what to fix.
+    </div>
+
+    <div class="pat-grid">
+      <div class="pat-card">
+        <div class="pat-num">1</div>
+        <div class="pat-body">
+          <strong>Missing semicolon</strong>
+          <div class="pat-msg">error: expected ';' before '...'</div>
+          <small>You forgot a <code>;</code>. The fix is usually on the line <em>above</em> the one g++ points at. Stage: compiler.</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">2</div>
+        <div class="pat-body">
+          <strong>Missing <code>std::</code> or unknown identifier</strong>
+          <div class="pat-msg">error: 'cout' was not declared in this scope; did you mean 'std::cout'?</div>
+          <small>The most common C++ beginner error. Add the <code>std::</code> prefix, or include the right header. Modern g++ even suggests the fix. Stage: compiler.</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">3</div>
+        <div class="pat-body">
+          <strong>No matching function (overload resolution failure)</strong>
+          <div class="pat-msg">error: no matching function for call to 'std::vector&lt;int&gt;::push_back(const char [6])'</div>
+          <small>You called a function but the arguments don't match any overload. g++ then lists all the candidates and explains why each one rejected your call. Long, but read the candidate list — it tells you what types it <em>did</em> expect. Stage: compiler.</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">4</div>
+        <div class="pat-body">
+          <strong>Undefined reference (linker)</strong>
+          <div class="pat-msg">undefined reference to `foo()'</div>
+          <small>Compiler was happy; the linker can't find the implementation. You declared a function but never defined it, or forgot to link a library (e.g. missing <code>-pthread</code>, <code>-lm</code>). Stage: linker. (See 1.4.)</small>
+        </div>
+      </div>
+      <div class="pat-card">
+        <div class="pat-num">5</div>
+        <div class="pat-body">
+          <strong>Template instantiation chain</strong>
+          <div class="pat-msg">required from 'void std::sort&lt;_RandomAccessIterator&gt;(_RandomAccessIterator, _RandomAccessIterator) [with _RandomAccessIterator = ...]'</div>
+          <small>The infamous one. A template was used with types that don't satisfy its requirements. The error shows you 5–10 layers of "required from..." chain. <strong>Always scroll to the <em>bottom</em> of the chain — that's where the real reason lives</strong>, usually a single line about a missing operator or wrong type. Stage: compiler.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-pix="3">
+    <div class="step-label"><span class="step-num">4</span> Rule One: fix the first error</div>
+    <h2>The cascading-errors trap 🌊</h2>
+
+    <div class="new-content">
+      C++ cascades hard. One missing semicolon or one missing <code>;</code> after a class body can produce <strong>dozens</strong> of follow-on errors. Beginners panic at the total. Don't.
+    </div>
+
+    <p><strong>The rule:</strong> fix the <em>first</em> error, recompile, then look at what's left. The cascade usually collapses to nothing once the root cause is gone.</p>
+
+    <div class="cascade-side">
+      <div class="cascade-card bad">
+        <h5>🌊 What you see (panic mode)</h5>
+        <pre>hello.cpp:4:5: error: 'cout' was not declared
+hello.cpp:5:5: error: expected ';' before 'return'
+hello.cpp:5:12: error: 'return' undeclared
+hello.cpp:6:1: error: expected ';' before '}'
+hello.cpp:6:1: error: expected statement
+hello.cpp: At global scope:
+hello.cpp:7:1: error: expected unqualified-id
+
+7 errors generated.</pre>
+      </div>
+      <div class="cascade-card good">
+        <h5>✓ The actual problem</h5>
+        <pre>hello.cpp:4 — missing 'std::'
+            in front of cout.
+
+After fixing that ONE thing,
+recompile and ALL 7 errors
+disappear.
+
+Cascade collapses to nothing.</pre>
+      </div>
+    </div>
+
+    <p>From now on: see 20 errors → look only at the first. Fix it. Recompile. Repeat. Almost always the count drops dramatically.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-pix="4">
+    <div class="step-label"><span class="step-num">5</span> Predict</div>
+    <h2>Where's the real bug? 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You see this error message:
+<pre>error: no matching function for call to 'std::vector&lt;int&gt;::push_back(const char [6])'
+   12 |     v.push_back("hello");
+      |     ^~~~~~~~~~~~~~~~~~~~
+note: candidate: 'void std::vector&lt;int&gt;::push_back(const int&amp;)'
+note:   no known conversion for argument 1 from
+        'const char[6]' to 'const int&amp;'</pre>
+What's the actual bug?</div>
+      <button class="opt" data-correct="false">The <code>push_back</code> method doesn't exist on <code>std::vector</code>.</button>
+      <button class="opt" data-correct="true">You're trying to push a string literal <code>"hello"</code> into a <code>vector&lt;int&gt;</code> — but it expects an <code>int</code>, not a string. Either change the vector type or push a number.</button>
+      <button class="opt" data-correct="false">You forgot to <code>#include &lt;vector&gt;</code>.</button>
+      <button class="opt" data-correct="false">The compiler doesn't support C++20.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-pix="5">
+    <div class="step-label"><span class="step-num">6</span> Common mistakes</div>
+    <h2>How beginners mis-read C++ errors 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Reading template errors from the top down.</strong>
+        <small>For template errors, <em>flip the rule</em>: scroll to the <strong>bottom</strong>. The 8 "required from..." lines at the top are just the call chain. The <em>last</em> short message is the actual reason — usually something like "no matching operator==" or "no member named X." Once you've spotted it, the chain above just tells you which call triggered it.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Ignoring warnings because the program ran.</strong>
+        <small>A warning means "this compiled, but I think you made a mistake." C++ warnings catch real bugs — uninitialized variables, narrowing conversions, dangling references. Treat warnings as errors. Compile with <code>-Wall -Wextra</code> always; consider <code>-Werror</code> in serious projects.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>Searching the error online before reading it.</strong>
+        <small>g++ tells you the file, line, column, the involved types, the candidate functions it considered, and often a suggested fix. Read it for 60 seconds before pasting into a search. C++ errors look scary but contain almost everything you need. The fast-pattern-recognition you build this way pays off forever.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-pix="6">
+    <div class="step-label"><span class="step-num">7</span> Your turn</div>
+    <h2>Practice reading C++ errors 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Generate three errors on purpose.</strong> Take your <code>hello.cpp</code>. (1) Remove <code>std::</code> from <code>std::cout</code>. Compile. Read the error. Restore. (2) Remove <code>#include &lt;iostream&gt;</code>. Compile. Read. Restore. (3) Replace <code>&lt;&lt;</code> with <code>&gt;&gt;</code>. Compile. Read. Note how the error shape differs each time.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Trigger a no-matching-function error.</strong> Write this exactly:
+      <div style="background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-family: var(--mono); font-size: 12.5px; margin: 6px 0;">#include &lt;vector&gt;<br>int main() {<br>&nbsp;&nbsp;std::vector&lt;int&gt; v;<br>&nbsp;&nbsp;v.push_back("hello");<br>&nbsp;&nbsp;return 0;<br>}</div>
+      Compile. The error will list all the candidate overloads of <code>push_back</code> and explain why each one rejected your call. Read every "note:" line — that's g++ teaching you C++.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Survive a template error.</strong> Open <a href="https://godbolt.org/" target="_blank" rel="noopener">godbolt.org</a>, paste this:
+      <div style="background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-family: var(--mono); font-size: 12.5px; margin: 6px 0;">#include &lt;algorithm&gt;<br>#include &lt;vector&gt;<br>struct Box {};<br>int main() {<br>&nbsp;&nbsp;std::vector&lt;Box&gt; v;<br>&nbsp;&nbsp;std::sort(v.begin(), v.end());<br>&nbsp;&nbsp;return 0;<br>}</div>
+      You'll see ~50 lines of error output. Find the one short line that says something like <em>"no match for 'operator&lt;'"</em> — that's the real reason. <code>std::sort</code> needs <code>&lt;</code> on the type, and <code>Box</code> doesn't have one. Welcome to template error survival.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap — and Part I is complete! 🎉</h3>
+    <ul>
+      <li>Every g++ error has the same structure: <strong>filename:line:column: severity: message</strong>, followed by a source snippet with a <code>^~~~~</code> caret and (often) a <strong>"did you mean..."</strong> hint or suggested fix line.</li>
+      <li><strong>Rule One:</strong> fix the first error, recompile, then look again. C++ cascades hard.</li>
+      <li>Five patterns you'll see most: <em>missing semicolon, missing <code>std::</code>, no matching function, undefined reference (linker), template instantiation chain</em>.</li>
+      <li><strong>For template errors:</strong> read bottom-up. The 8 "required from..." lines are just the call chain — the real reason is the last short message.</li>
+      <li>Take warnings seriously. Compile with <code>-Wall -Wextra</code>.</li>
+      <li><strong>Part I done.</strong> You can install a modern compiler, configure VS Code, write and run your first C++, understand the build pipeline, and read errors. From Part II onward we dive into the language itself — building blocks, types, I/O.</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_1_4.html" class="nav-btn prev">
+      <small>← Previous</small>
+      1.4  How a C++ program is built
+    </a>
+    <a href="Cpp_Book_Lesson_2_1.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      2.1  Variables, types, and auto
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "C++ errors are LONG. There's a method. Last lesson of Part I — let's make them manageable. ✨",
+    "Beginners panic at 50 lines of red. Pros read the first line and move on. Pattern recognition wins.",
+    "Click each part — +6 XP each. After this you can decode g++ errors like a sentence. 🔍",
+    "Five patterns cover 99% of beginner errors. Each one has a signature shape.",
+    "RULE ONE: fix the FIRST error. C++ cascades. Most of what looks like 20 errors is one.",
+    "Pick the answer — read past the type names to what's actually wrong. 🎯",
+    "Templates errors are special — read them BOTTOM-UP. The 'required from' chain at top is just history.",
+    "Try the stretch! Survive a real template error on godbolt. It changes you. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 7;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Part I complete! +100 XP'); addXP(100); }, 400); } }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) { const line = PIXEL_LINES[idx] || PIXEL_LINES[0]; pixelBubble.style.opacity = '0'; setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250); }
+  let currentPix = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.pix; if (i !== currentPix) { currentPix = i; updatePixel(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // Anatomy
+  const ANAT = {
+    '1': {
+      title: 'The filename',
+      tag: 'WHICH FILE',
+      body: `<p>The first thing on each error line is the <strong>filename</strong>. In a big multi-file project, this tells you which file to open. For a single-file program, it'll always be the same.</p><p>Notice the filename appears twice in this error block: once at the top (with the function context), and again on the actual error line. That's g++ being explicit about provenance — different errors in different files could show up in the same compile.</p>`
+    },
+    '2': {
+      title: 'The function context',
+      tag: 'WHICH FUNCTION',
+      body: `<p>g++ tells you the full signature of the function containing the error — here, <code>'int main()'</code>. Notice it includes the return type and parameter list, unlike GCC for C. That's because C++ functions can be overloaded — there could be several functions named "main" in theory, so the compiler shows the full signature to be unambiguous.</p><p>In a real C++ project with many classes, you might see something like <em>"In member function 'void MyClass::doSomething(int) const'"</em> — that level of precision is part of why C++ errors are longer than C errors.</p>`
+    },
+    '3': {
+      title: 'Line and column',
+      tag: 'WHERE EXACTLY',
+      body: `<p>Format is always <code>line:column</code>. Here, <code>4:5</code> means line 4, column 5 — open the file, jump to that spot, look right there.</p><p>VS Code (and most editors) lets you click the error message to teleport to the exact position. The "Problems" panel at the bottom of VS Code lists every error and warning with a single-click jump.</p><p>One subtlety: <strong>the line number is where g++ <em>noticed</em> the problem, not always where the problem actually lives</strong>. Missing semicolons are the classic example — the error appears on the next non-blank line.</p>`
+    },
+    '4': {
+      title: 'Severity',
+      tag: 'HOW BAD',
+      body: `<p>One of these words appears here:</p><ul style="margin: 0 0 8px 18px; font-size: 14.5px; color: var(--ink-soft);"><li><strong style="color: var(--red);">error</strong> — compilation fails. No executable produced. Must fix.</li><li><strong style="color: #ca8a04;">warning</strong> — compiled, but g++ suspects a real problem. Most warnings are runtime bugs that haven't bitten yet.</li><li><strong style="color: var(--blue);">note</strong> — extra info attached to another error/warning. For C++, "note: candidate:" lines list all the overloads the compiler considered. Read them for "no matching function" errors.</li></ul>`
+    },
+    '5': {
+      title: 'The actual message',
+      tag: 'WHAT WENT WRONG',
+      body: `<p>This is g++'s best guess. <em>"'cout' was not declared in this scope"</em> means: <em>"I see you're trying to use something called <code>cout</code>, but I don't know what that is in this context."</em></p><p>Common C++ message shapes: <em>"X was not declared in this scope"</em> (missing <code>std::</code> or wrong include), <em>"no matching function for call to X"</em> (overload resolution failed), <em>"invalid use of incomplete type"</em> (forward-declared but never defined), <em>"undefined reference"</em> (linker — see lesson 1.4).</p>`
+    },
+    '6': {
+      title: 'The "did you mean..." hint',
+      tag: '✨ HELPFUL HINT',
+      body: `<p>Modern g++ (version 11+) is unusually helpful. When it sees an unknown identifier, it scans nearby identifiers for one that's a close spelling match — and suggests it. Here, it sees <code>cout</code>, doesn't know it, scans, and finds <code>std::cout</code>.</p><p><strong>This single feature alone saves hours per week.</strong> Always read the line after the colon — it often <em>is</em> the fix. If you're on an old g++ (version 9 or earlier) you won't see these hints; another reason to upgrade.</p><p>The next line down (not labeled here) shows the suggestion written as a replacement: <code>std::cout</code> appearing right under the broken word. You can literally copy that.</p>`
+    },
+    '7': {
+      title: 'The caret pointer',
+      tag: 'EXACTLY HERE',
+      body: `<p>The <code>^</code> aligns with the start of the trouble spot; the <code>~~~</code> underlines the rest of the offending token. Below the caret, g++ often shows the <em>suggested replacement</em> (here, <code>std::cout</code>) — you can literally read off the fix.</p><p>For long expressions or chained method calls, the caret can save you from re-counting columns yourself. For C++ template errors, the caret usually points at the original call site, not the deep template instantiation that's actually broken — read both.</p>`
+    }
+  };
+  const parts = document.querySelectorAll('.err-part');
+  const panel = document.getElementById('anatPanel');
+  const anatCounter = document.getElementById('anatCount');
+  const anatFinish = document.getElementById('anatFinish');
+  const exploredAnat = new Set();
+  const uniqueIds = new Set();
+  parts.forEach(p => { if (p.dataset.id) uniqueIds.add(p.dataset.id); });
+  const totalUnique = uniqueIds.size;
+  parts.forEach(p => {
+    p.addEventListener('click', (e) => {
+      const id = p.dataset.id;
+      const a = ANAT[id];
+      if (!a) return;
+      parts.forEach(x => x.classList.remove('active'));
+      document.querySelectorAll(`.err-part[data-id="${id}"]`).forEach(x => x.classList.add('active'));
+      panel.innerHTML = `<h4><span class="anat-tag">${a.tag}</span> ${a.title}</h4>${a.body}`;
+      if (!exploredAnat.has(id)) {
+        exploredAnat.add(id);
+        document.querySelectorAll(`.err-part[data-id="${id}"]`).forEach(x => x.classList.add('explored'));
+        anatCounter.textContent = exploredAnat.size;
+        anatCounter.style.transform = 'scale(1.3)';
+        setTimeout(() => anatCounter.style.transform = 'scale(1)', 200);
+        addXP(6, e.clientX, e.clientY);
+        bumpStreak();
+        if (exploredAnat.size === totalUnique) {
+          anatFinish.classList.add('done');
+          anatFinish.innerHTML = '🎉 <strong>All 7 parts explored!</strong> You can now decode any g++ error message. Even the 50-line ones.';
+          setTimeout(() => { burst(); addXP(30, window.innerWidth/2, window.innerHeight/2, '🎉 Anatomy mastered! +30 XP'); }, 200);
+        }
+      }
+    });
+  });
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> The key line is the bottom one: <em>"no known conversion for argument 1 from &apos;const char[6]&apos; to &apos;const int&amp;&apos;"</em>. That literally says: you gave a string, expected an int. Read past the scary "no matching function" header to find the actual reason.' : '✓ <strong style="color: var(--green)">Got it.</strong> Type mismatch between the string literal and the vector&apos;s element type.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Look at the "no known conversion" note — what types is it comparing?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>
+pt>
+</body>
+</html>

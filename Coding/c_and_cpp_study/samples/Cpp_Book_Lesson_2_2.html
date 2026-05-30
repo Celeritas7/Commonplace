@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.2 — Basic Types, Sizes &amp; Ranges · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .size-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14.5px; }
+  .size-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .size-table th, .size-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .size-table th { font-weight: 700; font-size: 13px; letter-spacing: 0.5px; }
+  .size-table td.mono { font-family: var(--mono); font-size: 13px; background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: var(--purple-deep); border-radius: 4px; font-weight: 600; }
+  .size-table tbody tr:hover { background: var(--bg1); }
+  .size-table .size-num { font-family: var(--mono); font-weight: 700; color: var(--purple-deep); }
+  .size-table .range { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); }
+
+  .insp-area { background: linear-gradient(135deg, #faf5ff, #fdf4ff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .insp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .insp-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .insp-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .insp-counter strong { font-size: 18px; }
+  .type-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .type-btn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 8px 14px; font-family: var(--mono); font-size: 13px; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .type-btn:hover { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .type-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .type-btn.explored { border-color: var(--green); }
+  .insp-panel { background: white; border: 2px solid var(--purple-light); border-radius: 14px; padding: 20px; }
+  .insp-panel-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .insp-name { font-family: var(--mono); font-size: 22px; color: var(--purple-deep); font-weight: 700; }
+  .insp-size { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
+  .insp-purpose { color: var(--ink-soft); font-size: 14.5px; margin-bottom: 12px; font-style: italic; }
+  .insp-range-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .insp-range { background: var(--bg1); padding: 10px 14px; border-radius: 10px; border-left: 3px solid var(--purple-light); }
+  .insp-range strong { display: block; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+  .insp-range .val { font-family: var(--mono); font-size: 14px; color: var(--ink); font-weight: 700; }
+  @media (max-width: 600px) { .insp-range-grid { grid-template-columns: 1fr; } }
+  .insp-bits { background: var(--terminal); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .insp-bits-label { color: #94a3b8; font-size: 11.5px; margin-bottom: 8px; font-family: var(--mono); }
+  .insp-bits-row { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+  .insp-bit { width: 30px; height: 36px; background: #1e293b; color: #64748b; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 16px; font-weight: 700; transition: all 0.3s var(--bouncy); }
+  .insp-bit.on { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+  .insp-bits-formula { color: #cbd5e1; font-family: var(--mono); font-size: 12px; margin-top: 8px; text-align: center; }
+  .insp-bits-formula .num { color: #fde047; }
+  .insp-bits-formula .res { color: #86efac; font-weight: 700; }
+  .insp-examples { background: var(--bg1); padding: 12px 16px; border-radius: 10px; font-size: 13.5px; line-height: 1.6; color: var(--ink-soft); }
+  .insp-examples strong { color: var(--ink); display: block; margin-bottom: 4px; }
+  .insp-examples code { background: var(--terminal); color: #e0e7ff; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+  .overflow-box { background: linear-gradient(135deg, #faf5ff, white); border: 2px dashed var(--purple-light); border-radius: 14px; padding: 16px; margin: 16px 0; }
+  .overflow-box h5 { margin: 0 0 10px; color: var(--purple-deep); font-size: 14px; }
+  .overflow-input { width: 100%; padding: 10px 14px; font: inherit; font-family: var(--mono); font-size: 15px; border: 2px solid var(--bg3); border-radius: 8px; }
+  .overflow-input:focus { outline: none; border-color: var(--purple); }
+  .overflow-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; }
+  .overflow-table th, .overflow-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .overflow-table th { background: var(--bg1); color: var(--ink-dim); font-weight: 700; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .overflow-table td.mono { font-family: var(--mono); font-size: 12.5px; }
+  .overflow-table .ok { color: var(--green); font-weight: 700; }
+  .overflow-table .overflow { color: var(--red); font-weight: 700; }
+  .overflow-table .actual { font-family: var(--mono); color: var(--ink); font-weight: 700; }
+
+  .modern-callout { background: linear-gradient(135deg, #ddd6fe, #c4b5fd); border: 2px solid var(--purple); border-radius: 16px; padding: 18px 22px; margin: 16px 0; position: relative; }
+  .modern-callout::before { content: "🌟 MODERN C++"; position: absolute; top: -10px; left: 14px; background: var(--purple-deep); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .modern-callout h4 { margin: 4px 0 8px; color: var(--purple-deep); font-size: 17px; }
+  .modern-callout p { margin: 0 0 10px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+  .modern-callout p:last-child { margin-bottom: 0; }
+  .modern-callout code { background: rgba(255,255,255,0.7); }
+
+  .quiz { background: linear-gradient(135deg, #fce7f3, #f3e8ff); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--pink); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--pink); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="52" height="52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/><circle cx="50" cy="36" r="3.5" fill="#ec4899"/>
+      <text x="40" y="56" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="10" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="64" y="32" width="6" height="14" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="32" y="60" width="16" height="6" rx="2" fill="#c4b5fd" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="26" y="66" width="28" height="8" rx="3" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Types have sizes — and modern C++ has fixed-width types for guaranteed portability. ✨
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK · 2.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 12 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II · THE BUILDING BLOCKS</span>
+    <h1>Basic Types, Sizes &amp; Ranges</h1>
+    <p class="hero-sub">In 2.1 we met the types. Now we look inside: how many bytes each takes, what range of values it can hold, what overflow does, and how modern C++ gives you <em>guaranteed</em> sizes with <code>int32_t</code> and friends.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="7" r="4" fill="#fde047" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="54" rx="18" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+      <rect x="26" y="33" width="48" height="22" rx="10" fill="#1e1b4b" stroke="#1e1b4b" stroke-width="2"/>
+      <circle cx="38" cy="44" r="4" fill="#06b6d4"/><circle cx="62" cy="44" r="4" fill="#ec4899"/>
+      <text x="50" y="68" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#6d28d9">++</text>
+      <rect x="12" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="80" y="40" width="8" height="16" rx="3" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="40" y="74" width="20" height="8" rx="2" fill="#c4b5fd" stroke="#1e1b4b" stroke-width="2"/>
+      <rect x="32" y="82" width="36" height="10" rx="3" fill="#fff" stroke="#1e1b4b" stroke-width="3"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-pix="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Size and range — the two facts that bite 🦷</h2>
+
+    <div class="new-content">
+      Every C++ type takes a <strong>specific number of bytes</strong> in memory. That number determines the <strong>range of values</strong> the type can hold. Pick too small and your value silently wraps; pick too big and you waste memory. C++ adds tools to make this safer (<code>std::numeric_limits</code>, fixed-width types) — but you still need to know the basics.
+    </div>
+
+    <p>Two questions you'll meet constantly: <em>"What size should my counter be?"</em> and <em>"What happens at <code>INT_MAX + 1</code>?"</em> (Spoiler for the second in C++: undefined behavior — the worst kind.) This lesson hands you the numbers, the intuition, and the modern C++ way to ask the compiler for guaranteed sizes.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-pix="1">
+    <div class="step-label"><span class="step-num">2</span> The size table</div>
+    <h2>How many bytes does each type take? 📏</h2>
+
+    <div class="new-content">
+      Like C, C++ guarantees <em>minimum</em> sizes but lets the compiler pick larger ones. On every modern 64-bit machine, the actual sizes are stable:
+    </div>
+
+    <table class="size-table">
+      <thead>
+        <tr><th>Type</th><th>Size</th><th>Signed range</th><th>Unsigned range</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">char</td><td class="size-num">1 byte</td><td class="range">-128 to 127</td><td class="range">0 to 255</td></tr>
+        <tr><td class="mono">short</td><td class="size-num">2 bytes</td><td class="range">-32,768 to 32,767</td><td class="range">0 to 65,535</td></tr>
+        <tr><td class="mono">int</td><td class="size-num">4 bytes</td><td class="range">−2.1 billion to +2.1 billion</td><td class="range">0 to 4.3 billion</td></tr>
+        <tr><td class="mono">long</td><td class="size-num">4 or 8 bytes</td><td class="range">platform-dependent</td><td class="range">platform-dependent</td></tr>
+        <tr><td class="mono">long long</td><td class="size-num">8 bytes</td><td class="range">±9.2 × 10¹⁸</td><td class="range">0 to 1.8 × 10¹⁹</td></tr>
+        <tr><td class="mono">float</td><td class="size-num">4 bytes</td><td class="range" colspan="2">≈ ±3.4 × 10³⁸ (about 7 decimal digits)</td></tr>
+        <tr><td class="mono">double</td><td class="size-num">8 bytes</td><td class="range" colspan="2">≈ ±1.8 × 10³⁰⁸ (about 15 decimal digits)</td></tr>
+        <tr><td class="mono">bool</td><td class="size-num">1 byte</td><td class="range" colspan="2"><code>true</code> or <code>false</code> (only 1 bit used, but takes a whole byte)</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Two practical defaults:</strong> <code>int</code> for whole numbers, <code>double</code> for decimals. Don't reach for <code>long long</code>, <code>float</code>, or fixed-width types without a reason — but <em>do</em> know they exist for when you need them.</p>
+
+    <p>The <code>sizeof</code> operator gives you the exact size on your machine: <code>std::cout &lt;&lt; sizeof(int);</code> prints <code>4</code> almost everywhere.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-pix="2">
+    <div class="step-label"><span class="step-num">3</span> Fixed-width types: the C++ way</div>
+    <h2>When you need a <em>guaranteed</em> size 🎯</h2>
+
+    <div class="modern-callout">
+      <h4>&lt;cstdint&gt; — the fixed-width types</h4>
+      <p>When portability matters — when your code must behave identically on a 32-bit microcontroller, a Windows desktop, and a 64-bit Linux server — use <strong>fixed-width types</strong> from the <code>&lt;cstdint&gt;</code> header:</p>
+      <p style="font-family: var(--mono); background: rgba(255,255,255,0.7); padding: 8px 12px; border-radius: 8px; font-size: 13px;">
+        <code>int8_t, int16_t, int32_t, int64_t</code> &nbsp;←&nbsp; signed, exactly that many bits<br>
+        <code>uint8_t, uint16_t, uint32_t, uint64_t</code> &nbsp;←&nbsp; unsigned versions
+      </p>
+      <p>Each name promises <em>exactly</em> the bit width it says, on every conforming platform. <code>uint32_t</code> is always 32 bits, anywhere.</p>
+    </div>
+
+    <div style="background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; font-family: var(--mono); font-size: 13px; line-height: 1.65; margin: 10px 0;">
+<span style="color: #f9a8d4;">#include &lt;cstdint&gt;</span>
+<span style="color: #c4b5fd;">#include</span> <span style="color: #86efac;">&lt;iostream&gt;</span>
+
+<span style="color: #c4b5fd;">int</span> <span style="color: #fbbf24;">main</span>() {
+    <span style="color: #c4b5fd;">int32_t</span> <span style="color: #f9a8d4;">a</span> = <span style="color: #fde047;">1000000</span>;       <span style="color: #64748b;">// exactly 4 bytes, signed</span>
+    <span style="color: #c4b5fd;">uint8_t</span>  <span style="color: #f9a8d4;">red</span> = <span style="color: #fde047;">255</span>;          <span style="color: #64748b;">// exactly 1 byte, unsigned — like an image pixel channel</span>
+    <span style="color: #c4b5fd;">int64_t</span> <span style="color: #f9a8d4;">big</span> = <span style="color: #fde047;">9000000000LL</span>;   <span style="color: #64748b;">// exactly 8 bytes</span>
+
+    <span style="color: #67e8f9;">std</span>::<span style="color: #fbbf24;">cout</span> &lt;&lt; <span style="color: #c4b5fd;">sizeof</span>(<span style="color: #f9a8d4;">a</span>);   <span style="color: #64748b;">// always prints 4</span>
+}
+    </div>
+
+    <p>Use these when: working with binary file formats, network protocols, image data, or any code that must be portable across machines. For general application code, plain <code>int</code> is fine.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-pix="3">
+    <div class="step-label"><span class="step-num">4</span> Type Inspector</div>
+    <h2>Click each type — explore size, range, bits 🔬</h2>
+
+    <div class="new-content">
+      Click any type below to inspect it. You'll see its size, range, an 8-bit visualization for small types, and example uses. There's also a live overflow demo at the bottom. Each first click = <strong>+6 XP</strong>.
+    </div>
+
+    <div class="insp-area">
+      <div class="insp-header">
+        <div class="insp-title">🔬 C++ type inspector</div>
+        <div class="insp-counter"><strong id="inspCount">0</strong> / 8 inspected</div>
+      </div>
+
+      <div class="type-picker" id="typePicker">
+        <button class="type-btn" data-t="bool">bool</button>
+        <button class="type-btn" data-t="char">char</button>
+        <button class="type-btn" data-t="uint8">uint8_t</button>
+        <button class="type-btn" data-t="int16">int16_t</button>
+        <button class="type-btn" data-t="int">int</button>
+        <button class="type-btn" data-t="int64">int64_t</button>
+        <button class="type-btn" data-t="float">float</button>
+        <button class="type-btn" data-t="double">double</button>
+      </div>
+
+      <div class="insp-panel" id="inspPanel">
+        <div class="insp-panel-head">
+          <div class="insp-name">👆 Pick a type</div>
+        </div>
+        <p style="margin: 0;">Click any type button above to see its size, value range, bit-level representation, and example uses.</p>
+      </div>
+
+      <div class="overflow-box">
+        <h5>💥 Try storing a value</h5>
+        <input type="number" class="overflow-input" id="overflowInput" placeholder="Type a number (e.g. 200, 100000, -50, 1000000000)" value="200">
+        <table class="overflow-table" id="overflowTable">
+          <thead>
+            <tr><th>Type</th><th>Fits?</th><th>What you'd get</th></tr>
+          </thead>
+          <tbody id="overflowBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-pix="4">
+    <div class="step-label"><span class="step-num">5</span> Floating-point: float vs double</div>
+    <h2>Why <code>double</code> is almost always the right choice 🎯</h2>
+
+    <div class="new-content">
+      <code>float</code> and <code>double</code> both store decimal numbers, but with different <strong>precision</strong>. <code>float</code> has about 7 decimal digits; <code>double</code> has about 15. In C++, <em>unsuffixed decimal literals are always <code>double</code></em> — <code>3.14</code> is a double; <code>3.14f</code> is a float.
+    </div>
+
+    <div style="background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; font-family: var(--mono); font-size: 13px; line-height: 1.65; margin: 10px 0;">
+<span style="color: #c4b5fd;">float</span> <span style="color: #f9a8d4;">f</span> = <span style="color: #fde047;">0.1f</span> + <span style="color: #fde047;">0.2f</span>;    <span style="color: #64748b;">// f ≈ 0.30000001192</span>
+<span style="color: #c4b5fd;">double</span> <span style="color: #f9a8d4;">d</span> = <span style="color: #fde047;">0.1</span> + <span style="color: #fde047;">0.2</span>;     <span style="color: #64748b;">// d ≈ 0.30000000000000004</span>
+    </div>
+
+    <p>Both are slightly wrong (binary can't represent decimal exactly), but <code>double</code> is wrong further out. For almost every program — finance, science, games — <code>double</code> is the right pick.</p>
+
+    <p><strong>Use <code>float</code> when:</strong> giant data buffers where memory matters (3D meshes, ML weights, image arrays), or specific platforms where double-precision is slower. <strong>Otherwise: <code>double</code>.</strong></p>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-pix="5">
+    <div class="step-label"><span class="step-num">6</span> Predict</div>
+    <h2>What happens here? 🎯</h2>
+
+    <div class="quiz" id="quiz">
+      <div class="quiz-q">You write this C++ code:
+<pre><span style="color: #c4b5fd;">int</span> x = std::numeric_limits&lt;<span style="color: #c4b5fd;">int</span>&gt;::max();
+x = x + <span style="color: #fde047;">1</span>;
+std::cout &lt;&lt; x;</pre>
+What happens?</div>
+      <button class="opt" data-correct="false"><code>x</code> wraps to <code>INT_MIN</code> (the most negative int).</button>
+      <button class="opt" data-correct="false">Compiler error — value out of range.</button>
+      <button class="opt" data-correct="true"><strong>Undefined behavior.</strong> The compiler can do anything — including optimizing the check away. You can't rely on any specific result.</button>
+      <button class="opt" data-correct="false">Runtime crash with a clean exception.</button>
+      <div class="quiz-feedback" id="quizFb">👆 Pick one — +15 XP first try.</div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-pix="6">
+    <div class="step-label"><span class="step-num">7</span> Common mistakes</div>
+    <h2>Three traps with C++ types 🚧</h2>
+
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"Signed integer overflow wraps around in C++."</strong>
+        <small>It does <em>not</em>. Signed overflow is <strong>undefined behavior</strong> — the compiler is free to assume it never happens and optimize accordingly. Some real bugs only appear when you turn on optimization. If you need wrapping math, use an <em>unsigned</em> type (or <code>uint32_t</code>) where wrap-around is guaranteed.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"<code>auto x = 3.14;</code> gives me a float."</strong>
+        <small>It gives you a <code>double</code>. C++ decimal literals default to <code>double</code>. To get a <code>float</code>, you'd write <code>auto x = 3.14f;</code> — but you usually shouldn't bother. <code>double</code> is the right default in C++.</small>
+      </div>
+    </div>
+    <div class="mistake">
+      <div class="mistake-icon">🙅</div>
+      <div class="mistake-body">
+        <strong>"<code>size_t</code> is just an <code>unsigned int</code>."</strong>
+        <small>It's an <em>unsigned</em> type, yes — but it's the type used by <code>sizeof</code>, <code>.size()</code> on containers, etc. On 64-bit systems it's usually a 64-bit unsigned, not a 32-bit one. Comparing a signed <code>int i</code> with <code>vector.size()</code> triggers the sign-compare warning we mentioned in 2.1 — keep the types consistent. In modern C++ a common fix is <code>for (size_t i = 0; i &lt; v.size(); ++i)</code> or, better, the range-for loop.</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-pix="7">
+    <div class="step-label"><span class="step-num">8</span> Your turn</div>
+    <h2>Get a feel for sizes 💪</h2>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Measure your machine.</strong> Write a small program that prints sizeof each type. Use <code>std::cout &lt;&lt; sizeof(int) &lt;&lt; '\n';</code> and similar. Compare to what the size table claims. Especially check <code>long</code> — on Linux/Mac it's usually 8 bytes; on Windows it's still 4.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Meet <code>std::numeric_limits</code>.</strong> Include <code>&lt;limits&gt;</code>. Print these values:
+      <div style="background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; font-family: var(--mono); font-size: 12.5px; margin: 6px 0; line-height: 1.55;">std::cout &lt;&lt; std::numeric_limits&lt;int&gt;::max() &lt;&lt; '\n';<br>std::cout &lt;&lt; std::numeric_limits&lt;int&gt;::min() &lt;&lt; '\n';<br>std::cout &lt;&lt; std::numeric_limits&lt;double&gt;::max() &lt;&lt; '\n';<br>std::cout &lt;&lt; std::numeric_limits&lt;double&gt;::epsilon() &lt;&lt; '\n';</div>
+      Run it. The last one (<code>epsilon</code>) is the smallest difference a <code>double</code> can distinguish near 1.0 — it's the source of all "0.1 + 0.2 isn't 0.3" weirdness.
+    </div>
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Catch a portability bug.</strong> On <a href="https://godbolt.org/" target="_blank" rel="noopener">godbolt.org</a>, write a function that does <code>int32_t a = 100000; int16_t b = a;</code>. Compile with <code>-Wconversion -Wall</code>. Read the warning. Now repeat without the flags — note that the conversion is silent. This is exactly why brace-init (<code>int16_t b{a};</code>) refuses to compile narrowing conversions — to make them explicit.
+    </div>
+  </section>
+
+  <!-- Recap -->
+  <div class="recap">
+    <h3>🎓 Quick recap</h3>
+    <ul>
+      <li>Sizes you'll see on every modern machine: <code>char</code> = 1, <code>short</code> = 2, <code>int</code> = 4, <code>long long</code> = 8, <code>float</code> = 4, <code>double</code> = 8, <code>bool</code> = 1.</li>
+      <li><strong>Default to <code>int</code></strong> for whole numbers, <strong><code>double</code></strong> for decimals.</li>
+      <li><strong>Fixed-width types</strong> (<code>int32_t</code>, <code>uint8_t</code>, etc.) from <code>&lt;cstdint&gt;</code> guarantee exact sizes — use for binary data, network protocols, portable code.</li>
+      <li><strong>Signed overflow is undefined behavior in C++.</strong> Unsigned overflow wraps cleanly to 0. Use the right type for the behavior you want.</li>
+      <li>Use <code>std::numeric_limits&lt;T&gt;::max()</code> / <code>::min()</code> from <code>&lt;limits&gt;</code> for safe access to the exact range of any type.</li>
+      <li><code>sizeof(type)</code> still works in C++ for "how many bytes does this take on this machine."</li>
+    </ul>
+  </div>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_2_1.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.1  Variables, types, and auto
+    </a>
+    <a href="#" class="nav-btn next">
+      <small>Next lesson →</small>
+      2.3  <code>std::string</code> — your first proper string type
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Types have sizes — and modern C++ has fixed-width types for guaranteed portability. ✨",
+    "Memorize the sizes: 1, 2, 4, 4-or-8, 8 bytes for integers. <code>double</code> = 8 bytes, default for decimals.",
+    "Need exactly 32 bits everywhere? Use <code>int32_t</code> from <code>&lt;cstdint&gt;</code>. Modern, portable. 🌟",
+    "Click each type — bit visualization included! Overflow demo at the bottom is the fun part. 🔬",
+    "<code>double</code> beats <code>float</code> 95% of the time. C++ literals default to double, BTW.",
+    "Trick question — what does C++ ACTUALLY say about signed overflow? 🎯",
+    "These three traps catch every C++ beginner. Especially the signed-UB one!",
+    "Try the medium one — <code>std::numeric_limits</code> is your portable range query tool! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) { xp += amount; xpEl.textContent = xp; xpEl.style.transform = 'scale(1.4)'; setTimeout(() => xpEl.style.transform = 'scale(1)', 200); if (x !== undefined) { const pop = document.createElement('div'); pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`; pop.style.left = x + 'px'; pop.style.top = y + 'px'; document.body.appendChild(pop); setTimeout(() => pop.remove(), 1400); } if (msg) showToast(msg); }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) { if (visited.has(idx)) return; visited.add(idx); progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%'; if (visited.size === TOTAL_SECTIONS) { setTimeout(() => { burst(); showToast('🎉 Lesson 2.2 complete! +50 XP'); addXP(50); }, 400); } }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) { const line = PIXEL_LINES[idx] || PIXEL_LINES[0]; pixelBubble.style.opacity = '0'; setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250); }
+  let currentPix = -1;
+  const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { markVisited(+e.target.dataset.section); const i = +e.target.dataset.pix; if (i !== currentPix) { currentPix = i; updatePixel(i); } } }); }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // Type Inspector
+  const TYPES = {
+    'bool': {
+      name: 'bool', size: '1 byte (only 1 bit needed, but stored as a byte)', sizeBits: 8,
+      purpose: 'true or false — C++ has a real Boolean type (unlike C\'s _Bool/int hack)',
+      min: 'false (stored as 0)', max: 'true (stored as 1)',
+      examples: `<strong>Examples:</strong> <code>bool done = true;</code>, <code>bool ok = (x &lt; 10);</code>.<br>Any nonzero value converts to <code>true</code>; zero converts to <code>false</code>. Modern code prefers the keywords over 0/1.`,
+      sample: 1, samplePurpose: 'true = 1 (rest of byte unused)'
+    },
+    'char': {
+      name: 'char', size: '1 byte (8 bits)', sizeBits: 8,
+      purpose: 'A single character — implementation-defined whether signed or unsigned',
+      min: '-128 (if signed) or 0 (if unsigned)', max: '+127 or 255',
+      examples: `<strong>Examples:</strong> <code>'A'</code> (which is 65), <code>'\\n'</code> (newline = 10).<br>For modern text, prefer <code>std::string</code>. <code>char</code> is for single chars or interop with C-style arrays.`,
+      sample: 65, samplePurpose: "65 = 'A'"
+    },
+    'uint8': {
+      name: 'uint8_t', size: '1 byte (8 bits) — exact, guaranteed', sizeBits: 8,
+      purpose: 'Fixed-width 8-bit unsigned integer — for binary data, pixels, bytes',
+      min: '0', max: '255',
+      examples: `<strong>Use for:</strong> single bytes of binary data, image pixel channels (red/green/blue), network packet bytes.<br>From <code>&lt;cstdint&gt;</code>. Wraps cleanly: 255 + 1 → 0.`,
+      sample: 200, samplePurpose: '200 (= 0xC8)'
+    },
+    'int16': {
+      name: 'int16_t', size: '2 bytes (16 bits) — exact, guaranteed', sizeBits: 16,
+      purpose: 'Fixed-width 16-bit signed integer',
+      min: '-32,768', max: '+32,767',
+      examples: `<strong>Use for:</strong> audio samples (16-bit PCM), small integer arrays, packed binary formats.<br>From <code>&lt;cstdint&gt;</code>. Signed overflow is undefined behavior.`,
+      sample: 32000, samplePurpose: '32,000 (fits)'
+    },
+    'int': {
+      name: 'int', size: '4 bytes on every modern platform (32 bits)', sizeBits: 32,
+      purpose: "The right default for whole numbers in most code",
+      min: '-2,147,483,648', max: '+2,147,483,647',
+      examples: `<strong>Use for:</strong> general counting, loop indices, arithmetic. Matches the CPU's natural word size.<br>Signed by default. Overflow is undefined behavior — use <code>int32_t</code> or <code>uint32_t</code> for predictable wrap.`,
+      sample: 1000000, samplePurpose: "1 million"
+    },
+    'int64': {
+      name: 'int64_t', size: '8 bytes (64 bits) — exact, guaranteed', sizeBits: 64,
+      purpose: 'Fixed-width 64-bit signed integer — for big numbers',
+      min: '-9.2 × 10¹⁸', max: '+9.2 × 10¹⁸',
+      examples: `<strong>Use for:</strong> nanosecond timestamps, large counters, file sizes, microsecond clocks.<br>The "always-portable big int" — use over <code>long long</code> in modern C++.`,
+      sample: null
+    },
+    'float': {
+      name: 'float', size: '4 bytes (32 bits)', sizeBits: 32,
+      purpose: 'Single-precision floating-point — about 7 decimal digits',
+      min: '≈ -3.4 × 10³⁸', max: '≈ +3.4 × 10³⁸',
+      examples: `<strong>Use for:</strong> 3D graphics, ML weights, anywhere you need many decimals and memory matters.<br>C++ literal trick: <code>3.14f</code> with the <code>f</code> suffix is a <code>float</code>; plain <code>3.14</code> is a <code>double</code>.`,
+      sample: null
+    },
+    'double': {
+      name: 'double', size: '8 bytes (64 bits)', sizeBits: 64,
+      purpose: 'Double-precision floating-point — about 15 decimal digits. The C++ default.',
+      min: '≈ -1.8 × 10³⁰⁸', max: '≈ +1.8 × 10³⁰⁸',
+      examples: `<strong>Use for:</strong> almost any decimal math. Finance, science, physics.<br>Plain decimal literals (<code>3.14</code>, <code>0.001</code>) are <code>double</code> by default in C++.`,
+      sample: null
+    }
+  };
+
+  function renderBits(value, bits) {
+    if (value === null || value === undefined) return '';
+    const max = Math.pow(2, bits);
+    let v = ((value % max) + max) % max;
+    let s = v.toString(2).padStart(bits, '0');
+    let html = '<div class="insp-bits-row">';
+    for (let i = 0; i < bits; i++) {
+      html += `<div class="insp-bit${s[i]==='1'?' on':''}">${s[i]}</div>`;
+    }
+    html += '</div>';
+    let formula = bits + '-bit value: ';
+    let parts = [];
+    for (let i = 0; i < bits; i++) {
+      if (s[i] === '1') {
+        const power = bits - 1 - i;
+        parts.push(`<span class="num">2<sup>${power}</sup></span>`);
+      }
+    }
+    if (parts.length === 0) parts.push('<span class="num">0</span>');
+    formula += parts.join(' + ') + ` = <span class="res">${v}</span>`;
+    html += `<div class="insp-bits-formula">${formula}</div>`;
+    return html;
+  }
+
+  const picker = document.getElementById('typePicker');
+  const panel = document.getElementById('inspPanel');
+  const inspCounter = document.getElementById('inspCount');
+  const inspected = new Set();
+  picker.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = btn.dataset.t;
+      const t = TYPES[id];
+      if (!t) return;
+      picker.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      let bitsHtml = '';
+      if (t.sample !== null && t.sizeBits <= 16) {
+        bitsHtml = `<div class="insp-bits"><div class="insp-bits-label">Sample value: <strong>${t.sample}</strong> — ${t.samplePurpose}</div>${renderBits(t.sample, t.sizeBits)}</div>`;
+      } else if (t.sample !== null) {
+        bitsHtml = `<div class="insp-bits"><div class="insp-bits-label">${t.sizeBits}-bit values are too wide to show as individual bits. Sample: <strong>${t.sample}</strong> (${t.samplePurpose})</div></div>`;
+      }
+      panel.innerHTML = `
+        <div class="insp-panel-head">
+          <span class="insp-name">${t.name}</span>
+          <span class="insp-size">${t.size}</span>
+        </div>
+        <p class="insp-purpose">${t.purpose}</p>
+        <div class="insp-range-grid">
+          <div class="insp-range"><strong>Min</strong><div class="val">${t.min}</div></div>
+          <div class="insp-range"><strong>Max</strong><div class="val">${t.max}</div></div>
+        </div>
+        ${bitsHtml}
+        <div class="insp-examples">${t.examples}</div>
+      `;
+      if (!inspected.has(id)) {
+        inspected.add(id);
+        btn.classList.add('explored');
+        inspCounter.textContent = inspected.size;
+        inspCounter.style.transform = 'scale(1.3)';
+        setTimeout(() => inspCounter.style.transform = 'scale(1)', 200);
+        addXP(6, e.clientX, e.clientY);
+        bumpStreak();
+        if (inspected.size === 8) {
+          burst();
+          addXP(20, window.innerWidth/2, window.innerHeight/2, '🎉 All types inspected! +20 XP');
+        }
+      }
+    });
+  });
+
+  const overflowInput = document.getElementById('overflowInput');
+  const overflowBody = document.getElementById('overflowBody');
+  function wrapTo(value, bits, signed) {
+    const max = Math.pow(2, bits);
+    let v = ((Math.trunc(value) % max) + max) % max;
+    if (signed && v >= max/2) v -= max;
+    return v;
+  }
+  function updateOverflow() {
+    const raw = parseFloat(overflowInput.value);
+    if (isNaN(raw)) {
+      overflowBody.innerHTML = '<tr><td colspan="3" style="color: var(--ink-dim); padding: 12px;">Enter a number above.</td></tr>';
+      return;
+    }
+    const checks = [
+      { type: 'uint8_t', bits: 8, signed: false, min: 0, max: 255 },
+      { type: 'int16_t', bits: 16, signed: true, min: -32768, max: 32767 },
+      { type: 'int (int32_t)', bits: 32, signed: true, min: -2147483648, max: 2147483647 },
+      { type: 'uint32_t', bits: 32, signed: false, min: 0, max: 4294967295 },
+      { type: 'int64_t', bits: 64, signed: true, min: -9223372036854775808, max: 9223372036854775807 }
+    ];
+    overflowBody.innerHTML = checks.map(c => {
+      const fits = raw >= c.min && raw <= c.max && Number.isInteger(raw);
+      const stored = wrapTo(raw, c.bits, c.signed);
+      const status = fits ? '<span class="ok">✓ fits</span>' : '<span class="overflow">⚠ overflow</span>';
+      let note = '';
+      if (!fits) {
+        if (c.signed) note = ' <span style="color: var(--ink-dim); font-size: 11px;">(signed → undefined behavior!)</span>';
+        else note = ' <span style="color: var(--ink-dim); font-size: 11px;">(unsigned → wraps cleanly)</span>';
+      }
+      const actual = fits ? `<span class="actual">${raw}</span>` : `<span class="actual">${stored}</span>${note}`;
+      return `<tr><td class="mono">${c.type}</td><td>${status}</td><td>${actual}</td></tr>`;
+    }).join('');
+  }
+  overflowInput.addEventListener('input', updateOverflow);
+  updateOverflow();
+
+  // Quiz
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry ? '🌟 <strong style="color: var(--green)">Nailed it!</strong> Signed integer overflow is <strong>undefined behavior</strong> in C++. On most platforms you\'ll see wrap-around, but the compiler is allowed to assume it never happens, which can silently delete checks. For predictable wrap, use unsigned types or <code>uint32_t</code>.' : '✓ <strong style="color: var(--green)">Got it.</strong> Signed overflow = UB. Use unsigned types for guaranteed wrap.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. C++ is stricter than you might think about signed overflow.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() { const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6']; for (let i = 0; i < 40; i++) { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px'; c.style.background = colors[Math.floor(Math.random() * colors.length)]; c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's'; c.style.transform = `rotate(${Math.random()*360}deg)`; if (Math.random() > 0.5) c.style.borderRadius = '50%'; document.body.appendChild(c); setTimeout(() => c.remove(), 3000); } }
+</script>
+</body>
+</html>
