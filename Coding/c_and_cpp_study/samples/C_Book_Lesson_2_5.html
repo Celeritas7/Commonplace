@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.5 — Operators Part 2 · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13.5px; }
+  .op-table .op-sym { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 3px 10px; border-radius: 6px; font-weight: 700; font-family: var(--mono); display: inline-block; min-width: 40px; text-align: center; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CLASSIC C TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* Truth table */
+  .truth { width: 100%; border-collapse: separate; border-spacing: 0; margin: 12px 0; font-family: var(--mono); font-size: 14px; }
+  .truth th, .truth td { padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--bg3); }
+  .truth thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .truth th { font-weight: 700; font-size: 12px; letter-spacing: 0.6px; font-family: var(--sans); }
+  .truth .t { color: var(--green); font-weight: 700; }
+  .truth .f { color: var(--red); font-weight: 700; }
+
+  /* ===== Logic Lab ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .logic-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  @media (max-width: 600px) { .logic-row { grid-template-columns: 1fr; } }
+  .logic-card { background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 12px 16px; }
+  .logic-label { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 6px; }
+  .logic-expr { font-family: var(--mono); font-size: 14px; color: var(--orange-deep); margin-bottom: 8px; font-weight: 700; }
+  .toggle { display: inline-flex; gap: 4px; }
+  .toggle button { background: white; border: 2px solid var(--bg3); border-radius: 8px; padding: 6px 14px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .toggle button.on { background: var(--green); color: white; border-color: var(--green); }
+  .toggle button.off { background: var(--red); color: white; border-color: var(--red); }
+  .toggle button:hover:not(.on):not(.off) { border-color: var(--orange); }
+
+  .op-picker { margin-bottom: 14px; }
+  .op-picker-label { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .op-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .op-btn { background: white; border: 2px solid var(--bg3); border-radius: 8px; padding: 10px 16px; font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .op-btn:hover { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .op-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .op-btn.tried { border-color: var(--green); }
+
+  .result-panel { background: var(--terminal); color: #e2e8f0; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 14px; min-height: 100px; }
+  .result-panel .label { color: #94a3b8; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .result-panel .expr { color: #c4b5fd; font-size: 15px; margin: 6px 0; }
+  .result-panel .result { color: #fde047; font-size: 18px; font-weight: 700; }
+  .result-panel .note { color: #cbd5e1; font-size: 13px; margin-top: 8px; font-family: var(--sans); line-height: 1.55; }
+  .result-panel .short-cut { color: #fdba74; font-style: italic; }
+
+  /* Stepper */
+  .step-expr { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; font-family: var(--mono); font-size: 15px; color: var(--ink); margin-bottom: 12px; text-align: center; }
+  .step-expr select { font-family: var(--mono); font-size: 14px; padding: 4px 8px; border: 2px solid var(--orange); border-radius: 6px; background: white; color: var(--orange-deep); font-weight: 700; cursor: pointer; }
+  .stepper-controls { display: flex; gap: 8px; margin-bottom: 12px; justify-content: center; }
+  .step-go { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 10px 20px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .step-go:hover { transform: translateY(-2px); }
+  .step-go:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .step-reset { background: white; color: var(--ink-soft); border: 2px solid var(--bg3); padding: 10px 18px; font: inherit; font-weight: 600; border-radius: 10px; cursor: pointer; }
+  .trace-line { background: var(--terminal); color: #e2e8f0; padding: 10px 14px; margin-bottom: 6px; border-radius: 8px; font-family: var(--mono); font-size: 13px; line-height: 1.5; animation: slide-in 0.35s var(--bouncy); }
+  @keyframes slide-in { 0% { opacity: 0; transform: translateY(-8px); } 100% { opacity: 1; transform: translateY(0); } }
+  .trace-line .kw { color: #fbbf24; font-weight: 700; }
+  .trace-line .num { color: #fde047; font-weight: 700; }
+  .trace-line .var { color: #67e8f9; }
+  .trace-line .note { color: #94a3b8; font-style: italic; font-size: 12.5px; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Operators round two — Boolean logic, increment, and the one-line if! ⚡
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 2.5</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 15 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II &middot; CORE LANGUAGE</span>
+    <h1>Operators Part 2 — Logical, Increment, Ternary</h1>
+    <p class="hero-sub">The operators you need to write real decisions: <code>&amp;&amp;</code>, <code>||</code>, <code>!</code> for combining conditions; <code>++</code> and <code>--</code> for counting; and <code>?:</code> — the one-line shortcut for tiny ifs.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Real programs make compound decisions 🧠</h2>
+
+    <div class="new-content">
+      Last lesson you learned to compare two things: <code>age &gt;= 18</code>. Real programs rarely check just one thing. <em>"Is the user logged in <strong>and</strong> are they an admin?"</em> <em>"Is it raining <strong>or</strong> is the temperature below 5°C?"</em> You need to glue conditions together — that's what logical operators do.
+    </div>
+
+    <p>You'll also meet two of C's most beloved-and-cursed shortcuts: <code>++</code> (add one) and the ternary <code>?:</code> (one-line if-else). They're everywhere in real code, and each one has a famous gotcha.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> Logical operators</div>
+    <h2>AND, OR, NOT — the three you need 🔗</h2>
+
+    <table class="op-table">
+      <thead><tr><th>Operator</th><th>Name</th><th>Reads as</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><span class="op-sym">&amp;&amp;</span></td><td>Logical AND</td><td>"both are true"</td><td class="mono">age &gt;= 18 &amp;&amp; has_id</td></tr>
+        <tr><td><span class="op-sym">||</span></td><td>Logical OR</td><td>"at least one is true"</td><td class="mono">is_weekend || is_holiday</td></tr>
+        <tr><td><span class="op-sym">!</span></td><td>Logical NOT</td><td>"flip true/false"</td><td class="mono">!is_logged_in</td></tr>
+      </tbody>
+    </table>
+
+    <p>Each of these takes <strong>truthy</strong> values (any non-zero number) and returns <code>1</code> for true or <code>0</code> for false. The truth table for AND and OR:</p>
+
+    <table class="truth">
+      <thead><tr><th>A</th><th>B</th><th>A &amp;&amp; B</th><th>A || B</th><th>!A</th></tr></thead>
+      <tbody>
+        <tr><td class="f">false</td><td class="f">false</td><td class="f">false</td><td class="f">false</td><td class="t">true</td></tr>
+        <tr><td class="f">false</td><td class="t">true</td><td class="f">false</td><td class="t">true</td><td class="t">true</td></tr>
+        <tr><td class="t">true</td><td class="f">false</td><td class="f">false</td><td class="t">true</td><td class="f">false</td></tr>
+        <tr><td class="t">true</td><td class="t">true</td><td class="t">true</td><td class="t">true</td><td class="f">false</td></tr>
+      </tbody>
+    </table>
+
+    <div class="trap">
+      <h4>🚨 Don't confuse <code>&amp;&amp;</code> with <code>&amp;</code></h4>
+      <p>One ampersand <code>&amp;</code> is the <strong>bitwise AND</strong> operator (covered later). Two ampersands <code>&amp;&amp;</code> is the <strong>logical AND</strong>. Using the wrong one usually compiles fine, but gives wrong results: <code>2 &amp; 1</code> is <code>0</code>, while <code>2 &amp;&amp; 1</code> is <code>1</code>. Same trap for <code>|</code> vs <code>||</code>.</p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Short-circuit evaluation</div>
+    <h2>C is lazy — and that's a feature ⚡</h2>
+
+    <div class="new-content">
+      Here's the magic property: <strong><code>&amp;&amp;</code> stops as soon as it sees a false</strong>, and <strong><code>||</code> stops as soon as it sees a true</strong>. The right-hand side may never be evaluated.
+    </div>
+
+    <p>Why? Because the answer is already determined. If the left side of <code>&amp;&amp;</code> is false, the whole expression is false — no need to look further. If the left side of <code>||</code> is true, the whole expression is true. C exploits this to skip work and — more importantly — to let you write safe checks like:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Pattern</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">if (p != NULL &amp;&amp; *p == 5)</td><td>Only dereferences <code>p</code> if it's non-null. Reversed order would crash.</td></tr>
+        <tr><td class="mono">if (count == 0 || total / count &gt; 10)</td><td>Avoids divide-by-zero by checking the denominator first.</td></tr>
+        <tr><td class="mono">if (debug &amp;&amp; expensive_check())</td><td>Skips the expensive call when debug is off.</td></tr>
+      </tbody>
+    </table>
+
+    <p>This means <strong>the order of conditions matters</strong> — not just for readability, but for correctness. Put your safety check first.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Increment and decrement</div>
+    <h2><code>++</code> and <code>--</code> — and the pre/post puzzle 🧮</h2>
+
+    <p>These add (or subtract) <code>1</code> from a variable:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Form</th><th>Name</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><span class="op-sym">i++</span></td><td>Post-increment</td><td>Returns <em>old</em> <code>i</code>, then adds 1.</td></tr>
+        <tr><td><span class="op-sym">++i</span></td><td>Pre-increment</td><td>Adds 1, then returns <em>new</em> <code>i</code>.</td></tr>
+        <tr><td><span class="op-sym">i--</span></td><td>Post-decrement</td><td>Returns old <code>i</code>, then subtracts 1.</td></tr>
+        <tr><td><span class="op-sym">--i</span></td><td>Pre-decrement</td><td>Subtracts 1, then returns new <code>i</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      <strong>If you use them on their own line</strong> — like <code>i++;</code> — pre and post are identical. They both just add 1. The difference only shows when you use them <em>inside an expression</em>.
+    </div>
+
+    <p>Example. Given <code>int i = 5;</code>:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Code</th><th>x ends as</th><th>i ends as</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">int x = i++;</td><td class="mono">5</td><td class="mono">6</td></tr>
+        <tr><td class="mono">int x = ++i;</td><td class="mono">6</td><td class="mono">6</td></tr>
+      </tbody>
+    </table>
+
+    <p>Read <code>i++</code> as "give me <code>i</code>'s current value, <em>then</em> increment". Read <code>++i</code> as "increment <em>first</em>, then give me the new value". You'll play with this in the stepper below.</p>
+
+    <div class="trap">
+      <h4>🚨 Don't use <code>++</code> on the same variable twice in one expression</h4>
+      <p>Code like <code>i = i++ + ++i;</code> or <code>a[i] = i++;</code> is <strong>undefined behavior</strong> in C — the compiler can produce any result. Don't be clever. Split it into separate statements.</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> The ternary operator</div>
+    <h2><code>?:</code> — the one-line if-else 🎀</h2>
+
+    <p>You'll often write tiny ifs like this:</p>
+
+    <table class="op-table">
+      <thead><tr><th>The long way</th><th>The ternary way</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">int max;<br>if (a &gt; b) max = a;<br>else max = b;</td>
+          <td class="mono">int max = (a &gt; b) ? a : b;</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The syntax is <code>condition ? value_if_true : value_if_false</code>. C evaluates the condition; if true, the whole expression equals the part before <code>:</code>; otherwise, the part after.</p>
+
+    <div class="new-content">
+      <strong>When to use it:</strong> picking between two values to assign or pass. Things like <code>printf("%d apple%s\n", n, n == 1 ? "" : "s");</code><br>
+      <strong>When NOT to use it:</strong> for side effects, multi-step logic, or anything that won't fit on one line. Just write the <code>if</code> — it's clearer.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Logic Lab &amp; Stepper</div>
+    <h2>Play with both 🔬</h2>
+
+    <p>Two interactive panels. The <strong>Logic Lab</strong> lets you flip Boolean inputs and watch short-circuit evaluation happen. The <strong>Pre/Post Stepper</strong> walks through expressions that mix <code>++</code> / <code>--</code> with assignment so you can see exactly when the increment happens.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">⚙️ Operator Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 9 tried</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="logic">Logic Lab</button>
+        <button class="tab-btn" data-tab="stepper">Pre/Post Stepper</button>
+      </div>
+
+      <!-- LOGIC LAB -->
+      <div class="tab-panel active" id="tab-logic">
+        <div class="logic-row">
+          <div class="logic-card">
+            <div class="logic-label">A — left operand</div>
+            <div class="logic-expr" id="aExpr">age &gt;= 18</div>
+            <div class="toggle">
+              <button id="aT" class="on">true</button>
+              <button id="aF">false</button>
+            </div>
+          </div>
+          <div class="logic-card">
+            <div class="logic-label">B — right operand</div>
+            <div class="logic-expr" id="bExpr">has_id</div>
+            <div class="toggle">
+              <button id="bT" class="on">true</button>
+              <button id="bF">false</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="op-picker">
+          <div class="op-picker-label">Logical operator</div>
+          <div class="op-row">
+            <button class="op-btn" data-op="&amp;&amp;">A &amp;&amp; B</button>
+            <button class="op-btn" data-op="||">A || B</button>
+            <button class="op-btn" data-op="!A">!A</button>
+            <button class="op-btn" data-op="!B">!B</button>
+            <button class="op-btn" data-op="!(A&amp;&amp;B)">!(A &amp;&amp; B)</button>
+            <button class="op-btn" data-op="!A||!B">!A || !B</button>
+          </div>
+        </div>
+
+        <div class="result-panel" id="logicResult">
+          <div class="label">Pick an operator above</div>
+        </div>
+      </div>
+
+      <!-- STEPPER -->
+      <div class="tab-panel" id="tab-stepper">
+        <div class="step-expr">
+          <code>int i = 5; int x = </code>
+          <select id="stepExpr">
+            <option value="i++">i++</option>
+            <option value="++i">++i</option>
+            <option value="i--">i--</option>
+            <option value="--i">--i</option>
+            <option value="(i++) * 2">(i++) * 2</option>
+            <option value="(++i) * 2">(++i) * 2</option>
+            <option value="i++ + 1">i++ + 1</option>
+            <option value="++i + 1">++i + 1</option>
+            <option value="i-- + ++i">i-- + ++i ⚠️</option>
+          </select>
+          <code>;</code>
+        </div>
+
+        <div class="stepper-controls">
+          <button class="step-go" id="stepGo">▶ Step</button>
+          <button class="step-reset" id="stepReset">↺ Reset</button>
+        </div>
+
+        <div id="stepTrace"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        Given the code below — what gets printed?
+        <pre>int i = 3;
+int j = 0;
+if (i &gt; 0 || j++ &gt; 0) {
+    printf("%d %d\n", i, j);
+}</pre>
+      </div>
+      <button class="opt" data-correct="false"><span>3 1</span></button>
+      <button class="opt" data-correct="true"><span>3 0</span></button>
+      <button class="opt" data-correct="false"><span>4 1</span></button>
+      <button class="opt" data-correct="false"><span>Nothing — the <code>if</code> is false</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: think about which side of <code>||</code> gets evaluated first.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">⚡</div>
+      <div class="mistake-body">
+        <strong>Using single <code>&amp;</code> or <code>|</code> where you meant <code>&amp;&amp;</code> or <code>||</code></strong>
+        <small>The single forms do bitwise math, not logic. <code>4 &amp; 1</code> is <code>0</code>; <code>4 &amp;&amp; 1</code> is <code>1</code>. Both compile, and the wrong one silently gives the wrong answer. Always use the doubled forms for if-style conditions.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔁</div>
+      <div class="mistake-body">
+        <strong>Side effects in short-circuited expressions</strong>
+        <small>If you write <code>if (cheap_check() || expensive_thing_with_side_effect())</code>, the side effect may never happen. That's the point of short-circuit — but it's a bug if you were counting on the side effect to run.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">⚠️</div>
+      <div class="mistake-body">
+        <strong>Multiple <code>++</code>/<code>--</code> on the same variable in one expression</strong>
+        <small><code>i = i++ + ++i;</code> is undefined behavior — different compilers print different answers, and you can't reason about it. If you need increments, put them on their own lines: <code>int a = i; i++; int b = ++i;</code></small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Leap-year check.</strong> Write the condition for "is <code>year</code> a leap year?" using <code>&amp;&amp;</code> and <code>||</code>. Rule: divisible by 4 AND (not divisible by 100 OR divisible by 400). Print the result for 1900, 2000, 2024.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Safe divide with ternary.</strong> Read two integers <code>a</code> and <code>b</code>. Print <code>a / b</code> if <code>b != 0</code>, otherwise the string <code>"undefined"</code>. Use a ternary inside a single <code>printf</code>.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Count vowels with short-circuit.</strong> Loop over a string. Inside the loop, count a character as a vowel if it matches <code>'a'</code>, <code>'e'</code>, <code>'i'</code>, <code>'o'</code>, or <code>'u'</code> using a chain of <code>||</code>s. Notice how short-circuit makes the chain efficient — once a match is found, the rest don't run.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>Logical:</strong> <code>&amp;&amp;</code> (AND), <code>||</code> (OR), <code>!</code> (NOT). Return <code>1</code> or <code>0</code>. Don't confuse with bitwise <code>&amp;</code> and <code>|</code>.</li>
+        <li><strong>Short-circuit:</strong> <code>&amp;&amp;</code> stops at first false; <code>||</code> stops at first true. Order your conditions accordingly — safety checks first.</li>
+        <li><strong>Increment:</strong> <code>i++</code> returns old value, <code>++i</code> returns new value. Identical on their own line; different inside expressions.</li>
+        <li><strong>Ternary:</strong> <code>cond ? a : b</code> — the one-line if. Great for tiny choices, terrible for complex logic.</li>
+        <li><strong>Don't be clever:</strong> never increment the same variable twice in one expression. That way lies undefined behavior.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_2_4.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.4  Operators part 1 — arithmetic, assignment, comparison
+    </a>
+    <a href="#" class="nav-btn next">
+      <small>Next lesson →</small>
+      2.6  Operator precedence — the rules you'll actually hit
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Operators round two — Boolean logic, increment, and the one-line if! ⚡",
+    "AND, OR, NOT — the three you'll use every day for conditions. 🔗",
+    "Short-circuit means C skips work it doesn't need. Order matters! ⚡",
+    "<code>i++</code> returns OLD value. <code>++i</code> returns NEW value. Same on its own line, different in an expression!",
+    "Ternary is the one-line if. Use it for tiny choices, not complex logic. 🎀",
+    "Flip the toggles, pick an op, see what C decides. Try the stepper too! 🔬",
+    "Watch short-circuit in action — does <code>j++</code> ever run? 🎯",
+    "Three traps, three exercises. Leap years are sneakier than they look! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 2.5 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  // ===== Logic Lab =====
+  let aVal = true, bVal = true;
+  const aT = document.getElementById('aT'), aF = document.getElementById('aF');
+  const bT = document.getElementById('bT'), bF = document.getElementById('bF');
+  function setA(v) { aVal = v; aT.classList.toggle('on', v); aT.classList.toggle('off', false); aF.classList.toggle('off', !v); aF.classList.toggle('on', false); if (!v) { aT.classList.remove('on'); } else { aF.classList.remove('off'); } renderLogic(); }
+  function setB(v) { bVal = v; bT.classList.toggle('on', v); bF.classList.toggle('off', !v); if (!v) { bT.classList.remove('on'); } else { bF.classList.remove('off'); } renderLogic(); }
+  aT.addEventListener('click', () => setA(true));
+  aF.addEventListener('click', () => setA(false));
+  bT.addEventListener('click', () => setB(true));
+  bF.addEventListener('click', () => setB(false));
+
+  let currentLogicOp = null;
+  const triedOps = new Set();
+  const playCount = document.getElementById('playCount');
+
+  function renderLogic() {
+    const r = document.getElementById('logicResult');
+    if (!currentLogicOp) { r.innerHTML = '<div class="label">Pick an operator above</div>'; return; }
+    const op = currentLogicOp;
+    const aStr = aVal ? '1 (true)' : '0 (false)';
+    const bStr = bVal ? '1 (true)' : '0 (false)';
+    let result, expr, note;
+    if (op === '&&') {
+      expr = `(${aVal ? 1 : 0}) &amp;&amp; (${bVal ? 1 : 0})`;
+      result = (aVal && bVal) ? 1 : 0;
+      if (!aVal) note = `<span class="short-cut">⚡ Short-circuit:</span> A is false, so B is <strong>never evaluated</strong>. Whole expression is 0.`;
+      else if (!bVal) note = `A is true, so C evaluates B. B is false → whole expression is 0.`;
+      else note = `Both true → result is 1.`;
+    } else if (op === '||') {
+      expr = `(${aVal ? 1 : 0}) || (${bVal ? 1 : 0})`;
+      result = (aVal || bVal) ? 1 : 0;
+      if (aVal) note = `<span class="short-cut">⚡ Short-circuit:</span> A is true, so B is <strong>never evaluated</strong>. Whole expression is 1.`;
+      else if (bVal) note = `A is false, so C evaluates B. B is true → whole expression is 1.`;
+      else note = `Both false → result is 0.`;
+    } else if (op === '!A') {
+      expr = `!(${aVal ? 1 : 0})`;
+      result = aVal ? 0 : 1;
+      note = `NOT flips the truth value of A.`;
+    } else if (op === '!B') {
+      expr = `!(${bVal ? 1 : 0})`;
+      result = bVal ? 0 : 1;
+      note = `NOT flips the truth value of B.`;
+    } else if (op === '!(A&&B)') {
+      expr = `!((${aVal ? 1 : 0}) &amp;&amp; (${bVal ? 1 : 0}))`;
+      result = (aVal && bVal) ? 0 : 1;
+      note = `Compute A &amp;&amp; B first, then negate. (Parentheses force this order.)`;
+    } else if (op === '!A||!B') {
+      expr = `!(${aVal ? 1 : 0}) || !(${bVal ? 1 : 0})`;
+      result = (!aVal || !bVal) ? 1 : 0;
+      note = `De Morgan's law: <code>!(A &amp;&amp; B)</code> is the same as <code>!A || !B</code>. Compare with the row above!`;
+    }
+    r.innerHTML = `
+      <div class="label">C expression</div>
+      <div class="expr">${expr}</div>
+      <div class="label">Result</div>
+      <div class="result">${result}</div>
+      <div class="note">${note}</div>
+    `;
+  }
+
+  document.querySelectorAll('#tab-logic .op-btn').forEach(b => b.addEventListener('click', (e) => {
+    const op = b.dataset.op;
+    currentLogicOp = op;
+    document.querySelectorAll('#tab-logic .op-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    renderLogic();
+    if (!triedOps.has(op)) {
+      triedOps.add(op);
+      b.classList.add('tried');
+      playCount.textContent = triedOps.size;
+      playCount.style.transform = 'scale(1.3)';
+      setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+      addXP(4, e.clientX, e.clientY);
+      bumpStreak();
+      checkAllTried();
+    }
+  }));
+
+  // ===== Stepper =====
+  const stepExprSel = document.getElementById('stepExpr');
+  const stepGo = document.getElementById('stepGo');
+  const stepReset = document.getElementById('stepReset');
+  const stepTrace = document.getElementById('stepTrace');
+  const stepperTried = new Set();
+  let trace = [];
+  let step = 0;
+
+  function buildTrace(expr) {
+    let i = 5;
+    const steps = [];
+    steps.push({ html: `<span class="kw">int</span> <span class="var">i</span> = <span class="num">5</span>; <span class="note">// initial state</span>` });
+    if (expr === 'i++') {
+      steps.push({ html: `Evaluate <code>i++</code>: returns <span class="num">5</span> (old <span class="var">i</span>), then <span class="var">i</span> becomes <span class="num">6</span>.` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">5</span>; <span class="note">// final: i=6, x=5</span>` });
+    } else if (expr === '++i') {
+      steps.push({ html: `Evaluate <code>++i</code>: <span class="var">i</span> becomes <span class="num">6</span>, returns <span class="num">6</span> (new <span class="var">i</span>).` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">6</span>; <span class="note">// final: i=6, x=6</span>` });
+    } else if (expr === 'i--') {
+      steps.push({ html: `Evaluate <code>i--</code>: returns <span class="num">5</span> (old <span class="var">i</span>), then <span class="var">i</span> becomes <span class="num">4</span>.` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">5</span>; <span class="note">// final: i=4, x=5</span>` });
+    } else if (expr === '--i') {
+      steps.push({ html: `Evaluate <code>--i</code>: <span class="var">i</span> becomes <span class="num">4</span>, returns <span class="num">4</span> (new <span class="var">i</span>).` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">4</span>; <span class="note">// final: i=4, x=4</span>` });
+    } else if (expr === '(i++) * 2') {
+      steps.push({ html: `Evaluate <code>i++</code>: returns <span class="num">5</span>, <span class="var">i</span> becomes <span class="num">6</span>.` });
+      steps.push({ html: `Multiply: <span class="num">5</span> * <span class="num">2</span> = <span class="num">10</span>.` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">10</span>; <span class="note">// final: i=6, x=10</span>` });
+    } else if (expr === '(++i) * 2') {
+      steps.push({ html: `Evaluate <code>++i</code>: <span class="var">i</span> becomes <span class="num">6</span>, returns <span class="num">6</span>.` });
+      steps.push({ html: `Multiply: <span class="num">6</span> * <span class="num">2</span> = <span class="num">12</span>.` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">12</span>; <span class="note">// final: i=6, x=12</span>` });
+    } else if (expr === 'i++ + 1') {
+      steps.push({ html: `Evaluate <code>i++</code>: returns <span class="num">5</span>, <span class="var">i</span> becomes <span class="num">6</span>.` });
+      steps.push({ html: `Add: <span class="num">5</span> + <span class="num">1</span> = <span class="num">6</span>.` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">6</span>; <span class="note">// final: i=6, x=6 — confusing because x equals i!</span>` });
+    } else if (expr === '++i + 1') {
+      steps.push({ html: `Evaluate <code>++i</code>: <span class="var">i</span> becomes <span class="num">6</span>, returns <span class="num">6</span>.` });
+      steps.push({ html: `Add: <span class="num">6</span> + <span class="num">1</span> = <span class="num">7</span>.` });
+      steps.push({ html: `Assign: <span class="kw">int</span> <span class="var">x</span> = <span class="num">7</span>; <span class="note">// final: i=6, x=7</span>` });
+    } else if (expr === 'i-- + ++i') {
+      steps.push({ html: `<span style="color:#f87171">⚠️ This is <strong>undefined behavior</strong> in C!</span>` });
+      steps.push({ html: `<span class="note">Two modifications of the same variable in one expression. The C standard doesn't pin down what order they happen.</span>` });
+      steps.push({ html: `<span class="note">GCC might give you 11, Clang might give you 12, MSVC might give you something else. There's no "right answer" — just don't write this.</span>` });
+    }
+    return steps;
+  }
+
+  function renderStep() {
+    stepTrace.innerHTML = '';
+    for (let k = 0; k <= step && k < trace.length; k++) {
+      const d = document.createElement('div');
+      d.className = 'trace-line';
+      d.innerHTML = trace[k].html;
+      stepTrace.appendChild(d);
+    }
+    stepGo.disabled = step >= trace.length - 1;
+    stepGo.textContent = step >= trace.length - 1 ? '✓ Done' : `▶ Step (${step + 1}/${trace.length})`;
+  }
+
+  function loadStepper() {
+    trace = buildTrace(stepExprSel.value);
+    step = 0;
+    renderStep();
+  }
+
+  stepExprSel.addEventListener('change', () => {
+    loadStepper();
+    const expr = stepExprSel.value;
+    if (!stepperTried.has(expr)) {
+      stepperTried.add(expr);
+      triedOps.add('stepper:' + expr);
+      playCount.textContent = triedOps.size;
+      addXP(3);
+      checkAllTried();
+    }
+  });
+
+  stepGo.addEventListener('click', (e) => {
+    if (step < trace.length - 1) {
+      step++;
+      renderStep();
+      addXP(1, e.clientX, e.clientY);
+    }
+  });
+  stepReset.addEventListener('click', () => { step = 0; renderStep(); });
+
+  function checkAllTried() {
+    if (triedOps.size >= 9) {
+      burst();
+      addXP(20, window.innerWidth/2, window.innerHeight/2, '🎉 Lab fully explored! +20 XP');
+    }
+  }
+
+  loadStepper();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Got it.</strong> <code>i &gt; 0</code> is true, so <code>||</code> short-circuits — <code>j++</code> is <strong>never evaluated</strong>. <code>j</code> stays 0.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Short-circuit: left side of <code>||</code> is true, so the right side is skipped entirely.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Remember: with <code>||</code>, if the left side is true, C never evaluates the right side. Does <code>j++</code> actually run?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

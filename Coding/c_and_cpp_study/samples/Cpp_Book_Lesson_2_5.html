@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.5 — Operators and Expressions · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  /* ===== Precedence table ===== */
+  .prec-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  .prec-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .prec-table th, .prec-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .prec-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .prec-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .prec-rank { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-family: var(--mono); display: inline-block; min-width: 28px; text-align: center; font-size: 12px; }
+  .prec-table tr.high { background: rgba(139, 92, 246, 0.04); }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 PRECEDENCE TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Precedence Explorer ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .expr-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .expr-btn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 14px; font: inherit; font-family: var(--mono); font-size: 13.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .expr-btn:hover { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .expr-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .expr-btn.tried { border-color: var(--green); }
+
+  .custom-row { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+  .custom-row label { font-size: 12px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .custom-input { flex: 1; min-width: 180px; padding: 10px 14px; font-family: var(--mono); font-size: 14px; border: 2px solid var(--bg3); border-radius: 10px; background: white; color: var(--ink); }
+  .custom-input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15); }
+  .vars-line { font-size: 12px; color: var(--ink-dim); }
+  .vars-line code { font-size: 12.5px; }
+
+  .explorer { background: var(--terminal); color: #e0e7ff; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 14px; min-height: 120px; }
+  .explorer .label { color: #a5b4fc; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .explorer .expr { color: #c4b5fd; font-size: 16px; margin: 6px 0 10px; }
+  .explorer .paren { color: #fde047; font-size: 15px; margin: 6px 0 12px; font-weight: 700; }
+  .explorer .step { display: flex; gap: 10px; margin: 4px 0; align-items: baseline; }
+  .explorer .step-tag { color: #a5b4fc; font-size: 11px; font-weight: 700; min-width: 60px; }
+  .explorer .step-body { color: #e0e7ff; font-size: 13.5px; line-height: 1.6; }
+  .explorer .num { color: #fde047; font-weight: 700; }
+  .explorer .op { color: #f9a8d4; font-weight: 700; }
+  .explorer .var { color: #67e8f9; }
+  .explorer .final { color: #86efac; font-size: 17px; font-weight: 700; margin-top: 10px; padding-top: 8px; border-top: 1px solid #4338ca; }
+  .explorer .commentary { color: #c7d2fe; font-style: italic; font-family: var(--sans); font-size: 13px; margin-top: 8px; line-height: 1.55; }
+  .explorer .err { color: #fca5a5; font-weight: 700; }
+
+  /* ===== Quiz / mistakes / exercises ===== */
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Expressions! How does C++ pick what to compute first? Precedence and associativity. 🎯
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 2.5</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 15 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II &middot; CORE LANGUAGE</span>
+    <h1>Operators and Expressions</h1>
+    <p class="hero-sub">You know the operators. Now: how C++ decides what to compute first in <code>a + b * c &amp;&amp; d</code>. Precedence, associativity, short-circuit, and the Precedence Explorer that walks any expression for you.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Expressions are how C++ thinks 💭</h2>
+
+    <div class="new-content">
+      An <strong>expression</strong> is any piece of code that produces a value. <code>3 + 4</code> is an expression. <code>x &gt; 5</code> is an expression. <code>a = b * c + d</code> is an expression. In C++ you spend most of your time writing them, and the compiler reads them with very specific rules about <em>what runs first</em>.
+    </div>
+
+    <p>Get the rules wrong and your code does something subtly different from what you meant — and it usually compiles fine. The classic example: <code>a + b * c</code> isn't <code>(a + b) * c</code>; it's <code>a + (b * c)</code>. <code>*</code> binds tighter than <code>+</code>. This is <strong>operator precedence</strong>, and it's the topic of the lesson.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The operators you'll meet</div>
+    <h2>A quick tour 🗺️</h2>
+
+    <p>C++ inherits C's operators and adds a few of its own. The big families:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Family</th><th>Operators</th><th>Returns</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Arithmetic</strong></td><td class="mono">+ &nbsp; - &nbsp; * &nbsp; / &nbsp; %</td><td>A number</td></tr>
+        <tr><td><strong>Comparison</strong></td><td class="mono">== &nbsp; != &nbsp; &lt; &nbsp; &gt; &nbsp; &lt;= &nbsp; &gt;=</td><td><code>bool</code></td></tr>
+        <tr><td><strong>Logical</strong></td><td class="mono">&amp;&amp; &nbsp; || &nbsp; !</td><td><code>bool</code></td></tr>
+        <tr><td><strong>Assignment</strong></td><td class="mono">= &nbsp; += &nbsp; -= &nbsp; *= &nbsp; /= &nbsp; %=</td><td>The new value</td></tr>
+        <tr><td><strong>Increment</strong></td><td class="mono">++ &nbsp; --</td><td>The old or new value</td></tr>
+        <tr><td><strong>Ternary</strong></td><td class="mono">?:</td><td>One of two values</td></tr>
+        <tr><td><strong>C++ stream</strong></td><td class="mono">&lt;&lt; &nbsp; &gt;&gt;</td><td>The stream itself</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      <strong>Important C++ difference:</strong> in C, the comparison and logical operators return <code>int</code> (1 or 0). In C++ they return a true <code>bool</code> (<code>true</code> or <code>false</code>). The conversions are usually invisible — but if you <code>std::cout</code> a comparison you'll see <code>1</code> by default. Add <code>std::boolalpha</code> to print <code>true</code> / <code>false</code> instead.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Precedence — who runs first</div>
+    <h2>The pecking order 🥇</h2>
+
+    <p>When several operators sit in one expression, C++ has a fixed table that decides which one binds tighter. You don't need to memorize all 17 levels — you need the handful that bite. Highest binds first:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Rank</th><th>Operators</th><th>Mnemonic</th></tr></thead>
+      <tbody>
+        <tr class="high"><td><span class="prec-rank">1</span></td><td class="mono">() &nbsp; [] &nbsp; .</td><td>Calls, indexing, member access</td></tr>
+        <tr class="high"><td><span class="prec-rank">2</span></td><td class="mono">! &nbsp; ++ &nbsp; -- &nbsp; (unary -)</td><td>Unary ops — bind tightly to one operand</td></tr>
+        <tr><td><span class="prec-rank">3</span></td><td class="mono">* &nbsp; / &nbsp; %</td><td>Multiplicative</td></tr>
+        <tr><td><span class="prec-rank">4</span></td><td class="mono">+ &nbsp; -</td><td>Additive</td></tr>
+        <tr><td><span class="prec-rank">5</span></td><td class="mono">&lt; &nbsp; &gt; &nbsp; &lt;= &nbsp; &gt;=</td><td>Relational</td></tr>
+        <tr><td><span class="prec-rank">6</span></td><td class="mono">== &nbsp; !=</td><td>Equality (looser than relational!)</td></tr>
+        <tr><td><span class="prec-rank">7</span></td><td class="mono">&amp;&amp;</td><td>Logical AND</td></tr>
+        <tr><td><span class="prec-rank">8</span></td><td class="mono">||</td><td>Logical OR (looser than AND)</td></tr>
+        <tr><td><span class="prec-rank">9</span></td><td class="mono">?:</td><td>Ternary</td></tr>
+        <tr><td><span class="prec-rank">10</span></td><td class="mono">= &nbsp; += &nbsp; -= ...</td><td>Assignment (lowest — runs last)</td></tr>
+      </tbody>
+    </table>
+
+    <p>The three rules that catch beginners:</p>
+    <ul>
+      <li><strong>Arithmetic before comparison.</strong> <code>a + 1 &gt; b</code> means <code>(a + 1) &gt; b</code>, not <code>a + (1 &gt; b)</code>.</li>
+      <li><strong>Comparison before logical.</strong> <code>x &gt; 0 &amp;&amp; y &gt; 0</code> means <code>(x &gt; 0) &amp;&amp; (y &gt; 0)</code> — no extra parens needed.</li>
+      <li><strong>AND binds tighter than OR.</strong> <code>a || b &amp;&amp; c</code> means <code>a || (b &amp;&amp; c)</code>. This one surprises everyone — always parenthesize.</li>
+    </ul>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Associativity — left or right</div>
+    <h2>What happens when ranks tie ⚖️</h2>
+
+    <p>If two operators of the same rank meet, <strong>associativity</strong> decides who runs first. Most operators are <em>left-associative</em> — they group left to right:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Expression</th><th>Grouping</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">10 - 4 - 2</td><td class="mono">(10 - 4) - 2 = 4</td><td><code>-</code> is left-associative</td></tr>
+        <tr><td class="mono">100 / 5 / 2</td><td class="mono">(100 / 5) / 2 = 10</td><td><code>/</code> is left-associative</td></tr>
+        <tr><td class="mono">a = b = 5</td><td class="mono">a = (b = 5)</td><td><code>=</code> is <strong>right-associative</strong> (rare)</td></tr>
+        <tr><td class="mono">a ? b : c ? d : e</td><td class="mono">a ? b : (c ? d : e)</td><td>Ternary is right-associative</td></tr>
+      </tbody>
+    </table>
+
+    <div class="trap">
+      <h4>🚨 Equality has lower precedence than relational</h4>
+      <p>You'd think <code>a &lt; b &lt; c</code> would mean "<code>b</code> is between <code>a</code> and <code>c</code>." It doesn't. <code>&lt;</code> is left-associative, so it becomes <code>(a &lt; b) &lt; c</code> — first <code>a &lt; b</code> gives a <code>bool</code> (<code>true</code>/<code>false</code> which is <code>1</code>/<code>0</code>), then <code>1 &lt; c</code> or <code>0 &lt; c</code>. Almost certainly not what you wanted. Write <code>a &lt; b &amp;&amp; b &lt; c</code> instead.</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Short-circuit and side effects</div>
+    <h2>C++ is lazy with logic ⚡</h2>
+
+    <p><code>&amp;&amp;</code> and <code>||</code> have a special property: they evaluate <em>left to right</em> and stop the moment the answer is known.</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Expression</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">false &amp;&amp; expensive()</td><td><code>expensive()</code> is <strong>never called</strong> — left side already decides the result.</td></tr>
+        <tr><td class="mono">true || expensive()</td><td>Same — <code>expensive()</code> is skipped.</td></tr>
+        <tr><td class="mono">ptr != nullptr &amp;&amp; ptr-&gt;value &gt; 0</td><td>The dereference is safe — only happens if <code>ptr</code> is non-null.</td></tr>
+        <tr><td class="mono">n != 0 &amp;&amp; total / n &gt; 100</td><td>The division is safe — only happens if <code>n</code> isn't zero.</td></tr>
+      </tbody>
+    </table>
+
+    <p>That's why putting your safety check first matters. Reversing the order — <code>ptr-&gt;value &gt; 0 &amp;&amp; ptr != nullptr</code> — will crash, because the <code>nullptr</code> check happens after you've already tried to read through a null pointer.</p>
+
+    <div class="new-content">
+      <strong>Operators that DON'T short-circuit:</strong> the bitwise versions <code>&amp;</code> and <code>|</code>. They always evaluate both sides. If you write <code>ptr != nullptr &amp; ptr-&gt;value &gt; 0</code> (one ampersand!) — boom, segfault. Same trap for <code>|</code> vs <code>||</code>.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Precedence Explorer</div>
+    <h2>Watch C++ parenthesize and evaluate 🔬</h2>
+
+    <p>Pick an expression (or type your own). The explorer shows how C++ groups it with parentheses, then walks the evaluation step by step.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🔍 Precedence Explorer</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 9 tried</div>
+      </div>
+
+      <div class="vars-line">Variables: <code>a = 2</code>, <code>b = 3</code>, <code>c = 4</code>, <code>d = 5</code></div>
+
+      <div class="expr-row">
+        <button class="expr-btn" data-expr="a + b * c">a + b * c</button>
+        <button class="expr-btn" data-expr="(a + b) * c">(a + b) * c</button>
+        <button class="expr-btn" data-expr="a + 1 > b">a + 1 &gt; b</button>
+        <button class="expr-btn" data-expr="a > 0 && b > 0">a &gt; 0 &amp;&amp; b &gt; 0</button>
+        <button class="expr-btn" data-expr="a || b && c">a || b &amp;&amp; c</button>
+        <button class="expr-btn" data-expr="10 - 4 - 2">10 - 4 - 2</button>
+        <button class="expr-btn" data-expr="a < b < c">a &lt; b &lt; c ⚠️</button>
+        <button class="expr-btn" data-expr="a > b ? a : b">a &gt; b ? a : b</button>
+        <button class="expr-btn" data-expr="!a == b">!a == b</button>
+      </div>
+
+      <div class="custom-row">
+        <label>Custom:</label>
+        <input class="custom-input" id="customExpr" placeholder="e.g. a*b + c/d" />
+        <button class="expr-btn" id="customGo">Evaluate</button>
+      </div>
+
+      <div class="explorer" id="explorer">
+        <div class="label">Pick an expression above</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does this program print?
+        <pre>#include &lt;iostream&gt;
+int main() {
+    int a = 5, b = 10, c = 15;
+    std::cout &lt;&lt; (a + b &lt; c || a * 2 == b) &lt;&lt; '\n';
+}</pre>
+      </div>
+      <button class="opt" data-correct="false"><span><code>0</code></span></button>
+      <button class="opt" data-correct="true"><span><code>1</code></span></button>
+      <button class="opt" data-correct="false"><span><code>true</code></span></button>
+      <button class="opt" data-correct="false"><span>Compile error</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: walk through it left to right with precedence in mind. What does <code>a + b &lt; c</code> evaluate to?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔗</div>
+      <div class="mistake-body">
+        <strong>Chained comparisons that don't mean what they look like</strong>
+        <small><code>if (0 &lt; x &lt; 10)</code> doesn't check that <code>x</code> is between 0 and 10. It evaluates as <code>(0 &lt; x) &lt; 10</code>, which is always true (a <code>bool</code> is 0 or 1, both less than 10). Write <code>if (x &gt; 0 &amp;&amp; x &lt; 10)</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">⚖️</div>
+      <div class="mistake-body">
+        <strong>Trusting <code>&amp;&amp;</code> and <code>||</code> precedence without parens</strong>
+        <small><code>a || b &amp;&amp; c</code> means <code>a || (b &amp;&amp; c)</code>, not <code>(a || b) &amp;&amp; c</code>. The reader (including future-you) will pause to figure it out. Add the parens — they cost nothing and signal intent.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">💥</div>
+      <div class="mistake-body">
+        <strong>Single <code>&amp;</code> or <code>|</code> instead of <code>&amp;&amp;</code> / <code>||</code></strong>
+        <small>The bitwise versions still compile, still produce a value the <code>if</code> accepts — but they don't short-circuit. If you wrote <code>p != nullptr &amp; p-&gt;ok()</code>, the <code>-&gt;ok()</code> call happens even when <code>p</code> is null. Crash.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Add the parens.</strong> For each expression below, write it with explicit parentheses showing how C++ groups it: <code>a + b * c - d</code>, <code>x &gt; 0 || y &gt; 0 &amp;&amp; z &gt; 0</code>, <code>a == b == c</code>. Check your answers in the explorer.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>In-range check.</strong> Write a single <code>bool</code> expression that's <code>true</code> when <code>x</code> is between <code>10</code> and <code>20</code> inclusive. Then write a version that's true when <code>x</code> is outside that range. No <code>if</code> — just the expression.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Order matters.</strong> Suppose you have a <code>int *p</code> that may be <code>nullptr</code>. Write a single <code>if</code> that prints "ok" when <code>p</code> is non-null AND <code>*p</code> is between 1 and 100. Reverse the order of the two checks and explain why the new version crashes.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>Expression = anything that produces a value.</strong> Most C++ code is expressions, and precedence dictates the order.</li>
+        <li><strong>Precedence shortcut:</strong> <code>* /</code> before <code>+ -</code>; arithmetic before comparison; comparison before <code>&amp;&amp;</code>; <code>&amp;&amp;</code> before <code>||</code>; assignment last.</li>
+        <li><strong>Associativity:</strong> most operators group left-to-right. <code>=</code> and <code>?:</code> are right-associative.</li>
+        <li><strong>Short-circuit:</strong> <code>&amp;&amp;</code> and <code>||</code> stop early. Put safety checks first. Don't use the bitwise <code>&amp;</code> or <code>|</code> by mistake.</li>
+        <li><strong>When in doubt, parenthesize.</strong> The compiler doesn't care; the reader does.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_2_4.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.4  Input and output — cin, cout, getline
+    </a>
+    <a href="#" class="nav-btn next">
+      <small>Next lesson →</small>
+      2.6  Type conversion and the C++ casts
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Expressions! How does C++ pick what to compute first? Precedence and associativity. 🎯",
+    "Operators come in families — arithmetic, comparison, logical. Each returns a different kind of value.",
+    "Memorize the top of the precedence table. <code>* /</code> &gt; <code>+ -</code> &gt; comparisons &gt; <code>&amp;&amp;</code> &gt; <code>||</code>!",
+    "Most operators are left-associative. <code>=</code> and <code>?:</code> are the rebels — they group right.",
+    "Short-circuit: put safety checks first! <code>ptr != nullptr &amp;&amp; ptr-&gt;ok()</code> is safe; reverse it and you crash. 💥",
+    "Pick an expression — watch C++ parenthesize and evaluate step by step. Try the chained comparison! 🔍",
+    "Walk through it yourself. What does <code>a + b &lt; c</code> evaluate to? 🎯",
+    "Three traps, three exercises. The chained comparison is the sneakiest! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 2.5 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPixel = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentPixel) { currentPixel = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Precedence Explorer =====
+  const VARS = { a: 2, b: 3, c: 4, d: 5 };
+  const triedSet = new Set();
+  const playCount = document.getElementById('playCount');
+
+  // Tokenizer
+  function tokenize(s) {
+    const tokens = [];
+    let i = 0;
+    while (i < s.length) {
+      const ch = s[i];
+      if (/\s/.test(ch)) { i++; continue; }
+      if (/[0-9]/.test(ch)) {
+        let j = i;
+        while (j < s.length && /[0-9.]/.test(s[j])) j++;
+        tokens.push({ kind: 'num', val: parseFloat(s.slice(i, j)) });
+        i = j; continue;
+      }
+      if (/[a-zA-Z_]/.test(ch)) {
+        let j = i;
+        while (j < s.length && /[a-zA-Z0-9_]/.test(s[j])) j++;
+        tokens.push({ kind: 'var', name: s.slice(i, j) });
+        i = j; continue;
+      }
+      const two = s.slice(i, i+2);
+      if (['==','!=','<=','>=','&&','||'].includes(two)) {
+        tokens.push({ kind: 'op', op: two }); i += 2; continue;
+      }
+      if ('+-*/%<>!()?:'.includes(ch)) {
+        tokens.push({ kind: 'op', op: ch }); i++; continue;
+      }
+      throw new Error('Unknown character: ' + ch);
+    }
+    return tokens;
+  }
+
+  // Pratt-ish parser
+  const PREC = {
+    '||': 4, '&&': 5,
+    '==': 9, '!=': 9,
+    '<': 10, '>': 10, '<=': 10, '>=': 10,
+    '+': 12, '-': 12,
+    '*': 13, '/': 13, '%': 13
+  };
+
+  function parse(tokens) {
+    let pos = 0;
+    function peek() { return tokens[pos]; }
+    function consume() { return tokens[pos++]; }
+    function parsePrimary() {
+      const t = peek();
+      if (!t) throw new Error('Unexpected end');
+      if (t.kind === 'num') { consume(); return { kind: 'num', val: t.val }; }
+      if (t.kind === 'var') { consume(); return { kind: 'var', name: t.name }; }
+      if (t.kind === 'op' && t.op === '(') {
+        consume();
+        const e = parseTernary();
+        if (!peek() || peek().op !== ')') throw new Error('Missing )');
+        consume();
+        return e;
+      }
+      if (t.kind === 'op' && (t.op === '!' || t.op === '-' || t.op === '+')) {
+        consume();
+        const operand = parseUnary();
+        return { kind: 'unary', op: t.op, child: operand };
+      }
+      throw new Error('Unexpected token: ' + JSON.stringify(t));
+    }
+    function parseUnary() {
+      const t = peek();
+      if (t && t.kind === 'op' && (t.op === '!' || t.op === '-' || t.op === '+')) {
+        consume();
+        const child = parseUnary();
+        return { kind: 'unary', op: t.op, child };
+      }
+      return parsePrimary();
+    }
+    function parseBinary(minPrec) {
+      let left = parseUnary();
+      while (peek() && peek().kind === 'op' && PREC[peek().op] !== undefined && PREC[peek().op] >= minPrec) {
+        const op = consume().op;
+        const right = parseBinary(PREC[op] + 1);
+        left = { kind: 'binary', op, left, right };
+      }
+      return left;
+    }
+    function parseTernary() {
+      const cond = parseBinary(1);
+      if (peek() && peek().op === '?') {
+        consume();
+        const thenE = parseTernary();
+        if (!peek() || peek().op !== ':') throw new Error('Missing :');
+        consume();
+        const elseE = parseTernary();
+        return { kind: 'ternary', cond, thenE, elseE };
+      }
+      return cond;
+    }
+    const result = parseTernary();
+    if (pos < tokens.length) throw new Error('Trailing tokens');
+    return result;
+  }
+
+  function show(node) {
+    if (node.kind === 'num') return String(node.val);
+    if (node.kind === 'var') return node.name;
+    if (node.kind === 'unary') return node.op + show(node.child);
+    if (node.kind === 'binary') return '(' + show(node.left) + ' ' + node.op + ' ' + show(node.right) + ')';
+    if (node.kind === 'ternary') return '(' + show(node.cond) + ' ? ' + show(node.thenE) + ' : ' + show(node.elseE) + ')';
+  }
+
+  function evalNode(node, steps) {
+    if (node.kind === 'num') return node.val;
+    if (node.kind === 'var') {
+      const v = VARS[node.name];
+      if (v === undefined) throw new Error('Unknown variable: ' + node.name);
+      return v;
+    }
+    if (node.kind === 'unary') {
+      const v = evalNode(node.child, steps);
+      let r;
+      if (node.op === '!') r = v ? 0 : 1;
+      else if (node.op === '-') r = -v;
+      else r = +v;
+      steps.push({ tag: 'unary', html: `<span class="op">${node.op}</span><span class="num">${v}</span> → <span class="num">${r}</span>` });
+      return r;
+    }
+    if (node.kind === 'binary') {
+      const op = node.op;
+      if (op === '&&') {
+        const l = evalNode(node.left, steps);
+        if (!l) {
+          steps.push({ tag: 'short', html: `<span class="op">&amp;&amp;</span> short-circuit: left side is <span class="num">${l}</span> (false), right side <em>not evaluated</em> → <span class="num">0</span>` });
+          return 0;
+        }
+        const r = evalNode(node.right, steps);
+        const res = r ? 1 : 0;
+        steps.push({ tag: 'binary', html: `<span class="num">${l ? 1 : 0}</span> <span class="op">&amp;&amp;</span> <span class="num">${r ? 1 : 0}</span> → <span class="num">${res}</span>` });
+        return res;
+      }
+      if (op === '||') {
+        const l = evalNode(node.left, steps);
+        if (l) {
+          steps.push({ tag: 'short', html: `<span class="op">||</span> short-circuit: left side is <span class="num">${l ? 1 : 0}</span> (true), right side <em>not evaluated</em> → <span class="num">1</span>` });
+          return 1;
+        }
+        const r = evalNode(node.right, steps);
+        const res = r ? 1 : 0;
+        steps.push({ tag: 'binary', html: `<span class="num">${l ? 1 : 0}</span> <span class="op">||</span> <span class="num">${r ? 1 : 0}</span> → <span class="num">${res}</span>` });
+        return res;
+      }
+      const l = evalNode(node.left, steps);
+      const r = evalNode(node.right, steps);
+      let res;
+      switch (op) {
+        case '+': res = l + r; break;
+        case '-': res = l - r; break;
+        case '*': res = l * r; break;
+        case '/': res = Math.trunc(l / r); break;
+        case '%': res = l - Math.trunc(l/r)*r; break;
+        case '<': res = l < r ? 1 : 0; break;
+        case '>': res = l > r ? 1 : 0; break;
+        case '<=': res = l <= r ? 1 : 0; break;
+        case '>=': res = l >= r ? 1 : 0; break;
+        case '==': res = l == r ? 1 : 0; break;
+        case '!=': res = l != r ? 1 : 0; break;
+      }
+      const opDisp = op === '<' ? '&lt;' : op === '>' ? '&gt;' : op === '<=' ? '&lt;=' : op === '>=' ? '&gt;=' : op;
+      steps.push({ tag: op, html: `<span class="num">${l}</span> <span class="op">${opDisp}</span> <span class="num">${r}</span> → <span class="num">${res}</span>` });
+      return res;
+    }
+    if (node.kind === 'ternary') {
+      const c = evalNode(node.cond, steps);
+      if (c) {
+        const v = evalNode(node.thenE, steps);
+        steps.push({ tag: '?:', html: `<span class="op">?:</span> condition <span class="num">${c ? 1 : 0}</span> is true → use then-branch → <span class="num">${v}</span>` });
+        return v;
+      } else {
+        const v = evalNode(node.elseE, steps);
+        steps.push({ tag: '?:', html: `<span class="op">?:</span> condition <span class="num">${c ? 1 : 0}</span> is false → use else-branch → <span class="num">${v}</span>` });
+        return v;
+      }
+    }
+  }
+
+  function commentaryFor(expr) {
+    if (expr === 'a + b * c') return '<code>*</code> binds tighter than <code>+</code>, so this is <code>a + (b * c)</code>.';
+    if (expr === '(a + b) * c') return 'Parens override precedence — addition runs first.';
+    if (expr === 'a + 1 > b') return 'Arithmetic before comparison: <code>(a + 1) > b</code>.';
+    if (expr === 'a > 0 && b > 0') return 'Comparison binds tighter than <code>&amp;&amp;</code>, so no extra parens needed.';
+    if (expr === 'a || b && c') return '⚠️ <code>&amp;&amp;</code> binds tighter than <code>||</code>, so this is <code>a || (b &amp;&amp; c)</code> — not <code>(a || b) &amp;&amp; c</code>!';
+    if (expr === '10 - 4 - 2') return '<code>-</code> is left-associative: <code>(10 - 4) - 2</code>, not <code>10 - (4 - 2)</code>.';
+    if (expr === 'a < b < c') return '⚠️ Chained comparison! Evaluates as <code>(a &lt; b) &lt; c</code> — a bool compared to an int. Almost never what you want.';
+    if (expr === 'a > b ? a : b') return 'Ternary picks the larger value — the C++ idiom for max-of-two.';
+    if (expr === '!a == b') return 'Unary <code>!</code> binds tighter than <code>==</code>, so this is <code>(!a) == b</code>.';
+    return '';
+  }
+
+  const explorer = document.getElementById('explorer');
+  function runExplorer(expr) {
+    try {
+      const tokens = tokenize(expr);
+      const tree = parse(tokens);
+      const grouped = show(tree);
+      const steps = [];
+      const finalVal = evalNode(tree, steps);
+      const commentary = commentaryFor(expr);
+      explorer.innerHTML = `
+        <div class="label">Source expression</div>
+        <div class="expr">${expr.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/&&/g,'&amp;&amp;')}</div>
+        <div class="label">How C++ groups it</div>
+        <div class="paren">${grouped.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/&&/g,'&amp;&amp;')}</div>
+        <div class="label">Evaluation steps</div>
+        ${steps.map((s,i) => `<div class="step"><span class="step-tag">${i+1}.</span><span class="step-body">${s.html}</span></div>`).join('')}
+        <div class="final">Final result: ${finalVal}</div>
+        ${commentary ? `<div class="commentary">💡 ${commentary}</div>` : ''}
+      `;
+    } catch (err) {
+      explorer.innerHTML = `<div class="err">⚠️ Could not parse: ${err.message}</div><div class="commentary">Use only variables <code>a b c d</code>, numbers, and ops: <code>+ - * / % &lt; &gt; &lt;= &gt;= == != &amp;&amp; || ! ?: ( )</code></div>`;
+    }
+  }
+
+  document.querySelectorAll('.expr-btn[data-expr]').forEach(b => b.addEventListener('click', (e) => {
+    const expr = b.dataset.expr;
+    document.querySelectorAll('.expr-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    runExplorer(expr);
+    if (!triedSet.has(expr)) {
+      triedSet.add(expr);
+      b.classList.add('tried');
+      playCount.textContent = triedSet.size;
+      playCount.style.transform = 'scale(1.3)';
+      setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+      addXP(5, e.clientX, e.clientY);
+      bumpStreak();
+      if (triedSet.size === 9) {
+        burst();
+        addXP(20, window.innerWidth/2, window.innerHeight/2, '🎉 All 9 expressions explored! +20 XP');
+      }
+    }
+  }));
+
+  document.getElementById('customGo').addEventListener('click', () => {
+    const v = document.getElementById('customExpr').value.trim();
+    if (v) {
+      document.querySelectorAll('.expr-btn').forEach(x => x.classList.remove('active'));
+      runExplorer(v);
+      addXP(3);
+    }
+  });
+  document.getElementById('customExpr').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('customGo').click();
+  });
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Nailed it.</strong> Walk: <code>a+b</code> = 15, <code>15 &lt; 15</code> = false (0). Then <code>a*2 == b</code> → <code>10 == 10</code> = true (1). <code>0 || 1</code> = 1. <code>cout</code> prints bools as <code>1</code> unless you set <code>std::boolalpha</code>.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> The OR is true because <code>a*2 == b</code> holds. Default <code>cout</code> shows <code>bool</code> as <code>1</code>.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width/2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Evaluate piece by piece. What is <code>a + b &lt; c</code>? What is <code>a * 2 == b</code>? Combine them with <code>||</code>. How does <code>cout</code> print a <code>bool</code> by default?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>
