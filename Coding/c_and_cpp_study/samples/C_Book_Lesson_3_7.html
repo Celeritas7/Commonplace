@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 3.7 — A Note on goto · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e2e8f0; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #fdba74; font-weight: 700; }
+  pre.code .cm { color: #64748b; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .lbl { color: #f9a8d4; font-weight: 700; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 WHY IT'S DISCOURAGED"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .okbox { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid var(--green); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .okbox::before { content: "✅ THE ONE OK USE"; position: absolute; top: -10px; left: 14px; background: var(--green); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .okbox h4 { margin: 4px 0 8px; color: #166534; font-size: 16px; }
+  .okbox p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* goto jump tracer */
+  .jt-main { display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .jt-main { grid-template-columns: 1fr; } }
+  .jt-code { background: var(--terminal); border-radius: 12px; padding: 12px 10px; font-family: var(--mono); font-size: 13px; line-height: 1.8; color: #e2e8f0; }
+  .jt-line { display: flex; gap: 10px; padding: 2px 8px; border-radius: 6px; transition: all 0.2s; }
+  .jt-line .num { color: #475569; min-width: 16px; text-align: right; }
+  .jt-line.active { background: rgba(250,204,21,0.2); }
+  .jt-line.jumpedfrom { background: rgba(239,68,68,0.18); }
+  .jt-line.jumpedto { background: rgba(34,197,94,0.18); }
+  .jt-line .kw { color: #fdba74; font-weight: 700; }
+  .jt-line .lbl { color: #f9a8d4; font-weight: 700; }
+  .jt-line .str { color: #86efac; }
+  .jt-line .cm { color: #64748b; }
+  .jt-side .gs-pill { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 5px 12px; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink); display: inline-block; margin: 0 6px 8px 0; }
+  .jt-side .gs-pill b { color: var(--orange-deep); }
+  .jt-out { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
+  .jt-out .ol { font-size: 10px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .jt-out .ov { font-family: var(--mono); font-size: 16px; color: var(--orange-deep); font-weight: 700; min-height: 22px; }
+  .jt-buttons { display: flex; gap: 8px; }
+  .sbtn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 16px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .sbtn:hover:not(:disabled) { transform: translateY(-2px); }
+  .sbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .sbtn.ghost { background: white; color: var(--ink-soft); border: 2px solid var(--bg3); }
+  .jt-msg { margin-top: 10px; font-size: 13px; color: var(--ink-soft); min-height: 36px; background: rgba(255,255,255,0.6); border-radius: 10px; padding: 8px 12px; line-height: 1.45; }
+  .jt-msg .jump { color: var(--red); font-weight: 700; }
+
+  /* use-instead game */
+  .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-text { font-size: 14.5px; color: var(--ink); line-height: 1.5; }
+  .scenario-text code { font-size: 0.92em; }
+  .ui-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .uibtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 14px; font: inherit; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .uibtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .uibtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .uibtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .ui-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .partdone { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid var(--green); border-radius: 16px; padding: 16px 20px; margin-top: 18px; font-size: 14.5px; color: #065f46; }
+  .partdone strong { color: #065f46; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    <code>goto</code> jumps anywhere — which is exactly why we almost never use it. Let's see why. 🪂
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 3.7</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 26 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🔁 PART III &middot; MAKING DECISIONS</span>
+    <h1>A Note on goto</h1>
+    <p class="hero-sub">C has a keyword that jumps execution straight to a labeled line, anywhere in the function: <code>goto</code>. You'll meet it in old code, so it's worth understanding — but modern C almost never uses it, and this short lesson explains why.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Know it, then move on 🧭</h2>
+
+    <div class="new-content">
+      This is a short one. <code>goto</code> is a real C keyword, and you'll occasionally see it in old codebases, textbooks, or systems code. So you should recognize it and understand what it does. But it's the one piece of C flow control that the whole industry agreed, decades ago, to mostly stop using — and this lesson is about <em>why</em>, so you can confidently leave it alone.
+    </div>
+
+    <p>Everything you've learned in Part III — <code>if</code>, <code>switch</code>, loops, <code>break</code>, <code>continue</code> — exists precisely so you don't need <code>goto</code>. They're the "structured" replacements that made code readable. Think of this lesson as the historical footnote that ties a bow on the chapter.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> What goto is</div>
+    <h2>A jump to a label 🏷️</h2>
+
+    <p><code>goto</code> transfers execution, unconditionally, to a <strong>label</strong> elsewhere in the same function. A label is just a name followed by a colon:</p>
+
+    <pre class="code">    i = 0;
+<span class="lbl">start:</span>                       <span class="cm">// a label</span>
+    printf(<span class="str">"%d "</span>, i);
+    i++;
+    <span class="kw">if</span> (i &lt; 3)
+        <span class="kw">goto</span> start;          <span class="hl">// jump back up to 'start:'</span>
+    printf(<span class="str">"done"</span>);
+<span class="cm">// prints: 0 1 2 done</span></pre>
+
+    <div class="new-content">
+      That's a loop built out of <code>goto</code> — and it works. But notice you have to mentally <em>follow the jump</em> to understand it: read down, hit the <code>goto</code>, scroll your eyes back up to the label, repeat. A <code>for</code> loop says the same thing in one tidy header. The Jump Tracer below lets you step through this exact program and watch execution leap around.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Why it's discouraged</div>
+    <h2>The road to spaghetti 🍝</h2>
+
+    <div class="trap">
+      <h4>🚨 Unrestricted jumps make code unreadable</h4>
+      <p>Because <code>goto</code> can jump <em>anywhere</em> in a function — forward, backward, into the middle of things — a program full of them becomes impossible to follow. You can't tell how you arrived at a given line or where you'll go next without tracing every jump by hand. This tangled style earned the nickname <strong>"spaghetti code,"</strong> and in 1968 a famous letter titled <em>"Go To Statement Considered Harmful"</em> kicked off the move to structured programming — the loops and <code>if</code>s you now use.</p>
+    </div>
+
+    <p>The fix the industry adopted: build all control flow out of a few well-behaved structures — sequence, selection (<code>if</code>/<code>switch</code>), and iteration (loops) — each with one obvious entry and exit. Those are easy to read because the structure tells you the flow. <code>goto</code> throws that guarantee away, so it's avoided by default.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The one place it survives</div>
+    <h2>Error cleanup in C 🧹</h2>
+
+    <div class="okbox">
+      <h4>✅ A single forward jump to a cleanup block</h4>
+      <p>C has no automatic cleanup (no destructors like C++). So when a function grabs several resources and any step can fail, a tidy pattern is one <code>goto</code> that jumps <em>forward</em> to a shared cleanup section that releases everything:</p>
+      <p style="font-family:var(--mono);font-size:12px;background:#0f172a;color:#e2e8f0;padding:8px 12px;border-radius:8px;line-height:1.7;">f = fopen(...);<br>if (!f) goto cleanup;<br>buf = malloc(...);<br>if (!buf) goto cleanup;<br>... use them ...<br><span style="color:#f9a8d4">cleanup:</span><br>&nbsp;&nbsp;free(buf); fclose(f);</p>
+      <p>You'll see this a lot in the Linux kernel and C libraries. It's accepted because it's <strong>one direction (forward), one target, and replaces deeply nested <code>if</code>s</strong> — the opposite of spaghetti.</p>
+    </div>
+
+    <p>This is the honest exception: a disciplined, forward-only <code>goto</code> for error handling can be cleaner than the alternatives in plain C. Outside that narrow pattern, reach for structured control flow.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> What to use instead</div>
+    <h2>You already have the tools 🧰</h2>
+
+    <table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;">
+      <thead><tr style="background:linear-gradient(135deg,var(--orange),var(--pink));color:white;"><th style="padding:8px 12px;text-align:left;">Instead of goto, to…</th><th style="padding:8px 12px;text-align:left;">…use</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);">repeat a block</td><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);" class="mono">for / while loop</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);">stop a loop early</td><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);" class="mono">break</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);">skip one iteration</td><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);" class="mono">continue</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);">leave the whole function</td><td style="padding:8px 12px;border-bottom:1px solid var(--bg3);" class="mono">return</td></tr>
+        <tr><td style="padding:8px 12px;">escape nested loops</td><td style="padding:8px 12px;" class="mono">a flag, or a helper function + return</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      Every row above is something you learned this chapter. That's the takeaway: structured control flow covers essentially every case where a beginner might reach for <code>goto</code>. Knowing <code>goto</code> exists is useful for reading other people's code; using it should be a deliberate, rare choice — basically just the cleanup pattern.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — goto Lab</div>
+    <h2>Follow the jump 🔬</h2>
+
+    <p>Two tools. The <strong>Jump Tracer</strong> steps through the <code>goto</code> loop from section 2 — watch execution leap from the <code>goto</code> back up to the label. <strong>Use Instead?</strong> asks you to pick the structured tool that replaces each <code>goto</code> use.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🪂 goto Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 5 answered</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="jt">Jump Tracer</button>
+        <button class="tab-btn" data-tab="ui">Use Instead?</button>
+      </div>
+
+      <!-- JUMP TRACER -->
+      <div class="tab-panel active" id="tab-jt">
+        <div class="jt-main">
+          <div class="jt-code" id="jtCode"></div>
+          <div class="jt-side">
+            <div class="jt-out"><div class="ol">Output</div><div class="ov" id="jtOut"></div></div>
+            <div><span class="gs-pill">i = <b id="jtI">—</b></span></div>
+            <div class="jt-buttons">
+              <button class="sbtn" id="jtStep">▶ Step</button>
+              <button class="sbtn ghost" id="jtReset">↺ Reset</button>
+            </div>
+            <div class="jt-msg" id="jtMsg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- USE INSTEAD -->
+      <div class="tab-panel" id="tab-ui">
+        <div class="scenario">
+          <div class="scenario-num" id="uiNum">Case 1 / 5</div>
+          <div class="scenario-text" id="uiText"></div>
+        </div>
+        <div class="ui-btns" id="uiBtns">
+          <button class="uibtn" data-u="loop">for / while loop</button>
+          <button class="uibtn" data-u="break">break</button>
+          <button class="uibtn" data-u="continue">continue</button>
+          <button class="uibtn" data-u="return">function + return</button>
+        </div>
+        <div class="ui-fb" id="uiFb">Which structured tool replaces this goto?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="uiNext" disabled>Next case →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does this print?
+        <pre>int i = 0;
+again:
+    printf("%d", i);
+    i++;
+    if (i < 3) goto again;</pre>
+      </div>
+      <button class="opt" data-correct="true"><span><code>012</code></span></button>
+      <button class="opt" data-correct="false"><span><code>0123</code></span></button>
+      <button class="opt" data-correct="false"><span><code>123</code></span></button>
+      <button class="opt" data-correct="false"><span>Loops forever</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: this is a loop in disguise. Trace it: print <code>i</code>, bump <code>i</code>, and jump back while <code>i &lt; 3</code>.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Recap &amp; what's next</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Two things to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🍝</div>
+      <div class="mistake-body">
+        <strong>Using <code>goto</code> for ordinary control flow</strong>
+        <small>Building loops or skipping code with <code>goto</code> instead of <code>for</code>/<code>while</code>/<code>break</code>/<code>continue</code> makes code hard to follow. Use the structured tools — that's what they're for.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">↩️</div>
+      <div class="mistake-body">
+        <strong>Jumping backward or into blocks</strong>
+        <small>The only broadly-accepted <code>goto</code> is a single <em>forward</em> jump to a cleanup label. Backward jumps (fake loops) and jumps into the middle of other blocks are the spaghetti the world moved away from.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercise 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>De-goto it.</strong> Take the <code>goto</code> loop from this lesson (<code>start:</code> … <code>goto start;</code>) and rewrite it as a plain <code>for</code> loop that prints <code>0 1 2</code>. Notice how the <code>for</code> version makes the loop's bounds obvious in one line — no jump to trace.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong><code>goto label;</code></strong> jumps unconditionally to a labeled line in the same function.</li>
+        <li><strong>It's discouraged</strong> because unrestricted jumps create unreadable "spaghetti code."</li>
+        <li><strong>Structured flow replaced it:</strong> loops, <code>if</code>/<code>switch</code>, <code>break</code>, <code>continue</code>, <code>return</code> cover essentially every case.</li>
+        <li><strong>The one accepted use:</strong> a single forward jump to an error-cleanup block in plain C.</li>
+        <li><strong>Bottom line:</strong> recognize it when reading old code; reach for it almost never.</li>
+      </ul>
+    </div>
+
+    <div class="partdone">
+      <strong>🎉 That completes Part III — Making Decisions &amp; Repeating Work!</strong> You can now branch with <code>if</code> and <code>switch</code>, repeat with every kind of loop, steer them with <code>break</code>/<code>continue</code>, nest them, and you know why <code>goto</code> stays on the shelf. Next up: <strong>Part IV — Functions</strong>, where you start packaging code into reusable, named pieces.
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_3_6.html" class="nav-btn prev">
+      <small>← Previous</small>
+      3.6  Nested loops
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      4.1  Why functions exist
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "<code>goto</code> jumps anywhere — which is exactly why we almost never use it. Let's see why. 🪂",
+    "A label is just <code>name:</code>, and <code>goto name;</code> jumps straight there. 🏷️",
+    "Unrestricted jumps = spaghetti code. Structured flow fixed that in the '60s! 🍝",
+    "The one OK use: a single forward jump to a cleanup block in C. 🧹",
+    "Loops, break, continue, return — they replace every beginner goto. 🧰",
+    "Step through the goto loop — watch execution leap back to the label! 🔬",
+    "This goto is a loop in disguise. Trace it: print, bump, jump while i&lt;3. 🎯",
+    "Part III complete! You've mastered all of C's control flow. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 3.7 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Jump Tracer =====
+  // program lines (PC-driven). line indices 0-based.
+  const PROG = [
+    { html: '<span class="kw">int</span> i = 0;' },                                   // 0 init
+    { html: '<span class="lbl">again:</span>' },                                       // 1 label (no-op)
+    { html: '&nbsp;&nbsp;printf(<span class="str">"%d "</span>, i);' },                 // 2 print
+    { html: '&nbsp;&nbsp;i++;' },                                                      // 3 i++
+    { html: '&nbsp;&nbsp;<span class="kw">if</span> (i &lt; 3) <span class="kw">goto</span> again;' }, // 4 cond/goto
+    { html: '&nbsp;&nbsp;printf(<span class="str">"done"</span>);' }                    // 5 done
+  ];
+  let pc = 0, ii = 0, out = [], jtDone = false, jumpFrom = -1, jumpTo = -1;
+  const jtCode = document.getElementById('jtCode');
+  const jtOut = document.getElementById('jtOut');
+  const jtI = document.getElementById('jtI');
+  const jtStep = document.getElementById('jtStep');
+  const jtMsg = document.getElementById('jtMsg');
+  let jtBurstDone = false, jtStepsTaken = 0;
+
+  function renderJT() {
+    jtI.textContent = ii;
+    jtOut.textContent = out.join('');
+    jtCode.innerHTML = PROG.map((l, n) => {
+      let cls = 'jt-line';
+      if (!jtDone && n === pc) cls += ' active';
+      if (n === jumpFrom) cls += ' jumpedfrom';
+      if (n === jumpTo) cls += ' jumpedto';
+      return `<div class="${cls}"><span class="num">${n + 1}</span><span>${l.html}</span></div>`;
+    }).join('');
+  }
+  function resetJT() {
+    pc = 0; ii = 0; out = []; jtDone = false; jumpFrom = -1; jumpTo = -1;
+    jtStep.disabled = false; jtStep.textContent = '▶ Step';
+    jtMsg.innerHTML = 'Click Step. Watch the program counter move — and jump.';
+    renderJT();
+  }
+  function jtStepFn() {
+    if (jtDone) return;
+    jumpFrom = -1; jumpTo = -1;
+    if (pc === 0) { ii = 0; jtMsg.innerHTML = 'Line 1: <code>i = 0</code>.'; pc = 1; }
+    else if (pc === 1) { jtMsg.innerHTML = 'Line 2: the label <code>again:</code> — just a marker, no action.'; pc = 2; }
+    else if (pc === 2) { out.push(ii + ' '); jtMsg.innerHTML = `Line 3: print <code>${ii}</code>.`; pc = 3; }
+    else if (pc === 3) { ii++; jtMsg.innerHTML = `Line 4: <code>i++</code> → i is now <code>${ii}</code>.`; pc = 4; }
+    else if (pc === 4) {
+      if (ii < 3) { jtMsg.innerHTML = `Line 5: <code>${ii} &lt; 3</code> is true → <span class="jump">goto again</span> — jump back up to the label!`; jumpFrom = 4; jumpTo = 1; pc = 1; }
+      else { jtMsg.innerHTML = `Line 5: <code>${ii} &lt; 3</code> is false → no jump. Fall through.`; pc = 5; }
+    }
+    else if (pc === 5) {
+      out.push('done'); jtDone = true; jtStep.disabled = true; jtStep.textContent = '✓ Done';
+      jtMsg.innerHTML = `Line 6: print <code>done</code>. Final output: <code>${out.join('')}</code>. (A <code>for</code> loop would say this in one line!)`;
+      if (!jtBurstDone) { jtBurstDone = true; burst(); addXP(10, window.innerWidth/2, 260, '🪂 goto traced! +10 XP'); }
+    }
+    jtStepsTaken++;
+    if (jtStepsTaken === 1) addXP(3);
+    renderJT();
+  }
+  jtStep.addEventListener('click', jtStepFn);
+  document.getElementById('jtReset').addEventListener('click', resetJT);
+  resetJT();
+
+  // ===== Use Instead? =====
+  const UI = [
+    { text: 'A backward <code>goto</code> that repeats a block a fixed number of times.', answer: 'loop', why: 'That\'s just a counting loop — use a <code>for</code> (or <code>while</code>).' },
+    { text: 'A <code>goto</code> that jumps past the end of a loop the moment a match is found.', answer: 'break', why: '<code>break</code> exits the loop cleanly — exactly this job.' },
+    { text: 'A <code>goto</code> that skips the rest of this iteration and starts the next one.', answer: 'continue', why: '<code>continue</code> skips to the next iteration — no goto needed.' },
+    { text: 'A <code>goto</code> that bails out of a deeply nested search once the answer is found.', answer: 'return', why: 'Put the search in a function and <code>return</code> the result — cleaner than any goto.' },
+    { text: 'A backward <code>goto</code> that keeps re-reading input while it\'s invalid.', answer: 'loop', why: 'That\'s a <code>while</code>/<code>do-while</code> loop — repeat while the condition holds.' }
+  ];
+  let uiIdx = 0;
+  const uiAnswered = new Set();
+  const uiText = document.getElementById('uiText');
+  const uiNum = document.getElementById('uiNum');
+  const uiBtns = document.querySelectorAll('#uiBtns .uibtn');
+  const uiFb = document.getElementById('uiFb');
+  const uiNext = document.getElementById('uiNext');
+
+  function loadUI() {
+    const s = UI[uiIdx];
+    uiText.innerHTML = s.text;
+    uiNum.textContent = `Case ${uiIdx + 1} / ${UI.length}`;
+    uiBtns.forEach(b => { b.classList.remove('right', 'wrong'); b.disabled = false; });
+    uiFb.innerHTML = 'Which structured tool replaces this goto?';
+    uiNext.disabled = true;
+    uiNext.textContent = uiIdx < UI.length - 1 ? 'Next case →' : 'Restart ↺';
+  }
+  uiBtns.forEach(b => b.addEventListener('click', (e) => {
+    const s = UI[uiIdx];
+    if (b.dataset.u === s.answer) {
+      b.classList.add('right');
+      uiFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      uiBtns.forEach(x => x.disabled = true);
+      uiNext.disabled = false;
+      if (!uiAnswered.has(uiIdx)) {
+        uiAnswered.add(uiIdx);
+        playCount.textContent = uiAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (uiAnswered.size === UI.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 5 cases nailed! +20 XP'); }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      uiFb.innerHTML = `❌ Not quite. Ask: is it repeating, leaving a loop, skipping one round, or leaving the whole function?`;
+      breakStreak();
+    }
+  }));
+  uiNext.addEventListener('click', () => { uiIdx = (uiIdx + 1) % UI.length; loadUI(); });
+  loadUI();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> It\'s a loop in disguise. Print <code>0</code> → i=1 → jump back. Print <code>1</code> → i=2 → jump back. Print <code>2</code> → i=3 → <code>3 &lt; 3</code> false, no jump. Output: <code>012</code>. A plain <code>for (i = 0; i &lt; 3; i++)</code> does the same, more clearly.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Prints 0, 1, 2 and stops when i reaches 3: <code>012</code>.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Trace it as a loop: print i, then i++, then jump back <em>while</em> i &lt; 3. Which values of i get printed?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

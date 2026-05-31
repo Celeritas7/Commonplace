@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 3.1 — if, else, else if · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e2e8f0; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #fdba74; font-weight: 700; }
+  pre.code .cm { color: #64748b; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CLASSIC C TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Branch tracer */
+  .tracer-input { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tracer-input label { font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+  .tracer-input input[type=range] { flex: 1; min-width: 160px; accent-color: var(--orange); }
+  .tracer-input .score-box { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--orange-deep); background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 4px 14px; min-width: 60px; text-align: center; }
+  .preset-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .preset-row button { background: white; border: 2px solid var(--bg3); border-radius: 8px; padding: 6px 12px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .preset-row button:hover { border-color: var(--orange); transform: translateY(-2px); }
+  .ladder { background: var(--terminal); border-radius: 12px; padding: 16px 18px; font-family: var(--mono); font-size: 13.5px; }
+  .lad-line { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; margin: 2px 0; transition: all 0.3s var(--bouncy); color: #94a3b8; }
+  .lad-line .cond { color: #e2e8f0; }
+  .lad-line .body { color: #c4b5fd; }
+  .lad-line .mark { width: 20px; text-align: center; font-weight: 700; }
+  .lad-line.false { opacity: 0.5; }
+  .lad-line.false .mark { color: #f87171; }
+  .lad-line.taken { background: rgba(34,197,94,0.15); opacity: 1; }
+  .lad-line.taken .mark { color: #4ade80; }
+  .lad-line.taken .cond, .lad-line.taken .body { color: #86efac; }
+  .lad-line.skipped { opacity: 0.28; }
+  .lad-line.skipped .mark { color: #475569; }
+  .tracer-result { margin-top: 14px; background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; }
+  .grade-badge { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: white; font-family: var(--mono); background: linear-gradient(135deg, var(--orange), var(--pink)); box-shadow: var(--shadow-sm); }
+  .tracer-result .rtext { font-size: 14px; color: var(--ink-soft); }
+  .tracer-result .rtext b { color: var(--ink); }
+
+  /* Spot the bug */
+  .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .verdict-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .vbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .vbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .vbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .vbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .spot-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Part III begins! Now your programs can <strong>make decisions</strong> with <code>if</code>. 🔀
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 3.1</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 20 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🔀 PART III &middot; MAKING DECISIONS</span>
+    <h1>if, else, else if</h1>
+    <p class="hero-sub">Up to now your programs ran straight through, top to bottom. The <code>if</code> statement is the first fork in the road: it lets your code take different paths depending on what's true. This is where programs start to feel alive.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Programs that choose 🧠</h2>
+
+    <div class="new-content">
+      Every useful program reacts to its situation. "If the password is correct, let them in." "If the cart is empty, show a message." "If the temperature is below zero, warn about ice." That word — <strong>if</strong> — is a real keyword in C, and it's the foundation of every decision your code will ever make.
+    </div>
+
+    <p>So far your programs have been a straight line: do step 1, then step 2, then step 3. The <code>if</code> statement adds a fork. The program checks a condition, and only runs certain code when that condition is true. Add an <code>else</code> and you get a second path for when it's false. Chain a few together and your program can sort any situation into the right response. This whole lesson is that one idea, plus the handful of ways it trips people up.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The if statement</div>
+    <h2>One condition, one block 🚦</h2>
+
+    <p>The shape of an <code>if</code> is a condition in parentheses, followed by the code to run when it's true:</p>
+
+    <pre class="code"><span class="kw">if</span> (temperature &lt; 0) {
+    printf(<span class="str">"Watch out for ice!\n"</span>);
+}</pre>
+
+    <p>C evaluates the condition <code>temperature &lt; 0</code>. If it's <strong>true</strong> (any nonzero value), the code in the braces runs. If it's <strong>false</strong> (zero), C skips the whole block and carries on below it.</p>
+
+    <div class="new-content">
+      Remember from the operators lessons: a C condition doesn't have to be a comparison. <strong>Any expression that's nonzero counts as true</strong>, and zero counts as false. So <code>if (count)</code> means "if count isn't zero," and <code>if (ptr)</code> means "if ptr isn't null." Comparisons like <code>a &gt;= 18</code> just produce <code>1</code> or <code>0</code>, which is why they work as conditions.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> else and else if</div>
+    <h2>Adding the other paths 🛤️</h2>
+
+    <p><code>else</code> gives you a fallback that runs when the <code>if</code> condition is false. And <code>else if</code> lets you test a series of conditions in order, picking the <em>first</em> one that's true:</p>
+
+    <pre class="code"><span class="kw">if</span> (score &gt;= 90) {
+    grade = <span class="str">'A'</span>;
+} <span class="kw">else if</span> (score &gt;= 80) {
+    grade = <span class="str">'B'</span>;
+} <span class="kw">else if</span> (score &gt;= 70) {
+    grade = <span class="str">'C'</span>;
+} <span class="kw">else</span> {
+    grade = <span class="str">'F'</span>;
+}</pre>
+
+    <div class="new-content">
+      The key rule of an <code>if / else if</code> chain: C checks the conditions <strong>top to bottom and stops at the first true one</strong>. Once a branch runs, every later branch is skipped — even if its condition would also be true. That's why you order them carefully: <code>score &gt;= 90</code> comes before <code>score &gt;= 80</code>, because a 95 satisfies both, and you want the <code>A</code>. Exactly one branch runs (the <code>else</code> catches everything left over). The Branch Tracer below shows this in motion.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Braces and blocks</div>
+    <h2>Why you should always use <code>{ }</code> 🧱</h2>
+
+    <p>If the body is a single statement, C lets you drop the braces: <code>if (x &gt; 0) printf("positive\n");</code> is legal. But this convenience is the source of two nasty bugs, so the strong advice is: <strong>always use braces, even for one line.</strong></p>
+
+    <div class="trap">
+      <h4>🚨 The "I forgot braces" bug</h4>
+      <p>Without braces, only the <em>next single statement</em> belongs to the <code>if</code>. So in:</p>
+      <p style="font-family:var(--mono);font-size:13px;background:#0f172a;color:#e2e8f0;padding:8px 12px;border-radius:8px;">if (loggedIn)<br>&nbsp;&nbsp;&nbsp;&nbsp;showDashboard();<br>&nbsp;&nbsp;&nbsp;&nbsp;logAccess();&nbsp;&nbsp;// runs ALWAYS — not part of the if!</p>
+      <p><code>logAccess()</code> looks indented under the <code>if</code>, but indentation means nothing to C. It runs every time. Braces would have caught it.</p>
+    </div>
+
+    <div class="trap">
+      <h4>🚨 The stray semicolon</h4>
+      <p><code>if (x &gt; 0);</code> — that semicolon right after the <code>)</code> is an <em>empty statement</em> that becomes the entire body. Whatever you wrote next runs unconditionally. It compiles cleanly and silently does the wrong thing.</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Conditions and the equals trap</div>
+    <h2>The bug that bites every beginner 🪤</h2>
+
+    <p>Inside an <code>if</code>, you compare with <code>==</code> (two equals). The single <code>=</code> is <em>assignment</em> — and using it by accident is the most famous bug in all of C:</p>
+
+    <pre class="code"><span class="cm">// BUG: assigns 0 to x, then tests 0 (false)</span>
+<span class="kw">if</span> (x = 0) { ... }
+
+<span class="cm">// CORRECT: compares x against 0</span>
+<span class="kw">if</span> (x == 0) { ... }</pre>
+
+    <div class="new-content">
+      <code>if (x = 0)</code> compiles fine. It assigns <code>0</code> to <code>x</code>, then the value of that assignment — <code>0</code> — becomes the condition, which is false. With <code>if (x = 5)</code> it's worse: it sets <code>x</code> to <code>5</code> and the condition is always true. A defensive trick some programmers use is to put the constant first — <code>if (0 == x)</code> — because <code>if (0 = x)</code> won't compile, catching the typo. Mostly, just turn on compiler warnings (<code>-Wall</code>), which flag <code>if (x = 0)</code> automatically.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Branch Lab</div>
+    <h2>Trace the decision 🔬</h2>
+
+    <p>Two tools. The <strong>Branch Tracer</strong> runs a grading <code>if / else if</code> ladder — move the score and watch C test each condition top to bottom and pick the winner. <strong>Spot the Bug</strong> gives you <code>if</code> snippets to judge.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🔀 Branch Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 6 snippets</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="trace">Branch Tracer</button>
+        <button class="tab-btn" data-tab="spot">Spot the Bug</button>
+      </div>
+
+      <!-- BRANCH TRACER -->
+      <div class="tab-panel active" id="tab-trace">
+        <div class="tracer-input">
+          <label>score =</label>
+          <input type="range" id="scoreRange" min="0" max="100" value="85" />
+          <span class="score-box" id="scoreBox">85</span>
+        </div>
+        <div class="preset-row">
+          <button data-v="95">95</button>
+          <button data-v="85">85</button>
+          <button data-v="72">72</button>
+          <button data-v="65">65</button>
+          <button data-v="40">40</button>
+        </div>
+        <div class="ladder" id="ladder"></div>
+        <div class="tracer-result">
+          <div class="grade-badge" id="gradeBadge">B</div>
+          <div class="rtext" id="resultText"></div>
+        </div>
+      </div>
+
+      <!-- SPOT THE BUG -->
+      <div class="tab-panel" id="tab-spot">
+        <div class="scenario">
+          <div class="scenario-num" id="spotNum">Snippet 1 / 6</div>
+          <div class="scenario-code" id="spotCode"></div>
+        </div>
+        <div class="verdict-btns" id="spotBtns">
+          <button class="vbtn" data-v="ok">✅ Works as intended</button>
+          <button class="vbtn" data-v="bug">🐛 Bug</button>
+        </div>
+        <div class="spot-fb" id="spotFb">Does this <code>if</code> do what it looks like it does?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="spotNext" disabled>Next snippet →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does this print?
+        <pre>int x = 5;
+if (x = 0)
+    printf("zero\n");
+else
+    printf("nonzero\n");</pre>
+      </div>
+      <button class="opt" data-correct="false"><span><code>zero</code></span></button>
+      <button class="opt" data-correct="true"><span><code>nonzero</code></span></button>
+      <button class="opt" data-correct="false"><span>Nothing prints</span></button>
+      <button class="opt" data-correct="false"><span>Compile error</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: that's a single <code>=</code>, not <code>==</code>. What value does <code>x = 0</code> produce, and is it true or false?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🟰</div>
+      <div class="mistake-body">
+        <strong>Writing <code>=</code> instead of <code>==</code></strong>
+        <small><code>if (x = 5)</code> assigns 5 and is always true; <code>if (x == 5)</code> compares. Turn on <code>-Wall</code> and the compiler warns you. When in doubt, put the constant first: <code>if (5 == x)</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🧱</div>
+      <div class="mistake-body">
+        <strong>Dropping braces and adding a second line</strong>
+        <small>Without <code>{ }</code>, only the next single statement belongs to the <code>if</code>. The line after it runs unconditionally, no matter how it's indented. Always use braces.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">❗</div>
+      <div class="mistake-body">
+        <strong>A semicolon right after <code>if (...)</code></strong>
+        <small><code>if (cond);</code> makes the body an empty statement — the real code below runs every time. Watch for that stray <code>;</code>.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Pass or fail.</strong> Read an <code>int score</code> and print <code>"Pass"</code> if it's 50 or above, otherwise <code>"Fail"</code>. Use a single <code>if / else</code> with braces.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Grade ladder.</strong> Recreate the A/B/C/D/F grader from this lesson as a real program. Test it with 95, 85, 72, 65, and 40 — match the Branch Tracer's answers. Make sure a 90 gets an A, not a B (boundary check!).
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Categorize a number.</strong> Read an <code>int</code> and print whether it's <code>"negative"</code>, <code>"zero"</code>, or <code>"positive"</code> using an <code>if / else if / else</code> chain. Then add: if it's positive, also say whether it's even or odd, using a nested <code>if</code> inside that branch.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong><code>if (condition) { ... }</code></strong> runs its block only when the condition is true (nonzero).</li>
+        <li><strong><code>else</code></strong> is the fallback; <strong><code>else if</code></strong> chains test top to bottom and stop at the first true one.</li>
+        <li><strong>Always use braces</strong> <code>{ }</code> — bare bodies invite the missing-brace and stray-semicolon bugs.</li>
+        <li><strong>Compare with <code>==</code>, not <code>=</code></strong>. A single <code>=</code> assigns and is a classic silent bug.</li>
+        <li><strong>Any nonzero value is true;</strong> zero is false. Comparisons just produce <code>1</code> or <code>0</code>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_2_9.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.9  Bitwise operators — a quick tour
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      3.2  switch and when to prefer it
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Part III begins! Now your programs can <strong>make decisions</strong> with <code>if</code>. 🔀",
+    "An <code>if</code> runs its block only when the condition is true (nonzero). 🚦",
+    "<code>else if</code> chains check top to bottom and stop at the first true one. 🛤️",
+    "Always use braces! Bare bodies hide the nastiest <code>if</code> bugs. 🧱",
+    "<code>==</code> compares, <code>=</code> assigns. Mixing them up is the classic C bug. 🪤",
+    "Slide the score — watch C test each condition and pick the winner! 🔬",
+    "Single <code>=</code>! What does <code>x = 0</code> evaluate to — true or false? 🎯",
+    "Three traps, three exercises. Mind the 90-vs-A boundary! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 3.1 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Branch Tracer =====
+  const LADDER = [
+    { kind: 'if', cond: 'score >= 90', test: s => s >= 90, grade: 'A' },
+    { kind: 'elif', cond: 'score >= 80', test: s => s >= 80, grade: 'B' },
+    { kind: 'elif', cond: 'score >= 70', test: s => s >= 70, grade: 'C' },
+    { kind: 'elif', cond: 'score >= 60', test: s => s >= 60, grade: 'D' },
+    { kind: 'else', cond: null, grade: 'F' }
+  ];
+  const scoreRange = document.getElementById('scoreRange');
+  const scoreBox = document.getElementById('scoreBox');
+  const ladderEl = document.getElementById('ladder');
+  const gradeBadge = document.getElementById('gradeBadge');
+  const resultText = document.getElementById('resultText');
+  const gradesSeen = new Set();
+  let traceAllDone = false;
+
+  function renderTracer(score) {
+    scoreBox.textContent = score;
+    let takenIdx = -1;
+    for (let i = 0; i < LADDER.length; i++) {
+      if (LADDER[i].kind === 'else') { takenIdx = i; break; }
+      if (LADDER[i].test(score)) { takenIdx = i; break; }
+    }
+    let html = '';
+    LADDER.forEach((L, i) => {
+      let cls, mark;
+      if (i < takenIdx) { cls = 'false'; mark = '✗'; }
+      else if (i === takenIdx) { cls = 'taken'; mark = '✓'; }
+      else { cls = 'skipped'; mark = '·'; }
+      const head = L.kind === 'if' ? 'if (' + L.cond + ')' : L.kind === 'elif' ? 'else if (' + L.cond + ')' : 'else';
+      html += `<div class="lad-line ${cls}"><span class="mark">${mark}</span><span class="cond">${head}</span><span class="body">grade = '${L.grade}';</span></div>`;
+    });
+    ladderEl.innerHTML = html;
+    const g = LADDER[takenIdx].grade;
+    gradeBadge.textContent = g;
+    const reason = LADDER[takenIdx].kind === 'else'
+      ? `No condition matched, so the <b>else</b> caught it.`
+      : `First true condition: <b>${LADDER[takenIdx].cond}</b>. Branches below are skipped.`;
+    resultText.innerHTML = `Grade <b>${g}</b>. ${reason}`;
+
+    if (!gradesSeen.has(g)) {
+      gradesSeen.add(g);
+      addXP(3);
+      if (!traceAllDone && gradesSeen.size === 5) {
+        traceAllDone = true;
+        burst();
+        addXP(15, window.innerWidth / 2, window.innerHeight / 2, '🎉 Saw all 5 grades! +15 XP');
+      }
+    }
+  }
+  scoreRange.addEventListener('input', () => renderTracer(parseInt(scoreRange.value, 10)));
+  document.querySelectorAll('.preset-row button').forEach(b => b.addEventListener('click', () => {
+    scoreRange.value = b.dataset.v; renderTracer(parseInt(b.dataset.v, 10));
+  }));
+  renderTracer(85);
+
+  // ===== Spot the Bug =====
+  const SNIPPETS = [
+    { code: 'if (x == 5) {\n    win();\n}', answer: 'ok', why: 'Correct comparison with <code>==</code> and proper braces. Does exactly what it says.' },
+    { code: 'if (x = 5) {\n    win();\n}', answer: 'bug', why: 'Single <code>=</code> assigns 5 to x and is always true — <code>win()</code> runs every time. Use <code>==</code>.' },
+    { code: 'if (x > 0)\n    printf("pos\\n");\n    total++;', answer: 'bug', why: 'No braces, so only the printf belongs to the if. <code>total++</code> runs unconditionally despite the indentation.' },
+    { code: 'if (x > 0);\n    printf("pos\\n");', answer: 'bug', why: 'The <code>;</code> after <code>)</code> is an empty body. The printf is outside the if and always runs.' },
+    { code: 'if (age >= 13 && age <= 19) {\n    printf("teen\\n");\n}', answer: 'ok', why: 'Proper range check with <code>&&</code> and braces. Works correctly.' },
+    { code: 'if (0 <= x <= 10) {\n    inRange();\n}', answer: 'bug', why: 'Chained comparison! Reads as <code>(0 <= x) <= 10</code> — a 0/1 result always <= 10, so it\'s always true. Use <code>x >= 0 && x <= 10</code>.' }
+  ];
+  let spotIdx = 0;
+  const spotAnswered = new Set();
+  const spotCode = document.getElementById('spotCode');
+  const spotNum = document.getElementById('spotNum');
+  const spotBtns = document.querySelectorAll('#spotBtns .vbtn');
+  const spotFb = document.getElementById('spotFb');
+  const spotNext = document.getElementById('spotNext');
+
+  function loadSpot() {
+    const s = SNIPPETS[spotIdx];
+    spotCode.textContent = s.code;
+    spotNum.textContent = `Snippet ${spotIdx + 1} / ${SNIPPETS.length}`;
+    spotBtns.forEach(b => { b.classList.remove('right', 'wrong'); b.disabled = false; });
+    spotFb.innerHTML = 'Does this <code>if</code> do what it looks like it does?';
+    spotNext.disabled = true;
+    spotNext.textContent = spotIdx < SNIPPETS.length - 1 ? 'Next snippet →' : 'Restart ↺';
+  }
+  spotBtns.forEach(b => b.addEventListener('click', (e) => {
+    const s = SNIPPETS[spotIdx];
+    if (b.dataset.v === s.answer) {
+      b.classList.add('right');
+      spotFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      spotBtns.forEach(x => x.disabled = true);
+      spotNext.disabled = false;
+      if (!spotAnswered.has(spotIdx)) {
+        spotAnswered.add(spotIdx);
+        playCount.textContent = spotAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (spotAnswered.size === SNIPPETS.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 6 snippets judged! +20 XP'); }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      spotFb.innerHTML = `❌ Not quite. Look closely at the operator, the braces, and any stray punctuation.`;
+      breakStreak();
+    }
+  }));
+  spotNext.addEventListener('click', () => { spotIdx = (spotIdx + 1) % SNIPPETS.length; loadSpot(); });
+  loadSpot();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>x = 0</code> is assignment, not comparison. It stores 0 in <code>x</code>, and the <em>value</em> of that assignment is 0 — which is false. So the <code>else</code> runs: <code>nonzero</code>. (And <code>x</code> is now 0, ironically.) The author meant <code>x == 0</code>.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> <code>x = 0</code> evaluates to 0 (false), so the else branch prints <code>nonzero</code>.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. That\'s a single <code>=</code> — assignment. <code>x = 0</code> evaluates to the assigned value, 0. Is 0 true or false in a condition?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

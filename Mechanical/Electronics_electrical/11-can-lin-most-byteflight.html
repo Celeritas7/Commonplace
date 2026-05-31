@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CAN, LIN, MOST, byteflight &amp; BSD · Mechanical · Commonplace</title>
+
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../index.html">Commonplace</a><span class="sep">›</span><a href="../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="index.html">Electronics &amp; Electrical</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Electronics &amp; Electrical</div>  <h1>CAN, LIN, MOST, byteflight &amp; BSD</h1>  <div class="source">Source images: IMG20250515002732, IMG20250515002739, IMG20250515002754, IMG20250515002800</div></div>
+    <article>
+      <blockquote>
+<p><strong>Notebook date:</strong> 2/8/2013</p>
+</blockquote>
+<p><img alt="Original notebook page — CAN (Controller Area Network)" src="../../docs/Electronics_electrical/IMG20250515002732.jpg"></p>
+<h2>Overview</h2>
+<p>The specific bus protocols a BMW uses. <strong>CAN</strong> (Controller Area Network) is the workhorse — multi-master, twisted-pair, used in two flavours (PT-CAN fast, K-CAN slow). <strong>LIN</strong> is a single-wire sub-bus driven by a master ECU — used for slow, local communication within a single function (HVAC stepper motors, AHL master/slave). <strong>MOST</strong> uses <strong>fibre-optic cables</strong> for high-speed audio/video. <strong>byteflight</strong> is the <strong>star-topology, fibre-optic bus</strong> developed specifically for <strong>airbag/SRS safety</strong>. <strong>BSD</strong> (Bit Serial Data) and <strong>F-CAN</strong> are smaller specialised buses. The page also covers <strong>arbitration</strong> (how multi-master priorities are resolved), <strong>identifiers</strong>, and <strong>optical fibre advantages</strong>.</p>
+<h2>Working Principle</h2>
+<h3>CAN — Controller Area Network</h3>
+<blockquote>
+<p><em>Notebook (IMG 002732):</em>
+"<strong>CAN (Controller Area Network)</strong>:
+– Linear-shaped bus structure
+– Developed by <strong>Bosch &amp; Intel in 1981</strong>
+– It's faster because of two-way transfer of data
+– Used in:
+  i) <strong>PT-CAN (fast)</strong>
+  ii) <strong>K-CAN (slow)</strong>
+– The speed is varied for communication (speed depends on processor)
+– We can add &amp; remove control units (like RAM chips)
+– Transmission rates vary from <strong>10 kbit/s to 1 Mbit/s</strong>
+– (Comfort) K-bus: 100 kbit/sec
+– (Safety) PT-bus: 500 kbit/sec"</p>
+</blockquote>
+<p>CAN spec key points:
+- <strong>Bosch + Intel, 1981</strong> — Bosch invented the protocol; Intel made the first chips.
+- <strong>Linear topology</strong> — single twisted pair runs the length of the car, every ECU taps in.
+- <strong>Two-way (bidirectional)</strong> — both wires used for differential signalling.
+- <strong>Multi-master</strong> — any node can initiate a message any time.
+- <strong>Bit-rate</strong>: 10 kbit/s (very slow comfort) up to 1 Mbit/s (max for high-speed CAN).
+- BMW splits into <strong>fast PT-CAN</strong> (500 kbit/s, powertrain) and <strong>slow K-CAN</strong> (100 kbit/s, body/comfort).</p>
+<h3>Multi-master arbitration</h3>
+<blockquote>
+<p><em>Notebook (IMG 002732 bottom + IMG 002739 top):</em>
+"<strong>Multi-master bus</strong>:
+– Anyone can be master
+– Subscriber reads transmitter's message</p>
+<p><strong>Arbitration</strong>:
+– Priority is set for different messages
+– Messages sent by master as per priorities</p>
+<p><strong>Identifier</strong>:
+– Identifier code is given in message"</p>
+</blockquote>
+<p>Arbitration mechanism (CAN's clever trick):
+- Each message starts with its <strong>identifier</strong> (a number) — lower number = higher priority.
+- If two nodes start sending at the same time, they bitwise-compare their identifiers.
+- The node with the <strong>lower identifier wins</strong> automatically (dominant bit overrides recessive) → the loser sees its bit overwritten and immediately stops.
+- The winner finishes the message; the loser retries when the bus is idle.</p>
+<p>So priority is <strong>baked into the message ID</strong>, no separate arbitration round needed. Critical messages (airbag, engine emergency) get low IDs; non-critical (radio, infotainment) get high IDs.</p>
+<h3>F-CAN</h3>
+<blockquote>
+<p><em>Notebook (IMG 002739):</em>
+"<strong>F-CAN</strong>: Sensors
+– One-way communication
+– Just provide I/P"</p>
+</blockquote>
+<p>A <strong>simplified CAN</strong> variant where sensors only <strong>send</strong> (one-way), reducing complexity. Used for some sensor sub-networks.</p>
+<h3>LIN — Local Interconnect Network</h3>
+<blockquote>
+<p><em>Notebook (IMG 002739 bottom):</em>
+"<strong>Local interconnect Network (LIN)</strong>:
+– Sub-bus system
+– Adaptive headlights (AHL master) → [Xenon (slave), Xenon (slave)]
+– Steering
+– Transmission rate <strong>19.2 kbit/s</strong>"</p>
+</blockquote>
+<p>LIN characteristics:
+- <strong>Single-wire</strong> (uses chassis as ground reference) — even cheaper than CAN.
+- <strong>Slow</strong> — 19.2 kbit/s max.
+- <strong>Master-slave</strong> — one ECU is master, up to 15 slaves.
+- <strong>Sub-bus</strong> — bridges into a bigger CAN bus via the master.</p>
+<p>Where LIN is used:
+- <strong>HVAC stepper motors</strong> — flap actuators, blower control.
+- <strong>AHL</strong> (Adaptive Headlights) — main module controls slave Xenon modules at each headlight.
+- <strong>Steering column</strong> — wiper switch, stalks, multifunction wheel buttons.
+- <strong>Window control</strong> — door modules.
+- Any application where comm speed isn't critical and the device is local to one car area.</p>
+<h3>BSD — Bit Serial Data</h3>
+<blockquote>
+<p><em>Notebook (IMG 002754 top):</em>
+"<strong>BSD (Bit Serial Data Interface)</strong>:
+– Speed of transmission <strong>9.6 kbit/s</strong>
+– Generator [GNN] → DME → IBS (Intelligent battery sensor)"</p>
+</blockquote>
+<p>Even slower than LIN. Used for the <strong>alternator → DME → battery sensor</strong> communication chain. Very low data rate but enough for charging-system status messages.</p>
+<h3>MOST and optic-fibre communication</h3>
+<blockquote>
+<p><em>Notebook (IMG 002754 middle):</em>
+"<strong>Optic fibre communication</strong>:
+– Signal is transferred at the speed of light
+– Data transmission in the form of <strong>light waves</strong></p>
+<p><strong>Advantages</strong>:
+① High speed of data transmission
+② Insensitive [to] electromagnetic influences
+③ Lighter than copper
+④ Less space</p>
+<p>[Diagram: LED → glass fibre core → photoelectric cell]
+– Total internal reflection
+– Fibre coating
+– Fibre core (made up of special fibre)</p>
+<p><strong>Light's loss of power — attenuation</strong>:
+Light intensity becomes less if length of wire is more. So there could be loss of communication."</p>
+</blockquote>
+<p><strong>MOST</strong> (Media Oriented Systems Transport) is BMW's high-speed fibre-optic bus, used for in-car audio/video:
+- <strong>LED transmitter + photoelectric receiver</strong> at each node.
+- <strong>Plastic optical fibre</strong> (POF) cable — about the diameter of a pencil lead.
+- <strong>Total internal reflection</strong> keeps light bouncing inside the core.
+- <strong>Lossless against EM interference</strong> (ignition coils, alternator, etc.) because light isn't affected.
+- <strong>Lighter</strong> than copper bundles — important on a 7-series-size car with lots of audio gear.</p>
+<p>Speed: <strong>25 Mbit/s</strong> (MOST25) for early versions; later MOST50 and MOST150 with much higher bandwidth.</p>
+<h3>byteflight — safety-grade star bus</h3>
+<blockquote>
+<p><em>Notebook (IMG 002800):</em>
+"In <strong>byteflight bus system</strong>: <strong>star bus system</strong>
+– <strong>Plastic optic fibres cable</strong> used for transmission of signal
+– Data transmission: <strong>10 Mbit/sec</strong>"</p>
+</blockquote>
+<p><strong>byteflight</strong> is the safety-grade fibre-optic bus that BMW developed specifically for <strong>airbag/SRS</strong> systems:
+- <strong>Star topology</strong> — every node has its own dedicated fibre to the central gateway → no single-point failure on a shared bus.
+- <strong>Time-triggered</strong> — slots are pre-allocated, so airbag firing commands always arrive deterministically (no waiting for bus availability).
+- <strong>Fibre-optic</strong> — immune to EMI; very fast.
+- <strong>Standard speed: 10 Mbit/s</strong>.</p>
+<p>This was the predecessor to <strong>FlexRay</strong>, which became the safety bus standard for later BMWs and other manufacturers.</p>
+<h2>Force Path / Process Flow</h2>
+<h3>CAN arbitration example (two ECUs simultaneously)</h3>
+<pre><code>   Time →
+
+   Bit:    1   2   3   4   5   6   7   8   9   10  11
+
+   ECU A:  0   0   1   0   1   1   0   1   0   1   0   ← ID 0x05A
+   ECU B:  0   0   1   0   1   0   1   1   1   1   1   ← ID 0x059
+
+   Bus:    0   0   1   0   1   0   ...                  
+
+                          ▲
+                          │
+                  At bit 6, A sends 1 (recessive) but B sends 0 (dominant)
+                  → Bus shows 0 → A detects mismatch → A stops sending
+                  → B continues sending its message (ID 0x059)
+
+   Winner: ECU B (lower numerical ID)
+   Loser: ECU A (retries when bus is idle)
+
+   ► CAN's brilliant trick: dominant 0 always wins over recessive 1.
+   ► Arbitration is automatic, non-destructive, no collision penalty.
+</code></pre>
+<h3>Optic-fibre signal transmission</h3>
+<pre><code>   ECU A                                    ECU B
+
+   ┌────────┐    plastic optic fibre    ┌────────┐
+   │  LED   │ ════════════════════════&gt; │ Photo  │
+   │ (emits │   ◄── total internal      │ diode  │
+   │ light) │       reflection inside   │(detects│
+   │        │       glass core          │ light) │
+   └────────┘                            └────────┘
+
+   ► Light bounces along the fibre core (TIR)
+   ► Not affected by EM noise from ignition coils, alternator, etc.
+   ► Speed of light is fast → high data rate possible
+   ► But: light attenuates with distance → range limit
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CAN twisted pair</strong></td>
+<td>CAN-H + CAN-L differential signalling</td>
+</tr>
+<tr>
+<td><strong>CAN transceiver IC</strong></td>
+<td>Translates ECU logic levels to/from CAN voltage levels</td>
+</tr>
+<tr>
+<td><strong>CAN controller</strong></td>
+<td>Inside the ECU's μP — handles protocol, framing, arbitration</td>
+</tr>
+<tr>
+<td><strong>LIN single wire</strong></td>
+<td>Single-wire serial sub-bus</td>
+</tr>
+<tr>
+<td><strong>LIN master</strong></td>
+<td>One ECU on a LIN bus runs the schedule</td>
+</tr>
+<tr>
+<td><strong>LIN slaves</strong> (up to 15)</td>
+<td>Subordinate ECUs that respond when polled</td>
+</tr>
+<tr>
+<td><strong>POF (Plastic Optical Fibre)</strong></td>
+<td>Light-conducting fibre for MOST and byteflight</td>
+</tr>
+<tr>
+<td><strong>LED transmitter</strong></td>
+<td>At each fibre node — modulates light intensity</td>
+</tr>
+<tr>
+<td><strong>Photo-diode receiver</strong></td>
+<td>At each fibre node — converts light back to electrical signal</td>
+</tr>
+<tr>
+<td><strong>byteflight gateway</strong></td>
+<td>Central hub for star topology — every safety node has its own fibre</td>
+</tr>
+<tr>
+<td><strong>Terminator (120 Ω)</strong></td>
+<td>At each end of CAN bus — absorbs reflections</td>
+</tr>
+<tr>
+<td><strong>SGM (Safety &amp; Gateway Module)</strong></td>
+<td>Bridges CAN ↔ MOST ↔ byteflight</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>Why CAN's dominant/recessive trick works</h3>
+<p>The CAN bus has an <strong>idle</strong> state (both wires at the same voltage) called "<strong>recessive</strong>" (binary 1). When any node pulls the wires apart, it's "<strong>dominant</strong>" (binary 0). Dominant <strong>always wins</strong> over recessive — if any node sends a 0, the bus reads 0 regardless of how many nodes send 1.</p>
+<p>This <strong>wired-AND</strong> behaviour is what makes arbitration automatic: the node with the lower ID has more 0s in its identifier → wins automatically when both transmit.</p>
+<h3>Why LIN is so slow</h3>
+<p>LIN runs at <strong>19.2 kbit/s</strong> because:
+- Single-wire signalling needs more bit time for the receiver to lock onto the signal cleanly.
+- Used for slow applications (HVAC flaps move once a second; window switches once a button-press).
+- Cheap silicon — small/inexpensive transceiver IC.</p>
+<h3>Why MOST uses fibre instead of copper</h3>
+<ol>
+<li><strong>EMI immunity</strong> — alternator + ignition + EPS motors throw off massive EM noise. Light is unaffected.</li>
+<li><strong>Bandwidth</strong> — 25-150 Mbit/s for audio/video; copper Ethernet only just caught up.</li>
+<li><strong>Weight</strong> — POF is much lighter than coax or twisted pair for the same bandwidth.</li>
+<li><strong>No ground loops</strong> — fibre electrically isolates nodes → no chassis-ground noise.</li>
+</ol>
+<h3>Why byteflight uses star topology</h3>
+<p>For airbag safety, a <strong>single bus failure</strong> must NOT take down all the airbag modules. <strong>Star topology</strong> means each module has its <strong>own dedicated fibre</strong> to the central control — one fibre cut only kills one module, not the whole system. The redundancy is structural, not just functional.</p>
+<h3>Modern context — FlexRay and CAN-FD</h3>
+<p>After ~ 2010, BMW (and other premium manufacturers) moved safety-critical buses from byteflight to <strong>FlexRay</strong> (10 Mbit/s, time-triggered, star or bus topology). For high-bandwidth applications, <strong>CAN-FD</strong> (CAN Flexible Data, up to 5 Mbit/s) extended classic CAN. <strong>Automotive Ethernet</strong> (100 Mbit/s, 1 Gbit/s) is the current state of the art.</p>
+<h2>Visual Diagram</h2>
+<pre><code>   BMW BUS ECOSYSTEM (E60/E65 era):
+   ────────────────────────────────
+
+                       ┌─────────────────┐
+   PT-CAN (500 kbit/s)─┤  DME (engine)   │
+   ┌────────────────── │  EGS (trans)    │
+   │                   │  DSC (brakes)   │
+   │                   └────────┬────────┘
+   │                            │
+   │           ┌────────────────┴──────────────┐
+   │           │  SGM (Safety/Gateway Module)  │
+   │           └────┬───────────┬──────────┬───┘
+   │                │           │          │
+   │      K-CAN     │           │          │
+   │      (100 kbit/s)          │          │
+   │      ┌─────────┴──────┐    │          │
+   │      │ Body modules:  │    │          │
+   │      │ ─ Doors        │    │          │
+   │      │ ─ Climate IHKA │    │          │
+   │      │ ─ Cluster      │    │          │
+   │      │ ─ Comfort      │    │          │
+   │      └────────────────┘    │          │
+   │                            │          │
+   │           MOST (fibre)     │          │ byteflight
+   │           ┌────────────────┘          │ (fibre, star)
+   │           │                            │
+   │      ┌────┴────────────┐        ┌─────┴──────────┐
+   │      │ Audio + video:  │        │ Safety/SRS:    │
+   │      │ ─ Head unit     │        │ ─ Airbag modules│
+   │      │ ─ Amplifier     │        │ ─ Pretensioners │
+   │      │ ─ DVD/CD changer│        │ ─ Crash sensors │
+   │      │ ─ Navigation    │        └─────────────────┘
+   │      └─────────────────┘                            
+   │                                                      
+   │ LIN sub-buses (19.2 kbit/s, single-wire):           
+   │   Each master ECU on K-CAN may run a LIN bus to:    
+   │   ─ HVAC flap motors                                
+   │   ─ AHL slave Xenon modules                         
+   │   ─ Mirror motors                                   
+   │   ─ Window switches                                 
+   └────                                                  
+</code></pre>
+<h2>Key Facts</h2>
+<ul>
+<li><strong>CAN</strong> = Bosch+Intel 1981; multi-master, twisted-pair, linear topology. 10 kbit/s – 1 Mbit/s.</li>
+<li><strong>PT-CAN</strong> (fast, 500 kbit/s, powertrain) and <strong>K-CAN</strong> (slow, 100 kbit/s, body) — two BMW CAN buses.</li>
+<li><strong>Arbitration</strong> via message identifier — lower ID = higher priority; dominant 0 always wins over recessive 1.</li>
+<li><strong>F-CAN</strong> = simplified one-way CAN for sensors.</li>
+<li><strong>LIN</strong> = single-wire master-slave sub-bus, 19.2 kbit/s. Used for HVAC, AHL, steering column.</li>
+<li><strong>BSD</strong> = Bit Serial Data, 9.6 kbit/s. Connects alternator-DME-IBS.</li>
+<li><strong>MOST</strong> = fibre-optic bus, 25 Mbit/s, for audio/video.</li>
+<li><strong>byteflight</strong> = fibre-optic, <strong>star topology, 10 Mbit/s</strong>, for airbag SRS safety.</li>
+<li><strong>Fibre advantages</strong>: high speed, EMI-immune, lighter, less space.</li>
+<li><strong>Fibre limitation</strong>: light attenuation with distance.</li>
+<li><strong>Modern replacements</strong>: FlexRay (safety), CAN-FD (general), automotive Ethernet (high-bandwidth).</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="10-bus-systems-overview-topologies-and-data-transmission.html">Bus systems overview — topologies, master/slave/multi-master</a></li>
+<li><a href="09-control-unit-modules.html">Control unit modules — interface module = bus driver</a></li>
+<li><a href="07-diode-applications-rectification-zener-led.html">LED — used as MOST/byteflight light source</a></li>
+<li><a href="12-energy-management-system.html">Energy management — uses K-CAN status messages</a></li>
+<li><a href="14-adaptive-headlights-ahl-system.html">Adaptive headlights — AHL uses LIN</a></li>
+<li><a href="../Steering_Wheels_tyres/05-active-steering-and-hydraulic-pump.html">Active steering — uses CAN to talk to DSC</a></li>
+<li><a href="../Torque_convertor_gears/07-egs-electronic-gearbox.html">EGS — uses CAN to read DME torque</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>"Bosch &amp; Intel 1981"</strong> — actually, Bosch developed CAN; Intel made early CAN chips. Joint association is accurate but Bosch held the patents.</li>
+<li>[?] <strong>Speed depends on processor</strong> — partly true; bit-rate is set by the bus master configuration, but processor speed determines how fast ECUs can respond to messages.</li>
+<li>[?] <strong>"Subscriber reads transmitter's message"</strong> — terminology slightly unusual; usually called "receivers acknowledge each message." On CAN, every node that successfully receives sends an ACK bit.</li>
+<li>[?] <strong>LIN transmission rate 19.2 kbit/s</strong> — exact spec value.</li>
+<li>[?] <strong>BSD 9.6 kbit/s</strong> — confirmed; the slow link is fine for charging-system status which doesn't need fast updates.</li>
+<li>[?] <strong>byteflight 10 Mbit/s</strong> — exact spec value.</li>
+<li>[?] No mention of <strong>FlexRay</strong> — byteflight was the precursor; both are BMW-developed. By 2013 (notebook date) FlexRay was already in production cars but the trainer used byteflight as the safety-bus example.</li>
+<li>[?] <strong>"GNN"</strong> in BSD chain — interpreted as <strong>GENerator</strong> (alternator); BMW's K-letter coding for the alternator ECU.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Electronics &amp; Electrical</a>
+      <span class="spacer"></span>
+      <a href="../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

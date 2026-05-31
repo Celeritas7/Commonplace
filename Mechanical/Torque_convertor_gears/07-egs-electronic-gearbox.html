@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EGS — Electronic Gearbox Control · Mechanical · Commonplace</title>
+
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../index.html">Commonplace</a><span class="sep">›</span><a href="../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="index.html">Torque Converter &amp; Gears</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Torque Converter &amp; Gears</div>  <h1>EGS — Electronic Gearbox Control</h1>  <div class="source">Source images: IMG20250514181421, IMG20250514181430</div></div>
+    <article>
+      <p><img alt="Original notebook page — EGS advantages, sensors, actuators" src="../../docs/Torque_convertor_gears/IMG20250514181421.jpg"></p>
+<h2>Overview</h2>
+<p><strong>EGS</strong> (German: <em>Elektronische Getriebesteuerung</em> — Electronic Gearbox Control) is the <strong>automatic transmission's electronic brain</strong> — equivalent to what DME is for the engine. Where the older purely-hydraulic automatic decided when to shift using mechanical valves driven by oil-pressure signals, EGS reads digital inputs from many sensors, runs a shift-decision algorithm, commands the <strong>valve-body solenoids</strong> to apply the right multi-plate brakes and clutches, and handles <strong>fail-safe behaviour</strong> when something goes wrong. This page covers the <strong>7 advantages of EGS over hydraulic-only control</strong>, the <strong>sensor and actuator</strong> list, the <strong>signal-flow pipeline</strong> (signal in → shift curve displacement → shift decision → gear shift), and the <strong>failure-mode strategies</strong> (substitute value, important-signal failure, defect memory).</p>
+<h2>Working Principle</h2>
+<h3>Parking interlock (page header)</h3>
+<blockquote>
+<p><em>Notebook (top, partly obscured):</em> "<strong>Parking interlock</strong>: Pin &amp; socket mechanism"</p>
+</blockquote>
+<p>A safety feature: a pin engages a slot on the transmission output to <strong>mechanically lock</strong> the gearbox when the lever is in <strong>P (Park)</strong>. The car physically can't roll. The pin-and-socket mechanism is purely mechanical (driver lever → cable → pawl). EGS verifies the engaged position via a switch.</p>
+<h3>7 advantages of EGS over hydraulic-only</h3>
+<blockquote>
+<p><em>Notebook list (★ Advantages of EGS):</em>
+1. <strong>Smaller number of hydraulic components</strong>
+2. <strong>Processing additional signals</strong>
+3. <strong>Precise control of shift components</strong>
+4. <strong>Compensation of alteration in friction surfaces</strong>
+5. <strong>Flexible characteristic of shift curves</strong>
+6. <strong>Detection of driving style</strong>
+7. <strong>Protection against incorrect operation</strong></p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Advantage</th>
+<th>What it means in practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Fewer hydraulic components</strong></td>
+<td>Where the old valve body used dozens of mechanical spool valves for shift logic, EGS replaces most of them with <strong>electronic solenoid valves</strong> — fewer parts, smaller package, fewer wear points.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Processing additional signals</strong></td>
+<td>Reads digital inputs the old hydraulic valve body couldn't use (coolant temp, throttle history, ABS wheel speeds, engine torque from DME via CAN, etc.)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Precise shift control</strong></td>
+<td>Solenoids can be modulated (PWM duty cycle) → smooth pressure ramps → smoother shifts. Old valves were on/off only.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Compensation for friction-surface wear</strong></td>
+<td>EGS learns adaptation values — as clutches wear, apply timing drifts; EGS adjusts pressure ramps to keep shift feel consistent over the life of the transmission.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Flexible shift curves</strong></td>
+<td>Multiple stored shift maps (D, S, M, eco, sport+, etc.) — driver selects, EGS uses different shift curves immediately.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Detection of driving style</strong></td>
+<td>EGS watches throttle history — aggressive throttle = sport-leaning shifts; gentle throttle = economy-leaning.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Protection against incorrect operation</strong></td>
+<td>Won't allow R↔D shifts above a certain speed; won't allow downshift that would over-rev the engine; safe-mode behaviour on faults.</td>
+</tr>
+</tbody>
+</table>
+<h3>Sensors (5 — left side of page)</h3>
+<blockquote>
+<p><em>Notebook (5 sensor boxes):</em>
+1. <strong>Position detection switch</strong> — reads lever position (P, R, N, D, etc.)
+2. <strong>Kickdown switch</strong> — driver presses past full throttle → forces a downshift for max acceleration
+3. <strong>Vehicle speed sensor</strong> — output shaft rpm → vehicle speed
+4. <strong>Inductive sensor</strong> — input shaft rpm (turbine speed from torque converter) → measures slip
+5. <strong>Temperature sensor</strong> — ATF temperature → adjusts shift logic + cooler control</p>
+<p>Additional margin notes for some sensors:
+- <strong>Position detection switch</strong>: "with most modern automatic ... Position information from the lever needed for EGS"
+- <strong>Kickdown switch</strong>: "less warm ... EGS will not allow ... high gear when less torque"<br>
+- <strong>Vehicle speed</strong>: "regulates electrical valves"<br>
+- <strong>Temperature sensor</strong>: "if temp too high — driving with less ATF can be done [reduced shift performance]"</p>
+</blockquote>
+<h3>Actuators (4 — right side of page)</h3>
+<blockquote>
+<p><em>Notebook (4 actuator boxes labelled "Actuator"):</em>
+1. <strong>Pressure regulator solenoid</strong> — sets line pressure dynamically
+2. <strong>Variable gear control component</strong> — shift solenoids that apply specific clutches/brakes
+3. <strong>Lockup control</strong> <em>(implied)</em> — actuates torque-converter lockup clutch
+4. <strong>AC function</strong> — coordinates with HVAC during shifts (notebook annotation)</p>
+<p>Additional notes around the actuator boxes:
+- "Selector lever interlock" — actuator that prevents lever shift unless brake is pressed (P→D safety)
+- "P R N D S 4 3 2 1" — the lever positions interfaced
+- "Activating components"<br>
+- "Changing characteristic of clutch pads &amp; friction" 
+- "Various control plug &amp; switches"</p>
+</blockquote>
+<h3>The signal-flow pipeline</h3>
+<blockquote>
+<p><em>Notebook (IMG 181430 top):</em>
+"Signal I/P → Displacement of shift curve → Shift decision (yes/no) → Gear shift"</p>
+</blockquote>
+<p>The shift-decision flow:</p>
+<pre><code>   Sensor inputs (rpm, throttle, ATF temp, etc.)
+        │
+        ▼
+   EGS reads inputs
+        │
+        ▼
+   Look up current operating point on the SHIFT CURVE
+        │
+        ▼
+   Compare to commanded gear
+        │
+        ▼  is a shift needed?
+   ┌────────────┐
+   │ YES → Shift command issued
+   │ NO  → Hold current gear
+   └────────────┘
+        │
+        ▼  (if YES)
+   EGS commands valve-body solenoids
+        │
+        ▼
+   Specific clutches/brakes apply → gear changes
+        │
+        ▼
+   New gear engaged; loop continues
+</code></pre>
+<h3>Failure modes (3 strategies)</h3>
+<blockquote>
+<p><em>Notebook (IMG 181430 middle/bottom):</em></p>
+<p><strong>★ Substitute value</strong>: Whenever any one of sensor is faulty, EGS uses a fallback value computed from other sensors.</p>
+<p><strong>★ Failure of important signal</strong>: e.g., engine-load valve, acceleration pedal sensor → EGS:
+  – drives the gearbox in <strong>safe mode</strong>
+  – <strong>oil pressure is maintained high</strong> (so clutches don't slip even if EGS can't trim pressure)</p>
+<p><strong>★ Defect memory</strong>: Defect memory is stored as history. (Like DME's error memory — readable by DIS / ISTA.)</p>
+</blockquote>
+<p>This is the same fault-tolerance philosophy as DME (see <a href="../Engine_systems/N42/09-engine-management-vanos-control-o2-loop.html">N42 engine management</a>): degrade gracefully, never strand the driver, log for diagnosis.</p>
+<h2>Force Path / Process Flow</h2>
+<h3>EGS architecture (sensor → ECU → actuator)</h3>
+<pre><code>   SENSORS (inputs to EGS)              ACTUATORS (commanded by EGS)
+   ─────────────────────────            ──────────────────────────
+
+   Lever position switch ───┐        ┌──► Pressure regulator solenoid
+   Kickdown switch ─────────┤        │     (line pressure)
+   Vehicle speed sensor ────┤        │
+   Input (turbine) speed ───┤        ├──► Shift solenoids (4–6 of them)
+   ATF temperature ─────────┤        │     (apply specific clutches/brakes)
+   Coolant temp (via CAN) ──┤    ┌───┴──► Lockup clutch solenoid
+   Engine torque (via CAN) ─┼───►│EGS │     (torque converter lockup)
+   Engine rpm (via CAN) ────┤    │ECU │
+   Brake switch ────────────┤    │    ├──► Selector lever interlock
+                            │    │    │     (safety: must press brake to leave P)
+                            │    │    │
+   ABS wheel speeds ────────┘    │    └──► Status output (gear, status to
+   (CAN from ABS module)         │         dashboard via CAN)
+                                 │
+                          internal state:
+                            – shift maps (D, S, M)
+                            – adaptation values
+                            – DTC memory
+</code></pre>
+<h3>Failure cascade</h3>
+<pre><code>   NORMAL OPERATION
+        │
+        ▼
+   Sensor fails (e.g., ATF temp sensor open)
+        │
+        ▼
+   ┌─ EGS detects: input out of plausible range ─┐
+   │                                              │
+   ▼                                              ▼
+   Substitute value:                       DTC stored in defect memory
+   – Estimate ATF temp from
+     coolant temp + run time              ───► technicians read via
+   ────────────────────────                    DIS/ISTA later
+
+   If failure is of a CRITICAL signal:
+        │
+        ▼
+   Safe mode: lock in 4th (or limp gear)
+              Line pressure forced HIGH
+              No shifts until error cleared
+        │
+        ▼
+   MIL or transmission-warning lamp on
+        │
+        ▼
+   Vehicle drivable but underperforming
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>EGS / TCU</strong></td>
+<td>The electronic control unit. Reads sensors, runs shift logic, commands solenoids.</td>
+</tr>
+<tr>
+<td><strong>Position detection switch</strong></td>
+<td>Reads selector lever position (P, R, N, D, S, M).</td>
+</tr>
+<tr>
+<td><strong>Kickdown switch</strong></td>
+<td>Triggered when accelerator pedal pressed past full-throttle → forces downshift.</td>
+</tr>
+<tr>
+<td><strong>Vehicle speed sensor (output shaft)</strong></td>
+<td>Gives road speed via output shaft rpm.</td>
+</tr>
+<tr>
+<td><strong>Input/turbine speed sensor (inductive)</strong></td>
+<td>Reads transmission input shaft rpm → measures torque-converter slip.</td>
+</tr>
+<tr>
+<td><strong>ATF temperature sensor</strong></td>
+<td>NTC thermistor in ATF flow.</td>
+</tr>
+<tr>
+<td><strong>Pressure regulator solenoid</strong></td>
+<td>Sets line pressure based on load and torque demand.</td>
+</tr>
+<tr>
+<td><strong>Shift solenoids</strong></td>
+<td>4–6 on/off or PWM solenoids that apply specific clutches/brakes for each gear.</td>
+</tr>
+<tr>
+<td><strong>Lockup clutch solenoid</strong></td>
+<td>Engages/disengages torque-converter lockup clutch.</td>
+</tr>
+<tr>
+<td><strong>Selector lever interlock actuator</strong></td>
+<td>Physically locks lever in P unless brake is depressed.</td>
+</tr>
+<tr>
+<td><strong>CAN bus interface</strong></td>
+<td>Reads engine torque/rpm from DME, wheel speeds from ABS, etc.</td>
+</tr>
+<tr>
+<td><strong>Defect memory</strong></td>
+<td>Non-volatile DTC storage.</td>
+</tr>
+<tr>
+<td><strong>Adaptation memory</strong></td>
+<td>Learned shift-pressure trim values that compensate for clutch wear.</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>Why kickdown is electronic now (not hydraulic)</h3>
+<p>Old hydraulic automatics had a <strong>kickdown cable</strong> from the throttle pedal that mechanically activated a kickdown valve in the valve body. EGS reads a <strong>simple switch</strong> (or just the throttle-position sensor pinned at 100%) and decides whether to downshift based on current speed, rpm, and gear — much smarter than a mechanical cable.</p>
+<h3>Why ATF temperature matters</h3>
+<ul>
+<li><strong>Cold ATF (&lt; 50 °C)</strong> — high viscosity, slow shift response, EGS uses <strong>softer shift maps</strong> to avoid harsh shifts while ATF warms.</li>
+<li><strong>Normal (~ 80–100 °C)</strong> — design operating range, normal shift maps.</li>
+<li><strong>Hot (&gt; 130 °C)</strong> — close to ATF breakdown point, EGS enters <strong>transmission overheat protection mode</strong>: locks up torque converter early to reduce slip-generated heat, may limit kickdown, may disengage AC compressor.</li>
+<li><strong>Very hot (&gt; 150 °C)</strong> — limp mode, dashboard warning.</li>
+</ul>
+<h3>Substitute value example — input speed sensor fails</h3>
+<p>EGS knows: engine rpm (from DME via CAN), vehicle speed (from output speed sensor), and current gear. From these it can <strong>calculate</strong> what input shaft rpm should be. If the input sensor fails, EGS uses this computed value as a substitute → keeps running normally. Driver doesn't notice. DTC logged for next service visit.</p>
+<h3>Why safe mode locks high gear</h3>
+<p>"Safe mode" = limp-home mode after a critical fault. The standard strategy: <strong>lock the transmission in 4th gear</strong> (or a similar middle gear) with line pressure forced HIGH. Why:
+- 4th is direct drive — least clutch load.
+- High line pressure ensures clutches stay locked even with no electronic trim.
+- Driver can still get home, just without shift smoothness or sport response.</p>
+<h3>CAN bus dependence</h3>
+<p>Modern EGS reads many signals <strong>via CAN bus</strong> from other ECUs:
+- <strong>Engine torque</strong> from DME → EGS uses it for shift quality.
+- <strong>ABS wheel speeds</strong> from ABS ECU → cross-check vehicle speed.
+- <strong>Brake switch</strong> from instrument cluster → kickdown protection, P-shift interlock.</p>
+<p>Loss of CAN = EGS goes to safe mode (can't trust any of those signals).</p>
+<h2>Visual Diagram</h2>
+<pre><code>   EGS BLOCK DIAGRAM:
+   ──────────────────
+
+   ┌────────────────────────────────────────────────────────┐
+   │                  EGS  (TCU)                            │
+   │                                                        │
+   │  ┌─────────────┐    ┌──────────────┐    ┌──────────┐  │
+   │  │ READ INPUTS │───►│ DECIDE GEAR  │───►│ COMMAND  │  │
+   │  │             │    │  + shift map │    │ ACTUATORS│  │
+   │  │ - lever pos │    │  + adaption  │    │          │  │
+   │  │ - kickdown  │    │  + fault     │    │ - shift  │  │
+   │  │ - veh speed │    │    checks    │    │   sols   │  │
+   │  │ - in speed  │    │              │    │ - lockup │  │
+   │  │ - ATF temp  │    │              │    │ - press  │  │
+   │  │ - CAN data  │    │              │    │   reg    │  │
+   │  └─────────────┘    └──────────────┘    │ - lever  │  │
+   │                                          │   inter- │  │
+   │           ┌────────────────────────┐    │   lock   │  │
+   │           │  ADAPTATION MEMORY     │    └──────────┘  │
+   │           │  (learned trim values) │                   │
+   │           └────────────────────────┘                   │
+   │                                                        │
+   │           ┌────────────────────────┐                   │
+   │           │  DEFECT MEMORY (DTCs)  │  ─► read via      │
+   │           └────────────────────────┘     DIS/ISTA      │
+   │                                                        │
+   └────────────────────────────────────────────────────────┘
+</code></pre>
+<pre><code>   THE SHIFT DECISION (notebook signal flow):
+   ──────────────────────────────────────────
+
+       Sensor signal I/P
+             │
+             ▼
+       Displacement of shift curve (current operating point)
+             │
+             ▼
+       Compare to target gear from shift map
+             │
+             ▼
+       Shift decision: yes/no
+             │
+       ┌─────┴────┐
+       │ YES      │ NO
+       ▼          ▼
+   Gear shift    Hold current gear
+       │
+       ▼
+   Apply correct clutch/brake combination
+</code></pre>
+<p>Embedded original schematic:</p>
+<p><img alt="EGS signal flow + substitute value + safe mode + defect memory" src="../../docs/Torque_convertor_gears/IMG20250514181430.jpg"></p>
+<h2>Key Facts</h2>
+<ul>
+<li><strong>EGS</strong> = Electronic Gearbox Control = transmission's electronic brain (DME equivalent for AT).</li>
+<li><strong>7 advantages</strong> over hydraulic-only: fewer hydraulic parts, more signals, precise control, wear compensation, flexible shift maps, driving-style detection, fail-safe protection.</li>
+<li><strong>5 sensors</strong>: lever position switch, kickdown switch, vehicle speed, input speed (inductive), ATF temperature.</li>
+<li><strong>4 actuators</strong>: pressure regulator, shift solenoids, lockup clutch, selector-lever interlock.</li>
+<li><strong>Pin-and-socket parking interlock</strong> mechanically locks output in P.</li>
+<li><strong>Signal flow</strong>: input → shift-curve displacement → shift decision → gear shift.</li>
+<li><strong>Failure strategies</strong>: substitute value (calculate from other sensors), safe mode (lock in 4th, line pressure high), defect memory (DTCs logged).</li>
+<li>Reads <strong>many signals via CAN</strong> from DME, ABS, etc.</li>
+<li><strong>Adaptation memory</strong> learns shift-pressure trim values as clutches wear → consistent shift feel over life.</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="01-automatic-transmission-overview.html">Automatic transmission overview</a></li>
+<li><a href="02-torque-converter.html">Torque converter (lockup clutch is EGS-actuated)</a></li>
+<li><a href="04-simpson-ravigneaux-wilson-gear-drives.html">Simpson/Ravigneaux/Wilson gear drives (the gear sets EGS shifts)</a></li>
+<li><a href="06-overrunning-clutch-and-transmission-hydraulics.html">Overrunning clutch + transmission hydraulics (EGS commands the valve body)</a></li>
+<li><a href="../Clutch_brakes_suspensions/03-multi-plate-brake.html">Multi-plate brake/clutch (the apply elements EGS controls)</a></li>
+<li><a href="../Engine_systems/N42/09-engine-management-vanos-control-o2-loop.html">Engine management — DME architecture (analog)</a></li>
+<li><a href="../Engine_systems/N42/10-diagnosis-process-dis-and-test-plan.html">Diagnosis process — DIS reads EGS defect memory</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] The page is <strong>densely packed</strong> with sensor boxes and actuator boxes around a central "EGS" box — interpretation of which boxes are sensors vs actuators above is best-effort from positions and labels.</li>
+<li>[?] <strong>"AC function"</strong> box — interpreted as "AC compressor coordination" (EGS tells AC to shed load momentarily during a shift for smoothness, or AC tells EGS to hold higher gear when compressor is loading the engine). Could also be a tag for the BMW AC compressor's CAN ID.</li>
+<li>[?] <strong>"P R N D S 4 3 2 1"</strong> label — typical BMW lever positions of the era. Modern BMWs have replaced 4/3/2/1 with paddle shifters and a Manual mode.</li>
+<li>[?] <strong>"Various control plug &amp; switches"</strong> generic annotation — refers to the various electrical connectors in/out of EGS. Not a specific component.</li>
+<li>[?] <strong>"changing characteristic of clutch pads &amp; friction"</strong> annotation — interpreted as the adaptation value system that trims pressure as clutches wear.</li>
+<li>[?] The signal-flow pipeline in IMG 181430 omits the <strong>fault-checking</strong> branch — added in the architecture diagram above.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Torque Converter &amp; Gears</a>
+      <span class="spacer"></span>
+      <a href="../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 3.4 — The range-for loop · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .t11 { color: #fde047; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+  .badge11 { display: inline-block; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; letter-spacing: 0.4px; vertical-align: middle; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .prec-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  .prec-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .prec-table th, .prec-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .prec-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .prec-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .prec-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Range-for visualizer */
+  .mode-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .mode-btn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 12px; font: inherit; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .mode-btn:hover { border-color: var(--purple); transform: translateY(-2px); }
+  .mode-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .mode-btn.tried { box-shadow: inset 0 0 0 2px var(--green); }
+  .rf-code { background: var(--terminal); border-radius: 12px; padding: 14px 16px; font-family: var(--mono); font-size: 13.5px; line-height: 1.7; color: #e0e7ff; margin-bottom: 14px; }
+  .rf-code .kw { color: #c4b5fd; font-weight: 700; }
+  .rf-code .hlvar { color: #fde047; font-weight: 700; }
+  .rf-code .cm { color: #818cf8; font-style: italic; }
+  .rf-code.err { border: 2px solid var(--red); }
+  .vec-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .vec-label { font-family: var(--mono); font-size: 13px; color: var(--ink-dim); font-weight: 700; }
+  .vec { display: flex; gap: 6px; }
+  .vbox { width: 52px; height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; font-size: 17px; background: white; border: 2px solid var(--purple-light); color: var(--ink); transition: all 0.25s var(--bouncy); }
+  .vbox.cur { border-color: var(--purple); background: linear-gradient(135deg, #ede9fe, #ddd6fe); transform: translateY(-4px) scale(1.06); box-shadow: var(--shadow); }
+  .vbox.changed { border-color: var(--green); background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #166534; }
+  .xchip { display: inline-flex; align-items: center; gap: 8px; background: white; border: 2px dashed var(--purple-light); border-radius: 10px; padding: 6px 12px; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); }
+  .rf-buttons { display: flex; gap: 8px; margin: 14px 0 0; }
+  .sbtn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 10px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .sbtn:hover:not(:disabled) { transform: translateY(-2px); }
+  .sbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .sbtn.ghost { background: white; color: var(--ink-soft); border: 2px solid var(--bg3); }
+  .rf-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); min-height: 40px; background: rgba(255,255,255,0.6); border-radius: 10px; padding: 10px 14px; line-height: 1.5; }
+  .rf-msg .err { color: var(--red); font-weight: 700; }
+  .rf-msg .ok { color: #166534; font-weight: 700; }
+
+  /* capture picker */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-text { font-size: 14.5px; color: var(--ink); line-height: 1.5; }
+  .scenario-text code { font-size: 0.92em; }
+  .cap-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .capbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 14px; font: inherit; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .capbtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .capbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .capbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .cap-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    The range-for visits every element — no index, no off-by-one. But mind copy vs reference! 🔁
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 3.4</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 22 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🔁 PART III &middot; MAKING DECISIONS</span>
+    <h1>The range-for Loop</h1>
+    <p class="hero-sub">When you just want to visit every element of a container, the range-<code>for</code> (C++11) does it with no index, no <code>size()</code>, and no off-by-one. The one thing to master: whether your loop variable is a <strong>copy</strong> or a <strong>reference</strong>.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Visit everything, skip the bookkeeping 🧠</h2>
+
+    <div class="new-content">
+      Last lesson you walked a container with an index: <code>for (int i = 0; i &lt; v.size(); i++)</code>, then used <code>v[i]</code> inside. It works, but it's fiddly — you manage a counter, get the <code>&lt;</code> vs <code>&lt;=</code> right, and write <code>v[i]</code> everywhere. The <strong>range-<code>for</code></strong> (C++11) says what you actually mean: "for each element in this container, do this."
+    </div>
+
+    <p>When all you need is to touch every element in order — printing, summing, transforming — the range-<code>for</code> is shorter, clearer, and impossible to get an off-by-one wrong, because there's no index to misjudge. It's the loop you'll write most often in modern C++. There's just one concept that makes or breaks it, and it's the whole reason this lesson exists: <strong>copy versus reference</strong>.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The syntax</div>
+    <h2>for each element 🔁</h2>
+
+    <pre class="code">std::vector&lt;<span class="kw">int</span>&gt; scores = {90, 75, 60};
+
+<span class="kw">for</span> (<span class="t11">int s : scores</span>) {
+    std::cout &lt;&lt; s &lt;&lt; <span class="str">' '</span>;
+}                          <span class="cm">// 90 75 60</span></pre>
+
+    <p>Read <code>for (int s : scores)</code> as "<strong>for each</strong> <code>int s</code> <strong>in</strong> <code>scores</code>." Each time around, <code>s</code> takes the value of the next element. No counter, no <code>[i]</code>, no condition to write — the loop knows when to stop because it knows where the container ends.</p>
+
+    <div class="new-content">
+      In practice you'll usually write <code>auto</code> instead of spelling out the element type, so the compiler figures it out: <code>for (auto s : scores)</code>. That's the idiomatic form. It reads cleanly and adapts if the container's element type ever changes. The range-<code>for</code> works on <code>std::vector</code>, <code>std::string</code>, plain arrays, <code>std::map</code>, initializer lists like <code>{1, 2, 3}</code> — anything that knows its own beginning and end.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Copy vs reference</div>
+    <h2>The one thing that matters ⭐</h2>
+
+    <p>By default, the loop variable is a <strong>copy</strong> of each element. That means changing it inside the loop does <em>not</em> change the container:</p>
+
+    <pre class="code"><span class="kw">for</span> (<span class="kw">auto</span> s : scores) {
+    s += 10;          <span class="cm">// changes the COPY, not the vector</span>
+}
+<span class="cm">// scores is unchanged: still {90, 75, 60}</span></pre>
+
+    <p>To actually modify the elements, ask for a <strong>reference</strong> with <code>&amp;</code> — now the loop variable <em>is</em> the element, not a copy of it:</p>
+
+    <pre class="code"><span class="kw">for</span> (<span class="kw">auto</span>&amp; s : scores) {
+    s += 10;          <span class="cm">// changes the REAL element</span>
+}
+<span class="cm">// scores is now {100, 85, 70}</span></pre>
+
+    <table class="prec-table">
+      <thead><tr><th>Form</th><th>What <code>s</code> is</th><th>Modifies container?</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">for (auto s : v)</td><td>A copy of each element</td><td>No</td></tr>
+        <tr><td class="mono">for (auto&amp; s : v)</td><td>A reference to the element</td><td><strong>Yes</strong></td></tr>
+        <tr><td class="mono">for (const auto&amp; s : v)</td><td>A read-only reference</td><td>No (and no copy)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      The third form, <strong><code>const auto&amp;</code></strong>, is the one seasoned C++ programmers reach for when they only need to <em>read</em>. It avoids copying each element (which matters a lot for big types like <code>std::string</code> or large structs) <em>and</em> guarantees you won't accidentally modify them. The Range-for Visualizer below lets you flip between all three and watch what happens to the vector.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Which form to use</div>
+    <h2>A simple rule of thumb 🎯</h2>
+
+    <table class="prec-table">
+      <thead><tr><th>You want to…</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td>Modify each element in place</td><td class="mono">for (auto&amp; x : v)</td></tr>
+        <tr><td>Read each element, no copying (especially big types)</td><td class="mono">for (const auto&amp; x : v)</td></tr>
+        <tr><td>Read small, cheap values (<code>int</code>, <code>char</code>) — copy is fine</td><td class="mono">for (auto x : v)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      A safe default that's hard to get wrong: <strong>if you're only reading, use <code>const auto&amp;</code>.</strong> It's never wrong (no copy, no accidental change), and for small types the compiler optimizes away any overhead. Reach for plain <code>auto&amp;</code> when you specifically need to write to the elements, and plain <code>auto</code> only when you actually want a throwaway copy to mess with.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> When NOT to use range-for</div>
+    <h2>The limits 🚧</h2>
+
+    <p>The range-<code>for</code> is perfect for "visit every element," but it deliberately hides the index — so it's the wrong tool when you actually need that machinery:</p>
+
+    <ul>
+      <li><strong>You need the position.</strong> "Print element 3" or "compare <code>v[i]</code> with <code>v[i+1]</code>" needs an index — use a classic <code>for</code>.</li>
+      <li><strong>You're not visiting all of them.</strong> Every other element, the first half, backwards — the indexed <code>for</code> gives you that control.</li>
+      <li><strong>You change the container's size while looping.</strong> Adding or removing elements during a range-<code>for</code> can break it. Don't resize mid-loop.</li>
+    </ul>
+
+    <div class="trap">
+      <h4>🚨 The silent copy that does nothing</h4>
+      <p>The most common range-<code>for</code> bug: you write <code>for (auto x : v) x = something;</code> meaning to change the container, but <code>x</code> is a copy, so the container is untouched and your loop does nothing visible. If you meant to modify, you needed <code>auto&amp;</code>. The compiler won't warn you — the code is perfectly legal, just pointless.</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Range-for Lab</div>
+    <h2>Copy, reference, or const? 🔬</h2>
+
+    <p>Two tools. The <strong>Range-for Visualizer</strong> runs <code>x *= 2</code> over a vector — flip between <code>auto</code>, <code>auto&amp;</code>, and <code>const auto&amp;</code> and watch whether the vector actually changes. <strong>Pick the Capture</strong> asks which form fits each goal.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🔁 Range-for Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 5 picked</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="viz">Range-for Visualizer</button>
+        <button class="tab-btn" data-tab="pick">Pick the Capture</button>
+      </div>
+
+      <!-- VISUALIZER -->
+      <div class="tab-panel active" id="tab-viz">
+        <div class="mode-row">
+          <button class="mode-btn active" data-mode="copy">auto x</button>
+          <button class="mode-btn" data-mode="ref">auto&amp; x</button>
+          <button class="mode-btn" data-mode="constref">const auto&amp; x</button>
+        </div>
+        <div class="rf-code" id="rfCode"></div>
+        <div class="vec-wrap">
+          <span class="vec-label">v =</span>
+          <div class="vec" id="vecBoxes"></div>
+        </div>
+        <div class="vec-wrap">
+          <span class="vec-label">x =</span>
+          <span class="xchip" id="xChip">—</span>
+        </div>
+        <div class="rf-buttons">
+          <button class="sbtn" id="rfStep">▶ Step</button>
+          <button class="sbtn ghost" id="rfReset">↺ Reset</button>
+        </div>
+        <div class="rf-msg" id="rfMsg">Pick a capture mode, then Step through the loop.</div>
+      </div>
+
+      <!-- PICK THE CAPTURE -->
+      <div class="tab-panel" id="tab-pick">
+        <div class="scenario">
+          <div class="scenario-num" id="capNum">Goal 1 / 5</div>
+          <div class="scenario-text" id="capText"></div>
+        </div>
+        <div class="cap-btns" id="capBtns">
+          <button class="capbtn" data-c="auto">auto x</button>
+          <button class="capbtn" data-c="ref">auto&amp; x</button>
+          <button class="capbtn" data-c="constref">const auto&amp; x</button>
+        </div>
+        <div class="cap-fb" id="capFb">Which capture fits this goal?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="capNext" disabled>Next goal →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        After this loop, what does <code>v</code> contain?
+        <pre>std::vector&lt;int&gt; v = {1, 2, 3};
+for (int x : v)
+    x *= 10;</pre>
+      </div>
+      <button class="opt" data-correct="true"><span><code>{1, 2, 3}</code> — unchanged</span></button>
+      <button class="opt" data-correct="false"><span><code>{10, 20, 30}</code></span></button>
+      <button class="opt" data-correct="false"><span>Compile error</span></button>
+      <button class="opt" data-correct="false"><span><code>{0, 0, 0}</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: <code>int x</code> (no <code>&amp;</code>) — is <code>x</code> a copy of each element, or the element itself?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">📋</div>
+      <div class="mistake-body">
+        <strong>Expecting <code>auto x</code> to modify the container</strong>
+        <small><code>for (auto x : v) x = ...;</code> changes only the copy — the container is untouched. To modify in place, use <code>auto&amp;</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🐘</div>
+      <div class="mistake-body">
+        <strong>Copying big elements for no reason</strong>
+        <small><code>for (auto s : bigStrings)</code> copies every string each iteration. If you're only reading, use <code>const auto&amp; s</code> — no copies, and it can't be accidentally modified.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🚧</div>
+      <div class="mistake-body">
+        <strong>Resizing the container mid-loop</strong>
+        <small>Adding or removing elements during a range-<code>for</code> can invalidate it and crash. If you need to change the size while iterating, use a classic indexed loop and be careful.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Sum a vector.</strong> Given <code>std::vector&lt;int&gt; nums = {4, 8, 15, 16, 23, 42}</code>, use a range-<code>for</code> with <code>const auto&amp;</code> to add them all up and print the total.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Double in place.</strong> Take a <code>std::vector&lt;int&gt;</code> and double every element <em>in the vector itself</em> using a range-<code>for</code>. Print it before and after to prove it changed — then switch your loop to <code>auto</code> (no <code>&amp;</code>) and confirm the change vanishes.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Count vowels in a string.</strong> Loop over a <code>std::string</code> with a range-<code>for</code> (a string is a container of <code>char</code>). For each character, check if it's a vowel and count it. Use <code>const auto&amp;</code> since you're only reading.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong><code>for (auto x : container)</code></strong> visits every element in order — no index, no off-by-one (C++11).</li>
+        <li><strong>Default is a copy:</strong> changing <code>x</code> doesn't change the container.</li>
+        <li><strong>Use <code>auto&amp;</code> to modify</strong> elements in place; <strong><code>const auto&amp;</code> to read</strong> without copying.</li>
+        <li><strong>Safe default for read-only loops:</strong> <code>const auto&amp;</code> — never wrong, never copies.</li>
+        <li><strong>Use a classic <code>for</code></strong> when you need the index, skip elements, or change the container's size.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_3_3.html" class="nav-btn prev">
+      <small>← Previous</small>
+      3.3  while, do-while, for
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      3.5  break, continue
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "The range-for visits every element — no index, no off-by-one. But mind copy vs reference! 🔁",
+    "Read <code>for (auto s : v)</code> as \"for each s in v.\" No counter needed! 🔁",
+    "Default is a COPY. Want to modify? Add <code>&amp;</code> for a reference! ⭐",
+    "Safe default for reading: <code>const auto&amp;</code> — no copy, no accidental change. 🎯",
+    "Need the index, or to resize mid-loop? Use a classic <code>for</code> instead. 🚧",
+    "Flip copy / ref / const-ref and watch whether the vector changes! 🔬",
+    "<code>int x</code> with no <code>&amp;</code> — copy or the real element? 🎯",
+    "Three traps, three exercises. The silent-copy bug catches everyone! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 3.4 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPixel = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentPixel) { currentPixel = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Range-for Visualizer =====
+  const ORIG = [3, 5, 8, 4];
+  let VEC = ORIG.slice();
+  let mode = 'copy';   // 'copy' | 'ref' | 'constref'
+  let idx = -1;        // current element index, -1 = not started
+  let rfDone = false;
+  const modesTried = new Set();
+  const rfCode = document.getElementById('rfCode');
+  const vecBoxes = document.getElementById('vecBoxes');
+  const xChip = document.getElementById('xChip');
+  const rfMsg = document.getElementById('rfMsg');
+  const rfStep = document.getElementById('rfStep');
+
+  function modeDecl() {
+    return mode === 'copy' ? 'auto x' : mode === 'ref' ? 'auto&amp; x' : 'const auto&amp; x';
+  }
+  function renderRf(changedIdx) {
+    const isErr = mode === 'constref';
+    rfCode.className = 'rf-code' + (isErr ? ' err' : '');
+    rfCode.innerHTML =
+      `<span class="kw">for</span> (<span class="hlvar">${modeDecl()}</span> : v) {` +
+      `<br>&nbsp;&nbsp;x *= 2;` + (isErr ? `  <span class="cm">// ❌ x is read-only!</span>` : ``) +
+      `<br>}`;
+    vecBoxes.innerHTML = VEC.map((val, i) => {
+      let cls = 'vbox';
+      if (i === idx && !rfDone) cls += ' cur';
+      if (i === changedIdx) cls += ' changed';
+      return `<div class="${cls}">${val}</div>`;
+    }).join('');
+  }
+  function resetRf() {
+    VEC = ORIG.slice();
+    idx = -1; rfDone = false;
+    rfStep.disabled = false; rfStep.textContent = '▶ Step';
+    xChip.textContent = '—';
+    rfMsg.innerHTML = mode === 'constref'
+      ? 'This loop body <code>x *= 2</code> tries to modify a <span class="err">read-only</span> reference. Click Step to see what the compiler says.'
+      : 'Pick a capture mode, then Step through the loop.';
+    renderRf();
+  }
+
+  rfStep.addEventListener('click', () => {
+    if (rfDone) return;
+    if (mode === 'constref') {
+      rfDone = true; rfStep.disabled = true; rfStep.textContent = '✗ Error';
+      rfCode.classList.add('err');
+      rfMsg.innerHTML = '<span class="err">❌ Compile error:</span> assignment of read-only reference <code>x</code>. With <code>const auto&amp;</code>, <code>x</code> can be <em>read</em> but never written — so <code>x *= 2</code> is rejected. (That\'s the point: it guarantees you won\'t change anything.)';
+      return;
+    }
+    idx++;
+    if (idx >= VEC.length) {
+      rfDone = true; rfStep.disabled = true; rfStep.textContent = '✓ Done';
+      xChip.textContent = '—';
+      if (mode === 'ref') rfMsg.innerHTML = '<span class="ok">✅ Done.</span> With <code>auto&amp;</code>, <code>x</code> was a reference to each element — so <code>x *= 2</code> doubled the <strong>real</strong> vector. v is now changed.';
+      else rfMsg.innerHTML = '<span class="ok">Done.</span> With <code>auto</code>, <code>x</code> was a <strong>copy</strong> each time — doubling it changed only the copy. The vector is <strong>unchanged</strong>: ' + JSON.stringify(VEC).replace(/\[|\]/g, m => m === '[' ? '{' : '}') + '.';
+      renderRf();
+      return;
+    }
+    const cur = VEC[idx];
+    const doubled = cur * 2;
+    if (mode === 'ref') {
+      VEC[idx] = doubled;
+      xChip.textContent = 'x → ' + doubled;
+      rfMsg.innerHTML = `<strong>Element ${idx}:</strong> <code>x</code> <em>is</em> <code>v[${idx}]</code> (a reference). <code>x *= 2</code> → <strong>${cur} becomes ${doubled}</strong> in the vector.`;
+      renderRf(idx);
+    } else {
+      xChip.textContent = 'x = ' + cur + ' → ' + doubled + ' (copy)';
+      rfMsg.innerHTML = `<strong>Element ${idx}:</strong> <code>x</code> is a <em>copy</em> of <code>${cur}</code>. <code>x *= 2</code> makes the copy ${doubled}, but <code>v[${idx}]</code> stays <strong>${cur}</strong>.`;
+      renderRf();
+    }
+  });
+  document.getElementById('rfReset').addEventListener('click', resetRf);
+  document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', (e) => {
+    document.querySelectorAll('.mode-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    mode = b.dataset.mode;
+    if (!modesTried.has(mode)) { modesTried.add(mode); b.classList.add('tried'); addXP(4, e.clientX, e.clientY); if (modesTried.size === 3) { burst(); addXP(10, window.innerWidth/2, 260, '🔁 All 3 captures explored! +10 XP'); } }
+    resetRf();
+  }));
+  resetRf();
+
+  // ===== Pick the Capture =====
+  const CAPS = [
+    { text: 'Double every number in a <code>vector&lt;int&gt;</code> <strong>in place</strong>.', answer: 'ref', why: 'You\'re modifying the elements, so you need a reference: <code>auto&amp;</code>.' },
+    { text: 'Print each <code>std::string</code> in a big vector, <strong>changing nothing</strong>.', answer: 'constref', why: 'Read-only and the elements are big — <code>const auto&amp;</code> avoids copies and forbids changes.' },
+    { text: 'Sum a <code>vector&lt;int&gt;</code>; you only read each value (small, cheap).', answer: 'constref', why: 'Read-only → <code>const auto&amp;</code> is the safe default. (Plain <code>auto</code> copy is also fine for tiny ints.)' },
+    { text: 'Add 1 to every score in a <code>vector&lt;int&gt;</code>.', answer: 'ref', why: 'Modifying in place again → <code>auto&amp;</code>.' },
+    { text: 'You want a throwaway copy of each element to tweak, <strong>without</strong> touching the vector.', answer: 'auto', why: 'You deliberately want a private copy to change freely → plain <code>auto</code>.' }
+  ];
+  let capIdx = 0;
+  const capAnswered = new Set();
+  const capText = document.getElementById('capText');
+  const capNum = document.getElementById('capNum');
+  const capBtns = document.querySelectorAll('#capBtns .capbtn');
+  const capFb = document.getElementById('capFb');
+  const capNext = document.getElementById('capNext');
+
+  function loadCap() {
+    const s = CAPS[capIdx];
+    capText.innerHTML = s.text;
+    capNum.textContent = `Goal ${capIdx + 1} / ${CAPS.length}`;
+    capBtns.forEach(b => { b.classList.remove('right', 'wrong'); b.disabled = false; });
+    capFb.innerHTML = 'Which capture fits this goal?';
+    capNext.disabled = true;
+    capNext.textContent = capIdx < CAPS.length - 1 ? 'Next goal →' : 'Restart ↺';
+  }
+  capBtns.forEach(b => b.addEventListener('click', (e) => {
+    const s = CAPS[capIdx];
+    if (b.dataset.c === s.answer) {
+      b.classList.add('right');
+      capFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      capBtns.forEach(x => x.disabled = true);
+      capNext.disabled = false;
+      if (!capAnswered.has(capIdx)) {
+        capAnswered.add(capIdx);
+        playCount.textContent = capAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (capAnswered.size === CAPS.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 5 captures nailed! +20 XP'); }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      capFb.innerHTML = `❌ Not quite. Ask two questions: am I modifying the elements? and are they big enough that a copy would be wasteful?`;
+      breakStreak();
+    }
+  }));
+  capNext.addEventListener('click', () => { capIdx = (capIdx + 1) % CAPS.length; loadCap(); });
+  loadCap();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>int x</code> has no <code>&amp;</code>, so <code>x</code> is a <em>copy</em> of each element. <code>x *= 10</code> changes only the copy, which is thrown away at the end of each iteration. The vector stays <code>{1, 2, 3}</code>. To actually multiply the elements, you\'d need <code>for (int&amp; x : v)</code> (or <code>auto&amp;</code>).'
+        : '✓ <strong style="color: var(--green)">Right.</strong> No <code>&amp;</code> means <code>x</code> is a copy — the vector is unchanged: <code>{1, 2, 3}</code>.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. <code>int x</code> (no <code>&amp;</code>) makes <code>x</code> a <em>copy</em> of each element. Modifying a copy doesn\'t touch the container. So what stays in <code>v</code>?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

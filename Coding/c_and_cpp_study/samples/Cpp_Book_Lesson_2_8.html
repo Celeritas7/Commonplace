@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.8 — Namespaces and using · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .prec-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  .prec-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .prec-table th, .prec-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .prec-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .prec-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .prec-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 NAMESPACE TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Name resolver */
+  .resolver-setup { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-family: var(--mono); font-size: 13px; color: var(--ink); line-height: 1.7; }
+  .resolver-setup .ns { color: var(--purple-deep); font-weight: 700; }
+  .resolver-setup .cm { color: var(--ink-dim); font-style: italic; }
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .ntoggle { display: flex; align-items: center; gap: 10px; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 10px 16px; cursor: pointer; font-family: var(--mono); font-weight: 700; font-size: 13px; transition: all 0.2s var(--bouncy); user-select: none; }
+  .ntoggle:hover { border-color: var(--purple); }
+  .ntoggle.on { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ntoggle .box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--purple-light); display: flex; align-items: center; justify-content: center; font-size: 12px; background: white; color: var(--purple-deep); }
+  .ntoggle.on .box { background: white; border-color: white; }
+  .call-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+  .call-label { font-size: 12px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .call-btn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 14px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .call-btn:hover { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .call-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .resolver-out { background: var(--terminal); color: #e0e7ff; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 14px; min-height: 92px; }
+  .resolver-out .label { color: #a5b4fc; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .resolver-out .call { color: #c4b5fd; font-size: 16px; margin: 6px 0 10px; }
+  .resolver-out .res-ok { color: #86efac; font-size: 15px; font-weight: 700; }
+  .resolver-out .res-err { color: #fca5a5; font-size: 15px; font-weight: 700; }
+  .resolver-out .why { color: #c7d2fe; font-style: italic; font-family: var(--sans); font-size: 13px; margin-top: 8px; line-height: 1.55; }
+
+  /* Best practice */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-text { font-size: 14.5px; color: var(--ink); line-height: 1.5; }
+  .scenario-text code { font-size: 0.92em; }
+  .verdict-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .vbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .vbtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .vbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .vbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .bp-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Ever wondered why it's <code>std::cout</code> and not just <code>cout</code>? Namespaces! 🗂️
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 2.8</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 18 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II &middot; CORE LANGUAGE</span>
+    <h1>Namespaces and using</h1>
+    <p class="hero-sub">Why is it <code>std::cout</code> and not just <code>cout</code>? Because <code>cout</code> lives in a namespace called <code>std</code>. Namespaces keep names from colliding in big programs — and <code>using</code> lets you drop the prefix, carefully. Let's demystify the <code>::</code> you've been typing since lesson one.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Big programs run out of good names 💭</h2>
+
+    <div class="new-content">
+      Imagine two libraries you're using both define a function called <code>log()</code> — one writes to a logfile, the other computes a logarithm. In one big pile of names, that's a collision: the compiler can't tell which <code>log</code> you mean. A <strong>namespace</strong> is a named container for names, so each library can keep its own <code>log</code> tucked away as <code>logging::log</code> and <code>math::log</code> — no clash.
+    </div>
+
+    <p>That's exactly why the standard library lives in the namespace <code>std</code>. Every standard name — <code>cout</code>, <code>string</code>, <code>vector</code>, <code>sort</code> — is really <code>std::cout</code>, <code>std::string</code>, and so on. The <code>::</code> is the <strong>scope resolution operator</strong>: it means "the name on the right, found inside the namespace on the left." Once you see <code>std::</code> as "the standard library's <code>cout</code>," the syntax stops being mysterious and becomes a label.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> Defining a namespace</div>
+    <h2>Your own labeled container 🗂️</h2>
+
+    <p>You can make your own namespace just by wrapping declarations in a <code>namespace</code> block:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">namespace audio {<br>&nbsp;&nbsp;void play();<br>}</td><td class="plain">Declares <code>audio::play</code></td></tr>
+        <tr><td class="mono">namespace video {<br>&nbsp;&nbsp;void play();<br>}</td><td class="plain">A separate <code>video::play</code></td></tr>
+        <tr><td class="mono">audio::play();</td><td class="plain">Calls the one in <code>audio</code></td></tr>
+        <tr><td class="mono">video::play();</td><td class="plain">Calls the one in <code>video</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      Both namespaces can have a <code>play()</code> without conflict — the full name (<code>audio::play</code> vs <code>video::play</code>) keeps them distinct. This is how large codebases stay organized: each module gets its own namespace, and names only ever clash if you ask for the short form without saying which one you mean.
+    </div>
+
+    <p>Namespaces can also nest (<code>company::project::module</code>), and the same namespace can be reopened in multiple files — every <code>namespace audio { ... }</code> block across your project adds to the same <code>audio</code>. That's how the whole standard library shares one <code>std</code>.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Getting at the names</div>
+    <h2>Three ways to reach a name 🔑</h2>
+
+    <p>Once a name lives in a namespace, you have three ways to use it:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Approach</th><th>Example</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Qualified name</strong></td><td class="mono">std::cout &lt;&lt; x;</td><td>Spell it out every time — explicit, zero ambiguity</td></tr>
+        <tr><td><strong>using declaration</strong></td><td class="mono">using std::cout;</td><td>Bring in <em>one</em> name; now <code>cout</code> alone works</td></tr>
+        <tr><td><strong>using directive</strong></td><td class="mono">using namespace std;</td><td>Bring in <em>everything</em> from the namespace</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      The <strong>using declaration</strong> (<code>using std::cout;</code>) is the surgical option — it pulls in exactly the one name you want, so you get the convenience of <code>cout</code> without dragging in all 1,000+ other standard names. The <strong>using directive</strong> (<code>using namespace std;</code>) is the firehose — it makes <em>every</em> name in the namespace available unqualified. Convenient in a tiny program, risky in a big one, as we'll see next.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The "using namespace std" debate</div>
+    <h2>Convenience vs. collisions ⚖️</h2>
+
+    <p>You'll see <code>using namespace std;</code> at the top of countless tutorials, and it's fine in a 20-line learning program. But experienced C++ programmers avoid it in real code — especially in <strong>header files</strong> — for one reason: it dumps every standard name into your scope, and that invites collisions you didn't expect.</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Place</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Tiny program / single function</td><td class="plain">😌 Fine — convenience wins</td></tr>
+        <tr><td>A <code>.cpp</code> source file</td><td class="plain">🤔 Tolerable, but prefer qualifying</td></tr>
+        <tr><td>A header (<code>.h</code> / <code>.hpp</code>)</td><td class="plain">🚫 Avoid — it leaks into every file that includes it</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      The header case is the real danger: a <code>using namespace std;</code> in a header silently forces it on <em>every</em> file that <code>#include</code>s that header, whether they wanted it or not. If your code defines its own <code>count</code> or <code>distance</code> or <code>size</code>, it can suddenly clash with <code>std::count</code>, <code>std::distance</code>, <code>std::size</code>. The fix is boring but bulletproof: write <code>std::</code> in headers, and use targeted <code>using std::cout;</code> declarations when you want brevity.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> When names collide</div>
+    <h2>Ambiguity is a compile error 🧩</h2>
+
+    <div class="trap">
+      <h4>🚨 Two using directives, one name → ambiguous</h4>
+      <p>If you write <code>using namespace audio;</code> and <code>using namespace video;</code>, and both define <code>play()</code>, then a bare <code>play();</code> is <strong>ambiguous</strong> — the compiler errors with "call to 'play' is ambiguous." It won't guess. The cure: qualify the call — <code>audio::play();</code> — to say exactly which one you mean.</p>
+    </div>
+
+    <p>This is the heart of the trade-off. Qualified names can never be ambiguous, because you've named the namespace explicitly. <code>using</code> trades that safety for brevity, and the more you pull in, the more chance two names overlap. The Name Resolver below lets you toggle <code>using</code> directives and watch a bare call resolve cleanly — or break with an ambiguity error.</p>
+
+    <div class="new-content">
+      One handy tool for the brevity-without-risk case: a <strong>namespace alias</strong>. <code>namespace fs = std::filesystem;</code> lets you write <code>fs::path</code> instead of the long form, without importing anything globally. You get a short label that's still explicit about where the name comes from.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Namespace Lab</div>
+    <h2>Resolve names and pick best practice 🔬</h2>
+
+    <p>Two tools. The <strong>Name Resolver</strong> has two namespaces that both define <code>play()</code>; toggle <code>using</code> directives and a call, and watch what resolves — or collides. <strong>Best Practice</strong> asks you to judge where <code>using namespace std;</code> belongs.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🗂️ Namespace Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 placements</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="resolve">Name Resolver</button>
+        <button class="tab-btn" data-tab="best">Best Practice</button>
+      </div>
+
+      <!-- RESOLVER -->
+      <div class="tab-panel active" id="tab-resolve">
+        <div class="resolver-setup">
+          <span class="ns">namespace audio</span> { void play(); <span class="cm">// prints "🔊 audio"</span> }<br>
+          <span class="ns">namespace video</span> { void play(); <span class="cm">// prints "🎬 video"</span> }
+        </div>
+        <div class="toggle-row">
+          <div class="ntoggle" id="tgAudio"><span class="box" id="boxAudio"></span> using namespace audio;</div>
+          <div class="ntoggle" id="tgVideo"><span class="box" id="boxVideo"></span> using namespace video;</div>
+        </div>
+        <div class="call-row">
+          <span class="call-label">Call:</span>
+          <button class="call-btn active" data-call="play">play();</button>
+          <button class="call-btn" data-call="audio::play">audio::play();</button>
+          <button class="call-btn" data-call="video::play">video::play();</button>
+        </div>
+        <div class="resolver-out" id="resolverOut"></div>
+      </div>
+
+      <!-- BEST PRACTICE -->
+      <div class="tab-panel" id="tab-best">
+        <div class="scenario">
+          <div class="scenario-num" id="bpNum">Placement 1 / 4</div>
+          <div class="scenario-text" id="bpText"></div>
+        </div>
+        <div class="verdict-btns" id="bpBtns">
+          <button class="vbtn" data-v="ok">😌 Fine here</button>
+          <button class="vbtn" data-v="avoid">🚫 Avoid here</button>
+        </div>
+        <div class="bp-fb" id="bpFb">Is <code>using namespace std;</code> a good idea in this spot?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="bpNext" disabled>Next placement →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        Both namespaces define <code>greet()</code>. What happens?
+        <pre>namespace en { void greet(); }  // "Hello"
+namespace fr { void greet(); }  // "Bonjour"
+
+using namespace en;
+using namespace fr;
+
+int main() {
+    greet();
+}</pre>
+      </div>
+      <button class="opt" data-correct="false"><span>Prints <code>Hello</code></span></button>
+      <button class="opt" data-correct="false"><span>Prints <code>Bonjour</code></span></button>
+      <button class="opt" data-correct="true"><span>Compile error — <code>greet</code> is ambiguous</span></button>
+      <button class="opt" data-correct="false"><span>Prints both</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: two using directives brought both <code>greet</code>s into scope. Can the compiler tell which one you mean?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">📂</div>
+      <div class="mistake-body">
+        <strong><code>using namespace std;</code> in a header</strong>
+        <small>It leaks into every file that includes the header, forcing the whole <code>std</code> namespace on code that never asked for it. In headers, always qualify with <code>std::</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">💥</div>
+      <div class="mistake-body">
+        <strong>Pulling in two namespaces with overlapping names</strong>
+        <small>Two <code>using namespace</code> directives that share a name make a bare call ambiguous — a compile error. Qualify the call (<code>audio::play()</code>) to disambiguate.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🏷️</div>
+      <div class="mistake-body">
+        <strong>Reaching for the firehose when you need a scalpel</strong>
+        <small>Want just <code>cout</code> and <code>endl</code> without typing <code>std::</code>? Use <code>using std::cout;</code> — a targeted declaration — instead of importing all of <code>std</code> with a directive.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Qualify it.</strong> Take a small program that uses <code>using namespace std;</code> and rewrite it to qualify every standard name with <code>std::</code> instead. Count how many <code>std::</code> you needed — that's how many names you were importing implicitly.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Build a namespace.</strong> Write a namespace <code>geometry</code> with two functions, <code>area()</code> and <code>perimeter()</code>. Call them from <code>main</code> two ways: fully qualified (<code>geometry::area()</code>), and with a <code>using geometry::area;</code> declaration. Verify both compile in your head, then in a compiler.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Cause and cure a clash.</strong> Make two namespaces that each define <code>distance()</code>, pull both in with using directives, and call <code>distance()</code> unqualified to trigger the ambiguity error. Then fix it two ways: by qualifying the call, and by using a namespace alias. Confirm with the Name Resolver.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>A namespace is a named container for names</strong> — it stops collisions in big programs. The standard library lives in <code>std</code>.</li>
+        <li><strong><code>::</code> is scope resolution:</strong> <code>std::cout</code> means "the <code>cout</code> inside <code>std</code>."</li>
+        <li><strong>Three ways in:</strong> qualified (<code>std::cout</code>), using declaration (<code>using std::cout;</code> — one name), using directive (<code>using namespace std;</code> — everything).</li>
+        <li><strong>Avoid <code>using namespace std;</code> in headers</strong> — it leaks into every includer. Qualify, or use targeted declarations.</li>
+        <li><strong>Two directives + a shared name = ambiguity error.</strong> Qualify the call, or use a namespace alias for short-but-explicit names.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_2_7.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.7  const and immutability
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      3.1  if, else, and if-init (C++17)
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Ever wondered why it's <code>std::cout</code> and not just <code>cout</code>? Namespaces! 🗂️",
+    "A namespace is a named container for names. <code>audio::play</code> ≠ <code>video::play</code>. 📦",
+    "Three ways in: qualify it, using declaration (one name), using directive (everything). 🔑",
+    "<code>using namespace std;</code> is fine in tiny programs — never in headers! ⚖️",
+    "Two using directives sharing a name → ambiguous. The compiler won't guess. 🧩",
+    "Toggle the using directives — watch <code>play()</code> resolve or collide! 🔬",
+    "Two <code>greet</code>s in scope at once — can the compiler pick one? 🎯",
+    "Three traps, three exercises. Qualify in headers, always! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 2.8 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPixel = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentPixel) { currentPixel = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Name Resolver =====
+  let useAudio = false, useVideo = false, currentCall = 'play';
+  const tgAudio = document.getElementById('tgAudio'), tgVideo = document.getElementById('tgVideo');
+  const boxAudio = document.getElementById('boxAudio'), boxVideo = document.getElementById('boxVideo');
+  const resolverOut = document.getElementById('resolverOut');
+
+  function renderResolver() {
+    let resHtml, why;
+    if (currentCall === 'audio::play') {
+      resHtml = '<span class="res-ok">✅ calls audio::play() → 🔊 audio</span>';
+      why = 'A qualified call always works and is never ambiguous — you named the namespace explicitly.';
+    } else if (currentCall === 'video::play') {
+      resHtml = '<span class="res-ok">✅ calls video::play() → 🎬 video</span>';
+      why = 'A qualified call always works and is never ambiguous — you named the namespace explicitly.';
+    } else {
+      // bare play()
+      if (useAudio && useVideo) {
+        resHtml = '<span class="res-err">❌ error: call to \'play\' is ambiguous</span>';
+        why = 'Both using directives brought a play() into scope. The compiler can\'t choose — qualify the call to fix it.';
+      } else if (useAudio) {
+        resHtml = '<span class="res-ok">✅ calls audio::play() → 🔊 audio</span>';
+        why = 'Only audio\'s play() is visible unqualified, so the bare call resolves to it.';
+      } else if (useVideo) {
+        resHtml = '<span class="res-ok">✅ calls video::play() → 🎬 video</span>';
+        why = 'Only video\'s play() is visible unqualified, so the bare call resolves to it.';
+      } else {
+        resHtml = '<span class="res-err">❌ error: \'play\' was not declared in this scope</span>';
+        why = 'No using directive is active, so the unqualified name isn\'t visible. Qualify it (audio::play) or add a using directive.';
+      }
+    }
+    resolverOut.innerHTML = `
+      <div class="label">Call</div>
+      <div class="call">${currentCall}();</div>
+      <div class="label">Result</div>
+      <div>${resHtml}</div>
+      <div class="why">💡 ${why}</div>
+    `;
+  }
+  tgAudio.addEventListener('click', () => { useAudio = !useAudio; tgAudio.classList.toggle('on', useAudio); boxAudio.textContent = useAudio ? '✓' : ''; renderResolver(); });
+  tgVideo.addEventListener('click', () => { useVideo = !useVideo; tgVideo.classList.toggle('on', useVideo); boxVideo.textContent = useVideo ? '✓' : ''; renderResolver(); });
+  document.querySelectorAll('.call-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.call-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentCall = b.dataset.call;
+    renderResolver();
+  }));
+  renderResolver();
+
+  // ===== Best Practice =====
+  const PLACEMENTS = [
+    { text: 'At the top of a <strong>20-line learning program</strong> with one <code>main()</code>.', answer: 'ok', why: 'In a tiny self-contained program the collision risk is near zero — the convenience is fine.' },
+    { text: 'Inside a widely-included <strong>header file</strong> (<code>.hpp</code>).', answer: 'avoid', why: 'It leaks into every file that includes the header, forcing all of <code>std</code> on code that never asked. Always qualify in headers.' },
+    { text: 'Inside a single <strong>function body</strong> in a <code>.cpp</code> file, scoped to just that function.', answer: 'ok', why: 'Limited to one function\'s scope, the blast radius is small. Tolerable — though qualifying is still cleaner.' },
+    { text: 'At <strong>global scope in a large <code>.cpp</code></strong> that defines its own <code>count</code> and <code>distance</code>.', answer: 'avoid', why: 'Your own <code>count</code>/<code>distance</code> can clash with <code>std::count</code>/<code>std::distance</code>. Qualify, or use targeted using declarations.' }
+  ];
+  let bpIdx = 0;
+  const bpAnswered = new Set();
+  const bpText = document.getElementById('bpText');
+  const bpNum = document.getElementById('bpNum');
+  const bpBtns = document.querySelectorAll('#bpBtns .vbtn');
+  const bpFb = document.getElementById('bpFb');
+  const bpNext = document.getElementById('bpNext');
+
+  function loadBp() {
+    const s = PLACEMENTS[bpIdx];
+    bpText.innerHTML = s.text;
+    bpNum.textContent = `Placement ${bpIdx + 1} / ${PLACEMENTS.length}`;
+    bpBtns.forEach(b => { b.classList.remove('right', 'wrong'); b.disabled = false; });
+    bpFb.innerHTML = 'Is <code>using namespace std;</code> a good idea in this spot?';
+    bpNext.disabled = true;
+    bpNext.textContent = bpIdx < PLACEMENTS.length - 1 ? 'Next placement →' : 'Restart ↺';
+  }
+  bpBtns.forEach(b => b.addEventListener('click', (e) => {
+    const s = PLACEMENTS[bpIdx];
+    if (b.dataset.v === s.answer) {
+      b.classList.add('right');
+      bpFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      bpBtns.forEach(x => x.disabled = true);
+      bpNext.disabled = false;
+      if (!bpAnswered.has(bpIdx)) {
+        bpAnswered.add(bpIdx);
+        playCount.textContent = bpAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(6, e.clientX, e.clientY);
+        bumpStreak();
+        if (bpAnswered.size === PLACEMENTS.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 placements judged! +20 XP'); }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      bpFb.innerHTML = `❌ Not quite. Think about how far the directive's effect spreads — just this scope, or everything downstream?`;
+      breakStreak();
+    }
+  }));
+  bpNext.addEventListener('click', () => { bpIdx = (bpIdx + 1) % PLACEMENTS.length; loadBp(); });
+  loadBp();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Both <code>using namespace</code> directives pull a <code>greet()</code> into scope. The bare call <code>greet()</code> matches two equally — the compiler reports "call to \'greet\' is ambiguous." Fix it with <code>en::greet()</code> or <code>fr::greet()</code>.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Two visible <code>greet</code>s make the unqualified call ambiguous — a compile error until you qualify it.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Both namespaces are pulled in with directives, so <em>two</em> <code>greet</code>s are visible unqualified. What does the compiler do when it can\'t pick one?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.7 — Type Conversion · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13.5px; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+  .op-table tr.high { background: rgba(249, 115, 22, 0.05); }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CLASSIC C TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Mixed-type calculator */
+  .calc-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 14px; }
+  .calc-field { display: flex; flex-direction: column; gap: 4px; }
+  .calc-field label { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .calc-field select, .calc-field input { font-family: var(--mono); font-size: 14px; padding: 9px 11px; border: 2px solid var(--bg3); border-radius: 10px; background: white; color: var(--ink); font-weight: 600; }
+  .calc-field select:focus, .calc-field input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15); }
+  .calc-field input { width: 92px; }
+  .calc-op { font-size: 20px; color: var(--orange-deep); padding-bottom: 8px; font-family: var(--mono); font-weight: 700; }
+  .calc-result { background: var(--terminal); color: #e2e8f0; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 14px; min-height: 96px; }
+  .calc-result .label { color: #94a3b8; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .calc-result .line { margin: 6px 0; }
+  .calc-result .src { color: #c4b5fd; }
+  .calc-result .common { color: #67e8f9; font-weight: 700; }
+  .calc-result .dst { color: #fde047; font-weight: 700; font-size: 16px; }
+  .calc-result .verdict { margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155; font-family: var(--sans); font-size: 13.5px; line-height: 1.55; }
+  .calc-result .ok { color: #86efac; font-weight: 700; }
+  .calc-result .warn { color: #fdba74; font-weight: 700; }
+  .calc-result .bug { color: #fca5a5; font-weight: 700; }
+
+  /* Spot the bug */
+  .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; line-height: 1.6; }
+  .verdict-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .vbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 14px; font: inherit; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .vbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .vbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .vbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .spot-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    C mixes types all the time — usually silently. Let's see when that helps and when it bites! 🔄
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 2.7</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 17 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II &middot; CORE LANGUAGE</span>
+    <h1>Type Conversion — Silent and Explicit</h1>
+    <p class="hero-sub">When you write <code>3.0 + 5</code>, C quietly turns the <code>5</code> into a <code>double</code> first. Most conversions happen automatically — but a few throw away data without a peep. This lesson is C's conversion rules and the <code>(type)</code> cast that puts you back in control.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Different types, one expression 🧠</h2>
+
+    <div class="new-content">
+      C is fussy about types in memory — an <code>int</code> and a <code>double</code> are stored completely differently. Yet you mix them all the time: <code>area = 3.14159 * r * r;</code> where <code>r</code> is an <code>int</code>. For that to work, C has to <strong>convert</strong> one type into another. Most of the time it does this for you, silently, following fixed rules.
+    </div>
+
+    <p>That silence is usually a convenience — but it's also where a whole family of beginner bugs hides. A conversion can quietly drop the decimals off a number, wrap a value past the edge of its type, or flip a comparison upside down. Knowing <em>when</em> C converts and <em>what it costs</em> is the difference between code that works and code that's subtly wrong. And when the automatic behavior isn't what you want, the <code>(type)</code> cast lets you take the wheel.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> Implicit conversions</div>
+    <h2>The conversions C does for you 🪄</h2>
+
+    <p>An <strong>implicit conversion</strong> happens with no special syntax. There are two situations where C inserts one automatically:</p>
+
+    <table class="op-table">
+      <thead><tr><th>When</th><th>Example</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Assignment</strong></td><td class="mono">double d = 5;</td><td>The <code>int 5</code> becomes <code>5.0</code></td></tr>
+        <tr><td><strong>Assignment</strong></td><td class="mono">int n = 3.9;</td><td>The <code>3.9</code> is <em>truncated</em> to <code>3</code></td></tr>
+        <tr><td><strong>Mixed arithmetic</strong></td><td class="mono">3.0 + 5</td><td>The <code>5</code> is converted to <code>5.0</code> first</td></tr>
+        <tr><td><strong>Function arguments</strong></td><td class="mono">sqrt(9)</td><td>The <code>int 9</code> becomes <code>9.0</code></td></tr>
+      </tbody>
+    </table>
+
+    <p>When two different types meet in an arithmetic expression, C follows the <strong>usual arithmetic conversions</strong> — a ranking that picks one common type for both operands. The simple version you'll use every day:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Rank</th><th>Types</th><th>Rule of thumb</th></tr></thead>
+      <tbody>
+        <tr class="high"><td>Highest</td><td class="mono">double</td><td>If either side is <code>double</code>, both become <code>double</code></td></tr>
+        <tr><td>↓</td><td class="mono">float</td><td>Else if either is <code>float</code>, both become <code>float</code></td></tr>
+        <tr><td>↓</td><td class="mono">long</td><td>Else the smaller integer is widened toward the larger</td></tr>
+        <tr><td>Lowest</td><td class="mono">int</td><td><code>char</code> and <code>short</code> are always promoted to <code>int</code> first</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      <strong>Integer promotion</strong> is the one beginners miss: anything smaller than <code>int</code> (a <code>char</code> or <code>short</code>) is promoted to <code>int</code> before arithmetic even starts. That's why <code>'A' + 1</code> is the <code>int</code> <code>66</code>, not a <code>char</code>. The result only becomes a <code>char</code> again if you store it back into one.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Where silence bites</div>
+    <h2>The two conversions that cause real bugs 💥</h2>
+
+    <div class="trap">
+      <h4>🚨 Integer division before the conversion</h4>
+      <p><code>double avg = sum / count;</code> with two <code>int</code>s computes <code>sum / count</code> as <strong>integer</strong> division first — remainder discarded — and only <em>then</em> widens the result to <code>double</code>. <code>7 / 2</code> becomes <code>3.0</code>, not <code>3.5</code>. The conversion happens too late to help. Cast one operand <em>before</em> dividing: <code>(double)sum / count</code>.</p>
+    </div>
+
+    <div class="trap">
+      <h4>🚨 Signed meets unsigned</h4>
+      <p>When a signed and an unsigned value meet, C converts the <strong>signed</strong> one to unsigned — and a negative number wraps into a huge positive. So <code>-1 &lt; 1u</code> is <strong>false</strong>: <code>-1</code> becomes the largest <code>unsigned</code> value, which is not less than <code>1</code>. This bites hard in loops that count down with an <code>unsigned</code> index.</p>
+    </div>
+
+    <p>Both traps share a root cause: the conversion is invisible, so you don't notice it changed your math. The fixes are equally simple — convert deliberately with a cast, and keep signed and unsigned values from mixing in comparisons. The Mixed-Type Calculator below lets you reproduce both live.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The explicit cast</div>
+    <h2><code>(type)value</code> — taking control 🔧</h2>
+
+    <p>When you want a conversion that C wouldn't do on its own — or you want it to happen <em>now</em>, not later — you write an explicit <strong>cast</strong>. The syntax is the target type in parentheses, in front of the value:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Cast</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">(double)sum / count</td><td>Forces floating-point division — fixes the average bug</td></tr>
+        <tr><td class="mono">(int)3.9</td><td>Truncates to <code>3</code> (toward zero), on purpose and visibly</td></tr>
+        <tr><td class="mono">(char)65</td><td>Turns the code <code>65</code> into the character <code>'A'</code></td></tr>
+        <tr><td class="mono">(unsigned)x</td><td>Reinterprets <code>x</code> using unsigned rules</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      A cast produces a <strong>new value</strong> — it never changes the original variable. <code>(double)sum</code> hands the expression a <code>double</code> copy of <code>sum</code>; <code>sum</code> itself stays an <code>int</code>. And a cast binds tightly (it's a unary operator), so <code>(double)sum / count</code> casts <em>only</em> <code>sum</code>, then divides. That's exactly what you want.
+    </div>
+
+    <p>One honest caveat: C's cast is a blunt instrument. It will happily do dangerous conversions — like turning a pointer into an integer — without complaint. Use it for the everyday numeric conversions above, and be suspicious of any cast that's doing something more exotic. (C++ later splits this one cast into four safer, named ones — but in C, this is the tool.)</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Truncation, overflow, safety</div>
+    <h2>What survives a conversion ⚖️</h2>
+
+    <p>Whether a conversion is safe comes down to whether the destination type can <em>hold</em> the value:</p>
+
+    <ul>
+      <li><strong>Widening is safe.</strong> <code>int → long</code>, <code>int → double</code>, <code>char → int</code> — the bigger type holds everything. No data lost.</li>
+      <li><strong>Float → integer truncates.</strong> The fractional part is chopped off toward zero. <code>(int)3.9</code> is <code>3</code>; <code>(int)-3.9</code> is <code>-3</code>. It does not round.</li>
+      <li><strong>Narrowing integers can overflow.</strong> <code>(char)300</code> doesn't fit in a signed 8-bit <code>char</code>, so it wraps around to <code>44</code>. The value is mangled, usually silently.</li>
+      <li><strong>Any nonzero → a true condition.</strong> In an <code>if</code>, C treats any nonzero value as true and <code>0</code> as false.</li>
+    </ul>
+
+    <div class="new-content">
+      The mental checklist: <em>is the destination at least as roomy as the source?</em> If yes, the conversion is lossless and you can relax. If no, something might be thrown away — make it a deliberate cast so the next reader knows you meant it, and double-check the value actually fits.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Conversion Lab</div>
+    <h2>Mix types and spot the bugs 🔬</h2>
+
+    <p>Two tools. The <strong>Mixed-Type Calculator</strong> lets you combine two operands of different types and shows which common type C converts them to — and what the result becomes. <strong>Spot the Bug</strong> drops you real lines to classify.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🧪 Conversion Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 6 lines classified</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="calc">Mixed-Type Calculator</button>
+        <button class="tab-btn" data-tab="spot">Spot the Bug</button>
+      </div>
+
+      <!-- CALCULATOR -->
+      <div class="tab-panel active" id="tab-calc">
+        <div class="calc-controls">
+          <div class="calc-field">
+            <label>A value</label>
+            <input id="aVal" value="7" />
+          </div>
+          <div class="calc-field">
+            <label>A type</label>
+            <select id="aType">
+              <option value="int">int</option>
+              <option value="double">double</option>
+              <option value="char">char</option>
+              <option value="unsigned">unsigned</option>
+              <option value="long">long</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>Op</label>
+            <select id="calcOp">
+              <option value="/">/</option>
+              <option value="+">+</option>
+              <option value="-">-</option>
+              <option value="*">*</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>B value</label>
+            <input id="bVal" value="2" />
+          </div>
+          <div class="calc-field">
+            <label>B type</label>
+            <select id="bType">
+              <option value="int">int</option>
+              <option value="double">double</option>
+              <option value="char">char</option>
+              <option value="unsigned">unsigned</option>
+              <option value="long">long</option>
+            </select>
+          </div>
+        </div>
+        <div class="calc-result" id="calcResult">
+          <div class="label">Result</div>
+        </div>
+      </div>
+
+      <!-- SPOT THE BUG -->
+      <div class="tab-panel" id="tab-spot">
+        <div class="scenario">
+          <div class="scenario-num" id="spotNum">Line 1 / 6</div>
+          <div class="scenario-code" id="spotCode"></div>
+        </div>
+        <div class="verdict-btns" id="spotBtns">
+          <button class="vbtn" data-v="fine">✅ Fine</button>
+          <button class="vbtn" data-v="loss">⚠️ Silent data loss</button>
+          <button class="vbtn" data-v="bug">🐛 Logic bug</button>
+        </div>
+        <div class="spot-fb" id="spotFb">Classify the line above.</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="spotNext" disabled>Next line →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does this print?
+        <pre>int i = -1;
+unsigned int u = 1;
+if (i < u)
+    printf("less\n");
+else
+    printf("not less\n");</pre>
+      </div>
+      <button class="opt" data-correct="false"><span><code>less</code></span></button>
+      <button class="opt" data-correct="true"><span><code>not less</code></span></button>
+      <button class="opt" data-correct="false"><span>Nothing prints</span></button>
+      <button class="opt" data-correct="false"><span>Compile error</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: when signed meets unsigned, which one gets converted? What does <code>-1</code> become as an <code>unsigned</code>?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">➗</div>
+      <div class="mistake-body">
+        <strong>Dividing two ints and expecting a fraction</strong>
+        <small><code>double r = a / b;</code> does integer division first, so <code>7 / 2</code> is <code>3.0</code>. Cast one operand before the division: <code>(double)a / b</code> gives <code>3.5</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔀</div>
+      <div class="mistake-body">
+        <strong>Comparing signed and unsigned</strong>
+        <small><code>for (unsigned i = n; i &gt;= 0; i--)</code> never ends — an <code>unsigned</code> is always <code>&gt;= 0</code>, and it wraps to a huge number instead of going negative. Keep counters signed, or rethink the loop.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">📦</div>
+      <div class="mistake-body">
+        <strong>Stuffing a big value into a small type</strong>
+        <small><code>char c = 300;</code> doesn't fit and wraps silently. If you must narrow, cast on purpose — <code>(char)x</code> — and make sure the value is in range first.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Percentage.</strong> Given <code>int got = 17, total = 20;</code>, print the percentage as a decimal (should be <code>85.0</code>). Use one cast. Verify in the Mixed-Type Calculator with <code>int / int</code> vs <code>double / int</code>.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Character math.</strong> Write an expression that converts an uppercase letter in a <code>char ch</code> to lowercase using the <code>+ 32</code> trick, then explain why the intermediate result is an <code>int</code> and where it becomes a <code>char</code> again.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Hunt the wrap.</strong> Predict the output of <code>unsigned int x = 0; x = x - 1; printf("%u\n", x);</code> on a 32-bit <code>unsigned</code>. Then explain in one line why subtracting 1 from 0 gives a giant number rather than <code>-1</code>.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>C converts types automatically</strong> in assignments, mixed arithmetic, and function calls — usually invisibly.</li>
+        <li><strong>Usual arithmetic conversions:</strong> if either operand is <code>double</code>, both become <code>double</code>; <code>char</code>/<code>short</code> are always promoted to <code>int</code> first.</li>
+        <li><strong>Two silent killers:</strong> integer division before widening, and signed-vs-unsigned comparisons that wrap.</li>
+        <li><strong>The <code>(type)</code> cast</strong> makes a conversion deliberate and visible — and binds tightly, so <code>(double)a / b</code> casts only <code>a</code>.</li>
+        <li><strong>Widening is safe; narrowing and float→int lose data.</strong> Ask: is the destination roomy enough for the value?</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_2_6.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.6  Operator precedence — the rules you'll actually hit
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      2.8  printf and scanf — format specifiers
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "C mixes types all the time — usually silently. Let's see when that helps and when it bites! 🔄",
+    "Promotion widens to a roomier type (safe). Narrowing can lose data. 🪄",
+    "Two silent killers: int division before widening, and signed-vs-unsigned. 💥",
+    "The <code>(type)</code> cast puts you in control — and it binds tightly! 🔧",
+    "Ask one question: is the destination roomy enough to hold the value? ⚖️",
+    "Mix two types — watch which common type C picks, and the result! 🔬",
+    "Signed meets unsigned... which one converts? What does <code>-1</code> become? 🎯",
+    "Three traps, three exercises. The average bug catches everyone once! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 2.7 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  // ===== Mixed-Type Calculator =====
+  const RANK = { char: 1, short: 2, int: 3, unsigned: 4, long: 5, double: 7 };
+  const aVal = document.getElementById('aVal'), bVal = document.getElementById('bVal');
+  const aType = document.getElementById('aType'), bType = document.getElementById('bType');
+  const calcOp = document.getElementById('calcOp');
+  const calcResult = document.getElementById('calcResult');
+
+  function normalize(v, type) {
+    if (type === 'double') return v;
+    v = Math.trunc(v);
+    if (type === 'char') { let m = ((v % 256) + 256) % 256; if (m >= 128) m -= 256; return m; }
+    if (type === 'unsigned') { const mod = Math.pow(2, 32); return ((v % mod) + mod) % mod; }
+    return v; // int, long
+  }
+
+  function commonType(ta, tb) {
+    // integer promotion: char/short -> int
+    const pa = (ta === 'char' || ta === 'short') ? 'int' : ta;
+    const pb = (tb === 'char' || tb === 'short') ? 'int' : tb;
+    if (pa === 'double' || pb === 'double') return 'double';
+    if (pa === 'unsigned' || pb === 'unsigned') return 'unsigned';
+    if (pa === 'long' || pb === 'long') return 'long';
+    return 'int';
+  }
+
+  function runCalc() {
+    const ra = parseFloat(aVal.value), rb = parseFloat(bVal.value);
+    if (isNaN(ra) || isNaN(rb)) { calcResult.innerHTML = `<div class="label">Result</div><div class="line bug">⚠️ Enter numbers in both fields.</div>`; return; }
+    const ta = aType.value, tb = bType.value, op = calcOp.value;
+    let a = normalize(ra, ta), b = normalize(rb, tb);
+    const ct = commonType(ta, tb);
+    // convert both operands to common type
+    let ca = a, cb = b;
+    if (ct === 'unsigned') { ca = normalize(a, 'unsigned'); cb = normalize(b, 'unsigned'); }
+    let result, verdict, vClass;
+    const intDiv = (ct !== 'double');
+    if (op === '/') {
+      if (cb === 0) { result = 'undefined (÷0)'; verdict = 'Division by zero — undefined behavior in C.'; vClass = 'bug'; }
+      else if (intDiv) {
+        result = Math.trunc(ca / cb);
+        if (ct === 'unsigned') result = normalize(result, 'unsigned');
+        if (ca % cb !== 0) { verdict = `Both became <code>${ct}</code>, so this is <strong>integer division</strong> — the remainder (${ca % cb}) is dropped. Want a fraction? Cast one side to <code>double</code>.`; vClass = 'warn'; }
+        else { verdict = `Both became <code>${ct}</code>; integer division is exact here.`; vClass = 'ok'; }
+      } else { result = ca / cb; verdict = 'One side is <code>double</code>, so both become <code>double</code> — true floating-point division.'; vClass = 'ok'; }
+    } else {
+      if (op === '+') result = ca + cb;
+      else if (op === '-') result = ca - cb;
+      else result = ca * cb;
+      if (ct === 'double') { verdict = 'One side is <code>double</code>, so both convert to <code>double</code> before the math.'; vClass = 'ok'; }
+      else if (ct === 'unsigned') {
+        const before = result;
+        result = normalize(result, 'unsigned');
+        if (before < 0) { verdict = `Common type is <code>unsigned</code>, so a negative result (<code>${before}</code>) wraps to <code>${result}</code>. The signed/unsigned trap!`; vClass = 'bug'; }
+        else { verdict = 'Common type is <code>unsigned</code> — result stays non-negative.'; vClass = 'ok'; }
+      } else { verdict = `Both operands convert to <code>${ct}</code>, then C computes.`; vClass = 'ok'; }
+    }
+    const showDouble = (ct === 'double' && typeof result === 'number' && Number.isInteger(result)) ? result + '.0' : result;
+    calcResult.innerHTML = `
+      <div class="label">Expression</div>
+      <div class="line src">(${ta}) ${a} ${op} (${tb}) ${b}</div>
+      <div class="label">C converts both to</div>
+      <div class="line common">${ct}</div>
+      <div class="label">Result</div>
+      <div class="line dst">${showDouble}</div>
+      <div class="verdict"><span class="${vClass}">${vClass === 'ok' ? '✅' : vClass === 'warn' ? '⚠️' : '🐛'}</span> ${verdict}</div>
+    `;
+  }
+  [aVal, bVal].forEach(el => el.addEventListener('input', runCalc));
+  [aType, bType, calcOp].forEach(el => el.addEventListener('change', runCalc));
+  runCalc();
+
+  // ===== Spot the Bug =====
+  const LINES = [
+    { code: 'double avg = sum / count;  // sum, count are int', answer: 'bug', why: 'Integer division runs first, then widens. <code>7 / 2</code> → <code>3.0</code>, not <code>3.5</code>. Cast: <code>(double)sum / count</code>.' },
+    { code: 'double d = 5;', answer: 'fine', why: 'Widening <code>int → double</code> — completely lossless. <code>d</code> holds <code>5.0</code>.' },
+    { code: 'int n = 3.9;', answer: 'loss', why: 'Legal, but the fraction is silently truncated — <code>n</code> becomes <code>3</code>, not <code>4</code>.' },
+    { code: 'char c = 200;  // char is signed 8-bit', answer: 'loss', why: '200 doesn\'t fit a signed <code>char</code> (max 127), so it wraps to <code>-56</code>. Silent overflow.' },
+    { code: 'char ch = \'A\' + 1;', answer: 'fine', why: '<code>\'A\'</code> promotes to <code>int</code> 65, <code>+1</code> = 66, stored back as char <code>\'B\'</code>. All in range — fine.' },
+    { code: 'if (-1 < someUnsigned) ...', answer: 'bug', why: '<code>-1</code> converts to a huge <code>unsigned</code>, so the comparison is <strong>false</strong> — the opposite of intent.' }
+  ];
+  let spotIdx = 0;
+  const spotAnswered = new Set();
+  const spotCode = document.getElementById('spotCode');
+  const spotNum = document.getElementById('spotNum');
+  const spotBtns = document.querySelectorAll('#spotBtns .vbtn');
+  const spotFb = document.getElementById('spotFb');
+  const spotNext = document.getElementById('spotNext');
+  const playCount = document.getElementById('playCount');
+  const VLABEL = { fine: '✅ Fine', loss: '⚠️ Silent data loss', bug: '🐛 Logic bug' };
+
+  function loadSpot() {
+    const s = LINES[spotIdx];
+    spotCode.textContent = s.code;
+    spotNum.textContent = `Line ${spotIdx + 1} / ${LINES.length}`;
+    spotBtns.forEach(b => { b.classList.remove('right', 'wrong'); b.disabled = false; });
+    spotFb.innerHTML = 'Classify the line above.';
+    spotNext.disabled = true;
+    spotNext.textContent = spotIdx < LINES.length - 1 ? 'Next line →' : 'Restart ↺';
+  }
+
+  spotBtns.forEach(b => b.addEventListener('click', (e) => {
+    const s = LINES[spotIdx];
+    const pick = b.dataset.v;
+    if (pick === s.answer) {
+      b.classList.add('right');
+      spotFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      spotBtns.forEach(x => x.disabled = true);
+      spotNext.disabled = false;
+      if (!spotAnswered.has(spotIdx)) {
+        spotAnswered.add(spotIdx);
+        playCount.textContent = spotAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (spotAnswered.size === LINES.length) {
+          burst();
+          addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 6 lines classified! +20 XP');
+        }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      spotFb.innerHTML = `❌ Not quite — this isn't "${VLABEL[pick]}". Think about whether C converts here, and whether anything is lost. Try again.`;
+      breakStreak();
+    }
+  }));
+
+  spotNext.addEventListener('click', () => { spotIdx = (spotIdx + 1) % LINES.length; loadSpot(); });
+  loadSpot();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Signed meets unsigned, so <code>i</code> (the signed <code>-1</code>) converts to <code>unsigned</code> — becoming the largest unsigned value (~4.29 billion). That\'s not less than <code>1</code>, so <code>not less</code> prints. A genuine surprise.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> <code>-1</code> wraps to a huge unsigned value, which is greater than <code>1</code> — so the <code>else</code> runs.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. The comparison mixes signed and unsigned, so <code>-1</code> is converted to <code>unsigned</code> first. What huge value does it become?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

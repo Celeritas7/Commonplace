@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.7 — const and Immutability · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .prec-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  .prec-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .prec-table th, .prec-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .prec-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .prec-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .prec-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CONST TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Will it compile */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .verdict-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .vbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .vbtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .vbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .vbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .comp-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Pointer decoder */
+  .decoder-toggles { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .dtoggle { display: flex; align-items: center; gap: 10px; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 10px 16px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s var(--bouncy); user-select: none; }
+  .dtoggle:hover { border-color: var(--purple); }
+  .dtoggle.on { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .dtoggle .box { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--purple-light); display: flex; align-items: center; justify-content: center; font-size: 13px; background: white; color: var(--purple-deep); }
+  .dtoggle.on .box { background: white; border-color: white; }
+  .decoder-out { background: var(--terminal); color: #e0e7ff; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 14px; }
+  .decoder-out .label { color: #a5b4fc; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .decoder-out .decl { color: #fde047; font-size: 17px; font-weight: 700; margin: 6px 0 12px; }
+  .decoder-out .test { margin: 6px 0; display: flex; gap: 10px; align-items: baseline; }
+  .decoder-out .test code { background: rgba(255,255,255,0.08); color: #c4b5fd; font-size: 13px; }
+  .decoder-out .yes { color: #86efac; font-weight: 700; }
+  .decoder-out .no { color: #fca5a5; font-weight: 700; }
+  .decoder-out .reading { color: #c7d2fe; font-style: italic; font-family: var(--sans); font-size: 13.5px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #4338ca; line-height: 1.55; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    <code>const</code> is a promise to the compiler: "this won't change." Let it guard your code. 🔒
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 2.7</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 17 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II &middot; CORE LANGUAGE</span>
+    <h1>const and Immutability</h1>
+    <p class="hero-sub">One little keyword that makes your code safer: <code>const</code> promises a value won't change, and the compiler holds you to it. Master <code>const</code> variables, <code>const</code> references for fast safe parameters, and the famous pointer-<code>const</code> puzzle.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>A promise the compiler enforces 💭</h2>
+
+    <div class="new-content">
+      <code>const</code> marks a value as <strong>read-only</strong>. Once you write <code>const double PI = 3.14159;</code>, any line that tries to change <code>PI</code> is a compile error — not a runtime surprise, an error the compiler catches before your program ever runs. It's a promise you make ("I won't modify this") that the compiler turns into a guarantee.
+    </div>
+
+    <p>Why is that worth a whole lesson? Because immutability is one of the cheapest ways to prevent bugs. A value that can't change can't be changed <em>by accident</em>. <code>const</code> also documents intent — a reader sees <code>const</code> and instantly knows "this stays put." And it unlocks performance: passing big objects <code>by const reference</code> avoids copying them while guaranteeing the function won't mess them up. C++ programmers call the habit of using <code>const</code> wherever possible <strong>const correctness</strong>, and it's a hallmark of solid code.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> const variables</div>
+    <h2>The basics 🔒</h2>
+
+    <p>A <code>const</code> variable must be given a value when you declare it, and can never be reassigned afterward:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Code</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">const int maxLives = 3;</td><td class="mono plain">✅ Fine — initialized once</td></tr>
+        <tr><td class="mono">maxLives = 5;</td><td class="mono plain">❌ Error — can't assign to const</td></tr>
+        <tr><td class="mono">const int x;</td><td class="mono plain">❌ Error — must initialize</td></tr>
+        <tr><td class="mono">int y = maxLives + 1;</td><td class="mono plain">✅ Fine — reading is always allowed</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      Reading a <code>const</code> is always fine — the restriction is only on <em>changing</em> it. You can copy it, add to it, pass it around, print it. You just can't assign a new value back into the <code>const</code> variable itself.
+    </div>
+
+    <p>You'll also meet <code>constexpr</code> (C++11), a stronger cousin that means "const <em>and</em> computable at compile time." <code>constexpr int size = 10;</code> can be used where the compiler needs a constant, like an array length. For now, reach for <code>const</code> by default; use <code>constexpr</code> when you specifically need a compile-time constant.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> const references</div>
+    <h2>Fast and safe parameters 🚀</h2>
+
+    <p>Here's where <code>const</code> earns its keep day to day. When a function takes a big object — a <code>std::string</code>, a <code>std::vector</code> — passing it <em>by value</em> copies the whole thing. Passing by plain reference avoids the copy but lets the function modify your original. <strong>const reference</strong> gives you both wins: no copy, no modification.</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Parameter</th><th>Copy?</th><th>Can modify caller's object?</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">std::string s</td><td>Yes (slow)</td><td>No (it's a copy)</td></tr>
+        <tr><td class="mono">std::string&amp; s</td><td>No</td><td><strong>Yes</strong> — risky if unintended</td></tr>
+        <tr><td class="mono">const std::string&amp; s</td><td>No</td><td>No — compiler enforced ✅</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      <strong>The rule of thumb:</strong> for any parameter you only need to <em>read</em>, and that isn't a tiny type like <code>int</code> or <code>double</code>, take it by <code>const&amp;</code>. <code>void greet(const std::string&amp; name)</code> is the idiomatic way to pass a string you won't change. Inside, <code>name</code> behaves like the original but is read-only — try to modify it and you get a compile error.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Pointers and const</div>
+    <h2>The two-const puzzle 🧩</h2>
+
+    <p>Pointers have <em>two</em> things that could be constant: the value they point at, and the pointer itself. <code>const</code> can lock either, or both. The trick to reading them is <strong>right to left</strong>:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Declaration</th><th>Read right-to-left</th><th>What's locked</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">int* p</td><td class="plain">pointer to int</td><td>Nothing</td></tr>
+        <tr><td class="mono">const int* p</td><td class="plain">pointer to const int</td><td>The <strong>value</strong> (<code>*p</code> read-only)</td></tr>
+        <tr><td class="mono">int* const p</td><td class="plain">const pointer to int</td><td>The <strong>pointer</strong> (can't repoint)</td></tr>
+        <tr><td class="mono">const int* const p</td><td class="plain">const pointer to const int</td><td><strong>Both</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>The position of <code>const</code> relative to the <code>*</code> is what matters. <code>const</code> <em>before</em> the <code>*</code> protects the pointed-to value; <code>const</code> <em>after</em> the <code>*</code> protects the pointer. The Pointer Decoder below lets you toggle each one and watch what becomes legal.</p>
+
+    <div class="new-content">
+      A memory hook: read the declaration backwards, starting from the variable name. <code>int* const p</code> → "<code>p</code> is a <code>const</code> pointer to <code>int</code>" → the pointer is frozen. <code>const int* p</code> → "<code>p</code> is a pointer to <code>int</code> that's <code>const</code>" → the int is frozen. The thing nearest the word <code>const</code> is the thing that can't change.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Where const trips people up</div>
+    <h2>The gotchas ⚖️</h2>
+
+    <div class="trap">
+      <h4>🚨 const objects can only call const methods</h4>
+      <p>If you have a <code>const std::string&amp; s</code>, you can call <code>s.size()</code> or <code>s.substr(...)</code> (they don't modify) but not anything that would change it. A class method that promises not to modify the object is marked <code>const</code> after its parameter list — <code>int size() const;</code> — and only those can be called on a <code>const</code> object. You'll write your own in the classes part of the book.</p>
+    </div>
+
+    <div class="trap">
+      <h4>🚨 const-ness is "shallow" through a pointer</h4>
+      <p><code>int* const p</code> freezes the pointer, but <code>*p = 99;</code> still works — the <em>value</em> isn't const. People assume one <code>const</code> locks everything. Decide which you actually want to protect: the pointer, the pointee, or both, and place <code>const</code> accordingly.</p>
+    </div>
+
+    <p>The throughline: <code>const</code> is precise about <em>what</em> it freezes. A <code>const</code> variable freezes that variable; a <code>const&amp;</code> freezes the function's view of the argument; in a pointer, the side the <code>const</code> sits on decides whether the pointer or the value is locked. Be deliberate, and let the compiler enforce your intent.</p>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — const Lab</div>
+    <h2>Predict and decode 🔬</h2>
+
+    <p>Two tools. <strong>Will It Compile?</strong> drops you snippets that use <code>const</code> — guess whether each builds or errors. The <strong>Pointer Decoder</strong> lets you flip <code>const</code> on the value, the pointer, or both, and shows exactly what becomes legal.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🔒 const Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 6 snippets</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="compile">Will It Compile?</button>
+        <button class="tab-btn" data-tab="decode">Pointer Decoder</button>
+      </div>
+
+      <!-- WILL IT COMPILE -->
+      <div class="tab-panel active" id="tab-compile">
+        <div class="scenario">
+          <div class="scenario-num" id="compNum">Snippet 1 / 6</div>
+          <div class="scenario-code" id="compCode"></div>
+        </div>
+        <div class="verdict-btns" id="compBtns">
+          <button class="vbtn" data-v="ok">✅ Compiles</button>
+          <button class="vbtn" data-v="err">❌ Compile error</button>
+        </div>
+        <div class="comp-fb" id="compFb">Read the snippet, then predict.</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="compNext" disabled>Next snippet →</button>
+        </div>
+      </div>
+
+      <!-- POINTER DECODER -->
+      <div class="tab-panel" id="tab-decode">
+        <div class="decoder-toggles">
+          <div class="dtoggle" id="tgVal"><span class="box" id="boxVal"></span> const on the <strong>value</strong></div>
+          <div class="dtoggle" id="tgPtr"><span class="box" id="boxPtr"></span> const on the <strong>pointer</strong></div>
+        </div>
+        <div class="decoder-out" id="decoderOut"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        Which line causes a <strong>compile error</strong>?
+        <pre>int a = 1, b = 2;
+const int* p = &a;   // line A
+*p = 5;              // line B
+p = &b;              // line C
+int c = *p;          // line D</pre>
+      </div>
+      <button class="opt" data-correct="false"><span>Line A</span></button>
+      <button class="opt" data-correct="true"><span>Line B</span></button>
+      <button class="opt" data-correct="false"><span>Line C</span></button>
+      <button class="opt" data-correct="false"><span>Line D</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: <code>const int* p</code> — read it right-to-left. Is the value locked, or the pointer?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">📋</div>
+      <div class="mistake-body">
+        <strong>Passing big objects by value out of habit</strong>
+        <small><code>void print(std::string s)</code> copies the whole string every call. Use <code>const std::string&amp; s</code> — no copy, and the compiler guarantees you won't modify the caller's string.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔁</div>
+      <div class="mistake-body">
+        <strong>Misreading pointer-const</strong>
+        <small><code>const int* p</code> does <em>not</em> mean the pointer is const — it means the value is. You can still do <code>p = &amp;other;</code>. Read right-to-left, and remember: const before <code>*</code> locks the value.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🧊</div>
+      <div class="mistake-body">
+        <strong>Adding const too late</strong>
+        <small>Sprinkling <code>const</code> onto a finished codebase fights you, because one const forces another. Reach for <code>const</code> as you write — "const by default," loosen only when you truly need to mutate.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Lock the constants.</strong> Take a snippet with <code>double pi = 3.14159;</code> and <code>int maxScore = 100;</code> that never change, and add <code>const</code>. Confirm an attempted reassignment now fails — try it in "Will It Compile?".
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Make it const-correct.</strong> Rewrite <code>std::string shout(std::string text)</code> so the parameter is passed by <code>const</code> reference. Explain in one sentence what you gained (a hint: think copies <em>and</em> safety).
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Read the declarations.</strong> For each, say what's locked and write one legal and one illegal line: <code>const char* p</code>, <code>char* const p</code>, <code>const char* const p</code>. Verify with the Pointer Decoder.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong><code>const</code> = read-only,</strong> enforced at compile time. Must initialize; can never reassign; reading is always fine.</li>
+        <li><strong><code>const&amp;</code> parameters</strong> are the idiom for "pass a big object I'll only read" — no copy, no accidental modification.</li>
+        <li><strong>Pointer-const, read right-to-left:</strong> const before <code>*</code> locks the value; const after <code>*</code> locks the pointer.</li>
+        <li><strong>const objects call only const methods</strong> — methods that promise not to modify.</li>
+        <li><strong>Be const-correct:</strong> reach for <code>const</code> by default; loosen only when you genuinely need to mutate.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_2_6.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.6  Type conversion and the C++ casts
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      2.8  Namespaces and using
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "<code>const</code> is a promise to the compiler: \"this won't change.\" Let it guard your code. 🔒",
+    "A const must be initialized and can never be reassigned. Reading is always fine. 🔒",
+    "<code>const&amp;</code> params: no copy AND no accidental modification. The everyday idiom. 🚀",
+    "Pointers have two things to freeze — the value and the pointer. Read right-to-left! 🧩",
+    "const objects can only call const methods. const-ness is precise. ⚖️",
+    "Flip const on the value, the pointer, or both — watch what becomes legal! 🔬",
+    "<code>const int* p</code> — is the value locked, or the pointer? That's the whole question. 🎯",
+    "Three traps, three exercises. Be const-correct from the start! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 2.7 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPixel = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentPixel) { currentPixel = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Will It Compile? =====
+  const SNIPPETS = [
+    { code: 'const int maxLives = 3;\nmaxLives = 5;', answer: 'err', why: 'You can\'t assign to a <code>const</code>. <code>maxLives</code> is frozen after its initializer.' },
+    { code: 'const int n = 10;\nint m = n + 1;', answer: 'ok', why: 'Reading a <code>const</code> is always allowed — <code>m</code> becomes 11. Only changing <code>n</code> would be an error.' },
+    { code: 'const int x;', answer: 'err', why: 'A <code>const</code> must be initialized at declaration — there\'s no way to set it later.' },
+    { code: 'void greet(const std::string& s) {\n    s += "!";\n}', answer: 'err', why: '<code>s</code> is a <code>const</code> reference, so modifying it (<code>+=</code>) is forbidden. That\'s the safety you wanted.' },
+    { code: 'int v = 5;\nconst int& r = v;\nv = 9;', answer: 'ok', why: 'The const ref <code>r</code> can\'t change <code>v</code>, but <code>v</code> itself isn\'t const — assigning to <code>v</code> directly is fine.' },
+    { code: 'int a = 1;\nint* const p = &a;\n*p = 99;', answer: 'ok', why: '<code>int* const p</code> freezes the <em>pointer</em>, not the value. <code>*p = 99</code> writes through it — perfectly legal.' }
+  ];
+  let compIdx = 0;
+  const compAnswered = new Set();
+  const compCode = document.getElementById('compCode');
+  const compNum = document.getElementById('compNum');
+  const compBtns = document.querySelectorAll('#compBtns .vbtn');
+  const compFb = document.getElementById('compFb');
+  const compNext = document.getElementById('compNext');
+
+  function loadComp() {
+    const s = SNIPPETS[compIdx];
+    compCode.textContent = s.code;
+    compNum.textContent = `Snippet ${compIdx + 1} / ${SNIPPETS.length}`;
+    compBtns.forEach(b => { b.classList.remove('right', 'wrong'); b.disabled = false; });
+    compFb.innerHTML = 'Read the snippet, then predict.';
+    compNext.disabled = true;
+    compNext.textContent = compIdx < SNIPPETS.length - 1 ? 'Next snippet →' : 'Restart ↺';
+  }
+
+  compBtns.forEach(b => b.addEventListener('click', (e) => {
+    const s = SNIPPETS[compIdx];
+    const pick = b.dataset.v;
+    if (pick === s.answer) {
+      b.classList.add('right');
+      compFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      compBtns.forEach(x => x.disabled = true);
+      compNext.disabled = false;
+      if (!compAnswered.has(compIdx)) {
+        compAnswered.add(compIdx);
+        playCount.textContent = compAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (compAnswered.size === SNIPPETS.length) {
+          burst();
+          addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 6 snippets solved! +20 XP');
+        }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      compFb.innerHTML = `❌ Not quite. Look carefully at what <code>const</code> is protecting here, and what the code tries to change.`;
+      breakStreak();
+    }
+  }));
+
+  compNext.addEventListener('click', () => { compIdx = (compIdx + 1) % SNIPPETS.length; loadComp(); });
+  loadComp();
+
+  // ===== Pointer Decoder =====
+  let valConst = false, ptrConst = false;
+  const tgVal = document.getElementById('tgVal'), tgPtr = document.getElementById('tgPtr');
+  const boxVal = document.getElementById('boxVal'), boxPtr = document.getElementById('boxPtr');
+  const decoderOut = document.getElementById('decoderOut');
+  const decoderSeen = new Set();
+
+  function renderDecoder() {
+    let decl, reading;
+    if (!valConst && !ptrConst) { decl = 'int* p'; reading = '"pointer to int" — nothing is locked. You can change the value <em>and</em> repoint.'; }
+    else if (valConst && !ptrConst) { decl = 'const int* p'; reading = '"pointer to <strong>const</strong> int" — the value is locked, the pointer is free. <code>const</code> sits before the <code>*</code>.'; }
+    else if (!valConst && ptrConst) { decl = 'int* const p'; reading = '"<strong>const</strong> pointer to int" — the pointer is frozen, the value is free. <code>const</code> sits after the <code>*</code>.'; }
+    else { decl = 'const int* const p'; reading = '"<strong>const</strong> pointer to <strong>const</strong> int" — both are locked. Read it right-to-left, const by const.'; }
+
+    const canWriteValue = !valConst;
+    const canRepoint = !ptrConst;
+    decoderOut.innerHTML = `
+      <div class="label">Declaration</div>
+      <div class="decl">${decl};</div>
+      <div class="label">What you can do</div>
+      <div class="test"><code>*p = 99;</code> ${canWriteValue ? '<span class="yes">✅ allowed — value can change</span>' : '<span class="no">❌ error — value is const</span>'}</div>
+      <div class="test"><code>p = &amp;other;</code> ${canRepoint ? '<span class="yes">✅ allowed — pointer can move</span>' : '<span class="no">❌ error — pointer is const</span>'}</div>
+      <div class="reading">📖 ${reading}</div>
+    `;
+    const key = (valConst ? 'V' : '-') + (ptrConst ? 'P' : '-');
+    if (!decoderSeen.has(key)) {
+      decoderSeen.add(key);
+      addXP(3);
+    }
+  }
+  tgVal.addEventListener('click', () => { valConst = !valConst; tgVal.classList.toggle('on', valConst); boxVal.textContent = valConst ? '✓' : ''; renderDecoder(); });
+  tgPtr.addEventListener('click', () => { ptrConst = !ptrConst; tgPtr.classList.toggle('on', ptrConst); boxPtr.textContent = ptrConst ? '✓' : ''; renderDecoder(); });
+  renderDecoder();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>const int* p</code> reads right-to-left as "pointer to <strong>const</strong> int" — the value is locked. <code>*p = 5</code> (line B) tries to write through it → error. Repointing <code>p = &b</code> (line C) is fine; the pointer itself isn\'t const.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> The value is const, so writing <code>*p = 5</code> on line B is the error. The pointer can still move.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. <code>const int* p</code> locks the <em>value</em>, not the pointer. Which line tries to change the value through <code>*p</code>?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

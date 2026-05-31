@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 3.2 — switch · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .t17 { color: #fde047; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+  .badge17 { display: inline-block; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; letter-spacing: 0.4px; vertical-align: middle; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .prec-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  .prec-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .prec-table th, .prec-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .prec-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .prec-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .prec-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Switch tracer */
+  .sw-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .sw-controls .lbl { font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+  .val-btn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 8px 14px; font: inherit; font-family: var(--mono); font-size: 13.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .val-btn:hover { border-color: var(--purple); transform: translateY(-2px); }
+  .val-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .brk-toggle { margin-left: auto; display: flex; align-items: center; gap: 8px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 7px 12px; cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink-soft); user-select: none; }
+  .brk-toggle.on { border-color: var(--green); color: var(--green); }
+  .brk-toggle .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bg3); }
+  .brk-toggle.on .dot { background: var(--green); }
+  .sw-code { background: var(--terminal); border-radius: 12px; padding: 14px 18px; font-family: var(--mono); font-size: 13.5px; line-height: 1.75; color: #e0e7ff; }
+  .sw-row { display: block; padding: 2px 8px; border-radius: 6px; transition: all 0.25s; }
+  .sw-row .case { color: #c4b5fd; font-weight: 700; }
+  .sw-row .body { color: #a5b4fc; }
+  .sw-row .brk { color: #818cf8; }
+  .sw-row.matched { background: rgba(253,224,71,0.16); }
+  .sw-row.exec { background: rgba(34,197,94,0.16); }
+  .sw-row.exec .body { color: #86efac; }
+  .sw-row.dim .brk { opacity: 0.3; text-decoration: line-through; }
+  .sw-output { margin-top: 12px; background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 12px 16px; }
+  .sw-output .ol { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .sw-output .out { font-family: var(--mono); font-size: 15px; color: var(--purple-deep); font-weight: 700; margin-top: 4px; white-space: pre-wrap; }
+  .sw-output .note { font-size: 13px; color: var(--ink-soft); margin-top: 6px; }
+
+  /* switch or if game */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-text { font-size: 14.5px; color: var(--ink); line-height: 1.5; }
+  .scenario-text code { font-size: 0.92em; }
+  .verdict-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .vbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .vbtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .vbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .vbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .spot-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    <code>switch</code> shines on <code>enum</code>s — and modern C++ adds <code>[[fallthrough]]</code> and switch-init! 🔀
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 3.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 20 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🔀 PART III &middot; MAKING DECISIONS</span>
+    <h1>switch — Multi-Way Branching</h1>
+    <p class="hero-sub">When you're branching on one value across many fixed options — especially an <code>enum</code> — <code>switch</code> is cleaner than a stack of <code>else if</code>s. We'll cover fall-through, the C++17 <code>[[fallthrough]]</code> attribute, switching on enums, and switch-with-initializer.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>One value, many destinations 🧠</h2>
+
+    <div class="new-content">
+      Some decisions aren't "is this true?" but "which one of these is it?" A menu choice, a game state, a parsed token type. When you're matching a single value against a list of fixed possibilities, <code>switch</code> reads cleaner than a tall stack of <code>else if</code>s — and in C++ it pairs beautifully with <code>enum</code>s, where the compiler can even warn you if you forget a case.
+    </div>
+
+    <p>You could write all of this with <code>if / else if</code>. <code>switch</code> doesn't add power — it adds <strong>clarity</strong> for one shape of decision: comparing one integer-like value against several constants. It carries C's classic quirk (execution falls through until a <code>break</code>), and C++ layers a few modern conveniences on top. Let's get the fundamentals, then the C++ extras.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> Anatomy of a switch</div>
+    <h2>The parts 🧩</h2>
+
+    <pre class="code"><span class="kw">switch</span> (choice) {
+    <span class="kw">case</span> 1:
+        std::cout &lt;&lt; <span class="str">"New game\n"</span>;
+        <span class="kw">break</span>;
+    <span class="kw">case</span> 2:
+        std::cout &lt;&lt; <span class="str">"Load game\n"</span>;
+        <span class="kw">break</span>;
+    <span class="kw">default</span>:
+        std::cout &lt;&lt; <span class="str">"Unknown option\n"</span>;
+}</pre>
+
+    <ul>
+      <li><strong><code>switch (choice)</code></strong> — C++ evaluates <code>choice</code> once, then jumps to the matching <code>case</code>.</li>
+      <li><strong><code>case 1:</code></strong> — a label. Case values must be <em>compile-time constant</em> integers, chars, or enum values.</li>
+      <li><strong><code>break;</code></strong> — exits the <code>switch</code>. Without it, execution falls through into the next case.</li>
+      <li><strong><code>default:</code></strong> — the catch-all when no case matches. Optional, but usually wise.</li>
+    </ul>
+
+    <div class="new-content">
+      Think of the <code>case</code> labels as <strong>entry doors</strong>, not separate boxes. C++ finds the matching door, walks in, and keeps walking <em>downward</em> through whatever follows — across other case labels — until a <code>break</code> stops it. That walking-downward behavior is the whole story of <code>switch</code>.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Fall-through and [[fallthrough]]</div>
+    <h2>The break you can't forget 💥</h2>
+
+    <div class="trap">
+      <h4>🚨 Forgetting <code>break</code> = fall-through</h4>
+      <p>Leave out a <code>break</code> and execution spills into the next case. Given <code>choice = 1</code> with no breaks, all three lines run. This is the #1 <code>switch</code> bug — end every case with <code>break;</code>.</p>
+    </div>
+
+    <p>Stacking empty case labels to share code is <em>intentional</em> fall-through, and that's fine:</p>
+
+    <pre class="code"><span class="kw">switch</span> (key) {
+    <span class="kw">case</span> <span class="str">'a'</span>:
+    <span class="kw">case</span> <span class="str">'A'</span>:
+        moveLeft();
+        <span class="kw">break</span>;     <span class="cm">// 'a' and 'A' share this</span>
+}</pre>
+
+    <div class="new-content">
+      When you deliberately fall through <em>after</em> running some code, C++17 gives you a way to say so out loud: the <strong><code>[[fallthrough]]</code></strong> attribute. <span class="badge17">C++17</span> Place <code>[[fallthrough]];</code> where a <code>break</code> would go, and the compiler knows you meant it — no "did you forget a break?" warning. It documents intent to both the compiler and the next reader.
+    </div>
+
+    <pre class="code"><span class="kw">case</span> warning:
+    logWarning();
+    [[fallthrough]];    <span class="cm">// intentional — also do the error steps</span>
+<span class="kw">case</span> error:
+    logError();
+    <span class="kw">break</span>;</pre>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Switching on enums</div>
+    <h2>Where switch really shines ✨</h2>
+
+    <p>The most idiomatic use of <code>switch</code> in C++ is over an <code>enum</code> — a named set of states. The cases become self-documenting, and the compiler becomes your safety net:</p>
+
+    <pre class="code"><span class="kw">enum class</span> Light { Red, Yellow, Green };
+
+<span class="kw">switch</span> (signal) {
+    <span class="kw">case</span> Light::Red:    stop();  <span class="kw">break</span>;
+    <span class="kw">case</span> Light::Yellow: slow();  <span class="kw">break</span>;
+    <span class="kw">case</span> Light::Green:  go();    <span class="kw">break</span>;
+}</pre>
+
+    <div class="new-content">
+      <strong>The compiler safety net:</strong> if you <code>switch</code> over an <code>enum</code> and forget a case (say you add <code>Light::Flashing</code> later but don't handle it), compilers with <code>-Wswitch</code> (part of <code>-Wall</code>) will <strong>warn you</strong> about the missing case. That's a huge advantage over an <code>if</code> chain, which can silently ignore the new value. For this reason, many C++ programmers deliberately omit <code>default</code> when switching on an enum — so that adding a new enum value lights up every switch that needs updating.
+    </div>
+
+    <p>One more modern touch: like <code>if</code>, <code>switch</code> supports an <strong>initializer</strong> in C++17 — <code>switch (auto s = getState(); s) { ... }</code> <span class="badge17">C++17</span> — scoping the value to the switch alone.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> switch vs if (and what switch can't do)</div>
+    <h2>Choosing the right tool 🤔</h2>
+
+    <table class="prec-table">
+      <thead><tr><th>Use <code>switch</code> when…</th><th>Use <code>if / else if</code> when…</th></tr></thead>
+      <tbody>
+        <tr><td>Matching one value against fixed constants or enum values</td><td>Testing <strong>ranges</strong> (<code>score &gt;= 90</code>)</td></tr>
+        <tr><td>Branching on an <code>enum</code> state — get compiler warnings free</td><td><strong>Compound</strong> conditions (<code>x &gt; 0 &amp;&amp; y &lt; 10</code>)</td></tr>
+        <tr><td>The value is an <code>int</code>, <code>char</code>, or <code>enum</code></td><td>Comparing <code>double</code>s or… <code>std::string</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="trap">
+      <h4>🚨 You can't <code>switch</code> on a <code>std::string</code></h4>
+      <p>Beginners coming from other languages often expect <code>switch (name) { case "yes": ... }</code> to work. It doesn't — <code>switch</code> only handles integer-like values, and a string isn't one. For string matching, use <code>if (name == "yes")</code> chains, or a <code>std::map</code> later on.</p>
+    </div>
+
+    <p>The mental model: a <code>switch</code> is a <strong>computed jump</strong> — C++ leaps straight to the matching label and runs forward. That's why every case must be a compile-time constant, why ranges and strings are out, and why fall-through exists at all. When your decision is "pick the matching value from a fixed list," <code>switch</code> is the clean choice.</p>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Switch Lab</div>
+    <h2>Watch the jump and the flow 🔬</h2>
+
+    <p>Two tools. The <strong>Switch Tracer</strong> runs a <code>switch</code> over a <code>Light</code> enum — pick a signal and watch C++ jump to the case and stop at <code>break</code>. Flip <strong>breaks</strong> off to see fall-through. <strong>switch or if?</strong> asks you to pick the right tool for each decision.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🔀 Switch Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 5 decisions</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="trace">Switch Tracer</button>
+        <button class="tab-btn" data-tab="pick">switch or if?</button>
+      </div>
+
+      <!-- SWITCH TRACER -->
+      <div class="tab-panel active" id="tab-trace">
+        <div class="sw-controls">
+          <span class="lbl">signal =</span>
+          <button class="val-btn active" data-v="0">Red</button>
+          <button class="val-btn" data-v="1">Yellow</button>
+          <button class="val-btn" data-v="2">Green</button>
+          <div class="brk-toggle on" id="brkToggle"><span class="dot"></span> break; ON</div>
+        </div>
+        <div class="sw-code" id="swCode"></div>
+        <div class="sw-output">
+          <div class="ol">Output</div>
+          <div class="out" id="swOut"></div>
+          <div class="note" id="swNote"></div>
+        </div>
+      </div>
+
+      <!-- SWITCH OR IF -->
+      <div class="tab-panel" id="tab-pick">
+        <div class="scenario">
+          <div class="scenario-num" id="pickNum">Decision 1 / 5</div>
+          <div class="scenario-text" id="pickText"></div>
+        </div>
+        <div class="verdict-btns" id="pickBtns">
+          <button class="vbtn" data-v="switch">🔀 switch</button>
+          <button class="vbtn" data-v="if">🪜 if / else if</button>
+        </div>
+        <div class="spot-fb" id="pickFb">Which tool fits this decision best?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="pickNext" disabled>Next decision →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does this print?
+        <pre>int x = 2;
+switch (x) {
+    case 1: std::cout &lt;&lt; "one ";
+    case 2: std::cout &lt;&lt; "two ";
+    case 3: std::cout &lt;&lt; "three ";
+    default: std::cout &lt;&lt; "other";
+}</pre>
+      </div>
+      <button class="opt" data-correct="false"><span><code>two</code></span></button>
+      <button class="opt" data-correct="true"><span><code>two three other</code></span></button>
+      <button class="opt" data-correct="false"><span><code>two three</code></span></button>
+      <button class="opt" data-correct="false"><span><code>other</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: there are no <code>break</code> statements. Once C++ jumps to <code>case 2</code>, where does it stop?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">💥</div>
+      <div class="mistake-body">
+        <strong>Forgetting <code>break</code></strong>
+        <small>Execution falls through into the next case. End each case body with <code>break;</code> — or mark deliberate fall-through with <code>[[fallthrough]];</code> so the compiler (and readers) know it's intentional.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔤</div>
+      <div class="mistake-body">
+        <strong>Trying to <code>switch</code> on a <code>std::string</code></strong>
+        <small><code>case "yes":</code> won't compile — switch needs integer-like values. Use <code>if (s == "yes")</code> chains or a <code>std::map</code> for string dispatch.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🧰</div>
+      <div class="mistake-body">
+        <strong>Declaring a variable in a case without braces</strong>
+        <small><code>case 1: int y = 5;</code> can fail because the variable's scope crosses other labels. Wrap the case body in its own <code>{ }</code> block when you need a local.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Traffic light.</strong> Define <code>enum class Light { Red, Yellow, Green };</code> and write a <code>switch</code> that prints the action for each. Omit <code>default</code> and turn on <code>-Wall</code> — confirm the compiler is happy when all cases are covered.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Vowel grouping.</strong> Read a <code>char</code> and print <code>"vowel"</code> or <code>"consonant"</code> using stacked case labels (<code>case 'a': case 'e': ...</code>) for the vowels — intentional fall-through done right.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Add a case, catch the warning.</strong> Take your traffic-light switch (no <code>default</code>), then extend the enum with <code>Flashing</code>. Compile and watch <code>-Wswitch</code> flag the unhandled case — the compiler safety net in action. Then handle it.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong><code>switch (value)</code></strong> jumps to the matching <code>case</code> and runs forward; <code>break;</code> exits.</li>
+        <li><strong>Fall-through</strong> spills into the next case — accidental is a bug; deliberate gets a <code>[[fallthrough]];</code> (C++17).</li>
+        <li><strong>Switching on an <code>enum</code></strong> is the sweet spot — <code>-Wall</code> warns about missing cases; often skip <code>default</code> on purpose.</li>
+        <li><strong>Cases must be compile-time constants;</strong> you can't switch on a <code>std::string</code> or a range.</li>
+        <li><strong>C++17 switch-init:</strong> <code>switch (init; value)</code> scopes a variable to the switch.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_3_1.html" class="nav-btn prev">
+      <small>← Previous</small>
+      3.1  if, else, and if-init
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      3.3  while, do-while, for
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "<code>switch</code> shines on <code>enum</code>s — and modern C++ adds <code>[[fallthrough]]</code> and switch-init! 🔀",
+    "case = an entry door. C++ jumps in and walks downward until a <code>break</code>. 🧩",
+    "Forget a <code>break</code> → fall-through. Deliberate? Say <code>[[fallthrough]];</code> (C++17). 💥",
+    "Switch on an <code>enum</code> and <code>-Wall</code> warns you about missing cases. Free safety net! ✨",
+    "You can't switch on a <code>std::string</code> — it's not integer-like. Use <code>if</code>. 🤔",
+    "Pick a signal, watch the jump. Flip breaks off to see fall-through! 🔬",
+    "No breaks here! Once C++ lands on <code>case 2</code>, where does it stop? 🎯",
+    "Three traps, three exercises. The -Wswitch one is satisfying! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 3.2 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPixel = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentPixel) { currentPixel = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Switch Tracer (enum Light) =====
+  const CASES = [
+    { val: 0, label: "case Light::Red:", out: "stop()" },
+    { val: 1, label: "case Light::Yellow:", out: "slow()" },
+    { val: 2, label: "case Light::Green:", out: "go()" }
+  ];
+  let swValue = 0, breaksOn = true;
+  const swCode = document.getElementById('swCode');
+  const swOut = document.getElementById('swOut');
+  const swNote = document.getElementById('swNote');
+  const brkToggle = document.getElementById('brkToggle');
+  const valuesTried = new Set();
+  const NAMES = ['Red', 'Yellow', 'Green'];
+
+  function renderSwitch() {
+    let matchIdx = CASES.findIndex(c => c.val === swValue);
+    const executed = [];
+    for (let i = matchIdx; i < CASES.length; i++) {
+      executed.push(i);
+      if (breaksOn) break;
+    }
+    const outs = executed.map(i => CASES[i].out);
+
+    let html = `<span class="sw-row"><span class="case">switch</span> (signal) {</span>`;
+    CASES.forEach((c, i) => {
+      const isMatch = i === matchIdx;
+      const isExec = executed.includes(i);
+      const cls = isExec ? 'exec' : (isMatch ? 'matched' : '');
+      const dim = (!breaksOn) ? ' dim' : '';
+      html += `<span class="sw-row ${cls}${dim}">&nbsp;&nbsp;<span class="case">${c.label}</span> <span class="body">${c.out};</span> <span class="brk">break;</span></span>`;
+    });
+    html += `<span class="sw-row">}</span>`;
+    swCode.innerHTML = html;
+
+    swOut.textContent = outs.join("\n");
+    if (executed.length > 1) {
+      swNote.innerHTML = `⚠️ <strong>Fall-through!</strong> With <code>break</code> off, C++ kept running past <code>case Light::${NAMES[matchIdx]}</code> through ${executed.length} cases.`;
+    } else {
+      swNote.innerHTML = `Jumped to <code>case Light::${NAMES[matchIdx]}</code>, ran it, and <code>break</code> exited the switch.`;
+    }
+    const key = swValue + ':' + breaksOn;
+    if (!valuesTried.has(key)) { valuesTried.add(key); addXP(2); }
+  }
+  document.querySelectorAll('.val-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.val-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    swValue = parseInt(b.dataset.v, 10);
+    renderSwitch();
+  }));
+  brkToggle.addEventListener('click', () => {
+    breaksOn = !breaksOn;
+    brkToggle.classList.toggle('on', breaksOn);
+    brkToggle.innerHTML = `<span class="dot"></span> break; ${breaksOn ? 'ON' : 'OFF'}`;
+    renderSwitch();
+  });
+  renderSwitch();
+
+  // ===== switch or if? =====
+  const PICKS = [
+    { text: 'Branch on a parsed <code>enum class Token { Plus, Minus, Star, Slash };</code>', answer: 'switch', why: 'An enum with discrete values — the ideal <code>switch</code>, and you get <code>-Wswitch</code> coverage warnings.' },
+    { text: 'Pick a letter grade from a <code>score</code>: 90–100 → A, 80–89 → B, …', answer: 'if', why: 'These are <strong>ranges</strong>. <code>switch</code> can\'t test <code>score &gt;= 90</code> — use <code>if / else if</code>.' },
+    { text: 'Dispatch on a command stored in a <code>std::string</code>: <code>"start"</code>, <code>"stop"</code>, <code>"quit"</code>.', answer: 'if', why: 'You can\'t <code>switch</code> on a <code>std::string</code>. Use <code>if (cmd == "start")</code> chains (or a <code>std::map</code>).' },
+    { text: 'React to a single-key press: <code>\'w\'</code>, <code>\'a\'</code>, <code>\'s\'</code>, <code>\'d\'</code>.', answer: 'switch', why: 'A <code>char</code> matched against fixed constants — perfect for <code>switch</code>.' },
+    { text: 'Run code only when <code>(hp &gt; 0 &amp;&amp; !poisoned)</code>.', answer: 'if', why: 'A compound boolean condition — <code>switch</code> can\'t express it. Use <code>if</code>.' }
+  ];
+  let pickIdx = 0;
+  const pickAnswered = new Set();
+  const pickText = document.getElementById('pickText');
+  const pickNum = document.getElementById('pickNum');
+  const pickBtns = document.querySelectorAll('#pickBtns .vbtn');
+  const pickFb = document.getElementById('pickFb');
+  const pickNext = document.getElementById('pickNext');
+
+  function loadPick() {
+    const s = PICKS[pickIdx];
+    pickText.innerHTML = s.text;
+    pickNum.textContent = `Decision ${pickIdx + 1} / ${PICKS.length}`;
+    pickBtns.forEach(b => { b.classList.remove('right', 'wrong'); b.disabled = false; });
+    pickFb.innerHTML = 'Which tool fits this decision best?';
+    pickNext.disabled = true;
+    pickNext.textContent = pickIdx < PICKS.length - 1 ? 'Next decision →' : 'Restart ↺';
+  }
+  pickBtns.forEach(b => b.addEventListener('click', (e) => {
+    const s = PICKS[pickIdx];
+    if (b.dataset.v === s.answer) {
+      b.classList.add('right');
+      pickFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      pickBtns.forEach(x => x.disabled = true);
+      pickNext.disabled = false;
+      if (!pickAnswered.has(pickIdx)) {
+        pickAnswered.add(pickIdx);
+        playCount.textContent = pickAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (pickAnswered.size === PICKS.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 5 decisions nailed! +20 XP'); }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      pickFb.innerHTML = `❌ Not quite. Ask: is this one integer-like value against fixed constants, or a range / string / compound condition?`;
+      breakStreak();
+    }
+  }));
+  pickNext.addEventListener('click', () => { pickIdx = (pickIdx + 1) % PICKS.length; loadPick(); });
+  loadPick();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> No <code>break</code> anywhere. C++ jumps to <code>case 2</code>, prints <code>two</code>, then <strong>falls through</strong> <code>case 3</code> (<code>three</code>) and <code>default</code> (<code>other</code>). Output: <code>two three other</code>.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> With no breaks, execution flows from <code>case 2</code> down through every case: <code>two three other</code>.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. There are no <code>break</code>s. Once C++ lands on <code>case 2</code>, it keeps running through every case below it.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>

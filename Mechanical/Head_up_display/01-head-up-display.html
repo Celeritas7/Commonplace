@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Head-Up Display (HUD) · Mechanical · Commonplace</title>
+
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../index.html">Commonplace</a><span class="sep">›</span><a href="../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="index.html">Head-up Display</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Head-up Display</div>  <h1>Head-Up Display (HUD)</h1>  <div class="source">Source images: IMG20250514181543, IMG20250514181546, IMG20250514181555</div></div>
+    <article>
+      <p><img alt="Original notebook page — HUD overview + internal architecture" src="../../docs/Head_up_display/IMG20250514181543.jpg"></p>
+<h2>Overview</h2>
+<p>The HUD module covers BMW's head-up display — the small projector unit mounted behind the instrument cluster that <strong>reflects a virtual image off the windscreen</strong> so the driver can read speed, navigation prompts, DSC alerts, and ACC status without taking their eyes off the road. The trainer's three pages walk through five ergonomic advantages (less eye movement, longer focus distance, less focusing fatigue), the <strong>internal optical chain</strong> (TFT panel + backlighting + shutter + mirrors + covering glass), the <strong>electrical / bus architecture</strong> (HUD module on MOST bus, powered through Car Access System, getting data from DME and IBS), the <strong>3 DIN terminal feeds</strong> (30g / R / 15) and what each carries, the <strong>LED backlight design</strong> (super-bright red + green LEDs combined to produce white), the <strong>3-input brightness control</strong> (manual CID setting, rain/light sensor, instrument lighting), the <strong>content displayed</strong> (DSC errors, ACC info, navigation, M-ASK output), and the <strong>wedge-shaped plastic foil</strong> laminated into the windscreen that prevents double-imaging.</p>
+<h2>Working Principle</h2>
+<h3>What a head-up display does</h3>
+<blockquote>
+<p><em>"★ Head up display:</em>
+  <em>— The displays are reflected via windscreen.</em>
+  <em>— The windscreen functions as semipermeable mirror."</em> — IMG 181543.</p>
+</blockquote>
+<p>A small projector unit mounted in the dashboard, behind the instrument cluster, shines an image <strong>upward and forward</strong> onto the inside of the windscreen. The windscreen acts as a <strong>semi-permeable mirror</strong> — most of the light passes through (so the driver still sees the road), but a small fraction reflects back toward the driver's eyes, creating a <strong>virtual image</strong> that appears to float above the bonnet at a comfortable focus distance (~2-2.5 metres).</p>
+<pre><code>                                  Windscreen
+                                  (acts as
+                                   half-mirror)
+                                   ╱
+                                  ╱
+                                 ╱  ← reflected light
+                                ╱      reaches driver's eye
+                               ╱
+                              ╱
+                             ╱
+   Driver's eye ◄───────────╱
+                           ╱
+                          ╱
+                         ╱
+                        ╱       Virtual image appears to
+                       ╱        FLOAT above the bonnet
+                      ╱         at ~2-2.5 m focus distance
+                     ╱   (driver's eye focuses near road, not on dashboard)
+                    ╱
+   Outside light  → → → → → → → → → → →  reaches driver too
+                                            (most light passes through)
+   ┌──────────────┐
+   │  HUD module  │
+   │ in dashboard │  ←──── image projected upward
+   │   (TFT +     │       toward windscreen
+   │   mirrors)   │
+   └──────────────┘
+</code></pre>
+<h3>Five advantages</h3>
+<blockquote>
+<p><em>"Advantage:</em>
+  <em>① Direction of [regular] vision moved less.</em>
+  <em>② Distance of image greater.</em>
+  <em>③ Less focusing work for the eye.</em>
+  <em>④ Driver is concentrated.</em>
+  <em>⑤ Driver less susceptible to fatigue."</em> — IMG 181543.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Advantage</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>①</td>
+<td><strong>Less eye movement</strong></td>
+<td>Driver doesn't have to glance down to the instrument cluster — gauges appear in the forward field of view</td>
+</tr>
+<tr>
+<td>②</td>
+<td><strong>Longer image distance</strong></td>
+<td>Virtual image at ~2.5 m focus, vs ~0.7 m for the instrument cluster — closer to the road's focal range</td>
+</tr>
+<tr>
+<td>③</td>
+<td><strong>Less focusing fatigue</strong></td>
+<td>Eye doesn't have to re-accommodate between road (∞) and dashboard (0.7 m) — only between road and ~2.5 m HUD image</td>
+</tr>
+<tr>
+<td>④</td>
+<td><strong>Better concentration</strong></td>
+<td>Information appears within driver's primary attention zone instead of competing for it</td>
+</tr>
+<tr>
+<td>⑤</td>
+<td><strong>Less fatigue overall</strong></td>
+<td>Reduced eye-movement load → less neck/eye fatigue on long drives</td>
+</tr>
+</tbody>
+</table>
+<h3>Where the HUD sits</h3>
+<blockquote>
+<p><em>"Located:</em>
+  <em>★ Behind instrument cluster.</em>
+  <em>★ Above the steering column."</em> — IMG 181543.</p>
+</blockquote>
+<p>The projector unit is <strong>hidden in the dashboard between the instrument cluster and the windscreen</strong>, above the steering column. From the outside, the only visible part of the HUD is an opening on the top of the dashboard with a small clear glass cover.</p>
+<h3>Internal optical chain</h3>
+<p>The page sketches the HUD module's internal architecture:</p>
+<pre><code>                                ┌──────────────┐
+                                │              │  ← Covering glass
+                                │              │     (clear panel on
+                                ╰──────────────╯       top of dashboard
+                                       │                — protects the
+                                       ▼                  internals from dust)
+                                       │
+                              ┌────────┴────────┐
+                              │      Shutter    │  ← shutter (on/off
+                              │   (on-off as    │     as per need —
+                              │     per need)   │     opaque when HUD
+                              │                 │     is OFF, transparent
+                              └────────┬────────┘     when ON)
+                                       │
+                                       ▼
+                              ┌────────────────┐    ┌──────────────┐
+                              │      TFT       │◄───┤  Backlighting │
+                              │   projection   │    │  (LED array)  │
+                              │     display    │    │               │
+                              └────────┬───────┘    └──────────────┘
+                                       │
+                                       ▼ (light from TFT panel)
+                              ┌────────────────┐
+                              │     Mirror     │    ← Mirrors arrangements
+                              │  arrangements  │      (fold the optical
+                              │                │       path so the projector
+                              └────────┬───────┘       fits in a compact
+                                       │               dashboard space)
+                                       │
+                                       ▼
+                                  Windscreen
+</code></pre>
+<p><strong>Five sub-components:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Covering glass</strong></td>
+<td>Protects the internals from dust + sunlight</td>
+</tr>
+<tr>
+<td><strong>Shutter (electromechanical)</strong></td>
+<td>Closes when HUD is off — keeps sunlight from entering the housing and damaging the TFT</td>
+</tr>
+<tr>
+<td><strong>TFT projection display</strong></td>
+<td>Generates the image (small colour LCD panel — same family as a phone screen)</td>
+</tr>
+<tr>
+<td><strong>Backlighting</strong></td>
+<td>High-brightness LEDs illuminate the TFT from behind</td>
+</tr>
+<tr>
+<td><strong>Mirrors arrangement</strong></td>
+<td>Folds the light path so the projector fits in a flat dashboard housing</td>
+</tr>
+</tbody>
+</table>
+<h3>Why a shutter?</h3>
+<p>A focused image projector pointing at the windscreen also works in reverse — focused sunlight coming <strong>down through the windscreen</strong> could enter the optical path and burn the TFT panel. The <strong>shutter is a small motorised flap</strong> that closes the opening whenever the HUD is off (during the day with sun above the car) and opens when the HUD is on.</p>
+<h3>Brightness control — the TFT stays always-on</h3>
+<blockquote>
+<p><em>"Display of TFT is always ON. Just the brightness of light is adjusted by diode connections."</em> — IMG 181543.</p>
+</blockquote>
+<p>The TFT panel itself doesn't switch on/off — instead, the <strong>LED backlight current</strong> is modulated. This gives:
+- Smoother brightness transitions (no startup flicker).
+- Lower latency between brightness commands and visible change.
+- Longer TFT lifetime (continuous operation is gentler than power cycling).</p>
+<p>The "diode connections" wording refers to the backlight LED drive circuit — the current through the LEDs is varied by adjusting the drive transistor's biasing.</p>
+<h3>Bus architecture — HUD on MOST</h3>
+<p>The second page sketches the HUD's place in the car's data network:</p>
+<pre><code>                                              ┌──────────────┐
+                                              │  Engine      │
+                                              │  control     │
+                                              │  unit         │
+                                              │  (DME / DDE) │
+                                              └──────┬───────┘
+                                                     │
+                                  ┌──────────────────┘
+                                  │
+                                  ▼
+                          ┌──────────────┐
+                          │ Intelligent  │
+                          │   Battery    │
+                          │   Sensor     │
+                          │    (IBS)     │
+                          └──────┬───────┘
+                                 │
+                ┌────────────────┘
+                │
+                ▼
+        ┌───────────────┐
+        │ Car Access    │
+        │ System (CAS)  │  ← gates power to HUD via switch
+        │               │
+        └───────┬───────┘
+                │
+                ▼ (switched power)
+        ┌───────────────┐
+        │    HUD K      │   ← KI 30g supply
+        │ (head-up      │   ← KI 30 supply
+        │  display)     │
+        └───────────────┘
+</code></pre>
+<p><strong>The network roles</strong>:</p>
+<ul>
+<li><strong>DME/DDE</strong>: provides engine speed, road speed, gear, fuel level → HUD displays as numbers</li>
+<li><strong>IBS</strong> (Intelligent Battery Sensor): provides battery state info for energy-mgmt decisions about HUD power</li>
+<li><strong>CAS</strong> (Car Access System): the controller that switches HUD power on with ignition</li>
+<li><strong>HUD K</strong>: the HUD's own control unit, with <strong>MOST bus</strong> input and two power feeds (KI 30g and KI 30 — see below)</li>
+</ul>
+<h3>Three DIN terminal feeds</h3>
+<blockquote>
+<p><em>"Terminal 30g: bus supplied [through] switch through MOST bus.</em>
+<em>Terminal R: start up — checking the ignition switch on.</em>
+<em>Terminal 15: switching on back light (instrument cluster MOST)."</em> — IMG 181546.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Terminal</th>
+<th>Source</th>
+<th>Job</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>30g (Klemme 30g)</strong></td>
+<td>Switched permanent battery+ via CAS</td>
+<td>Main HUD power; also feeds MOST bus state</td>
+</tr>
+<tr>
+<td><strong>R</strong></td>
+<td>Ignition "ACC / Radio" position</td>
+<td>Wakes the HUD module on key turn; checks ignition state</td>
+</tr>
+<tr>
+<td><strong>15</strong></td>
+<td>Switched ignition (key fully ON)</td>
+<td>Switches on the LED backlight; instrument cluster receives MOST data</td>
+</tr>
+</tbody>
+</table>
+<p>So the three feeds correspond to <strong>three states</strong>:
+- <strong>Key OFF</strong> — only the MOST bus listening line is alive; HUD is dark.
+- <strong>Key in ACC / R</strong> — Terminal R wakes the HUD; module boots up, TFT begins receiving data, shutter still closed.
+- <strong>Key in IGN / 15</strong> — Terminal 15 powers the LED backlight; shutter opens; image appears on windscreen.</p>
+<h3>Two front-panel buttons</h3>
+<blockquote>
+<p><em>"On/off button:</em>
+  <em>① back lighting on/off.</em>
+  <em>② shutter close/open."</em> — IMG 181546.</p>
+</blockquote>
+<p>The driver's HUD on/off button does <strong>two physical things</strong> in one press:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Action</th>
+<th>What it controls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>①</td>
+<td>Backlight on/off</td>
+<td>LEDs power up (image visible) / power down (image invisible)</td>
+</tr>
+<tr>
+<td>②</td>
+<td>Shutter close/open</td>
+<td>Motorised flap moves to expose / cover the optical opening</td>
+</tr>
+</tbody>
+</table>
+<p>Both actions are coordinated: switching the HUD off closes the shutter and turns off the LEDs simultaneously. Switching it on does the reverse.</p>
+<h3>LED backlight structure — red + green = white</h3>
+<blockquote>
+<p><em>"Structure of LED:</em>
+  <em>— super bright.</em>
+  <em>— Alternate use of red &amp; green light [produces white light]."</em> — IMG 181546.</p>
+</blockquote>
+<p>The HUD's backlight is <strong>not</strong> made of white LEDs. Instead, it uses <strong>separate red and green high-brightness LEDs</strong>, and the combined emission is perceived as white by the driver's eye:</p>
+<pre><code>   Red LEDs   ─── λ ≈ 625 nm ──┐
+                                ├──► perceived as white (additive
+   Green LEDs ─── λ ≈ 525 nm ──┘     mixing of two wavelengths)
+</code></pre>
+<p><strong>Why this scheme?</strong>
+- Red and green LEDs separately are far more efficient than a white LED.
+- The two-LED design gives <strong>finer brightness control</strong> — independently dimming the two channels can shift the apparent colour temperature.
+- The two-wavelength output <strong>transmits cleanly through the windscreen's wedge foil</strong> (see below), which has different transmission properties at different wavelengths.</p>
+<h3>Three-input brightness control</h3>
+<blockquote>
+<p><em>"Brightness control:</em>
+  <em>① Basic brightness set using controller &amp; central information display (CID).</em>
+  <em>② Surrounding brightness measured by 'rain &amp; light' sensor.</em>
+  <em>③ Brightness of instrument lighting."</em> — IMG 181546.</p>
+</blockquote>
+<p>The HUD's actual on-screen brightness is set by <strong>three independent inputs</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Input source</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>①</td>
+<td><strong>CID / iDrive controller</strong></td>
+<td>Driver's manual brightness preference; persistent setting saved per car key (see Car Key Memory below)</td>
+</tr>
+<tr>
+<td>②</td>
+<td><strong>Rain &amp; light sensor</strong> (windscreen-mounted)</td>
+<td>Measures ambient outside light → boosts HUD brightness in bright sun, lowers it at night</td>
+</tr>
+<tr>
+<td>③</td>
+<td><strong>Instrument lighting dimmer</strong></td>
+<td>Matches HUD brightness to dashboard brightness when driver dims the cluster</td>
+</tr>
+</tbody>
+</table>
+<p>The three are typically combined by the HUD K module's firmware:
+<code>final_brightness = manual_preference × ambient_brightness_factor × instrument_dimmer_factor</code></p>
+<h3>Content displayed — what the HUD shows</h3>
+<blockquote>
+<p><em>"★ Navigation info:</em>
+  <em>① DSC (Dynamic Stability Control) — error msg from various control units.</em>
+     <em>ACC (Automatic Cruise Control) by DME/DDE.</em>
+  <em>② M-ASK (Navigation)."</em> — IMG 181555.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Information</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Speed</strong></td>
+<td>DME / DDE (engine ECU)</td>
+</tr>
+<tr>
+<td><strong>DSC error messages</strong></td>
+<td>DSC controller (when stability event happens)</td>
+</tr>
+<tr>
+<td><strong>ACC info</strong></td>
+<td>DME / DDE — set speed, lead-vehicle distance, gap symbol</td>
+</tr>
+<tr>
+<td><strong>Navigation prompts</strong></td>
+<td>M-ASK (Multi Audio System Controller — older BMW navigation unit)</td>
+</tr>
+<tr>
+<td><strong>General error messages</strong></td>
+<td>Various control units via Kombi instrument</td>
+</tr>
+</tbody>
+</table>
+<h3>Other displayed control modules</h3>
+<blockquote>
+<p><em>"Control modules:</em>
+  <em>— RLS [Rain-Light Sensor].</em>
+  <em>— CON [iDrive Controller]."</em> — IMG 181555.</p>
+</blockquote>
+<p>The HUD also processes inputs from:
+- <strong>RLS</strong> (Rain Light Sensor) — for the brightness-adjustment loop above.
+- <strong>CON</strong> (the iDrive controller knob) — for the driver to scroll through HUD configuration menus.</p>
+<h3>Car-key memory</h3>
+<blockquote>
+<p><em>"★ Car key memory: Storage of different adjustments."</em> — IMG 181555.</p>
+</blockquote>
+<p>Each car key has a <strong>stored profile</strong> that the BMW remembers. The HUD's brightness, image position (vertical offset), and content selection (full / partial / off) are all stored <strong>per key</strong>. So when driver A unlocks the car with Key 1, the HUD comes up at their preferred brightness and position; when driver B with Key 2 takes over, the HUD's settings switch automatically.</p>
+<p>This is the same key-memory feature that handles seat position, mirror position, steering wheel position, etc. — all stored per-key in the CAS module.</p>
+<h3>Faulty images — the wedge-foil windscreen</h3>
+<blockquote>
+<p><em>"Faulty images:</em>
+  <em>— Wedge-shaped plastic foil design."</em> — IMG 181555.</p>
+</blockquote>
+<p>A flat windscreen would produce a <strong>double image</strong> of the HUD: the inner glass surface reflects one image, the outer glass surface reflects another, and the two are slightly offset because the windscreen has thickness. To the driver these would appear as two superimposed sets of numbers — illegible.</p>
+<p><strong>The solution</strong> is to laminate a <strong>wedge-shaped plastic foil</strong> between the two glass layers of the windscreen:</p>
+<pre><code>   Plain windscreen — TWO reflections:        Wedge foil — ONE clear reflection:
+   ──────────────────────────────             ─────────────────────────────────
+
+   ╱    ╲   inner glass                          ╱        ╲   inner glass
+  ╱      ╲                                      ╱          ╲
+   ╲    ╱   ← reflection 1 (from outer)            ╲    ╱   ← single reflection
+    ╲  ╱    ← reflection 2 (from inner)              ╲╱       (the two surfaces
+     ╲╱        — produces DOUBLE IMAGE                         are now parallel
+                                                                relative to driver)
+
+   Plain glass:                                Wedge foil:
+   inner &amp; outer surfaces                       inner &amp; outer surfaces
+   are PARALLEL → two reflections               are at slight angle
+   at slightly different angles                 → both reflections
+   → double image                                converge into one
+</code></pre>
+<p>The wedge angle is tiny (a few arc-minutes) but enough to make the two reflected paths converge into a single image at the driver's eye position.</p>
+<p><strong>Service implication</strong>: a <strong>HUD-equipped windscreen is more expensive to replace</strong> than a standard windscreen, because the wedge-foil lamination is a precision optical part. Customers replacing a HUD windscreen with a non-HUD aftermarket replacement will see double images and have to upgrade.</p>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Covering glass</strong></td>
+<td>Top of dashboard; protects the HUD optical opening from dust + sun</td>
+</tr>
+<tr>
+<td><strong>Shutter (motorised flap)</strong></td>
+<td>Closes when HUD is off to prevent sunlight from burning the TFT</td>
+</tr>
+<tr>
+<td><strong>TFT projection display</strong></td>
+<td>Small colour LCD panel that generates the image</td>
+</tr>
+<tr>
+<td><strong>Red + green LED backlight</strong></td>
+<td>Two-wavelength backlight; combined emission appears white</td>
+</tr>
+<tr>
+<td><strong>Mirrors arrangement</strong></td>
+<td>Folds the optical path into a flat dashboard housing</td>
+</tr>
+<tr>
+<td><strong>HUD K control unit</strong></td>
+<td>Local controller; processes MOST bus data + brightness inputs</td>
+</tr>
+<tr>
+<td><strong>CAS (Car Access System)</strong></td>
+<td>Gates HUD power based on ignition key state</td>
+</tr>
+<tr>
+<td><strong>MOST bus</strong></td>
+<td>Optical / data bus carrying HUD content from other ECUs</td>
+</tr>
+<tr>
+<td><strong>Rain Light Sensor (RLS)</strong></td>
+<td>Provides ambient brightness for HUD brightness control</td>
+</tr>
+<tr>
+<td><strong>CID + iDrive controller (CON)</strong></td>
+<td>Manual HUD configuration interface</td>
+</tr>
+<tr>
+<td><strong>Wedge-shaped plastic foil</strong></td>
+<td>Laminated between windscreen layers; prevents double reflection</td>
+</tr>
+</tbody>
+</table>
+<h2>Key Facts</h2>
+<ul>
+<li>The HUD reflects an image off the <strong>windscreen acting as a semi-permeable mirror</strong> — the virtual image appears at ~2.5 m focus distance.</li>
+<li><strong>5 advantages</strong>: less eye movement, longer focus distance, less focusing fatigue, better concentration, less overall fatigue.</li>
+<li>The HUD is <strong>located behind the instrument cluster, above the steering column</strong>.</li>
+<li>Internal chain: <strong>covering glass → shutter → TFT → backlight → mirrors → windscreen</strong>.</li>
+<li>The <strong>shutter</strong> prevents focused sunlight from burning the TFT when the HUD is off.</li>
+<li>The <strong>TFT is always on</strong>; brightness is controlled by <strong>modulating the LED backlight current</strong> (not the TFT itself).</li>
+<li><strong>Three terminal feeds</strong>: 30g (power via CAS), R (wake on ignition ACC), 15 (backlight on with full IGN).</li>
+<li>The on/off button does <strong>two things</strong>: backlight on/off AND shutter open/close.</li>
+<li>LED backlight uses <strong>separate red + green LEDs</strong>, combined to produce white — more efficient + better wavelength selectivity through the wedge foil.</li>
+<li><strong>Brightness has 3 inputs</strong>: manual CID preference, rain/light sensor, instrument-cluster dimmer.</li>
+<li><strong>HUD content</strong>: speed (DME), DSC errors, ACC info (DME), navigation (M-ASK), control-module errors.</li>
+<li><strong>Car-key memory</strong>: HUD settings stored per key — switches automatically between drivers.</li>
+<li>The windscreen contains a <strong>wedge-shaped plastic foil</strong> to prevent the double-image problem caused by reflections off both glass surfaces.</li>
+<li><strong>Service note</strong>: HUD-equipped windscreens are more expensive; non-HUD windscreens cause double images.</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="../Electronics_electrical/Battery/04-current-measurement-and-din-terminal-numbers.html">04-current-measurement-and-din-terminal-numbers</a> — DIN terminal 30 / 30g / R / 15 framework that the HUD's power scheme uses.</li>
+<li><a href="../Electronics_electrical/10-bus-systems-overview-topologies-and-data-transmission.html">10-bus-systems-overview-topologies-and-data-transmission</a> — the MOST bus that carries HUD data.</li>
+<li><a href="../Electronics_electrical/11-can-lin-most-byteflight.html">11-can-lin-most-byteflight</a> — MOST bus protocol in detail.</li>
+<li><a href="../Electronics_electrical/14-adaptive-headlights-ahl-system.html">14-adaptive-headlights-ahl-system</a> — uses the same Rain Light Sensor input.</li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>"KI 30g &amp; KI 30"</strong> on IMG 181546 — KI is the German abbreviation for <em>Klemme</em> (terminal). The combined feed (30g for switched battery, 30 for permanent) is standard BMW practice. "30g" specifically denotes a <strong>switched</strong> battery+ that's killed by the CAS in sleep mode to prevent overnight drain — distinct from straight 30 (always-live).</li>
+<li>[?] <strong>"Terminal R: start up — checking the ignition switch on"</strong> — this is the trainer's compressed wording for the terminal-R role. Terminal R is the <strong>accessory / radio</strong> position of the ignition switch; powering up Terminal R wakes the HUD's microcontroller without yet enabling the high-power LED backlight (which waits for Terminal 15). The transcription preserves this layering correctly.</li>
+<li>[?] <strong>"M-ASK"</strong> stands for <strong>Multi Audio System Controller</strong> — the BMW unit that combined audio + navigation in mid-2000s vehicles (E60-era). Modern BMWs use the more general <strong>HU (Head Unit)</strong> terminology. M-ASK is specifically named on the source page, so preserved verbatim.</li>
+<li>[?] <strong>"Alternate use of red &amp; green light"</strong> — the trainer's word "alternate" could be read as "alternating" (LEDs flicker between red and green in rapid sequence) or "alternative" (separate red and green LEDs lit continuously). The latter is the standard implementation; preserved with this interpretation.</li>
+<li>[?] <strong>"Diode connections"</strong> for brightness control is the trainer's term for the LED backlight drive circuit. The standard implementation uses <strong>PWM (pulse-width modulation)</strong> of the LED drive current, controlled by transistors — not by physically changing "diode connections."</li>
+<li>[?] <strong>The wedge-foil sketch</strong> at the bottom of IMG 181555 shows a head looking through a glass panel with a separate wedge-shaped piece of plastic. The interpretation as a laminated windscreen foil is industry-standard; the trainer's exact intent of "wedge-shaped plastic foil design" is preserved verbatim.</li>
+<li>[?] <strong>MOST bus role</strong> — the HUD is on the MOST optical bus on E60 / E65 era BMWs (the era these notes are from). Modern BMWs (F-series and later) moved HUD to FlexRay or Ethernet. The MOST attribution is correct for the 2013 training context.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Head-up Display</a>
+      <span class="spacer"></span>
+      <a href="../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

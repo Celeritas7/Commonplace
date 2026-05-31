@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Battery Diagnostic Measurements &amp; Current Fundamentals · Mechanical · Commonplace</title>
+
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="../index.html">Electronics &amp; Electrical</a><span class="sep">›</span><a href="index.html">Battery</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Battery</div>  <h1>Battery Diagnostic Measurements &amp; Current Fundamentals</h1>  <div class="source">Source images: IMG20250514112839, IMG20250514112844, IMG20250514112900, IMG20250514112908, IMG20250514112921</div></div>
+    <article>
+      <p><img alt="Original notebook page — voltage scales + Ohms" src="../../../docs/Electronics_electrical/Battery/IMG20250514112839.jpg"></p>
+<h2>Overview</h2>
+<p>The dealer-technician's measurement toolkit for the electrical system: <strong>voltage scales</strong> (μV to kV range — from sensor signals to ignition-coil HV), <strong>digital vs analog multimeter</strong> comparison, the <strong>standard sequence of 12 voltage measurements</strong> that a BMW Maruti-Ritz example walks through (open circuit, key-on with various loads, vehicle running at multiple rpms — confirming the alternator is charging correctly), the <strong>causes and symptoms of overcharging</strong>, the <strong>discharge-over-time curve</strong> that shows how a parked battery loses capacity (with vs without disconnect switch), and the <strong>four effects of electric current</strong> (heat, magnetic, chemical, atomic) — the fundamental phenomena that everything from a starter motor to a battery to an LED relies on.</p>
+<h2>Working Principle</h2>
+<h3>Voltage scales — what magnitudes you'll meet</h3>
+<blockquote>
+<p><em>Notebook (IMG 112839):</em>
+"<strong>Ohm</strong>: Nuclei +ve / electron −ve
+1 kV = 1000 V
+1 mV = 10⁻³ V (≈ 448V in junction current = 10⁻⁶ / 448 × 10⁻³)
+1 mV = Body in hospital [ECG]
+2 V =
+12 V = Bosch battery (pulsed)
+12,000 V = ignition coil"</p>
+</blockquote>
+<p>A useful magnitude tour:</p>
+<table>
+<thead>
+<tr>
+<th>Voltage</th>
+<th>Where you see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1 μV (10⁻⁶ V)</strong></td>
+<td>Faintest sensor signals (e.g., O₂ sensor, thermocouple)</td>
+</tr>
+<tr>
+<td><strong>1 mV (10⁻³ V)</strong></td>
+<td>Body voltages (ECG monitoring); voltage drops across good connectors</td>
+</tr>
+<tr>
+<td><strong>0.7 V</strong></td>
+<td>Diode forward voltage drop</td>
+</tr>
+<tr>
+<td><strong>2 V</strong></td>
+<td>One lead-acid cell</td>
+</tr>
+<tr>
+<td><strong>5 V</strong></td>
+<td>Logic supply (ECU internal)</td>
+</tr>
+<tr>
+<td><strong>12 V</strong></td>
+<td>Battery (nominal); car electrical system</td>
+</tr>
+<tr>
+<td><strong>24 V</strong></td>
+<td>Truck systems; doubled batteries</td>
+</tr>
+<tr>
+<td><strong>80 V</strong></td>
+<td>Xenon ballast running voltage</td>
+</tr>
+<tr>
+<td><strong>400 V</strong></td>
+<td>Some hybrid traction batteries</td>
+</tr>
+<tr>
+<td><strong>12,000 V (12 kV)</strong></td>
+<td>Ignition-coil secondary; spark across plug gap</td>
+</tr>
+<tr>
+<td><strong>25,000 V (25 kV)</strong></td>
+<td>Xenon HV strike pulse</td>
+</tr>
+</tbody>
+</table>
+<h3>Why digital multimeter is preferred (vs analog)</h3>
+<blockquote>
+<p><em>Notebook (IMG 112844):</em>
+"Power [supply] in electricity requires 50 Hz.
+Analogue &amp; digital reading.</p>
+<p><strong>Adv. of Digital multimeter over Analogue</strong>:
+– Digital display
+– Overrange display
+– Negative measurement display
+– Greater sensitivity
+– Greater internal resistance
+– Not shock sensitive
+– Zeroing not necessary</p>
+<p>Power supply — red, Ground connection — brown"</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Analog multimeter</strong></th>
+<th><strong>Digital multimeter</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Display</td>
+<td>Mechanical needle on calibrated scale</td>
+<td>Numeric LCD display</td>
+</tr>
+<tr>
+<td>Overrange handling</td>
+<td>Needle pegged → can damage movement</td>
+<td>Automatic; displays "OL" or "1."</td>
+</tr>
+<tr>
+<td>Polarity</td>
+<td>Reverses if connected backwards → can pin needle</td>
+<td>Just shows negative sign</td>
+</tr>
+<tr>
+<td>Sensitivity</td>
+<td>Limited by needle inertia</td>
+<td>Much higher (millivolts, microamps)</td>
+</tr>
+<tr>
+<td>Input impedance</td>
+<td>Low (~20 kΩ/V) — loads the circuit being measured</td>
+<td>Very high (10+ MΩ) — minimal loading</td>
+</tr>
+<tr>
+<td>Shock</td>
+<td>Mechanical jolt can damage movement</td>
+<td>Solid-state, robust</td>
+</tr>
+<tr>
+<td>Zeroing</td>
+<td>Manual zero adjust needed</td>
+<td>Auto-zero</td>
+</tr>
+<tr>
+<td>Used for</td>
+<td>Field/legacy work, smooth signal tracking</td>
+<td>All modern diagnosis</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Standard wire colour codes</strong> (in technician practice):
+- <strong>Red</strong> — power supply / probe positive
+- <strong>Brown</strong> — ground / chassis (BMW convention; some manufacturers use black)</p>
+<h3>The 12-step battery + alternator voltage check</h3>
+<blockquote>
+<p><em>Notebook (IMG 112900, top-right corner):</em> "Maruti Ritz ZXR" — using this car as the example</p>
+<p>Procedure (12 measurements):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Test condition</th>
+<th>Reading</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Open circuit reading</td>
+<td><strong>12.65 V</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Key on, headlights OFF (all loads off)</td>
+<td>12.38 V</td>
+</tr>
+<tr>
+<td>3</td>
+<td>With parking light on, reading (blinking)</td>
+<td>12.26 V</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Headlights ON</td>
+<td>11.95 V</td>
+</tr>
+<tr>
+<td>5</td>
+<td>All loads ON (parking + hazard + radio + roof light + AC blower)</td>
+<td>11.74 V</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Reading with vehicle idling at cold start, at rpm is max (i.e., starting battery refill)</td>
+<td><strong>14.29 V</strong> <em>(charging voltage, not actual battery V)</em></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Vehicle idling (with all loads on)</td>
+<td>11.92 V</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Vehicle at 1500 rpm</td>
+<td>13.54 V</td>
+</tr>
+<tr>
+<td>9</td>
+<td>At 3000 rpm</td>
+<td>14.35 V</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Vehicle at max rpm (~6000 rpm)</td>
+<td>14.35 V <em>(regulator caps charging voltage)</em></td>
+</tr>
+<tr>
+<td>11</td>
+<td>Max rpm with all loads ON (IMG 112908 top)</td>
+<td>14.35 V <em>(regulator clamps even under load)</em></td>
+</tr>
+<tr>
+<td>12</td>
+<td>Reading with vehicle OFF (just after running)</td>
+<td><strong>13.66 V</strong> → slowly will reach 12.6 V <em>(surface charge dissipating)</em></td>
+</tr>
+</tbody>
+</table>
+</blockquote>
+<p>Margin notes: "charging voltage / Not actual" and "regulator doesn't allow alternator to go above 14.35 — it cap[s] at 14.35 - constant rpm"</p>
+<p>Interpretation:
+- <strong>Test 1</strong> is the resting voltage (true SoC indicator).
+- <strong>Tests 2-5</strong> show how each load drops the battery voltage while engine OFF.
+- <strong>Tests 6-10</strong> track the alternator output as rpm climbs; voltage regulator <strong>clamps at ~ 14.35 V</strong> to prevent overcharging.
+- <strong>Test 12</strong> shows surface charge that takes ~ 1 hour to dissipate back to true resting voltage.</p>
+<p>This is a <strong>complete electrical-system health check</strong> done with just a multimeter — battery condition, alternator output, voltage-regulator behaviour all in one session.</p>
+<h3>Causes of overcharging</h3>
+<blockquote>
+<p><em>Notebook (IMG 112908, middle):</em>
+"<strong>Consequences of overcharging</strong>:
+① Corrosion of electrodes
+② Lowering the fluid level
+③ Formation of oxy-hydrogen gas</p>
+<p><strong>Causes</strong>:
+① Faulty voltage regulator
+② Incorrect charging"</p>
+</blockquote>
+<p>When charging voltage exceeds ~ 14.5-14.7 V continuously:
+- <strong>Electrode corrosion</strong> — positive grids oxidise → mechanical failure.
+- <strong>Water loss</strong> — electrolysis boils off water → electrolyte concentration rises → SG too high → plate damage.
+- <strong>Oxy-hydrogen</strong> — explosion risk (see <a href="02-battery-specifications-and-failure-modes.html">chapter 02</a>).</p>
+<p>Causes are almost always:
+- Bad <strong>voltage regulator</strong> (mechanical type stuck closed, or solid-state failed).
+- Bad <strong>charging set-up</strong> (jumper cables connected wrong, generic charger left on too long).</p>
+<h3>Charging behaviour graph</h3>
+<blockquote>
+<p><em>Notebook (IMG 112908, bottom graph):</em>
+Terminal voltage on left Y-axis (0 to 14.2 V); time on X-axis (1-8 hours).
+Curves: ① charging current constant until V reaches 14.2 V; ② voltage held constant 14.2 V → current decreases exponentially; ③ battery fully charged → current drops to zero; ④ no current after full charge.</p>
+</blockquote>
+<p>This is the classic <strong>2-stage CV/CC</strong> charging profile:
+- <strong>Stage 1 (Constant Current)</strong>: charger pushes max current; voltage rises gradually.
+- <strong>Stage 2 (Constant Voltage)</strong>: voltage clamped at 14.2 V (a "boost charge" level); current tapers down as battery saturates.
+- <strong>Stage 3 (Float)</strong>: current drops near zero; battery is full.</p>
+<p>The alternator-regulator system in a car is a simplified version of this — runs at fixed regulator voltage and lets the battery draw what it needs.</p>
+<h3>Discharge over time (with vs without disconnect switch)</h3>
+<blockquote>
+<p><em>Notebook (IMG 112921, top graph):</em>
+Y-axis: battery voltage (12.0 to 12.5 V); X-axis: time (6 weeks to 12 weeks)
+Two curves:
+– <strong>Without disconnect switch</strong>: drops fast (1.0% per week — represents parasitic draw)
+– <strong>With disconnect switch</strong>: drops slowly (self-discharge only, ~ 0.5% per month)</p>
+<p>Margin: "Recharge"</p>
+</blockquote>
+<p>For a parked car:
+- Without battery isolator → parasitic draw (alarm, comfort modules, clock) drains battery → may need <strong>recharging after ~ 6 weeks</strong>.
+- With battery isolator → only self-discharge → <strong>3-6 months</strong> before recharge needed.</p>
+<p>Modern cars with energy management (<a href="../12-energy-management-system.html">chapter 12</a>) hold this margin without manual isolators by progressively shutting down comfort consumers.</p>
+<h3>Current — the four effects</h3>
+<blockquote>
+<p><em>Notebook (IMG 112921, bottom):</em>
+"<strong>Current — 1 Ampere = 2.42 × 10¹⁵ electrons per second</strong> <em>(should be 6.24 × 10¹⁸ — trainer slip)</em></p>
+<p><strong>Effects</strong>:
+① <strong>Heat effect</strong> — Heater
+② <strong>Magnetic field</strong> — Electric motor, generator, speaker
+③ <strong>Chemical effect</strong> — Battery (stores current in it) &amp; LED (light-emitting)
+④ <strong>Atomic effect</strong> — LED (light-emitting diode)"</p>
+</blockquote>
+<p>All four physical effects of electric current — every electrical device in the car exploits at least one:</p>
+<table>
+<thead>
+<tr>
+<th>Effect</th>
+<th>Mechanism</th>
+<th>Where used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Heat (resistive)</strong></td>
+<td>Current through resistance → I²R heating</td>
+<td>Heater elements, cigarette lighter, defrost grid, fuses (when they blow), incandescent bulbs</td>
+</tr>
+<tr>
+<td><strong>Magnetic</strong></td>
+<td>Current through wire → magnetic field; field through coil → induced current</td>
+<td>Starter motor, alternator, solenoids, relays, speakers, ignition coil</td>
+</tr>
+<tr>
+<td><strong>Chemical</strong></td>
+<td>Current drives redox reactions</td>
+<td>Battery charging, electrolysis, electroplating</td>
+</tr>
+<tr>
+<td><strong>Atomic / electronic</strong></td>
+<td>Direct electron-hole recombination → photons</td>
+<td>LED, fluorescent tube, semiconductor light sensors</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><em>Note:</em> The proper number of electrons in 1 A is <strong>6.24 × 10¹⁸ per second</strong> (= 1 C of charge / 1.6 × 10⁻¹⁹ C per electron). The trainer's "2.42 × 10¹⁵" is incorrect; preserved verbatim with this correction noted in Open Questions.</p>
+</blockquote>
+<h2>Force Path / Process Flow</h2>
+<h3>Vehicle voltage check workflow</h3>
+<pre><code>   STEP 1: Open circuit (key off, all loads off)
+        │
+        ▼  measure at battery terminals
+   12.65 V = HEALTHY full-charge resting voltage
+   12.45 V = ~ 75% SoC
+   12.20 V = ~ 50% SoC → service soon
+   &lt; 12.0 V = discharged → don't even crank
+        │
+        ▼  if OK, proceed
+
+   STEP 2-5: Key on, add loads progressively
+        │
+        ▼  watch voltage drop with each load
+   Each load adds ~ 0.1-0.5 V drop
+   No anomalies = circuits intact + no parasitic shorts
+   Anomaly = trace the load that drops too much
+        │
+        ▼  if OK, proceed
+
+   STEP 6-11: Engine running, sweep through rpm
+        │
+        ▼  watch alternator output
+   At idle: should reach ~ 14.0 V with light load
+   At 1500-3000 rpm: should reach 14.2-14.5 V
+   Above 3000 rpm: regulator clamps at ~ 14.4 V
+   ► If voltage stays low at high rpm → bad alternator or regulator
+   ► If voltage climbs above 15 V → faulty regulator (OVERCHARGE)
+        │
+        ▼
+
+   STEP 12: Engine off → battery surface charge dissipates
+        │
+        ▼  read terminal V after 10 min off
+   Should be 13.6 V settling toward 12.6 V over an hour
+   ► If stays &gt; 13 V → battery isn't accepting/releasing charge normally
+   ► If drops below 12 V quickly → battery has poor capacity
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Analog multimeter</strong></td>
+<td>Needle + scale; legacy diagnostic tool</td>
+</tr>
+<tr>
+<td><strong>Digital multimeter (DMM)</strong></td>
+<td>LCD display; modern standard</td>
+</tr>
+<tr>
+<td><strong>Probes</strong></td>
+<td>Red (positive/signal) + Black or Brown (ground)</td>
+</tr>
+<tr>
+<td><strong>Test leads</strong></td>
+<td>Insulated wire + safety-rated plug</td>
+</tr>
+<tr>
+<td><strong>Alligator clips</strong></td>
+<td>For hands-free attachment to terminals</td>
+</tr>
+<tr>
+<td><strong>Voltage regulator</strong> (in alternator)</td>
+<td>Limits charging to ~ 14.4 V; prevents overcharging</td>
+</tr>
+<tr>
+<td><strong>Disconnect switch (battery isolator)</strong></td>
+<td>Mechanical switch in − cable; protects from parasitic drain in long-storage cases</td>
+</tr>
+<tr>
+<td><strong>Hydrometer</strong></td>
+<td>Measures electrolyte specific gravity directly (for serviceable batteries)</td>
+</tr>
+<tr>
+<td><strong>Load tester</strong></td>
+<td>Discharges battery at controlled current to test under load (more reliable than open-circuit V)</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>Why high input impedance (10+ MΩ) matters</h3>
+<p>A multimeter with <strong>low impedance</strong> (analog ~ 20 kΩ/V) <strong>loads the circuit being measured</strong> — pulls some current through itself → distorts the reading. Modern digital meters with <strong>10 MΩ</strong> impedance pull negligible current → measurement is the <strong>actual</strong> voltage, not a perturbed one.</p>
+<p>This matters when reading high-impedance sensor signals (O₂ sensor, knock sensor) — a load-induced voltage drop on a low-impedance meter can give a 50% wrong reading.</p>
+<h3>"Body in hospital — 1 mV"</h3>
+<p>The trainer's example: ECG (electrocardiogram) signal is in the <strong>millivolt</strong> range. Body electricity is tiny — hospital equipment must amplify by 1000× to read it cleanly. Same principle on a car: sensor signals are often millivolts; the ECU's analog front-end amplifies before A/D conversion.</p>
+<h3>Why surface charge at 13.66 V settles over an hour</h3>
+<blockquote>
+<p><em>Notebook test 12:</em> "Reading with vehicle off: 13.66 V → slowly will reach 12.6 V"</p>
+</blockquote>
+<p>Right after charging, the <strong>outermost layers</strong> of the plates have higher concentration of active material than the bulk → terminal voltage reads slightly higher than the "true" rest voltage. As the chemistry equilibrates internally (diffusion), the surface charge dissipates and voltage settles to the actual SoC voltage of ~ 12.6 V over <strong>30 minutes to an hour</strong>.</p>
+<p>For accurate SoC reading, <strong>wait at least 30 minutes</strong> after charging or after a drive before reading resting voltage.</p>
+<h3>Why disconnect switch helps long storage</h3>
+<p>Some cars in long-term storage (vintage, race, RV) have a <strong>mechanical knife-switch</strong> on the battery negative cable. Turning it OFF disconnects the entire car from the battery → no parasitic load → battery only loses charge to internal self-discharge (which is much slower).</p>
+<p>Penalty: all clocks, radio presets, ECU adaptation values reset when reconnected. Modern cars with computer-controlled fuelling really don't like being fully disconnected — best avoided unless storing &gt; 1 month.</p>
+<h2>Visual Diagram</h2>
+<pre><code>   ALTERNATOR OUTPUT vs ENGINE rpm (test 6-11):
+   ────────────────────────────────────────────
+
+   battery V                                      
+       ▲                                          
+   14.5│                  ──────────              
+       │                ╱           ╲ ◄── regulator
+   14.0│              ╱                 caps here
+       │            ╱                                
+   13.5│          ╱                                  
+       │         ╱                                  
+   13.0│       ╱                                    
+       │      ╱                                    
+   12.5│     ╱  ◄── idle                           
+       │    ╱                                       
+   12.0│   ╱                                       
+       │  ╱                                       
+   11.5│ ╱  ◄── engine off + load on                
+       │                                          
+       └───────────────────────────────────────► rpm
+       0    500   1000   1500   2000   3000+        
+
+   ► Below ~ 13.5 V at any rpm = alternator weak
+   ► Above 14.5 V at any rpm = regulator faulty
+
+   Test 1-5 sweep:                                
+   – just measure terminal V with engine off       
+   – ADD loads → voltage drops progressively      
+
+   Test 12 (engine off after running):            
+   – starts at 13.66 V (surface charge)           
+   – settles to 12.6 V over ~ 1 hour              
+</code></pre>
+<pre><code>   PARKED-BATTERY DISCHARGE OVER TIME:
+   ───────────────────────────────────
+
+   voltage                                        
+   ▲                                              
+   12.5│◯                                         
+       │ ╲                                        
+       │  ╲     ─── Without disconnect:           
+   12.0│   ╲       drops faster (parasitic draw   
+       │    ╲      + self-discharge)              
+       │     ╲                                    
+   11.5│      ╲                                   
+       │       ╲   ─── With disconnect switch:    
+       │        ╲     drops slower (self-discharge
+   11.0│         ╲    only)                       
+       │          ╲                               
+       └──────────────────────────────────► weeks
+       0       6      12                          
+
+   ► Without isolator: needs recharge ~ 6 weeks   
+   ► With isolator: maybe 3-6 months              
+</code></pre>
+<h2>Key Facts</h2>
+<ul>
+<li>Voltage scales the technician meets: <strong>1 μV (faint sensors)</strong> to <strong>25 kV (Xenon strike pulse)</strong>.</li>
+<li><strong>Digital multimeter</strong> beats analog: better display, auto-polarity, high input impedance (≥ 10 MΩ), shock-resistant.</li>
+<li>Probe colour codes: <strong>red = power/signal</strong>, <strong>brown (or black) = ground</strong>.</li>
+<li><strong>12-step battery + alternator voltage check</strong> sweeps from open circuit through loads up to max rpm.</li>
+<li>Healthy resting V: <strong>12.65 V</strong>.</li>
+<li>Charging V at idle: ~ 14 V; at speed: ~ 14.35 V (regulator clamps).</li>
+<li><strong>Overcharging</strong> causes: electrode corrosion, water loss, oxy-hydrogen formation.</li>
+<li><strong>Overcharging cause</strong>: faulty voltage regulator or wrong charger.</li>
+<li><strong>Discharge over time</strong>: faster with parasitic load; slower with battery isolator.</li>
+<li><strong>4 effects of current</strong>: heat, magnetic, chemical, atomic.</li>
+<li>Examples by effect: heater (heat), motor/alternator (magnetic), battery (chemical), LED (atomic).</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="01-lead-acid-chemistry-and-sli-fundamentals.html">Lead-acid chemistry &amp; SLI fundamentals</a></li>
+<li><a href="02-battery-specifications-and-failure-modes.html">Battery specifications &amp; failure modes</a></li>
+<li><a href="../01-vehicle-electrical-symbols-and-diagnostics.html">Vehicle electrical symbols &amp; diagnostics — battery/starter test</a></li>
+<li><a href="../12-energy-management-system.html">Energy management system — IBS measures all of these continuously</a></li>
+<li><a href="../07-diode-applications-rectification-zener-led.html">Diode applications — LED as the "atomic effect" of current</a></li>
+<li><a href="../02-electric-motors-and-sensors-overview.html">Electric motors and sensors — magnetic effect of current</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>"2.42 × 10¹⁵ electrons per second" for 1 Ampere</strong> — the trainer's number is incorrect. <strong>1 A = 6.24 × 10¹⁸ electrons/sec</strong> (from 1 C / 1.6 × 10⁻¹⁹ C per electron). The notebook number is off by ~ 2500×. Preserved as written with correction noted.</li>
+<li>[?] <strong>"448 V in junction current = 10⁻⁶ / 448 × 10⁻³"</strong> — Ohm's law worked example: voltage/current/resistance relationship. The arithmetic isn't clearly explained.</li>
+<li>[?] <strong>Maruti Ritz ZXR</strong> as the test car — Indian market vehicle, but the test procedure applies to any 12 V system. Numbers given are illustrative; specific values depend on the car.</li>
+<li>[?] <strong>Test 12 "13.66 V"</strong> at engine-off — this is the "surface charge" voltage that decays back to ~ 12.6 V resting over 30-60 minutes. Don't confuse with actual SoC.</li>
+<li>[?] <strong>"Charging voltage / Not actual"</strong> margin annotation on test 6 — emphasises that 14.29 V is the <em>charging</em> voltage delivered by alternator, not the battery's intrinsic potential.</li>
+<li>[?] <strong>"regulator doesn't allow alternator to go above 14.35"</strong> — confirms regulator's clamping function.</li>
+<li>[?] <strong>Causes of overcharging "Incorrect charging"</strong> — could be a generic battery charger with wrong setting, jumper cables wrong way around, etc.</li>
+<li>[?] <strong>"Closed circuit current"</strong> header in IMG 112908 has minimal body text — likely the trainer intended to expand on parasitic-draw measurement but moved on.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Battery</a>
+      <span class="spacer"></span>
+      <a href="../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

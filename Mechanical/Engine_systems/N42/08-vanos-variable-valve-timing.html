@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VANOS — Variable Valve Timing · Mechanical · Commonplace</title>
+
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="../index.html">Engine Systems</a><span class="sep">›</span><a href="index.html">N42 Engine</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">N42 Engine</div>  <h1>VANOS — Variable Valve Timing</h1>  <div class="source">Source images: IMG20250515003027, IMG20250515003040</div></div>
+    <article>
+      <blockquote>
+<p><strong>Notebook date:</strong> 6/8/2013</p>
+</blockquote>
+<p><img alt="Original notebook page — VANOS need, valve-timing curves, 11 parts" src="../../../docs/Engine_systems/N42/IMG20250515003027.jpg"></p>
+<h2>Overview</h2>
+<p><strong>VANOS</strong> = <strong>Va</strong>riable <strong>No</strong>ckenwellen-<strong>S</strong>teuerung (German for "variable camshaft control") = BMW's variable valve <strong>timing</strong> system. It rotates the camshaft relative to the crankshaft via a <strong>hydraulic phaser</strong> — shifting valve events earlier or later in the engine cycle. <strong>Double VANOS</strong> does this on both intake and exhaust cams independently. On N42 this works alongside Valvetronic (<a href="07-valvetronic-variable-valve-lift.html">see Valvetronic chapter</a>) — VANOS controls valve-event timing, Valvetronic controls valve-event lift.</p>
+<h2>Working Principle</h2>
+<h3>The need</h3>
+<blockquote>
+<p><em>Notebook:</em> "VANOS (Variable Valve Timing). <strong>Need:</strong> ★ It can change alignment between camshaft &amp; crankshaft."</p>
+</blockquote>
+<p>A traditional cam-driven valvetrain has the cam locked to the crank at a fixed angular relationship (set by chain or belt). The valve always opens at the same crank angle. But the <strong>optimal valve event</strong> depends on engine load and rpm:
+- <strong>Idle / part load:</strong> want <strong>less overlap</strong> (intake closes earlier, exhaust closes earlier) → stable combustion.
+- <strong>Mid load:</strong> want <strong>moderate overlap</strong> → internal EGR effect → reduces pumping losses and NOx.
+- <strong>High rpm:</strong> want <strong>more overlap</strong> + later closing → uses intake-air inertia to push more charge in.</p>
+<p>VANOS lets the DME phase the cam by ±25° or so to match valve timing to operating conditions in real time.</p>
+<h3>Top diagram — valve-timing curves</h3>
+<p>The page shows valve-lift curves (intake red, exhaust blue) plotted against crank angle from 0° → 720°, with the curves <strong>shifted laterally</strong> to show what VANOS does. The shift is the timing change — same lift profile, but the whole event slides earlier or later in the cycle.</p>
+<h3>Individual parts (11 numbered)</h3>
+<blockquote>
+<p><em>Notebook list:</em>
+1. <strong>Housing with crown gear</strong> — outer housing turns with the timing chain.
+2. <strong>Front plate</strong> — closes the front face of the phaser.
+3. <strong>Torsion spring</strong> <em>(to remove torsional stresses)</em> — biases the rotor to a default position.
+4. <strong>Locking pin</strong> <em>(at excess pressure it leaves down &amp; can again lock after)</em> — locks rotor to housing at default position; oil pressure releases it.
+5. <strong>Rotor</strong> — vaned inner element keyed to the camshaft.
+6. <strong>Back plate</strong> — closes the back face.
+7. <strong>Blade</strong> <em>(vane on rotor)</em> — the working surfaces that swept volumes either side of them are the two pressure chambers.
+8. <strong>Springs</strong> — small return springs (locking-pin spring, etc.).
+9. <strong>Pressure channels A &amp; B</strong> — the two oil feeds to the two sides of each rotor vane.
+10. <strong>Solenoid valve</strong> — DME-controlled 4-way valve that selects A or B (or balances both).
+11. <strong>Hydraulic bore holes in camshaft</strong> — feed channels drilled through the cam to bring oil from the gallery into the phaser.</p>
+</blockquote>
+<h3>How the rotor moves</h3>
+<p>The rotor (item 5) sits inside the housing (item 1). The rotor's <strong>vanes</strong> (item 7) split the gap between rotor and housing into pressure chambers. Oil pressure on <strong>side A</strong> of the vane pushes the rotor one direction; pressure on <strong>side B</strong> pushes it the other. The solenoid valve (item 10) under DME control sends oil pressure to either A, B, or holds both (rotor locked at current position).</p>
+<p>Because the housing is tied to the timing chain (and so to the crank) and the rotor is keyed to the cam, <strong>moving the rotor relative to the housing rotates the cam relative to the crank</strong> → <strong>shifts valve timing</strong>.</p>
+<h3>Why the locking pin</h3>
+<blockquote>
+<p><em>Notebook:</em> "Locking pin: At excess pressure it leaves down &amp; can again lock after."</p>
+</blockquote>
+<p>At engine start (no oil pressure yet), the rotor would flop around. The locking pin <strong>engages a hole in the housing</strong> to hold the rotor at a known <strong>default position</strong> (typically full-retard for intake, full-advance for exhaust). When oil pressure builds (above the pin spring), the pin retracts → rotor free to move under hydraulic command. When you shut down, pin re-engages.</p>
+<h3>Torsion spring role</h3>
+<blockquote>
+<p><em>Notebook:</em> "(to remove torsional stresses)"</p>
+</blockquote>
+<p>Valvetrain creates torque pulses on the cam every time a valve closes against a spring — these pulses try to twist the rotor against the housing. The torsion spring biases the rotor against this pulsing so it doesn't oscillate at idle when oil-pressure damping is weak.</p>
+<h3>VANOS system in unpressurised state (IMG 003040)</h3>
+<blockquote>
+<p><em>Notebook top:</em> "VANOS system in unpressurised state"</p>
+</blockquote>
+<p>Shows the cam-timing curves with <strong>dashed lines</strong> = default (unpressurised) position, <strong>solid lines</strong> = pressurised/commanded position. The dashed curves are where the cams sit at startup before oil pressure builds — locked by the pin. Once oil pressure comes up, the rotor moves and shifts the solid curves to the commanded angle.</p>
+<h3>Combination with Valvetronic (middle of IMG 003040)</h3>
+<blockquote>
+<p><em>Notebook annotations:</em>
+- "Max lift: <strong>10 mm</strong>"
+- "Minimum lift: <strong>0.3 mm</strong>"
+- "Combination of VANOS &amp; Valvetronic"
+- "60°" marker on the curve</p>
+</blockquote>
+<p>The middle plot shows what's possible when both systems work together:
+- <strong>Valvetronic</strong> sets the <strong>height</strong> of the lift curve (0.3 mm → 10 mm).
+- <strong>VANOS</strong> sets the <strong>position</strong> of the curve in the crank-angle window (shift left or right within roughly ±25–30°, of which the 60° marker spans a typical overlap range).</p>
+<p>Together they give a <strong>fully variable</strong> valve event: any combination of lift and timing within the mechanical limits.</p>
+<h2>Force Path / Process Flow</h2>
+<h3>Oil flow to actuate the phaser</h3>
+<pre><code>   Oil gallery (from two-stage pump)
+        │
+        ▼
+   Hydraulic bore holes in camshaft
+        │
+        ▼
+   VANOS solenoid valve  ◄── DME signal
+        │
+        ├──► Pressure channel A ──► one side of rotor vanes ──► rotor advances
+        └──► Pressure channel B ──► other side of rotor vanes ──► rotor retards
+        │
+        ▼
+   Drain back to sump
+</code></pre>
+<h3>Cold-start sequence</h3>
+<pre><code>   Engine OFF:
+       Rotor locked by pin to default position (no oil pressure).
+
+   Engine starts:
+       1. Stage 1 of oil pump runs.
+       2. Oil pressure builds in the gallery.
+       3. Oil reaches the VANOS phaser via cam bore holes.
+       4. Locking pin retracts when pressure &gt; pin-spring force.
+       5. Rotor now free to be moved by solenoid commands.
+       6. DME selects A/B port — rotor slides → cam phases → valve timing shifts.
+</code></pre>
+<h3>DME command loop (full)</h3>
+<pre><code>   ┌─────────────────────────────────────┐
+   │  DME reads: rpm, load, coolant temp,│
+   │              throttle, knock, etc.  │
+   └─────────────┬───────────────────────┘
+                 │
+                 ▼
+   ┌─────────────────────────────────────┐
+   │  DME looks up target cam-phase angle│
+   │  from internal map (function of     │
+   │  rpm &amp; load)                        │
+   └─────────────┬───────────────────────┘
+                 │
+                 ▼
+   ┌─────────────────────────────────────┐
+   │  DME commands solenoid valve        │
+   │  (A% / B% duty cycle)               │
+   └─────────────┬───────────────────────┘
+                 │
+                 ▼
+   ┌─────────────────────────────────────┐
+   │  Solenoid routes oil pressure to    │
+   │  appropriate rotor side             │
+   └─────────────┬───────────────────────┘
+                 │
+                 ▼
+   ┌─────────────────────────────────────┐
+   │  Rotor moves; cam phases relative   │
+   │  to crank                           │
+   └─────────────┬───────────────────────┘
+                 │
+                 ▼
+   ┌─────────────────────────────────────┐
+   │  Cam position sensor reads new cam  │
+   │  angle, feeds back to DME           │
+   └─────────────┬───────────────────────┘
+                 │
+                 ▼ (closes the loop)
+   DME compares actual cam angle to target → adjusts solenoid duty
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Part</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Housing with crown gear</td>
+<td>Driven by the timing chain — rotates with the crank.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Front plate</td>
+<td>Seals the front face of the phaser cavity.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Torsion spring</td>
+<td>Biases the rotor against valvetrain torque pulses.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Locking pin</td>
+<td>Engages at zero pressure to hold rotor at default position. Retracts under oil pressure.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Rotor</td>
+<td>Keyed to the camshaft; its angle vs the housing = cam phase.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Back plate</td>
+<td>Seals the back face of the phaser cavity.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Blade (vane)</td>
+<td>Working face on the rotor — pressure on one side moves it.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Springs</td>
+<td>Various small springs (locking-pin return, etc.).</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Pressure channels A &amp; B</td>
+<td>Two oil feeds — one to advance, one to retard.</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Solenoid valve</td>
+<td>DME-actuated 4-way spool that selects A or B (or both = held).</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Hydraulic bore holes in camshaft</td>
+<td>Drilled passages through the cam that bring oil from gallery into phaser.</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>Why "Double VANOS" on N42</h3>
+<p>N42's double VANOS phases <strong>both</strong> intake and exhaust cams independently. This unlocks:
+- <strong>Internal EGR</strong> — open both valves briefly together (overlap) → some exhaust gets sucked back into the cylinder → cools combustion → cuts NOx without an external EGR system.
+- <strong>Atkinson-cycle effect</strong> — close the intake valve <strong>after</strong> BDC (late intake closing) → some charge gets pushed back into the manifold → effective compression ratio drops → lower NOx + better part-load efficiency.
+- <strong>Performance shifts</strong> — advance both cams at high rpm → max overlap + late closing → uses intake inertia for extra filling.</p>
+<p>A single-VANOS system (intake cam only) can only do a subset of these.</p>
+<h3>Why hydraulic and not electric</h3>
+<p>Hydraulic phasers are <strong>fast</strong> (full sweep in ~ 100 ms) and need only an oil supply + a small solenoid. Electric phasers (used on some 2010s+ engines) are even faster and work without oil pressure (so VANOS works at idle and cold start), but cost more and need their own motors + power. N42 went hydraulic.</p>
+<h3>Why VANOS needs the two-stage oil pump</h3>
+<blockquote>
+<p><em>Cross-ref:</em> See <a href="06-two-stage-oil-pump.html">two-stage oil pump chapter</a>.
+<em>Cross-ref:</em> See <a href="05-cooling-and-oil-circuits.html">cooling &amp; oil circuits chapter</a>, oil component #8.</p>
+</blockquote>
+<p>VANOS needs ~2 bar at idle to actuate. The two-stage pump runs both stages at low rpm specifically to guarantee that pressure → which is why pump deactivation thresholds are tied to "above 2 bar AND above 2000 rpm."</p>
+<h3>The 60° marker on the combined plot</h3>
+<p>The "60°" annotation on the central curve in IMG 003040 marks a <strong>valve-overlap window</strong> of roughly 60° — the crank-angle range over which intake and exhaust are simultaneously open. VANOS lets the DME slide this window earlier or later in the cycle to suit conditions.</p>
+<h2>Visual Diagram</h2>
+<pre><code>   VANOS PHASER CUTAWAY (looking down the cam axis):
+   ──────────────────────────────────────────────────
+
+         ┌─────── HOUSING (driven by chain) ────────┐
+         │  ┌──────────────────────────────────┐    │
+         │  │                                  │    │
+         │  │   ┌─────────┐                    │    │
+         │  │   │         │                    │    │
+   ◄ A ──┼──┼─►─│   B ◄───┼─── pressure A pushes rotor counter-clockwise │
+         │  │   │         │   pressure B pushes rotor clockwise          │
+         │  │   │  ROTOR  │                    │    │
+         │  │   │ (keyed  │                    │    │
+         │  │   │ to cam) │                    │    │
+         │  │   │  ╱│╲    │                    │    │
+         │  │   │ ╱ │ ╲   │ ◄── vane           │    │
+         │  │   └─────────┘                    │    │
+         │  │                                  │    │
+         │  └──────────────────────────────────┘    │
+         └───────────────────────────────────────────┘
+
+         Locking pin (item 4) sticks out from rotor face
+         and engages a hole in the front plate (item 2)
+         when oil pressure is zero (engine off / cold start).
+</code></pre>
+<pre><code>   VALVE TIMING CURVE — what VANOS shifts:
+   ────────────────────────────────────────
+
+   lift     ▲
+            │
+            │       ◄── intake event
+            │      ╱──╲                 ╲──╲     ◄── (after VANOS advance, dashed)
+            │     ╱    ╲                ╲   ╲
+            │    ╱      ╲              ╲     ╲
+            │   ╱        ╲           ╲       ╲
+            │ ╱            ╲     ╲              ╲
+            └────────────────────────────────────────► crank angle
+              0°         360°  ◄── VANOS shifts this whole curve
+                                    earlier (advance) or later (retard)
+
+   Valvetronic varies the HEIGHT of the curve (lift amplitude).
+   VANOS varies the POSITION of the curve (event timing).
+
+   Together = fully variable valve event.
+</code></pre>
+<p>Embedded original schematic:</p>
+<p><img alt="Valve-timing curves combined VANOS+Valvetronic, 10mm/0.3mm lift markers" src="../../../docs/Engine_systems/N42/IMG20250515003040.jpg"></p>
+<h2>Key Facts</h2>
+<ul>
+<li><strong>VANOS</strong> = variable valve <strong>timing</strong> (BMW's hydraulic cam phaser).</li>
+<li>N42 has <strong>double VANOS</strong> — both intake and exhaust cams phase independently.</li>
+<li><strong>11 individual parts</strong> in the phaser: housing, front plate, torsion spring, locking pin, rotor, back plate, blade, springs, pressure channels A &amp; B, solenoid valve, cam bore holes.</li>
+<li>Rotor is <strong>keyed to camshaft</strong>; housing is driven by the timing chain.</li>
+<li>Oil pressure pushes rotor vane → cam phases relative to crank.</li>
+<li><strong>Solenoid valve</strong> under DME control selects channel A (advance) or B (retard).</li>
+<li><strong>Locking pin</strong> holds rotor at default position when oil pressure is zero (cold start, engine off).</li>
+<li><strong>Torsion spring</strong> biases rotor against valvetrain torque pulses.</li>
+<li>Needs <strong>~2 bar oil pressure</strong> to actuate → reason for two-stage oil pump always running both stages at low rpm.</li>
+<li><strong>VANOS shifts curve, Valvetronic shifts height</strong> — together = fully variable valve event.</li>
+<li>Combined valve-overlap window roughly <strong>60°</strong> of crank angle.</li>
+<li>Max lift: <strong>10 mm</strong>; Min lift (Valvetronic): <strong>0.3 mm</strong>.</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="01-n42-overview-innovations-advantages.html">N42 overview — innovations</a></li>
+<li><a href="07-valvetronic-variable-valve-lift.html">Valvetronic — variable valve lift (sibling)</a></li>
+<li><a href="06-two-stage-oil-pump.html">Two-stage oil pump (provides VANOS pressure)</a></li>
+<li><a href="05-cooling-and-oil-circuits.html">Cooling &amp; oil circuits — VANOS control channel listed as oil component #8</a></li>
+<li><a href="09-engine-management-vanos-control-o2-loop.html">Engine management — DME commands VANOS via solenoid</a></li>
+<li><a href="../03-cylinder-head-camshaft.html">Cylinder head &amp; camshaft layouts — DOHC context</a></li>
+<li><a href="../../Intro/02-engine-and-vehicle-basics.html">Engine &amp; vehicle basics — 2:1 crank/cam ratio (the relationship VANOS shifts)</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>11-part list</strong> matches BMW VANOS service literature; the trainer's numbering is the same as the standard parts-diagram numbering.</li>
+<li>[?] The notebook's combined-curves plot in IMG 003040 has additional faint wavy lines at the bottom that look like a <strong>separate plot</strong> of cam position sensor output — not labelled clearly. Skipped.</li>
+<li>[?] "<strong>Above oil pressure 2 bar &amp; revolutions 2000 rpm</strong>" appears in both the <a href="06-two-stage-oil-pump.html">two-stage pump notes</a> and this VANOS context — same threshold means the engine guarantees VANOS pressure right at idle and onward.</li>
+<li>[?] <strong>Locking pin behaviour</strong> wording is awkward — "at excess pressure it leaves down &amp; can again lock after" reads as "under sufficient oil pressure the pin retracts (leaves down); when pressure drops, it can re-engage." Interpretation taken.</li>
+<li>[?] <strong>"Crown gear"</strong> on the housing (part 1) refers to the chain-driven sprocket teeth. "Crown gear" is sometimes used for ring/face gears specifically; here it's the standard chain sprocket.</li>
+<li>[?] The page has a small bottom sketch of a <strong>toothed sprocket with a central nut</strong> — not labelled but matches the standard VANOS phaser external view. Identification by appearance.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ N42 Engine</a>
+      <span class="spacer"></span>
+      <a href="../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Engine Management — DME, VANOS Control &amp; O₂ Closed Loop · Mechanical · Commonplace</title>
+
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="../index.html">Engine Systems</a><span class="sep">›</span><a href="index.html">N42 Engine</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">N42 Engine</div>  <h1>Engine Management — DME, VANOS Control &amp; O₂ Closed Loop</h1>  <div class="source">Source images: IMG20250515003118, IMG20250515003129</div></div>
+    <article>
+      <blockquote>
+<p>Page header: "Engine Management" with side tag "Variable valve lift / Variable valve timing"</p>
+</blockquote>
+<p><img alt="Original notebook page — engine management components + VANOS control diagram" src="../../../docs/Engine_systems/N42/IMG20250515003118.jpg"></p>
+<h2>Overview</h2>
+<p>The N42's brain is the <strong>DME (Digitale Motor Elektronik)</strong> — specifically the <strong>MS32</strong> variant for N42. It's the master controller that runs <strong>VANOS</strong> (variable valve timing), <strong>Valvetronic</strong> (variable valve lift), <strong>fuel injection</strong>, <strong>ignition</strong>, and <strong>closed-loop fuel control</strong> via the oxygen sensors. The page shows the standard ECU architecture (sensors → control unit → actuators), then drills into the <strong>VANOS control loop</strong> (cam sensor → DME → solenoid valve → phaser) and the <strong>dual-O₂ closed loop</strong> with both pre-cat and post-cat sensors.</p>
+<h2>Working Principle</h2>
+<h3>Engine management component list (7)</h3>
+<blockquote>
+<p><em>Notebook list under "Valve timing system parts":</em>
+1. Sensors
+2. Control unit
+3. Control unit <em>(listed twice — see Open Questions)</em>
+4. Control outputs
+5. Switches
+6. Relay outputs
+7. Interfaces</p>
+</blockquote>
+<p>This is the generic block-architecture template for any engine ECU:</p>
+<pre><code>   ┌─────────┐    ┌──────────────┐    ┌────────────────┐
+   │ Sensors │──►│ Control unit │──►│Control outputs │──► Actuators
+   └─────────┘    │   (logic)    │    └────────────────┘
+                  └──────────────┘
+                         │
+                  ┌──────┴────────────────────────────┐
+                  ▼                                   ▼
+              Switches              Relay outputs  / Interfaces
+              (input from           (drive lamps,    (CAN/MOST/LIN
+               driver / cabin)       solenoids,       to other ECUs)
+                                     fans)
+</code></pre>
+<h3>DME identification — MS32 / K-coding / N42</h3>
+<blockquote>
+<p><em>Notebook box top right:</em> "<strong>MS32 / DME (Digital motor electronic) / K / N42</strong>"</p>
+</blockquote>
+<ul>
+<li><strong>MS32</strong> — Bosch hardware/software platform (Motronic Siemens 32).</li>
+<li><strong>DME</strong> — BMW's name for the ECU.</li>
+<li><strong>K</strong> — coding-platform letter (likely BMW's "K" series of vehicles or coding scheme).</li>
+<li><strong>N42</strong> — engine code this DME is configured for.</li>
+</ul>
+<p>A DME from another engine (e.g., N52) won't drop into an N42 — it'd have to be <strong>re-coded</strong> for the right engine map.</p>
+<h3>VANOS control diagram (lower half of IMG 003118)</h3>
+<blockquote>
+<p><em>Notebook draws:</em>
+- <strong>Inlet camshaft</strong> with rotor cutaway (4-vane design with oil in the centre)
+- Connected to a <strong>solenoid valve</strong> (actuator) via pressure channels
+- <strong>Camshaft position sensor</strong> feeds the <strong>DME</strong> ("values set in it")
+- DME drives the solenoid valve</p>
+</blockquote>
+<p>Closed loop:</p>
+<pre><code>   Inlet camshaft (with VANOS phaser, 4-vane rotor visible)
+        │
+        │ position fed back via
+        ▼
+   ┌──────────────────────────┐
+   │ Camshaft position sensor │
+   └────────────┬─────────────┘
+                │
+                ▼
+   ┌──────────────────────────┐
+   │   DME (MS32)             │ ── &quot;values set in it&quot;
+   │   target map: phase angle│
+   │   vs rpm &amp; load          │
+   └────────────┬─────────────┘
+                │  command (duty cycle)
+                ▼
+   ┌──────────────────────────┐
+   │  Solenoid valve          │ ── 4-way spool
+   │  (actuator)              │
+   └────────────┬─────────────┘
+                │
+                ▼  oil pressure A or B
+   ┌──────────────────────────┐
+   │  VANOS phaser           │ ── rotor moves
+   │  (on cam)               │    cam phase shifts
+   └────────────┬─────────────┘
+                │
+                └──► back to cam-position sensor (closes the loop)
+</code></pre>
+<h3>Oxygen sensor closed loop (IMG 003129)</h3>
+<blockquote>
+<p><em>Notebook draws:</em>
+- <strong>Oxygen sensor</strong> → <strong>DME</strong> → <strong>VANOS / Valvetronic</strong>
+- <strong>Crankshaft position sensor</strong> (extra input to DME)
+- Then exhaust path: <strong>wide-band O₂ sensor</strong> → <strong>Catalytic Converter</strong> → <strong>Monitor O₂ sensor</strong>
+- λ voltage map:
+  - <strong>λ = 1 → 1.5 V</strong>
+  - <strong>λ &gt; 1 → &gt; 1.5 V</strong> (lean)
+  - <strong>λ &lt; 1 → &lt; 1.5 V</strong> (rich)</p>
+</blockquote>
+<h4>Top half — control loop</h4>
+<pre><code>   ┌──────────────────────┐    ┌──────────┐    ┌─────────────┐
+   │  Oxygen sensor       │──►│   DME    │──►│  VANOS      │
+   │  (wide-band, pre-cat)│    │          │    │  Valvetronic│
+   └──────────────────────┘    └────┬─────┘    └─────────────┘
+                                     ▲
+                                     │
+                          ┌──────────┴───────────┐
+                          │ Crankshaft position  │
+                          │ sensor               │
+                          └──────────────────────┘
+</code></pre>
+<p>The DME uses the O₂ signal to trim fuel pulse-width on the fly to hold <strong>λ = 1</strong>. It also uses the same signal (along with crank position, MAP, HFM, etc.) to schedule VANOS and Valvetronic.</p>
+<h4>Bottom half — diagnostic loop with two sensors</h4>
+<blockquote>
+<p><em>Notebook (paraphrased):</em>
+"Initially all λ = 1.
+So <strong>two 'Monitor O₂ sensors'</strong>.
+If [reading] = 1, it shows that this system is <strong>normal</strong>.
+It's not true — due to mixing of exhaust gases [post-cat] should sit at λ = 1.
+If λ &gt; 1 reading <strong>error message</strong> is sent as λ &gt; 1 → DME → 'Error is entered into the error memory.'"</p>
+</blockquote>
+<p>Reading the diagnostic logic:</p>
+<ol>
+<li>In <strong>normal operation</strong>, the pre-cat O₂ sensor swings rapidly between rich and lean (DME deliberately oscillates fuel to keep cat in its working window).</li>
+<li>The <strong>post-cat O₂ sensor</strong> should sit <strong>steady at ~ λ = 1</strong> because a healthy catalyst eats up the O₂ swing.</li>
+<li><strong>If the post-cat sensor starts swinging like the pre-cat one</strong> → catalyst has failed (no more O₂ buffering).</li>
+<li><strong>If the post-cat sensor sits at λ &gt; 1 (high voltage / lean)</strong> → exhaust is being diluted by air leak after the cat, or the cat is dumping O₂ → fault.</li>
+<li>DME stores the error in <strong>error memory</strong> for OBD readout via DIS / OBS port (see <a href="10-diagnosis-process-dis-and-test-plan.html">diagnosis chapter</a>).</li>
+</ol>
+<h3>Voltage convention (λ vs V)</h3>
+<blockquote>
+<p><em>Notebook:</em>
+"<strong>λ = 1 → 1.5 V</strong>
+ <strong>λ &gt; 1 → &gt; 1.5 V</strong>
+ <strong>λ &lt; 1 → &lt; 1.5 V</strong>"</p>
+</blockquote>
+<p>This convention is for a <strong>wide-band O₂ sensor</strong> (continuous output linear with λ). Narrow-band sensors switch around 0.45 V (low = lean, high = rich) instead.</p>
+<blockquote>
+<p>Note: The notebook's "λ &gt; 1 → &gt; 1.5 V" reads the right direction for a wide-band sensor that outputs higher voltage for leaner mixtures, but the absolute number (1.5 V at λ = 1) is the trainer's round figure rather than a strict spec — real wide-band sensors are calibrated to output a linear current through an external resistor, and the converted voltage depends on resistor choice. See Open Questions.</p>
+</blockquote>
+<h2>Force Path / Process Flow</h2>
+<h3>Full DME control loop on N42</h3>
+<pre><code>                INPUTS                                OUTPUTS
+                ──────                                ───────
+
+   ┌─ Crankshaft position sensor ─┐                  ┌──────────────┐
+   ├─ Camshaft position sensor ───┤                  │ Fuel         │
+   ├─ HFM (air mass)──────────────┤                  │ injectors    │
+   ├─ MAP sensor──────────────────┤                  └──────────────┘
+   ├─ O₂ pre-cat (wide-band) ─────┤    ┌──────┐      ┌──────────────┐
+   ├─ O₂ post-cat (monitor) ──────┼──► │ DME  │ ───► │ Ignition     │
+   ├─ Coolant temp (double sensor)│    │ MS32 │      │ coils        │
+   ├─ Throttle position ──────────┤    │      │      └──────────────┘
+   ├─ Knock sensor ───────────────┤    │      │      ┌──────────────┐
+   ├─ Pedal position ─────────────┤    │      │      │ VANOS        │
+   ├─ Valvetronic position sensor │    │      │      │ solenoids    │
+   ├─ Cam position ───────────────┘    └──────┘      └──────────────┘
+                                                      ┌──────────────┐
+                                                      │ Valvetronic  │
+                                                      │ motor        │
+                                                      └──────────────┘
+                                                      ┌──────────────┐
+                                                      │ DISA actuator│
+                                                      └──────────────┘
+                                                      ┌──────────────┐
+                                                      │ MAP-thermost.│
+                                                      └──────────────┘
+                                                      ┌──────────────┐
+                                                      │ Idle bypass /│
+                                                      │ throttle motor│
+                                                      └──────────────┘
+                                                      ┌──────────────┐
+                                                      │ CAN bus →    │
+                                                      │ other ECUs    │
+                                                      └──────────────┘
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DME (MS32)</strong></td>
+<td>Master ECU for N42. Runs fuel, ignition, VANOS, Valvetronic, DISA, thermostat.</td>
+</tr>
+<tr>
+<td><strong>Camshaft position sensor</strong></td>
+<td>Hall/VR sensor reading a tooth on the cam → tells DME cam angle for VANOS closed loop.</td>
+</tr>
+<tr>
+<td><strong>Crankshaft position sensor</strong></td>
+<td>Hall/VR sensor reading a reluctor wheel on the crank → master angle + rpm reference.</td>
+</tr>
+<tr>
+<td><strong>Solenoid valve (VANOS)</strong></td>
+<td>DME-driven 4-way spool that selects oil pressure to VANOS phaser side A or B.</td>
+</tr>
+<tr>
+<td><strong>Wide-band O₂ sensor</strong></td>
+<td>Pre-cat. Linear λ output. Drives fuel closed loop.</td>
+</tr>
+<tr>
+<td><strong>Monitor O₂ sensor</strong></td>
+<td>Post-cat. Narrow-band switch. Catalyst-efficiency diagnostic (OBD-II).</td>
+</tr>
+<tr>
+<td><strong>Knock sensor</strong> <em>(implied)</em></td>
+<td>Piezo-electric accelerometer on block → DME retards ignition timing if knock detected.</td>
+</tr>
+<tr>
+<td><strong>HFM</strong></td>
+<td>Hot-film air-mass sensor — see <a href="02-n42-features-and-air-routing.html">features and air-routing chapter</a>.</td>
+</tr>
+<tr>
+<td><strong>Valvetronic motor + position sensor</strong></td>
+<td>Drives eccentric shaft (see <a href="07-valvetronic-variable-valve-lift.html">Valvetronic chapter</a>).</td>
+</tr>
+<tr>
+<td><strong>Throttle actuator</strong></td>
+<td>Electric throttle motor (see <a href="02-n42-features-and-air-routing.html">features chapter</a>).</td>
+</tr>
+<tr>
+<td><strong>Error memory</strong></td>
+<td>Non-volatile fault-code storage inside DME, readable via diagnostic tools.</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>"Initially all λ = 1"</h3>
+<p>At startup before closed-loop control activates, the DME runs from a <strong>base map</strong> — fuel quantity from rpm × HFM mass × stoichiometric ratio. Result is approximately λ = 1 right out of the box. Once the O₂ sensor heats up and goes live, DME switches into closed-loop trim and starts oscillating around λ = 1 to keep the catalyst in its working window.</p>
+<h3>Why monitor O₂ as a check on the cat</h3>
+<p>The catalyst doesn't just convert pollutants — it has <strong>oxygen storage</strong> built in. The Pt/Pd/Rh washcoat traps small amounts of O₂ during lean swings and releases it during rich swings, <strong>smoothing</strong> the post-cat O₂ signal. A healthy cat → flat post-cat signal. A worn cat → post-cat signal starts to look like pre-cat (swinging) → DME concludes cat has failed → DTC stored → MIL on.</p>
+<h3>Why DME also reads the crank position sensor here</h3>
+<p>VANOS phasing is meaningful only <strong>relative to crank position</strong>. The cam position sensor reads cam angle; the crank position sensor reads crank angle; the DME subtracts to know the actual <strong>cam-vs-crank phase</strong> and compares it to the commanded phase. This is the feedback that closes the VANOS control loop.</p>
+<h3>"Values set in it"</h3>
+<p>The DME stores the <strong>target VANOS phase angle</strong> as a 3D map indexed by <strong>engine rpm</strong> and <strong>load</strong> (and modulated by coolant temp, knock, etc.). At any operating point, the DME looks up the target → commands the solenoid → reads back actual phase → adjusts duty cycle.</p>
+<h3>Error message and memory</h3>
+<blockquote>
+<p><em>Notebook last line:</em> "ERROR MSG as λ &gt; 1 → DME → 'Error is entered into the error memory.'"</p>
+</blockquote>
+<p>OBD-II workflow:
+- Fault detected (e.g., post-cat sensor reading shifted to lean).
+- DME assigns a <strong>DTC</strong> (Diagnostic Trouble Code, e.g., P0420 = catalyst efficiency below threshold).
+- DTC saved to non-volatile memory.
+- MIL ("check engine") light commanded on.
+- Tech reads the code with DIS / ISTA / OBD scanner (see <a href="10-diagnosis-process-dis-and-test-plan.html">diagnosis chapter</a>).</p>
+<h2>Visual Diagram</h2>
+<pre><code>   DME — ARCHITECTURE BLOCK
+   ────────────────────────
+
+   ┌──────────────────────────────────────────────────────────┐
+   │                          DME (MS32)                       │
+   │  ┌─────────────────┐    ┌──────────────┐    ┌──────────┐ │
+   │  │  INPUTS (read)  │───►│   LOGIC      │───►│ OUTPUTS  │ │
+   │  │                 │    │              │    │  (drive) │ │
+   │  │ ★ Cam pos       │    │ Fuel calc    │    │ Inj.     │ │
+   │  │ ★ Crank pos     │    │ Ign. timing  │    │ Coils    │ │
+   │  │ ★ HFM (air)     │    │ VANOS target │    │ VANOS    │ │
+   │  │ ★ MAP           │    │ VTron target │    │ solenoid │ │
+   │  │ ★ O₂ pre-cat    │    │ Knock retard │    │ VTron    │ │
+   │  │ ★ O₂ post-cat   │    │ A/F trim     │    │ motor    │ │
+   │  │ ★ Coolant temp  │    │ Diagnostics  │    │ Thermost.│ │
+   │  │ ★ Knock         │    │              │    │ DISA     │ │
+   │  │ ★ Throttle pos. │    │              │    │ Throttle │ │
+   │  │ ★ Pedal         │    │              │    │ CAN bus  │ │
+   │  │ ★ VTron position│    │              │    │          │ │
+   │  └─────────────────┘    └──────────────┘    └──────────┘ │
+   │                                                            │
+   │                    Error memory (DTCs)                    │
+   └────────────────────────────────────────────────────────────┘
+</code></pre>
+<pre><code>   POST-CAT O₂ MONITORING — what healthy vs faulty looks like:
+
+   pre-cat:    ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱   ◄── DME oscillates fuel
+                                       (rich/lean dithering)
+
+   HEALTHY:
+   post-cat:   ───────────────       ◄── flat ≈ 1.5 V (λ = 1)
+                                        cat O₂-storage smooths
+
+   FAULTY (cat dead):
+   post-cat:   ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱   ◄── post-cat swings like pre-cat
+                                       → DTC stored (P0420)
+                                       → MIL on
+</code></pre>
+<p>Embedded original schematic:</p>
+<p><img alt="Oxygen sensor closed loop, λ voltage map, dual O2 layout, error memory" src="../../../docs/Engine_systems/N42/IMG20250515003129.jpg"></p>
+<h2>Key Facts</h2>
+<ul>
+<li>N42 DME = <strong>MS32</strong> variant; ECU is BMW-named <strong>DME</strong> (Digitale Motor Elektronik).</li>
+<li>ECU architecture template: <strong>sensors → control unit → control outputs</strong>, plus switches, relay outputs, interfaces.</li>
+<li><strong>VANOS control loop</strong>: cam position sensor → DME → solenoid valve → phaser → cam position sensor (closed).</li>
+<li><strong>Solenoid valve</strong> is the <strong>actuator</strong> in VANOS; cam-position sensor is the feedback.</li>
+<li><strong>Wide-band O₂ pre-cat</strong> drives <strong>fuel closed loop</strong>.</li>
+<li><strong>Monitor O₂ post-cat</strong> is <strong>OBD diagnostic only</strong> — catches catalyst failures.</li>
+<li>Voltage map (wide-band): <strong>λ = 1 → 1.5 V</strong>, <strong>λ &gt; 1 → &gt; 1.5 V</strong> (lean), <strong>λ &lt; 1 → &lt; 1.5 V</strong> (rich).</li>
+<li>Healthy cat → post-cat sensor sits flat; faulty cat → post-cat sensor swings like pre-cat → DTC.</li>
+<li><strong>"Initially all λ = 1"</strong> — base map approximation before closed-loop activates.</li>
+<li><strong>Error memory</strong> stores DTCs; read via DIS / OBS scanner (see <a href="10-diagnosis-process-dis-and-test-plan.html">diagnosis chapter</a>).</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="01-n42-overview-innovations-advantages.html">N42 overview — DME listed as one of 5 innovations</a></li>
+<li><a href="08-vanos-variable-valve-timing.html">VANOS — the system this engine-management page controls</a></li>
+<li><a href="07-valvetronic-variable-valve-lift.html">Valvetronic — the other system controlled here</a></li>
+<li><a href="04-exhaust-system-and-mufflers.html">N42 exhaust system &amp; wide-band/monitor O₂ layout</a></li>
+<li><a href="10-diagnosis-process-dis-and-test-plan.html">Diagnosis process — reading the error memory</a></li>
+<li><a href="../Exhaust_system/02-oxygen-sensor-and-lambda.html">Oxygen sensor &amp; lambda — general theory</a></li>
+<li><a href="../Fuel_system/02-ignition-system.html">Ignition system — DME drives the ignition module</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>List items 2 and 3 both say "Control unit"</strong> — almost certainly a transcription slip (the trainer wrote "Control unit" twice). Standard ECU architectures list 7 elements as: sensors, <strong>control unit, internal processing logic</strong>, control outputs, switches, relay outputs, interfaces. The duplicate might be (2) control unit hardware + (3) control unit firmware / logic. Preserved as listed.</li>
+<li>[?] <strong>MS32</strong> is the correct Bosch / Siemens platform identifier for early Valvetronic engines. "K" in the box might be a coding-version letter — unconfirmed.</li>
+<li>[?] The "<strong>1.5 V</strong>" round-number reference voltage for λ = 1 — actual wide-band sensors output a linear <strong>current</strong> (4–20 mA style), not a voltage. The 1.5 V the trainer wrote is the converted voltage with a specific load resistor in the diagnostic circuit. Preserved as the trainer's number.</li>
+<li>[?] The notebook circle around "<strong>So two 'Monitor O₂ sensors'</strong>" reads as the trainer asking the class to consider whether two monitor sensors are needed (they're not — one pre-cat wide-band + one post-cat monitor is the standard). The text after ("It's not true") suggests the class concluded two monitors would give redundant info.</li>
+<li>[?] <strong>"Due to mixing of exhaust gases"</strong> — interpreted as referring to the catalyst's O₂-storage smoothing effect on the post-cat sensor.</li>
+<li>[?] The N42 has <strong>double VANOS</strong> (intake AND exhaust cams) but the diagram in IMG 003118 only shows the <strong>inlet</strong> cam phaser. The exhaust phaser works identically with a second solenoid valve.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ N42 Engine</a>
+      <span class="spacer"></span>
+      <a href="../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

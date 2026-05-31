@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.9 — Bitwise Operators · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13.5px; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+  .op-table .op-sym { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 3px 10px; border-radius: 6px; font-weight: 700; font-family: var(--mono); display: inline-block; min-width: 36px; text-align: center; }
+
+  /* binary mini-rows in prose */
+  .bin-demo { font-family: var(--mono); font-size: 14px; background: var(--terminal); color: #e2e8f0; border-radius: 10px; padding: 12px 16px; margin: 12px 0; line-height: 1.7; }
+  .bin-demo .one { color: #fde047; font-weight: 700; }
+  .bin-demo .zero { color: #475569; }
+  .bin-demo .lab { color: #94a3b8; }
+  .bin-demo .eq { color: #86efac; font-weight: 700; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CLASSIC C TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Bit visualizer */
+  .biz-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
+  .biz-field { display: flex; flex-direction: column; gap: 4px; }
+  .biz-field label { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .biz-field input { width: 90px; font-family: var(--mono); font-size: 14px; padding: 9px 11px; border: 2px solid var(--bg3); border-radius: 10px; background: white; color: var(--ink); font-weight: 600; }
+  .biz-field input:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15); }
+  .op-pick { margin-bottom: 14px; }
+  .op-pick-label { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .op-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .op-btn { background: white; border: 2px solid var(--bg3); border-radius: 8px; padding: 9px 16px; font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .op-btn:hover { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .op-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .op-btn.tried { border-color: var(--green); }
+
+  .bitgrid { background: var(--terminal); border-radius: 12px; padding: 16px 18px; margin-top: 4px; }
+  .bitrow { display: flex; align-items: center; gap: 14px; margin: 8px 0; flex-wrap: wrap; }
+  .bitrow-label { font-family: var(--mono); font-size: 13px; color: #94a3b8; width: 92px; flex-shrink: 0; }
+  .bitrow-label b { color: #e2e8f0; }
+  .bits { display: flex; gap: 4px; }
+  .bit { width: 30px; height: 34px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; font-size: 15px; border: 2px solid #334155; background: #1e293b; color: #475569; transition: all 0.2s var(--bouncy); }
+  .bit.on { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); box-shadow: 0 0 8px rgba(249,115,22,0.5); }
+  .bit.clickable { cursor: pointer; }
+  .bit.clickable:hover { transform: translateY(-2px); border-color: var(--orange-light); }
+  .bit.res.on { background: linear-gradient(135deg, var(--green), var(--teal)); border-color: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+  .bitrow-val { font-family: var(--mono); font-size: 13px; color: #fde047; }
+  .biz-divider { height: 1px; background: #334155; margin: 10px 0; }
+  .biz-expr { font-family: var(--mono); font-size: 14px; color: #c4b5fd; margin-bottom: 8px; }
+
+  /* Flag manipulator */
+  .flag-state { background: var(--terminal); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .flag-state .lab { font-size: 11px; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .flag-state .bits { margin: 8px 0; }
+  .flag-state .active-list { font-family: var(--sans); font-size: 13.5px; color: #c7d2fe; margin-top: 6px; }
+  .flag-state .active-list b { color: #fde047; }
+  .flag-table { width: 100%; border-collapse: collapse; }
+  .flag-table td { padding: 8px 6px; border-bottom: 1px solid var(--bg3); }
+  .flag-name { font-family: var(--mono); font-weight: 700; color: var(--orange-deep); font-size: 13.5px; }
+  .flag-name small { display: block; color: var(--ink-dim); font-weight: 600; font-size: 11px; }
+  .flag-ops { display: flex; gap: 5px; flex-wrap: wrap; }
+  .fop { background: white; border: 2px solid var(--bg3); border-radius: 7px; padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s var(--bouncy); color: var(--ink-soft); }
+  .fop:hover { border-color: var(--orange); transform: translateY(-1px); }
+  .fop.set { color: var(--green); } .fop.clear { color: var(--red); } .fop.toggle { color: var(--purple); } .fop.test { color: var(--blue); }
+  .flag-log { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); background: rgba(255,255,255,0.6); border-radius: 8px; padding: 8px 12px; margin-top: 12px; min-height: 22px; }
+  .flag-log .hl { color: var(--orange-deep); font-weight: 700; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .partdone { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid var(--green); border-radius: 16px; padding: 16px 20px; margin-top: 18px; font-size: 14.5px; color: #065f46; }
+  .partdone strong { color: #065f46; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Finally — my favorite topic! Operators that work on individual <strong>bits</strong>. ⚡
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 2.9</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 19 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II &middot; CORE LANGUAGE</span>
+    <h1>Bitwise Operators — A Quick Tour</h1>
+    <p class="hero-sub">Most operators work on whole numbers. These six work on the individual <strong>bits</strong> inside them: <code>&amp;</code>, <code>|</code>, <code>^</code>, <code>~</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code>. You won't reach for them daily, but when you need to pack flags, read hardware, or squeeze space, nothing else will do.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Working one bit at a time 🧠</h2>
+
+    <div class="new-content">
+      Every integer is stored as a row of bits — <code>0</code>s and <code>1</code>s. The number <code>5</code> is really <code>00000101</code> in an 8-bit <code>char</code>. Most operators treat that as the value "five." <strong>Bitwise operators</strong> ignore the value and work on each bit position directly, like flipping switches in a row.
+    </div>
+
+    <p>Why would you want that? Three big reasons: <strong>flags</strong> (cram eight on/off settings into one byte instead of eight variables), <strong>hardware</strong> (device registers are read and written bit by bit), and <strong>performance/space</strong> (shifts multiply and divide by powers of two, and bit tricks pack data tight). This is a quick, practical tour — enough to recognize bit manipulation in the wild and use the everyday patterns. The deep dive lives in Appendix B.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The six operators</div>
+    <h2>What each one does 🔧</h2>
+
+    <table class="op-table">
+      <thead><tr><th>Operator</th><th>Name</th><th>Per-bit rule</th></tr></thead>
+      <tbody>
+        <tr><td><span class="op-sym">&amp;</span></td><td>AND</td><td>1 only if <strong>both</strong> bits are 1</td></tr>
+        <tr><td><span class="op-sym">|</span></td><td>OR</td><td>1 if <strong>either</strong> bit is 1</td></tr>
+        <tr><td><span class="op-sym">^</span></td><td>XOR</td><td>1 if the bits <strong>differ</strong></td></tr>
+        <tr><td><span class="op-sym">~</span></td><td>NOT</td><td>flips every bit (unary)</td></tr>
+        <tr><td><span class="op-sym">&lt;&lt;</span></td><td>left shift</td><td>slide bits left, fill with 0s</td></tr>
+        <tr><td><span class="op-sym">&gt;&gt;</span></td><td>right shift</td><td>slide bits right</td></tr>
+      </tbody>
+    </table>
+
+    <p>Take <code>5 &amp; 3</code>. Line the two numbers up bit by bit, then apply the AND rule to each column:</p>
+
+    <div class="bin-demo">
+      <span class="lab">  5 =</span> <span class="zero">0000 0</span><span class="one">1</span><span class="zero">0</span><span class="one">1</span><br>
+      <span class="lab">  3 =</span> <span class="zero">0000 00</span><span class="one">11</span><br>
+      <span class="lab">─────────────</span><br>
+      <span class="lab">5&amp;3 =</span> <span class="zero">0000 000</span><span class="one">1</span> <span class="eq">= 1</span>
+    </div>
+
+    <div class="new-content">
+      <strong>Don't confuse these with the logical operators</strong> from lesson 2.5. <code>&amp;</code> is bitwise AND; <code>&amp;&amp;</code> is logical AND. <code>5 &amp; 3</code> is <code>1</code> (bit math), but <code>5 &amp;&amp; 3</code> is <code>1</code> meaning "both are truthy." Different jobs — same-looking symbols. Same for <code>|</code> vs <code>||</code>.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> XOR and NOT in action</div>
+    <h2>The flip operators 🔀</h2>
+
+    <p><strong>XOR</strong> (<code>^</code>) sets a bit to 1 only when the two bits differ. That makes it the "toggle" operator — XOR-ing a bit with <code>1</code> flips it; XOR-ing with <code>0</code> leaves it alone. A fun property: <code>x ^ x</code> is always <code>0</code>, and <code>x ^ 0</code> is always <code>x</code>.</p>
+
+    <div class="bin-demo">
+      <span class="lab">  6 =</span> <span class="zero">0000 0</span><span class="one">11</span><span class="zero">0</span><br>
+      <span class="lab">  3 =</span> <span class="zero">0000 00</span><span class="one">11</span><br>
+      <span class="lab">─────────────</span><br>
+      <span class="lab">6^3 =</span> <span class="zero">0000 0</span><span class="one">1</span><span class="zero">0</span><span class="one">1</span> <span class="eq">= 5</span>
+    </div>
+
+    <p><strong>NOT</strong> (<code>~</code>) is unary — it flips every single bit. In an 8-bit byte, <code>~00000101</code> becomes <code>11111010</code>. Because it flips the high bits too, the result on a signed type is usually negative (<code>~5</code> is <code>-6</code>). You'll mostly use <code>~</code> to build a "clear this bit" mask, as you'll see in a moment.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Shifts</div>
+    <h2><code>&lt;&lt;</code> and <code>&gt;&gt;</code> — sliding bits 🚀</h2>
+
+    <p>A <strong>left shift</strong> slides every bit one position to the left and drops a <code>0</code> in on the right. That doubles the value. A <strong>right shift</strong> slides bits right, which halves it (integer division):</p>
+
+    <table class="op-table">
+      <thead><tr><th>Expression</th><th>Binary</th><th>Value</th><th>Same as</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">1 &lt;&lt; 0</td><td class="mono">00000001</td><td class="mono">1</td><td class="plain">2⁰</td></tr>
+        <tr><td class="mono">1 &lt;&lt; 3</td><td class="mono">00001000</td><td class="mono">8</td><td class="plain">2³</td></tr>
+        <tr><td class="mono">5 &lt;&lt; 1</td><td class="mono">00001010</td><td class="mono">10</td><td class="plain">5 × 2</td></tr>
+        <tr><td class="mono">20 &gt;&gt; 1</td><td class="mono">00001010</td><td class="mono">10</td><td class="plain">20 ÷ 2</td></tr>
+        <tr><td class="mono">20 &gt;&gt; 2</td><td class="mono">00000101</td><td class="mono">5</td><td class="plain">20 ÷ 4</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      The pattern <code>1 &lt;&lt; n</code> is everywhere — it builds a value with <strong>exactly one bit set</strong>, at position <code>n</code>. That's how you name individual bits: bit 0 is <code>1 &lt;&lt; 0</code>, bit 3 is <code>1 &lt;&lt; 3</code>, and so on. Those single-bit values are the building blocks for flags.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> The killer app: flags &amp; masks</div>
+    <h2>Eight switches in one byte 🎛️</h2>
+
+    <p>Here's where bitwise earns its place. Instead of eight separate <code>bool</code> variables, you store eight on/off settings in the bits of a single integer, and use bit operations to flip them. Each pattern is a one-liner you'll memorize:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Goal</th><th>Pattern</th><th>How it works</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Set</strong> a bit</td><td class="mono">flags |= MASK;</td><td>OR forces the bit to 1</td></tr>
+        <tr><td><strong>Clear</strong> a bit</td><td class="mono">flags &amp;= ~MASK;</td><td>AND with the inverse forces it to 0</td></tr>
+        <tr><td><strong>Toggle</strong> a bit</td><td class="mono">flags ^= MASK;</td><td>XOR flips it</td></tr>
+        <tr><td><strong>Test</strong> a bit</td><td class="mono">if (flags &amp; MASK)</td><td>nonzero means the bit is set</td></tr>
+      </tbody>
+    </table>
+
+    <p>where <code>MASK</code> is a single-bit value like <code>1 &lt;&lt; 2</code>. These four lines — set, clear, toggle, test — are the entire vocabulary of flag handling, and you'll see them in every codebase that touches hardware, graphics, or file permissions. Play with them in the Flag Manipulator below.</p>
+
+    <div class="trap">
+      <h4>🚨 Bitwise binds looser than <code>==</code></h4>
+      <p>From lesson 2.6: <code>if (flags &amp; MASK == 0)</code> is read as <code>flags &amp; (MASK == 0)</code> because <code>==</code> binds tighter than <code>&amp;</code>. Almost never what you want. Always parenthesize the test: <code>if ((flags &amp; MASK) == 0)</code>.</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Bit Lab</div>
+    <h2>Watch the bits flip 🔬</h2>
+
+    <p>Two tools. The <strong>Bit Visualizer</strong> shows two 8-bit numbers and the result of any bitwise operation, bit by bit — click individual bits to change the inputs. The <strong>Flag Manipulator</strong> lets you set, clear, toggle, and test named flags in a single byte.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">⚡ Bit Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 6 operators tried</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="viz">Bit Visualizer</button>
+        <button class="tab-btn" data-tab="flags">Flag Manipulator</button>
+      </div>
+
+      <!-- VISUALIZER -->
+      <div class="tab-panel active" id="tab-viz">
+        <div class="biz-controls">
+          <div class="biz-field">
+            <label>A (0–255)</label>
+            <input id="bizA" type="number" min="0" max="255" value="12" />
+          </div>
+          <div class="biz-field">
+            <label id="bLabel">B (0–255)</label>
+            <input id="bizB" type="number" min="0" max="255" value="10" />
+          </div>
+        </div>
+        <div class="op-pick">
+          <div class="op-pick-label">Operator</div>
+          <div class="op-row">
+            <button class="op-btn active" data-op="&amp;">A &amp; B</button>
+            <button class="op-btn" data-op="|">A | B</button>
+            <button class="op-btn" data-op="^">A ^ B</button>
+            <button class="op-btn" data-op="~">~A</button>
+            <button class="op-btn" data-op="&lt;&lt;">A &lt;&lt; B</button>
+            <button class="op-btn" data-op="&gt;&gt;">A &gt;&gt; B</button>
+          </div>
+        </div>
+        <div class="bitgrid" id="bitGrid"></div>
+      </div>
+
+      <!-- FLAG MANIPULATOR -->
+      <div class="tab-panel" id="tab-flags">
+        <div class="flag-state">
+          <span class="lab">Current byte — <span id="flagDec">0</span> (0x<span id="flagHex">00</span>)</span>
+          <div class="bits" id="flagBits"></div>
+          <div class="active-list" id="flagActive">No flags set.</div>
+        </div>
+        <table class="flag-table" id="flagTable"></table>
+        <div class="flag-log" id="flagLog">Set, clear, toggle, or test a flag to see the bit operation.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What is <code>flags</code> at the end? (write the final value)
+        <pre>unsigned char flags = 0;
+flags |= (1 << 0);   // set bit 0
+flags |= (1 << 2);   // set bit 2
+flags &= ~(1 << 0);  // clear bit 0
+// flags == ?</pre>
+      </div>
+      <button class="opt" data-correct="false"><span><code>5</code></span></button>
+      <button class="opt" data-correct="true"><span><code>4</code></span></button>
+      <button class="opt" data-correct="false"><span><code>1</code></span></button>
+      <button class="opt" data-correct="false"><span><code>0</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: track the bits. Set bit 0 and bit 2 → <code>00000101</code>. Then clear bit 0 → ?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">⚡</div>
+      <div class="mistake-body">
+        <strong>Using <code>&amp;&amp;</code>/<code>||</code> where you meant <code>&amp;</code>/<code>|</code></strong>
+        <small>The logical versions give <code>1</code> or <code>0</code> based on truthiness, not bit math. <code>6 &amp; 3</code> is <code>2</code>; <code>6 &amp;&amp; 3</code> is <code>1</code>. For bit work, use the single-character forms.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔢</div>
+      <div class="mistake-body">
+        <strong>Forgetting the precedence parentheses</strong>
+        <small><code>flags &amp; MASK == 0</code> parses as <code>flags &amp; (MASK == 0)</code> — <code>==</code> binds tighter. Always write <code>(flags &amp; MASK) == 0</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">➖</div>
+      <div class="mistake-body">
+        <strong>Shifting or <code>~</code>-ing signed values carelessly</strong>
+        <small>Right-shifting a negative number and shifting by too many bits are implementation-defined or undefined. For bit manipulation, prefer <strong>unsigned</strong> types (<code>unsigned int</code>, <code>uint8_t</code>) so behavior is well-defined.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Even or odd.</strong> Write a one-line test using <code>&amp;</code> that's true when an <code>int n</code> is odd. (Hint: what's the lowest bit of an odd number?) Verify in the Bit Visualizer with <code>n &amp; 1</code>.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Permission bits.</strong> Define three masks <code>READ = 1&lt;&lt;0</code>, <code>WRITE = 1&lt;&lt;1</code>, <code>EXEC = 1&lt;&lt;2</code>. Start from <code>0</code>, grant READ and WRITE, then revoke WRITE, and print whether EXEC is set. Walk it through the Flag Manipulator.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Swap without a temp.</strong> The famous XOR swap: given <code>a</code> and <code>b</code>, exchange their values using only <code>a ^= b; b ^= a; a ^= b;</code> — no temporary variable. Trace why it works on paper with two small numbers, using <code>x ^ x == 0</code>.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>Six operators on bits:</strong> <code>&amp;</code> AND, <code>|</code> OR, <code>^</code> XOR, <code>~</code> NOT, <code>&lt;&lt;</code> left shift, <code>&gt;&gt;</code> right shift.</li>
+        <li><strong><code>&lt;&lt;</code> doubles, <code>&gt;&gt;</code> halves;</strong> <code>1 &lt;&lt; n</code> builds a value with one bit set at position <code>n</code>.</li>
+        <li><strong>Flag patterns:</strong> set <code>|=</code>, clear <code>&amp;= ~</code>, toggle <code>^=</code>, test <code>&amp;</code>. The whole vocabulary in four lines.</li>
+        <li><strong>Don't confuse <code>&amp;</code>/<code>|</code> with <code>&amp;&amp;</code>/<code>||</code></strong>, and parenthesize <code>(flags &amp; MASK) == 0</code>.</li>
+        <li><strong>Use unsigned types</strong> for bit work so shifts and <code>~</code> behave predictably.</li>
+      </ul>
+    </div>
+
+    <div class="partdone">
+      <strong>🎉 That wraps Part II — Core Language!</strong> You've covered variables, types, constants, all the operators, precedence, conversions, formatted I/O, and now bit manipulation. Next stop: <strong>Part III — Making Decisions and Repeating Work</strong>, starting with <code>if</code>, <code>else</code>, and loops.
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_2_8.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.8  printf and scanf — format specifiers
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      3.1  if, else, else if
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Finally — my favorite topic! Operators that work on individual <strong>bits</strong>. ⚡",
+    "Six operators: <code>&amp;</code> <code>|</code> <code>^</code> <code>~</code> <code>&lt;&lt;</code> <code>&gt;&gt;</code>. Each works column by column. 🔧",
+    "XOR toggles; <code>~</code> flips everything. <code>x ^ x</code> is always 0! 🔀",
+    "<code>&lt;&lt;</code> doubles, <code>&gt;&gt;</code> halves. <code>1 &lt;&lt; n</code> lights up exactly one bit. 🚀",
+    "Flags: set <code>|=</code>, clear <code>&amp;= ~</code>, toggle <code>^=</code>, test <code>&amp;</code>. Memorize these four! 🎛️",
+    "Click the bits, pick an operator — watch the result light up. 🔬",
+    "Set bit 0 and 2, then clear bit 0. What's left? 🎯",
+    "Last lesson of Part II — you've earned the bit-wizard badge! 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 2.9 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Bit Visualizer =====
+  const bizA = document.getElementById('bizA'), bizB = document.getElementById('bizB');
+  const bLabel = document.getElementById('bLabel');
+  const bitGrid = document.getElementById('bitGrid');
+  let currentOp = '&';
+  const opsTried = new Set();
+
+  function clamp(v, lo, hi) { v = parseInt(v, 10); if (isNaN(v)) v = 0; return Math.max(lo, Math.min(hi, v)); }
+  function toBits(n) { const a = []; for (let i = 7; i >= 0; i--) a.push((n >> i) & 1); return a; }
+
+  function bitsRow(label, valStr, bits, opts) {
+    opts = opts || {};
+    const cls = opts.res ? ' res' : '';
+    const click = opts.clickable ? ' clickable' : '';
+    const cells = bits.map((b, i) => `<div class="bit${cls}${b ? ' on' : ''}${click}" data-target="${opts.target || ''}" data-pos="${7 - i}">${b}</div>`).join('');
+    return `<div class="bitrow"><div class="bitrow-label">${label}</div><div class="bits">${cells}</div><div class="bitrow-val">${valStr}</div></div>`;
+  }
+
+  function renderViz() {
+    const isUnary = currentOp === '~';
+    const isShift = currentOp === '<<' || currentOp === '>>';
+    let A = clamp(bizA.value, 0, 255);
+    let B = clamp(bizB.value, 0, isShift ? 7 : 255);
+    bizA.value = A;
+    if (isShift) { if (parseInt(bizB.value, 10) > 7) bizB.value = B; }
+    bLabel.textContent = isShift ? 'shift amount (0–7)' : 'B (0–255)';
+    let result, exprTxt;
+    if (currentOp === '&') { result = A & B; exprTxt = `A &amp; B`; }
+    else if (currentOp === '|') { result = A | B; exprTxt = `A | B`; }
+    else if (currentOp === '^') { result = A ^ B; exprTxt = `A ^ B`; }
+    else if (currentOp === '~') { result = (~A) & 0xFF; exprTxt = `~A (8-bit)`; }
+    else if (currentOp === '<<') { result = (A << B) & 0xFF; exprTxt = `A &lt;&lt; ${B}`; }
+    else { result = A >> B; exprTxt = `A &gt;&gt; ${B}`; }
+
+    let html = `<div class="biz-expr">${exprTxt}  →  <span style="color:#86efac">${result}</span></div>`;
+    html += bitsRow('<b>A</b> = ' + A, A.toString(2).padStart(8, '0'), toBits(A), { clickable: true, target: 'A' });
+    if (!isUnary && !isShift) html += bitsRow('<b>B</b> = ' + B, B.toString(2).padStart(8, '0'), toBits(B), { clickable: true, target: 'B' });
+    html += `<div class="biz-divider"></div>`;
+    html += bitsRow('<b>=</b> ' + result, result.toString(2).padStart(8, '0'), toBits(result), { res: true });
+    bitGrid.innerHTML = html;
+
+    // attach bit-click handlers
+    bitGrid.querySelectorAll('.bit.clickable').forEach(el => el.addEventListener('click', () => {
+      const tgt = el.dataset.target, pos = parseInt(el.dataset.pos, 10);
+      if (tgt === 'A') { bizA.value = (clamp(bizA.value, 0, 255) ^ (1 << pos)) & 0xFF; }
+      else if (tgt === 'B') { bizB.value = (clamp(bizB.value, 0, 255) ^ (1 << pos)) & 0xFF; }
+      renderViz();
+    }));
+  }
+
+  document.querySelectorAll('#tab-viz .op-btn').forEach(b => b.addEventListener('click', (e) => {
+    document.querySelectorAll('#tab-viz .op-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentOp = b.dataset.op.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    renderViz();
+    if (!opsTried.has(currentOp)) {
+      opsTried.add(currentOp);
+      b.classList.add('tried');
+      playCount.textContent = opsTried.size;
+      playCount.style.transform = 'scale(1.3)';
+      setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+      addXP(4, e.clientX, e.clientY);
+      bumpStreak();
+      if (opsTried.size === 6) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 6 operators explored! +20 XP'); }
+    }
+  }));
+  bizA.addEventListener('input', renderViz);
+  bizB.addEventListener('input', renderViz);
+  // mark the default-active & as tried-eligible only on click; render initial
+  renderViz();
+
+  // ===== Flag Manipulator =====
+  const FLAGS = [
+    { name: 'BOLD', bit: 0 },
+    { name: 'ITALIC', bit: 1 },
+    { name: 'UNDERLINE', bit: 2 },
+    { name: 'STRIKE', bit: 3 }
+  ];
+  let flagByte = 0;
+  const flagBits = document.getElementById('flagBits');
+  const flagDec = document.getElementById('flagDec');
+  const flagHex = document.getElementById('flagHex');
+  const flagActive = document.getElementById('flagActive');
+  const flagTable = document.getElementById('flagTable');
+  const flagLog = document.getElementById('flagLog');
+
+  function renderFlags() {
+    flagDec.textContent = flagByte;
+    flagHex.textContent = flagByte.toString(16).toUpperCase().padStart(2, '0');
+    flagBits.innerHTML = toBits(flagByte).map(b => `<div class="bit${b ? ' on' : ''}">${b}</div>`).join('');
+    const on = FLAGS.filter(f => flagByte & (1 << f.bit)).map(f => f.name);
+    flagActive.innerHTML = on.length ? 'Active: <b>' + on.join('</b>, <b>') + '</b>' : 'No flags set.';
+  }
+  function buildFlagTable() {
+    flagTable.innerHTML = FLAGS.map((f, i) => `
+      <tr>
+        <td><span class="flag-name">${f.name}<small>1 &lt;&lt; ${f.bit} = ${1 << f.bit}</small></span></td>
+        <td><div class="flag-ops">
+          <button class="fop set" data-i="${i}" data-act="set">set |=</button>
+          <button class="fop clear" data-i="${i}" data-act="clear">clear &amp;= ~</button>
+          <button class="fop toggle" data-i="${i}" data-act="toggle">toggle ^=</button>
+          <button class="fop test" data-i="${i}" data-act="test">test &amp;</button>
+        </div></td>
+      </tr>`).join('');
+    flagTable.querySelectorAll('.fop').forEach(b => b.addEventListener('click', (e) => {
+      const f = FLAGS[parseInt(b.dataset.i, 10)];
+      const mask = 1 << f.bit;
+      const act = b.dataset.act;
+      let msg;
+      if (act === 'set') { flagByte |= mask; msg = `flags <span class="hl">|= (1 &lt;&lt; ${f.bit})</span> → ${f.name} on`; }
+      else if (act === 'clear') { flagByte &= ~mask & 0xFF; msg = `flags <span class="hl">&amp;= ~(1 &lt;&lt; ${f.bit})</span> → ${f.name} off`; }
+      else if (act === 'toggle') { flagByte ^= mask; msg = `flags <span class="hl">^= (1 &lt;&lt; ${f.bit})</span> → ${f.name} flipped`; }
+      else { const isOn = (flagByte & mask) !== 0; msg = `(flags <span class="hl">&amp; (1 &lt;&lt; ${f.bit})</span>) → ${isOn ? '<b>nonzero</b>: ' + f.name + ' is ON' : '0: ' + f.name + ' is OFF'}`; }
+      flagLog.innerHTML = msg;
+      renderFlags();
+      addXP(2, e.clientX, e.clientY);
+    }));
+  }
+  buildFlagTable();
+  renderFlags();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Set bit 0 → <code>00000001</code>. Set bit 2 → <code>00000101</code> (= 5). Clear bit 0 with <code>&amp;= ~(1&lt;&lt;0)</code> → <code>00000100</code> = <strong>4</strong>.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> After both sets you have <code>00000101</code>; clearing bit 0 leaves <code>00000100</code> = 4.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Write the bits: set bit 0 and bit 2 gives <code>00000101</code>. Then clearing <em>only</em> bit 0 — which bit remains set?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+</body>
+</html>
