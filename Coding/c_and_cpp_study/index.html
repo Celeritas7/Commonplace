@@ -159,6 +159,47 @@
   }
   @media (max-width: 900px) { .books { grid-template-columns: 1fr; } }
 
+  /* ===== Book folders (shelf) ===== */
+  .shelf { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 26px; }
+  @media (max-width: 640px) { .shelf { grid-template-columns: 1fr; } }
+  .folder { text-align: left; border: 2px solid var(--bg-c-light); background: var(--card); border-radius: 20px; padding: 18px 20px; cursor: pointer; font: inherit; box-shadow: var(--shadow-sm); transition: all 0.25s var(--bouncy); display: flex; flex-direction: column; gap: 12px; }
+  .folder:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .folder.c { border-color: var(--orange-light); }
+  .folder.cpp { border-color: var(--purple-light); }
+  .folder.active.c { border-color: var(--orange); background: linear-gradient(180deg, var(--card), var(--bg-c-light)); }
+  .folder.active.cpp { border-color: var(--purple); background: linear-gradient(180deg, var(--card), var(--bg-cpp-light)); }
+  .folder-top { display: flex; align-items: center; gap: 12px; }
+  .folder-ic { width: 44px; height: 44px; border-radius: 13px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 23px; box-shadow: var(--shadow-sm); }
+  .folder.c .folder-ic { background: linear-gradient(135deg, var(--orange), var(--pink)); }
+  .folder.cpp .folder-ic { background: linear-gradient(135deg, var(--purple), var(--cyan)); }
+  .folder-name { font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.12; }
+  .folder-name small { display: block; font-size: 12px; font-weight: 600; color: var(--ink-dim); margin-top: 2px; }
+  .folder-open { margin-left: auto; color: var(--ink-dim); font-size: 22px; font-weight: 700; transition: transform 0.25s var(--bouncy); }
+  .folder.active .folder-open { transform: rotate(90deg); }
+  .folder-prog .bar { height: 9px; border-radius: 5px; background: rgba(0,0,0,0.07); overflow: hidden; }
+  .folder-prog .fill { height: 100%; width: 0; border-radius: 5px; transition: width 0.7s var(--bouncy); }
+  .folder.c .folder-prog .fill { background: linear-gradient(90deg, var(--orange), var(--pink)); }
+  .folder.cpp .folder-prog .fill { background: linear-gradient(90deg, var(--purple), var(--cyan)); }
+  .folder-prog .lab { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-top: 6px; }
+  .folder-prog .lab b { color: var(--ink); }
+
+  /* one book open at a time */
+  .books { display: block; }
+  .book { display: none; }
+  .book.active { display: block; }
+
+  /* completed lesson tick */
+  a.lesson { position: relative; }
+  a.lesson.read { border-color: var(--green) !important; }
+  a.lesson.read .lesson-title::after { content: " ✓"; color: var(--green); font-weight: 800; }
+
+  /* ===== Collapsible parts ===== */
+  .part-label.collapsible { cursor: pointer; user-select: none; }
+  .part-label .chev { font-size: 10px; transition: transform 0.25s var(--bouncy); color: var(--ink-dim); flex-shrink: 0; }
+  .part-label.open .chev { transform: rotate(90deg); }
+  .part-label .pl-count { font-weight: 600; color: var(--ink-dim); text-transform: none; letter-spacing: 0; font-size: 11.5px; }
+  .lessons.collapsed { display: none; }
+
   .book {
     background: var(--card);
     border-radius: 28px;
@@ -379,7 +420,7 @@
     <div class="hero-content">
       <span class="hero-eyebrow">⭐ READING ROOM</span>
       <h1>Two books.<br>One playful way to learn.</h1>
-      <p class="hero-sub">Bit-sized lessons on C and C++, designed for complete beginners. Tap any lesson below to start — your progress and XP reset on each visit, so feel free to revisit and replay.</p>
+      <p class="hero-sub">Bit-sized lessons on C and C++, designed for complete beginners. Open a book folder below — finished lessons get ticked, and your reading progress is remembered on this device.</p>
     </div>
     <div class="hero-mascots">
       <!-- Bit -->
@@ -437,6 +478,30 @@
   </div>
 
   <!-- Books -->
+  <div class="shelf" id="shelf">
+    <button class="folder c" id="folder-c" type="button">
+      <div class="folder-top">
+        <div class="folder-ic">🤖</div>
+        <div class="folder-name">The C Book<small>Guided by Bit</small></div>
+        <span class="folder-open">›</span>
+      </div>
+      <div class="folder-prog">
+        <div class="bar"><div class="fill" id="fill-c"></div></div>
+        <div class="lab" id="lab-c">—</div>
+      </div>
+    </button>
+    <button class="folder cpp" id="folder-cpp" type="button">
+      <div class="folder-top">
+        <div class="folder-ic">✨</div>
+        <div class="folder-name">The C++ Book<small>Guided by Pixel</small></div>
+        <span class="folder-open">›</span>
+      </div>
+      <div class="folder-prog">
+        <div class="bar"><div class="fill" id="fill-cpp"></div></div>
+        <div class="lab" id="lab-cpp">—</div>
+      </div>
+    </button>
+  </div>
   <div class="books">
 
     <!-- ============ C BOOK ============ -->
@@ -951,5 +1016,86 @@
   </div>
 
 </div>
+<script>
+(function () {
+  var KEY = 'commonplace_ccpp_progress';
+  var OPENKEY = 'commonplace_open_book';
+  var cBook = document.querySelector('.book.c-book');
+  var cppBook = document.querySelector('.book.cpp-book');
+  var folderC = document.getElementById('folder-c');
+  var folderCpp = document.getElementById('folder-cpp');
+  if (!cBook || !cppBook || !folderC || !folderCpp) return;
+
+  function progress() { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } }
+  // id from href: samples/C_Book_Lesson_3_1.html -> "C 3.1"; Cpp_..._3_1 -> "CPP 3.1"
+  function idFromHref(href) {
+    var m = href.match(/(Cpp|C)_Book_Lesson_(\d+)_(\d+)/);
+    if (!m) return null;
+    return (m[1] === 'Cpp' ? 'CPP ' : 'C ') + m[2] + '.' + m[3];
+  }
+
+  function refresh() {
+    var done = progress();
+    [['fill-c', 'lab-c', cBook], ['fill-cpp', 'lab-cpp', cppBook]].forEach(function (cfg) {
+      var book = cfg[2];
+      var links = book.querySelectorAll('a.lesson');
+      var total = 0, read = 0;
+      links.forEach(function (a) {
+        total++;
+        var id = idFromHref(a.getAttribute('href') || '');
+        var isRead = !!(id && done[id] && done[id].done);
+        a.classList.toggle('read', isRead);
+        if (isRead) read++;
+      });
+      var pct = total ? Math.round(read / total * 100) : 0;
+      document.getElementById(cfg[0]).style.width = pct + '%';
+      document.getElementById(cfg[1]).innerHTML = '<b>' + read + '</b> of ' + total + ' read · ' + pct + '%';
+    });
+  }
+
+  function openBook(which) {
+    var isC = which === 'c';
+    cBook.classList.toggle('active', isC);
+    cppBook.classList.toggle('active', !isC);
+    folderC.classList.toggle('active', isC);
+    folderCpp.classList.toggle('active', !isC);
+    try { localStorage.setItem(OPENKEY, which); } catch (e) {}
+    (isC ? cBook : cppBook).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  folderC.addEventListener('click', function () { openBook('c'); });
+  folderCpp.addEventListener('click', function () { openBook('cpp'); });
+
+  // Collapsible parts — collapsed on phones, open on desktop
+  var isMobile = window.matchMedia('(max-width: 900px)').matches;
+  document.querySelectorAll('.part-label').forEach(function (pl) {
+    var lessons = pl.nextElementSibling;
+    if (!lessons || !lessons.classList.contains('lessons')) return;
+    pl.classList.add('collapsible');
+    var chev = document.createElement('span');
+    chev.className = 'chev'; chev.textContent = '▸';
+    pl.insertBefore(chev, pl.firstChild);
+    var n = lessons.querySelectorAll('.lesson').length;
+    var cnt = document.createElement('span');
+    cnt.className = 'pl-count'; cnt.textContent = '(' + n + ')';
+    pl.appendChild(cnt);
+    lessons.classList.toggle('collapsed', isMobile);
+    pl.classList.toggle('open', !isMobile);
+    pl.addEventListener('click', function () {
+      var nowCollapsed = lessons.classList.toggle('collapsed');
+      pl.classList.toggle('open', !nowCollapsed);
+    });
+  });
+
+  refresh();
+  var last = null; try { last = localStorage.getItem(OPENKEY); } catch (e) {}
+  cBook.classList.toggle('active', last !== 'cpp');
+  cppBook.classList.toggle('active', last === 'cpp');
+  folderC.classList.toggle('active', last !== 'cpp');
+  folderCpp.classList.toggle('active', last === 'cpp');
+  // re-read progress when returning from a lesson
+  window.addEventListener('focus', refresh);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+})();
+</script>
 </body>
 </html>
