@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C++ Practice Lab · Commonplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!-- CodeMirror 5 (editor) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15; --amber: #f59e0b;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.55; font-size: 16px; min-height: 100vh; }
+  .page { max-width: 980px; margin: 0 auto; padding: 22px 18px 90px; }
+
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .back { text-decoration: none; color: var(--purple-deep); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; background: var(--card); padding: 8px 14px; border-radius: 14px; box-shadow: var(--shadow-sm); border: 2px solid var(--purple-light); transition: transform .2s var(--bouncy); }
+  .back:hover { transform: translateX(-3px); }
+
+  /* auth pill */
+  .auth { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .auth input[type=email] { font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 12px; border: 2px solid var(--purple-light); outline: none; background: var(--card); color: var(--ink); min-width: 200px; }
+  .auth input[type=email]:focus { border-color: var(--purple); }
+  .btn { font: inherit; font-weight: 700; cursor: pointer; border: none; border-radius: 13px; padding: 9px 16px; transition: transform .18s var(--bouncy), box-shadow .2s; }
+  .btn:active { transform: scale(.96); }
+  .btn-primary { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: #fff; box-shadow: 0 4px 14px rgba(109,40,217,.35); }
+  .btn-ghost { background: var(--card); color: var(--purple-deep); border: 2px solid var(--purple-light); }
+  .btn-run { background: linear-gradient(135deg, var(--green), #16a34a); color: #fff; box-shadow: 0 4px 14px rgba(34,197,94,.35); font-size: 16px; padding: 11px 22px; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+  .who { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .who b { color: var(--purple-deep); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 55%, var(--cyan) 100%); border-radius: 24px; padding: 26px 28px; color: #fff; box-shadow: var(--shadow-lg); margin-bottom: 20px; position: relative; overflow: hidden; }
+  .hero h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -.5px; }
+  .hero p { margin: 0; opacity: .93; font-size: 15px; max-width: 640px; }
+  .hero .tag { display: inline-block; background: rgba(255,255,255,.22); backdrop-filter: blur(8px); padding: 5px 12px; border-radius: 16px; font-size: 11px; font-weight: 700; letter-spacing: .8px; margin-bottom: 10px; }
+
+  .panel { background: var(--card); border-radius: 20px; box-shadow: var(--shadow-sm); border: 2px solid transparent; margin-bottom: 16px; overflow: hidden; }
+  .panel-head { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid #ece7f6; flex-wrap: wrap; }
+  .panel-head .ttl { font-weight: 700; font-size: 15px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+  .spacer { flex: 1; }
+
+  .CodeMirror { height: auto; min-height: 280px; font-family: var(--mono); font-size: 14px; line-height: 1.6; border-radius: 0; }
+  .CodeMirror-scroll { min-height: 280px; }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 18px; flex-wrap: wrap; }
+  .hint { font-size: 12.5px; color: var(--ink-dim); }
+
+  details.stdin { padding: 0 18px 12px; }
+  details.stdin summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--purple-deep); }
+  details.stdin textarea { width: 100%; margin-top: 8px; font-family: var(--mono); font-size: 13px; border-radius: 12px; border: 2px solid var(--purple-light); padding: 10px; resize: vertical; min-height: 56px; }
+
+  /* output */
+  .out-wrap { padding: 0 18px 18px; }
+  .status-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 4px 11px; border-radius: 12px; }
+  .chip-ok { background: rgba(34,197,94,.15); color: #15803d; }
+  .chip-err { background: rgba(239,68,68,.15); color: #b91c1c; }
+  .chip-run { background: rgba(139,92,246,.15); color: var(--purple-deep); }
+  .chip-idle { background: rgba(113,128,150,.15); color: var(--ink-dim); }
+  pre.term { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 14px 16px; border-radius: 14px; line-height: 1.6; overflow-x: auto; margin: 10px 0 0; white-space: pre-wrap; word-break: break-word; min-height: 40px; }
+  pre.term .err { color: #fca5a5; }
+  pre.term .meta { color: #a5b4fc; }
+  .savenote { font-size: 12.5px; font-weight: 600; margin-top: 8px; }
+  .savenote.ok { color: #15803d; }
+  .savenote.warn { color: var(--amber); }
+  .savenote.err { color: #b91c1c; }
+
+  /* mistakes */
+  .mistakes-body { padding: 6px 18px 18px; }
+  .m-empty { font-size: 14px; color: var(--ink-dim); padding: 12px 0; }
+  .m-row { border: 1.5px solid #ece7f6; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .m-row .m-main { flex: 1; min-width: 200px; }
+  .m-reason { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; margin-bottom: 6px; }
+  .r-compile { background: rgba(239,68,68,.15); color: #b91c1c; }
+  .r-runtime { background: rgba(245,158,11,.18); color: #b45309; }
+  .r-self { background: rgba(139,92,246,.15); color: var(--purple-deep); }
+  .m-snip { font-family: var(--mono); font-size: 12px; background: #f7f5fc; border-radius: 10px; padding: 8px 10px; color: var(--ink-soft); max-height: 76px; overflow: hidden; white-space: pre-wrap; }
+  .m-date { font-size: 11.5px; color: var(--ink-dim); margin-top: 6px; }
+  .m-actions { display: flex; flex-direction: column; gap: 6px; }
+  .btn-sm { font-size: 12.5px; padding: 7px 12px; border-radius: 11px; }
+
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 14px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: all .35s var(--bouncy); z-index: 100; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 23px; }
+    .auth input[type=email] { min-width: 150px; flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top">
+    <a class="back" href="index.html">‹ Reading Room</a>
+    <div class="auth" id="auth"><span class="who">Connecting…</span></div>
+  </div>
+
+  <div class="hero">
+    <span class="tag">✨ PRACTICE LAB · C++</span>
+    <h1>Write it. Run it. Keep your mistakes.</h1>
+    <p>Type C++ below and hit Run — it compiles in the cloud and shows you the output. Sign in once and every attempt is saved; anything that fails is filed under "Mistakes to redo" so you can practise it again later.</p>
+  </div>
+
+  <!-- Editor panel -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="ttl">🧪 Your code <span class="hint" id="ver-hint">(g++ 10.2.0)</span></span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost btn-sm" id="reset-btn" type="button">↺ Reset</button>
+    </div>
+    <textarea id="code"></textarea>
+    <details class="stdin">
+      <summary>⌨ Program input (stdin) — optional</summary>
+      <textarea id="stdin" placeholder="Anything here is fed to your program's std::cin"></textarea>
+    </details>
+    <div class="toolbar">
+      <button class="btn btn-run" id="run-btn" type="button">▶ Run code</button>
+      <button class="btn btn-ghost" id="mistake-btn" type="button" title="File this code to redo later, even if it ran">🚩 Save as mistake</button>
+      <span class="spacer"></span>
+      <span class="hint">⌘/Ctrl + Enter to run</span>
+    </div>
+  </div>
+
+  <!-- Output panel -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="ttl">📟 Output</span>
+      <span class="spacer"></span>
+      <span class="status-chip chip-idle" id="status">idle</span>
+    </div>
+    <div class="out-wrap">
+      <pre class="term" id="term">Run your code to see the output here.</pre>
+      <div class="savenote" id="savenote"></div>
+    </div>
+  </div>
+
+  <!-- Mistakes panel -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="ttl">🚩 Mistakes to redo <span class="hint" id="m-count"></span></span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost btn-sm" id="refresh-m" type="button">⟳ Refresh</button>
+    </div>
+    <div class="mistakes-body" id="mistakes">
+      <div class="m-empty">Sign in to see and practise your saved mistakes.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ---------- config ---------- */
+var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
+var SUPABASE_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
+var PISTON = "https://emkc.org/api/v2/piston";
+var CPP_VERSION = "10.2.0"; // refined from /runtimes on load
+
+var DEFAULT_CODE =
+"#include <iostream>\n" +
+"using namespace std;\n" +
+"\n" +
+"int main() {\n" +
+"    cout << \"Hello from the Practice Lab!\" << endl;\n" +
+"    return 0;\n" +
+"}\n";
+
+/* ---------- supabase ---------- */
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+var currentUser = null;
+var lastAttemptId = null; // for "save as mistake"
+
+/* ---------- editor ---------- */
+var cm = CodeMirror.fromTextArea(document.getElementById("code"), {
+  mode: "text/x-c++src",
+  theme: "dracula",
+  lineNumbers: true,
+  indentUnit: 4,
+  tabSize: 4,
+  autoCloseBrackets: true,
+  matchBrackets: true,
+  viewportMargin: Infinity
+});
+cm.setValue(DEFAULT_CODE);
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove("show");},2400); }
+function setStatus(cls, txt){ var s=$("status"); s.className="status-chip "+cls; s.textContent=txt; }
+
+/* ---------- auth UI ---------- */
+function renderAuth(){
+  var el = $("auth");
+  if (currentUser){
+    el.innerHTML = '<span class="who">Signed in as <b>'+esc(currentUser.email)+'</b></span> <button class="btn btn-ghost btn-sm" id="signout">Sign out</button>';
+    $("signout").onclick = function(){ sb.auth.signOut(); };
+  } else {
+    el.innerHTML =
+      '<input type="email" id="email" placeholder="you@email.com" autocomplete="email">' +
+      '<button class="btn btn-primary btn-sm" id="magic">Email me a link</button>';
+    $("magic").onclick = sendMagicLink;
+    var inp=$("email"); if(inp){ inp.addEventListener("keydown",function(e){ if(e.key==="Enter") sendMagicLink(); }); }
+  }
+}
+function sendMagicLink(){
+  var email = ($("email").value||"").trim();
+  if(!email){ toast("Enter your email first"); return; }
+  $("magic").disabled = true; $("magic").textContent = "Sending…";
+  sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href.split('#')[0] } })
+    .then(function(res){
+      if(res.error){ toast("Error: "+res.error.message); }
+      else { toast("Check your inbox for the sign-in link ✉️"); }
+    })
+    .catch(function(e){ toast("Error: "+e.message); })
+    .finally(function(){ var m=$("magic"); if(m){ m.disabled=false; m.textContent="Email me a link"; } });
+}
+
+sb.auth.onAuthStateChange(function(_event, session){
+  currentUser = session ? session.user : null;
+  renderAuth();
+  if(currentUser){ loadMistakes(); } else { renderMistakes([]); }
+});
+
+/* ---------- run ---------- */
+function refineVersion(){
+  fetch(PISTON + "/runtimes").then(function(r){return r.json();}).then(function(list){
+    var cpp = list.find(function(x){ return x.language==="c++"; });
+    if(cpp && cpp.version){ CPP_VERSION = cpp.version; $("ver-hint").textContent = "(g++ "+CPP_VERSION+")"; }
+  }).catch(function(){});
+}
+
+function runCode(){
+  var code = cm.getValue();
+  var stdin = $("stdin").value || "";
+  setStatus("chip-run", "running…");
+  $("term").innerHTML = '<span class="meta">Compiling &amp; running…</span>';
+  $("savenote").textContent = "";
+  $("run-btn").disabled = true;
+  var t0 = Date.now();
+
+  fetch(PISTON + "/execute", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      language: "c++", version: CPP_VERSION,
+      files: [{ name: "main.cpp", content: code }],
+      stdin: stdin, compile_timeout: 10000, run_timeout: 6000
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var dur = Date.now() - t0;
+    if(d.message){ // piston-level error
+      setStatus("chip-err","error");
+      $("term").innerHTML = '<span class="err">'+esc(d.message)+'</span>';
+      return;
+    }
+    var comp = d.compile || {};
+    var run = d.run || {};
+    var compileFailed = comp && typeof comp.code === "number" && comp.code !== 0;
+    var runFailed = run && typeof run.code === "number" && run.code !== 0;
+    var hadError = compileFailed || runFailed;
+
+    // render terminal
+    var html = "";
+    if(comp.stderr && comp.stderr.trim()){ html += '<span class="err">'+esc(comp.stderr)+'</span>\n'; }
+    if(run.stdout){ html += esc(run.stdout); }
+    if(run.stderr && run.stderr.trim()){ html += '<span class="err">'+esc(run.stderr)+'</span>'; }
+    if(!html.trim()){ html = '<span class="meta">(no output)</span>'; }
+    html += '\n<span class="meta">— exit '+(run.code!=null?run.code:"?")+' · '+dur+' ms</span>';
+    $("term").innerHTML = html;
+    setStatus(hadError ? "chip-err" : "chip-ok", hadError ? (compileFailed?"compile error":"runtime error") : "ran clean");
+
+    // persist
+    var reason = compileFailed ? "compile_error" : (runFailed ? "runtime_error" : null);
+    saveAttempt({
+      code: code,
+      stdout: run.stdout || "",
+      stderr: ((comp.stderr||"") + (run.stderr? ("\n"+run.stderr):"")).trim() || null,
+      exit_code: (run.code!=null? run.code : null),
+      passed: !hadError,
+      duration_ms: dur
+    }, reason);
+  })
+  .catch(function(e){
+    setStatus("chip-err","error");
+    $("term").innerHTML = '<span class="err">Could not reach the compiler service.\n'+esc(e.message)+'</span>';
+  })
+  .finally(function(){ $("run-btn").disabled = false; });
+}
+
+/* ---------- persistence ---------- */
+function saveAttempt(row, mistakeReason){
+  var note = $("savenote");
+  if(!currentUser){
+    note.className = "savenote warn";
+    note.textContent = "⚠ Not signed in — this attempt was not saved. Sign in (top right) to keep your history.";
+    lastAttemptId = null;
+    return;
+  }
+  row.subject = "cpp"; row.language = "cpp"; row.user_id = currentUser.id;
+  sb.from("commonplace_attempts").insert(row).select("id").single()
+    .then(function(res){
+      if(res.error){ note.className="savenote err"; note.textContent="Could not save attempt: "+res.error.message; return; }
+      lastAttemptId = res.data.id;
+      if(mistakeReason){
+        return sb.from("commonplace_mistakes").insert({
+          user_id: currentUser.id, attempt_id: lastAttemptId, subject: "cpp", reason: mistakeReason
+        }).then(function(){
+          note.className="savenote warn"; note.textContent="Saved — filed under mistakes to redo 🚩";
+          loadMistakes();
+        });
+      } else {
+        note.className="savenote ok"; note.textContent="Attempt saved ✓";
+      }
+    })
+    .catch(function(e){ note.className="savenote err"; note.textContent="Save failed: "+e.message; });
+}
+
+function saveAsMistake(){
+  if(!currentUser){ toast("Sign in first to save mistakes"); return; }
+  var code = cm.getValue();
+  // create an attempt snapshot, then a self-marked mistake
+  sb.from("commonplace_attempts").insert({
+    user_id: currentUser.id, subject:"cpp", language:"cpp", code: code, passed: null
+  }).select("id").single().then(function(res){
+    if(res.error){ toast("Error: "+res.error.message); return; }
+    return sb.from("commonplace_mistakes").insert({
+      user_id: currentUser.id, attempt_id: res.data.id, subject:"cpp", reason:"self_marked"
+    }).then(function(r2){
+      if(r2.error){ toast("Error: "+r2.error.message); return; }
+      toast("Filed under mistakes to redo 🚩"); loadMistakes();
+    });
+  }).catch(function(e){ toast("Error: "+e.message); });
+}
+
+function loadMistakes(){
+  if(!currentUser){ renderMistakes([]); return; }
+  sb.from("commonplace_mistakes")
+    .select("id, reason, created_at, attempt_id, commonplace_attempts(code, stdout, stderr)")
+    .eq("subject","cpp").eq("resolved", false)
+    .order("created_at", { ascending:false })
+    .then(function(res){
+      if(res.error){ $("mistakes").innerHTML = '<div class="m-empty">Could not load: '+esc(res.error.message)+'</div>'; return; }
+      renderMistakes(res.data || []);
+    });
+}
+
+function renderMistakes(rows){
+  var box = $("mistakes");
+  $("m-count").textContent = currentUser ? ("· "+rows.length+" open") : "";
+  if(!currentUser){ box.innerHTML = '<div class="m-empty">Sign in to see and practise your saved mistakes.</div>'; return; }
+  if(!rows.length){ box.innerHTML = '<div class="m-empty">Nothing to redo right now — clean slate! 🎉</div>'; return; }
+  var reasonMap = { compile_error:["Compile error","r-compile"], runtime_error:["Runtime error","r-runtime"], self_marked:["Marked to redo","r-self"] };
+  box.innerHTML = rows.map(function(m){
+    var att = m.commonplace_attempts || {};
+    var code = att.code || "";
+    var snip = code.split("\n").slice(0,5).join("\n");
+    var rm = reasonMap[m.reason] || ["Mistake","r-self"];
+    var dt = new Date(m.created_at).toLocaleString();
+    return '<div class="m-row" data-id="'+m.id+'">' +
+      '<div class="m-main">' +
+        '<span class="m-reason '+rm[1]+'">'+rm[0]+'</span>' +
+        '<div class="m-snip">'+esc(snip)+(code.split("\n").length>5?"\n…":"")+'</div>' +
+        '<div class="m-date">'+esc(dt)+'</div>' +
+      '</div>' +
+      '<div class="m-actions">' +
+        '<button class="btn btn-primary btn-sm m-load" data-code="'+encodeURIComponent(code)+'">↥ Load &amp; redo</button>' +
+        '<button class="btn btn-ghost btn-sm m-solve">✓ Mark solved</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+  Array.prototype.forEach.call(box.querySelectorAll(".m-load"), function(b){
+    b.onclick = function(){ cm.setValue(decodeURIComponent(b.getAttribute("data-code"))); window.scrollTo({top:0,behavior:"smooth"}); toast("Loaded into the editor — give it another go!"); };
+  });
+  Array.prototype.forEach.call(box.querySelectorAll(".m-solve"), function(b){
+    b.onclick = function(){
+      var id = b.closest(".m-row").getAttribute("data-id");
+      sb.from("commonplace_mistakes").update({ resolved:true, resolved_at:new Date().toISOString() }).eq("id", id)
+        .then(function(res){ if(res.error){ toast("Error: "+res.error.message); } else { toast("Nice — marked solved ✓"); loadMistakes(); } });
+    };
+  });
+}
+
+/* ---------- wire up ---------- */
+$("run-btn").onclick = runCode;
+$("mistake-btn").onclick = saveAsMistake;
+$("reset-btn").onclick = function(){ cm.setValue(DEFAULT_CODE); $("term").textContent="Run your code to see the output here."; setStatus("chip-idle","idle"); $("savenote").textContent=""; };
+$("refresh-m").onclick = loadMistakes;
+cm.setOption("extraKeys", { "Cmd-Enter": runCode, "Ctrl-Enter": runCode });
+
+renderAuth();
+refineVersion();
+sb.auth.getSession().then(function(res){
+  currentUser = res.data.session ? res.data.session.user : null;
+  renderAuth();
+  if(currentUser){ loadMistakes(); }
+});
+</script>
+</body>
+</html>

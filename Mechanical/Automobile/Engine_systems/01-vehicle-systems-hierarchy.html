@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vehicle Systems — Hierarchy · Mechanical · Commonplace</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Mechanical</a><span class="sep">›</span><a href="../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="index.html">Engine Systems</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Engine Systems</div>  <h1>Vehicle Systems — Hierarchy</h1>  <div class="source">Source images: IMG20250514111840, IMG20250514111848</div></div>
+    <article>
+      <p><img alt="Original notebook page — engine and chassis sub-systems" src="../../docs/Engine_systems/IMG20250514111840.jpg"></p>
+<h2>Overview</h2>
+<p>A complete top-down breakdown of every major system on the vehicle, used as the master map for the rest of the notebook. The trainer organised the entire car under <strong>14 numbered systems</strong>, with the engine itself further decomposed into 7 sub-systems and the driveline into 3. Every later notebook section sits somewhere on this tree.</p>
+<h2>Working Principle</h2>
+<p>Treat this page as the <strong>index of the vehicle</strong>: any later detail (cooling, brakes, airbags, MoDic, navigation, etc.) maps back to one node here. The hierarchy mirrors the way BMW E60/E65-era service literature segments the car.</p>
+<h2>Force Path / Process Flow</h2>
+<h3>Top-level (14 systems)</h3>
+<pre><code>1) Engine
+2) Transmission
+3) Drive line
+4) Wheels &amp; tyre
+5) Brake system
+6) Steering system
+7) Chassis &amp; suspension system
+8) Safety system
+9) Vehicle electrical system        ← (page renumbers earlier 9/10 → 8/9 in some lines [?])
+10) Engine management system
+11) Air condition system
+12) Navigation system
+13) Body shell
+14) Infotainment system
+</code></pre>
+<blockquote>
+<p>The numbering jumps between the two pages because the notes were written down twice with slight renumbering; see Open Questions.</p>
+</blockquote>
+<h3>Engine (system #1) — sub-systems</h3>
+<pre><code>1) Engine
+   ├── Cylinder head    →  valves, [tappet], cam shaft, sprocket, gasket
+   ├── Crank case       →  piston, piston rings, connecting rod, gudgeon pin,
+   │                       crank shaft, flywheel, cylinder
+   ├── Oil sump
+   ├── a) Air induction system
+   ├── b) Fuel system
+   ├── c) Ignition system
+   ├── d) Exhaust system
+   ├── e) Cooling system
+   ├── f) Lubrication system
+   └── g) Engine electrical system
+</code></pre>
+<h3>Driveline (system #3) — sub-components</h3>
+<pre><code>3) Drive line  ──►  Front wheel / Rear wheel (drive selection)
+   ├── a) Propeller shaft
+   ├── b) Differential
+   └── c) Axle shaft
+</code></pre>
+<h3>Safety (system #8) — sub-types</h3>
+<pre><code>8) Safety system
+   ├── a) Active   (prevents accident)
+   └── b) Passive  (reduces impact)
+</code></pre>
+<h3>Engine management system (#10) — block layers</h3>
+<pre><code>10) Engine management system
+    ├── Sensors      (input — measure conditions)
+    ├── Control unit (logic — ECU/DME)
+    └── Actuators    (output — injectors, coils, valves)
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>System</th>
+<th>What it contains / does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Engine</td>
+<td>Converts fuel energy → rotational mechanical energy. Sub-systems: air induction, fuel, ignition, exhaust, cooling, lubrication, engine electrical. Hardware: cylinder head, crank case, oil sump and all internals.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Transmission</td>
+<td>Gears — selects torque/speed ratios between engine and driveline.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Drive line</td>
+<td>Takes torque from transmission to wheels: propeller shaft → differential → axle shaft. Routes power to front, rear, or all wheels.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Wheels &amp; tyre</td>
+<td>Road interface — supports the vehicle and transmits longitudinal/lateral forces.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Brake system</td>
+<td>Decelerates the vehicle, holds it stationary.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Steering system</td>
+<td>Translates driver input into wheel-angle change.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Chassis &amp; suspension system</td>
+<td>Frame plus springs/dampers/links — supports body, isolates road inputs, locates wheels.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Safety system</td>
+<td><strong>Active</strong> (prevent crash) and <strong>passive</strong> (reduce injury).</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Vehicle electrical system</td>
+<td>12 V power distribution, lighting, body electrics, harnessing.</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Engine management system</td>
+<td>Sensors → ECU/DME → actuators control loop for engine.</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Air condition system</td>
+<td>Cabin heating, cooling, dehumidification.</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Navigation system</td>
+<td>Map + GPS + route guidance.</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Body shell</td>
+<td>Outer/inner sheet-metal structure, crash structure.</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Infotainment system</td>
+<td>Audio, video, connectivity, head unit.</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>Why split "Vehicle electrical" from "Engine management"</h3>
+<p>Vehicle electrical (#9) is the <strong>bus and bulb</strong> side — body wiring, lights, comfort modules. Engine management (#10) is the closed-loop <strong>control system</strong> for the engine specifically (DME on BMW). They share the same physical wiring but are separate functional domains in dealer training.</p>
+<h3>Why split "Cylinder head / Crank case / Oil sump" from the 7 sub-systems</h3>
+<p>The first three are <strong>physical castings</strong>; the 7 sub-systems (a–g) are <strong>functional systems</strong> that thread through those castings. A single component like a head gasket lives in the cylinder-head <strong>casting</strong> but is part of the cooling <strong>system</strong>.</p>
+<h2>Visual Diagram</h2>
+<pre><code>                      ┌─────────────────────────┐
+                      │       VEHICLE           │
+                      └────────────┬────────────┘
+            ┌─────────────────────┼──────────────────────┐
+            │                     │                      │
+       POWERTRAIN              CHASSIS               BODY / E/E
+            │                     │                      │
+   ┌────────┼─────────┐    ┌──────┼──────┐       ┌──────┼──────┐
+   │        │         │    │      │      │       │      │      │
+ Engine  Trans-    Drive  Wheels Brake Steer    Vehicle Engine AC /
+ (#1)    mission   line   /tyre  (#5)  (#6)     electr. mgmt   Nav /
+         (#2)      (#3)   (#4)                  (#9)    (#10)  Body /
+                                                               Info
+                                                               (#11-14)
+                                  │
+                                  ▼
+                              Chassis &amp;     Safety
+                              Suspension    system
+                              (#7)          (#8: active/passive)
+</code></pre>
+<p>Embedded original second page (systems 9–14):</p>
+<p><img alt="Original notebook page — systems 9–14" src="../../docs/Engine_systems/IMG20250514111848.jpg"></p>
+<h2>Key Facts</h2>
+<ul>
+<li><strong>14 top-level vehicle systems</strong> organise the rest of the notebook.</li>
+<li>Engine has <strong>7 functional sub-systems</strong> (a–g) and <strong>3 main castings</strong> (cylinder head / crank case / oil sump).</li>
+<li>Driveline = <strong>propeller shaft + differential + axle shaft</strong>, feeding front and/or rear wheels.</li>
+<li>Engine management = <strong>sensors → control unit → actuators</strong> (BMW DME).</li>
+<li>Safety splits into <strong>active (prevention)</strong> and <strong>passive (mitigation)</strong>.</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="../Intro/02-engine-and-vehicle-basics.html">Engine &amp; vehicle basics</a></li>
+<li><a href="02-engine-fundamentals.html">Engine fundamentals</a></li>
+<li><a href="03-cylinder-head-camshaft.html">Cylinder head &amp; camshaft layouts</a></li>
+<li><a href="04-cooling-system.html">Cooling system</a></li>
+<li><a href="05-lubrication-system.html">Lubrication system</a></li>
+<li><a href="../Intro/03-air-induction-system.html">Air induction system</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] The numbering on page 2 starts with crossed-out "9) Chassis &amp; suspension system" and "10) Safety system," then restarts with <strong>"8) Vehicle electrical system, 9) Engine management system."</strong> The trainer renumbered mid-page; I've taken the corrected sequence (chassis/safety as 7/8, electrical/management as 9/10). Worth confirming against any printed BMW dealer outline.</li>
+<li>[?] "Sensors / Control unit / Actuators" under engine management is generic — no specific BMW DME variant (MS43, MSV70, etc.) named on this page.</li>
+<li>[?] "Body shell" is listed as a stand-alone system (#13). In some BMW training trees it's grouped under chassis rather than separately — keep as written.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Engine Systems</a>
+      <span class="spacer"></span>
+      <a href="../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Power-Supply Architecture &amp; Safety Battery Terminal (SBT) · Mechanical · Commonplace</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../../index.html">Mechanical</a><span class="sep">›</span><a href="../../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="../index.html">Electronics &amp; Electrical</a><span class="sep">›</span><a href="index.html">Battery</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Battery</div>  <h1>Power-Supply Architecture &amp; Safety Battery Terminal (SBT)</h1>  <div class="source">Source images: IMG20250515003348, IMG20250515003400</div></div>
+    <article>
+      <p><img alt="Original notebook page — power supply components + SBT + airbag-triggered disconnect" src="../../../docs/Electronics_electrical/Battery/IMG20250515003348.jpg"></p>
+<h2>Overview</h2>
+<p>The page begins a new topic — <strong>"Power Supply"</strong> — listing the components a BMW dealer treats as one logical system: the <strong>battery</strong>, the <strong>Safety Battery Terminal (SBT/SBK)</strong> that disconnects it in a crash, the <strong>front and rear power-distribution boxes</strong> that house fuses and bus bars, and the <strong>flat aluminium main cable</strong> running from battery to starter to alternator. It then explains the <strong>crash-disconnect logic</strong> — the cable to the starter motor is monitored by a microprocessor, and on impact the <strong>airbag control unit in the B-pillar</strong> triggers the SBT to physically break the +12 V supply within <strong>3 ms</strong>, killing any short-circuit current before it can start a fire. The second page covers the <strong>SBT trigger conditions</strong> and ends with the <strong>GRAV earth point</strong> — the riveted iron-and-steel junction that gives the front of the chassis a single, reliable ground reference even though the body uses two different metals.</p>
+<h2>Working Principle</h2>
+<h3>The five components of the "Power Supply" system</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Safety battery terminal (SBT / SBK)</strong></td>
+<td>Pyrotechnic disconnect that isolates the battery + cable on crash detection</td>
+</tr>
+<tr>
+<td><strong>Front &amp; rear power distribution</strong> (fuse + bus-bar boxes)</td>
+<td>Splits the +12 V rail into many fused branches; separated F/R for ease of repair and checking</td>
+</tr>
+<tr>
+<td><strong>Battery</strong></td>
+<td>"More the size → more Ah capacity." Spec must be registered with the ECU when swapped — see note below</td>
+</tr>
+<tr>
+<td><strong>Flat aluminium cable</strong></td>
+<td>Carries the very high starter / alternator current from engine bay to battery; flat profile keeps the floor pan low</td>
+</tr>
+<tr>
+<td><strong>Monitored copper-braid cables</strong></td>
+<td>Cables routed to other consumers; their continuity / short-circuit state is watched by the BCM microprocessor</td>
+</tr>
+</tbody>
+</table>
+<h3>Registering a new battery with the ECU</h3>
+<blockquote>
+<p><em>"If we replace battery, we should inform the ECU that 'this is new battery' because ECU knows that 'battery is old' &amp; different data about battery is stored."</em> — IMG 003348.</p>
+</blockquote>
+<p>A modern BMW logs <strong>how many charge cycles, what age, what specification</strong> the current battery has, so its <strong>temperature-compensated charging voltage</strong> can be set correctly (see <a href="09-charging-system-and-alternator.html">09-charging-system-and-alternator</a>). After a swap the dealer <strong>must register the new battery</strong> through the diagnostic tester (DIS / ISTA), otherwise the alternator will keep running the old battery's profile — typically overcharging an AGM replacement that was put in where a flooded battery used to be, or vice versa.</p>
+<h3>Flat aluminium cable — why aluminium, why flat?</h3>
+<pre><code>   Battery+ ────────[ flat Al cable ]──────► Starter motor
+                                       │
+                                       └────► Generator (alternator)
+
+   • Aluminium: ~½ the conductivity of copper but ~⅓ the weight
+                and ~⅕ the cost. At main-cable current (&gt;200 A peak),
+                weight &amp; cost win.
+
+   • Flat profile: cable lies under the floor mat / floor pan,
+                   keeps the car's interior floor level low
+                   (the source page says: &quot;keep flat surface of car down&quot;).
+</code></pre>
+<h3>Crash-disconnect logic — the SBT trigger chain</h3>
+<p>The cable between battery and starter motor is the <strong>single highest-energy conductor in the car</strong> (peak 600 A during cranking, melted-metal-and-fire energy if it shorts to chassis). To make sure a crash that crushes the engine bay doesn't turn that cable into an ignition source, every modern BMW carries a chain of safety logic:</p>
+<pre><code>   1. Microprocessor (in BCM) continuously checks
+      the battery-to-starter cable for short-circuit
+      or unexpected current path.
+
+   2. On impact, the B-pillar satellite sensors
+      (left &amp; right) fire their crash signal
+      to the Airbag Control Unit (ACSM / MRS).
+
+   3. ACSM sends a signal to the Safety Battery Terminal.
+
+   4. SBT pyrotechnic charge fires → physically severs
+      the +12 V connection inside the terminal itself.
+
+   5. Total elapsed time: ≤ 0.003 s (3 ms).
+
+   6. Battery is now electrically isolated from the rest
+      of the car. No fire, no shock to rescuers, no risk
+      to the airbag-control circuits during deployment.
+</code></pre>
+<h3>Safety Battery Terminal — trigger conditions</h3>
+<p>The SBT is a <strong>pyrotechnic device</strong> screwed onto the battery's +ve post. It contains a small explosive charge that, when triggered, drives a wedge through the cable lug — physically and permanently cutting the connection.</p>
+<p><strong>The page lists two trigger conditions:</strong></p>
+<ol>
+<li><strong>Triggered when an earthing connection is provided to the positive terminal</strong> — i.e. when the SBT detects that battery+ has been short-circuited to chassis (an unexpected ground path).</li>
+<li><strong>It can disconnect the battery supply within 0.003 seconds</strong> (3 ms — fast enough to clear the short before insulation melts and starts a fire).</li>
+</ol>
+<p>The trigger circuit (top of IMG 003400) is the microprocessor watching the <strong>SBSL — Safety Battery Sense Line</strong> through a 1.5 kΩ pull-up to 5 V. When the line state changes, the µP fires the SBT.</p>
+<pre><code>                          +5 V
+                            │
+                          [1.5 kΩ]
+                            │
+   [ µP ] ◄─── SBSL ────────┴───────── ground (0 V)
+                            │
+                            ▼
+                         to SBT
+                         pyrotechnic
+                         trigger
+</code></pre>
+<h3>GRAV earth point — why chassis ground isn't a single piece of metal</h3>
+<pre><code>   Front of vehicle              Rear of vehicle
+   ─────────────────             ───────────────
+   IRON sections           ←-- riveted joint --→   STEEL sections
+   (engine bay, suspension                        (cabin, boot,
+    towers — high strength,                        suspension mounts —
+    replaceable in collision)                      formed sheet)
+</code></pre>
+<p><strong>Why two metals:</strong> the front clip of a modern BMW is built from <strong>iron-content steels</strong> designed to be cut out and replaced after a collision. The rest of the body is <strong>stamped steel sheet</strong>, optimised for cabin stiffness and crash energy management. They are dissimilar materials.</p>
+<p><strong>The problem:</strong> dissimilar metals + moisture = electrochemical potential difference between them. Treated naïvely, that potential difference would create a tiny battery across every body seam, slowly corroding the joint AND producing unreliable chassis-ground reference voltages for every sensor that grounds through the body.</p>
+<p><strong>The solution shown on the page:</strong></p>
+<ul>
+<li>Both metals are <strong>strongly riveted</strong> together (not just spot-welded), so the joint is mechanically tight and the contact area is large.</li>
+<li>The joint is <strong>always strong</strong> — even if one rivet fails, the others hold the electrical bond.</li>
+<li><strong>The entire front portion of chassis is replaceable</strong> — after a crash, the body shop can unrivet the front clip, scrap it, and rivet a new one in. The riveted joint design exists in part to make this repair possible.</li>
+</ul>
+<p>This single joint is the <strong>GRAV earth point</strong> — a designated, monitored chassis-ground location that the body harness uses as its reference for the entire front of the car. Sensor return currents flow back to this point and from there to the battery negative.</p>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Safety Battery Terminal (SBT / SBK)</strong></td>
+<td>Pyrotechnic +12 V disconnect; trips within 3 ms</td>
+</tr>
+<tr>
+<td><strong>Microprocessor + SBSL (Safety Battery Sense Line)</strong></td>
+<td>Watches for short-to-ground on the battery cable; commands SBT fire</td>
+</tr>
+<tr>
+<td><strong>B-pillar satellite sensors (L + R)</strong></td>
+<td>Crash detection sensors that signal the Airbag Control Module</td>
+</tr>
+<tr>
+<td><strong>Airbag Control Unit (ACSM / MRS)</strong></td>
+<td>Receives crash signals; commands SBT fire alongside airbag deployment</td>
+</tr>
+<tr>
+<td><strong>Flat aluminium main cable</strong></td>
+<td>Battery ↔ starter ↔ alternator high-current path</td>
+</tr>
+<tr>
+<td><strong>Copper-braided monitored cables</strong></td>
+<td>Lower-current branches whose continuity is microprocessor-watched</td>
+</tr>
+<tr>
+<td><strong>Front &amp; rear power-distribution boxes</strong></td>
+<td>Fuse + bus-bar housings split into two physical locations</td>
+</tr>
+<tr>
+<td><strong>GRAV earth point</strong></td>
+<td>Riveted iron-steel chassis junction; primary front-end chassis-ground reference</td>
+</tr>
+</tbody>
+</table>
+<h2>Key Facts</h2>
+<ul>
+<li>The "Power Supply" system has <strong>5 named components</strong>: SBT, F+R distribution, battery, flat Al cable, monitored copper braids.</li>
+<li><strong>Aluminium</strong> main cable is used because at &gt;200 A peak it's lighter and cheaper than copper of the same ampacity.</li>
+<li>A new battery <strong>must be registered with the ECU</strong> after swap, otherwise the alternator runs the wrong charging profile.</li>
+<li>The SBT <strong>disconnects the battery within 0.003 s (3 ms)</strong> when triggered.</li>
+<li>Trigger source: a <strong>microprocessor watches the SBSL line</strong> for short-to-ground OR the <strong>ACSM fires the SBT on crash detection</strong> via the B-pillar satellite sensors.</li>
+<li>Chassis ground is <strong>not</strong> one continuous metal — it's an iron front + steel rear, <strong>riveted together</strong> at the GRAV earth point.</li>
+<li>The riveted joint is intentional: it survives one rivet failing AND it lets the body shop replace the entire front clip after a crash.</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="04-current-measurement-and-din-terminal-numbers.html">04-current-measurement-and-din-terminal-numbers</a> — DIN 30 (B+) is the terminal that the SBT physically severs; DIN 31 (ground) is what the GRAV joint defines.</li>
+<li><a href="06-electrolyte-freezing-cold-cranking-and-diagnostic-procedures.html">06-electrolyte-freezing-cold-cranking-and-diagnostic-procedures</a> — "negative off first" safety rule references the same chassis-ground reasoning as GRAV.</li>
+<li><a href="09-charging-system-and-alternator.html">09-charging-system-and-alternator</a> — the alternator profile that gets reset when a new battery is registered.</li>
+<li><a href="11-energy-management-and-intelligent-battery-sensor.html">11-energy-management-and-intelligent-battery-sensor</a> — the IBS sits on the same battery whose +ve post the SBT protects.</li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>"SBK" vs "SBT"</strong> — the page abbreviates "Safety Battery Terminal" as "SBK" (likely BMW German naming: <em>Sicherheits-Batterie-Klemme</em>). The English documentation more commonly uses SBT. Preserved both; treat as synonymous.</li>
+<li>[?] <strong>"GRAV earth point"</strong> — the term "GRAV" is partially unclear in the handwriting. Possibly a BMW-internal acronym, possibly an Indian-Hinglish phonetic spelling of "ground." Preserved verbatim because the trainer used it as a proper noun.</li>
+<li>[?] <strong>Iron vs steel distinction</strong> — the page literally says <em>"Half part of chassis is iron &amp; another is of steel."</em> In modern automotive engineering, "iron" usually means cast iron and "steel" means rolled / stamped sheet steel. For body construction the more accurate distinction is <strong>boron / high-strength steel (HSS) vs mild steel</strong>. Preserved the trainer's wording verbatim; the chassis joint described matches the HSS/mild-steel rivet-bond pattern.</li>
+<li>[?] <strong>The "K" symbol</strong> in the SBSL circuit (top of IMG 003400 was missing from my earlier reading — appears only on the energy-management page 003408, see file 11). On 003400 the circuit shows just µP → SBSL line → 1.5 kΩ pull-up to 5 V → ground.</li>
+<li>[?] <strong>"In case of any short circuit … airbag control unit in B-pillar"</strong> — the airbag control unit on a BMW is more typically mounted on the transmission tunnel / centre console floor, <strong>not</strong> in the B-pillar. The B-pillar locations house the <strong>side-airbag satellite crash sensors</strong>, which signal the central ACSM. The trainer may have conflated the two. Functional chain (sensor → ACSM → SBT) is correct; the geographic detail is suspect.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Battery</a>
+      <span class="spacer"></span>
+      <a href="../../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

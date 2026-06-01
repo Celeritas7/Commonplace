@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bus Systems — Overview, Topologies, Data Transmission · Mechanical · Commonplace</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Mechanical</a><span class="sep">›</span><a href="../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="index.html">Electronics &amp; Electrical</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Electronics &amp; Electrical</div>  <h1>Bus Systems — Overview, Topologies, Data Transmission</h1>  <div class="source">Source images: IMG20250515002630, IMG20250515002647, IMG20250515002653, IMG20250515002706, IMG20250515002715</div></div>
+    <article>
+      <blockquote>
+<p><strong>Notebook date:</strong> 1/8/2013</p>
+</blockquote>
+<p><img alt="Original notebook page — bus system motivation + DME interconnect" src="../../docs/Electronics_electrical/IMG20250515002630.jpg"></p>
+<h2>Overview</h2>
+<p>A modern car has <strong>dozens of ECUs</strong> (engine, transmission, ABS, airbag, climate, audio, navigation, instrument cluster, etc.) that must share information. The old approach — running a dedicated wire from each sensor to each ECU that needs it — collapses under its own weight. <strong>Bus systems</strong> solve this: a single shared communication medium that every ECU can talk on. This page covers <strong>why bus systems exist</strong> in BMWs, the <strong>6 advantages</strong>, the <strong>3 fundamental topologies</strong> (linear, ring, star), the <strong>master-slave</strong> and <strong>multi-master</strong> arbitration, and the <strong>data-transmission types</strong> (parallel/serial, bidirectional, synchronous vs asynchronous K-bus).</p>
+<h2>Working Principle</h2>
+<h3>Why bus systems</h3>
+<blockquote>
+<p><em>Notebook (IMG 002630):</em>
+"<strong>Bus system</strong>
+– AC system, navigation system, <strong>telephone</strong> [communication system, active-passive system] — expected by customers.
+– How can these systems be introduced without changing the amount of space???
+– Day by day size of electronic component is getting reduced.
+– DME (Digital motor electronic) is getting reduced.
+– Components increased so communication is required.
+– <strong>'BUS SYSTEM' used for communication between components &amp; control modules.</strong>"</p>
+</blockquote>
+<p>The bus motivation in one line: <strong>more features needed + less space available = a shared communication medium becomes essential.</strong></p>
+<h3>BMW bus families (combined on this page)</h3>
+<blockquote>
+<p><em>Notebook:</em>
+"It Combines:
+① <strong>PT-CAN</strong> — Power-train network <em>(fast, engine/transmission/ABS)</em>
+② <strong>K-CAN</strong> — Networking of general vehicle electronic modules <em>(slower, body electrics)</em>
+③ <strong>byteflight</strong> — Specially developed for passive safety <em>(airbag SRS)</em>
+④ <strong>MOST bus</strong> — Networking in information &amp; communication areas <em>(audio/video, fibre-optic)</em>"</p>
+</blockquote>
+<p>Margin notes (left side):
+- <strong>Terminator (just know what is in memory)</strong>
+- <strong>SGM</strong> = Safety &amp; Gateway Module (the "bus translator")
+- <strong>Traffic management</strong> annotation
+- <strong>Convey messages</strong> / <strong>Changes the speed</strong>
+- <strong>LED</strong></p>
+<p>The four BMW buses, in order of speed and criticality:</p>
+<table>
+<thead>
+<tr>
+<th>Bus</th>
+<th>Speed</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>byteflight</strong></td>
+<td>10 Mbit/s</td>
+<td>Safety-critical (airbag SRS) — failsafe, redundant</td>
+</tr>
+<tr>
+<td><strong>PT-CAN</strong></td>
+<td>500 kbit/s</td>
+<td>Powertrain — engine, transmission, ABS</td>
+</tr>
+<tr>
+<td><strong>MOST</strong></td>
+<td>25 Mbit/s</td>
+<td>Audio/video — fibre-optic (separate technology)</td>
+</tr>
+<tr>
+<td><strong>K-CAN</strong></td>
+<td>100 kbit/s</td>
+<td>Body — comfort modules, doors, windows</td>
+</tr>
+<tr>
+<td><strong>LIN</strong></td>
+<td>19.2 kbit/s</td>
+<td>Sub-bus — within a single function (e.g., HVAC stepper motors)</td>
+</tr>
+</tbody>
+</table>
+<h3>"Any control unit can communicate with another"</h3>
+<blockquote>
+<p><em>Notebook:</em> "Any control unit can communicate with another. Mean data input from one sensor can be known by other control unit which is not connected to sensor."</p>
+</blockquote>
+<p>The key benefit: a <strong>wheel-speed sensor</strong> physically wired only to the ABS module can have its reading <strong>read by the DME, EGS, instrument cluster, navigation, and dashboard</strong> — all without any additional wiring. Just a single CAN broadcast.</p>
+<h3>6 advantages of bus systems</h3>
+<blockquote>
+<p><em>Notebook (IMG 002647):</em>
+"<strong>Advantages</strong>:
+① Less wiring
+② Lower cost
+③ More functions
+④ Less space
+⑤ Great reliability
+⑥ Efficient diagnosis"</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Less wiring</strong>: one shared bus replaces dozens of point-to-point wires.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Lower cost</strong>: less copper, fewer connectors, fewer harnesses.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>More functions</strong>: new features just need a new ECU on the bus, no new wires.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Less space</strong>: thinner harnesses fit through smaller body cavities.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Great reliability</strong>: fewer connectors = fewer failure points.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Efficient diagnosis</strong>: DIS reads every ECU on the bus from one OBD port.</td>
+</tr>
+</tbody>
+</table>
+<h3>Bus topologies (3)</h3>
+<blockquote>
+<p><em>Notebook (IMG 002647 lower):</em>
+"<strong>Bus structures</strong>:
+● <strong>Linear topology</strong> — nodes strung along one wire pair
+● <strong>Ring topology</strong> — nodes connected in a loop
+● <strong>Star topology</strong> — all nodes connected to a central hub. Margin: 'Announcement / Satellite (TV channels from satellite) / Master'"</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Topology</th>
+<th>Layout</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Linear</strong></td>
+<td>Bus wire passes by each node</td>
+<td>Simple wiring, cheap</td>
+<td>Single break = network split</td>
+</tr>
+<tr>
+<td><strong>Ring</strong></td>
+<td>Closed loop through every node</td>
+<td>Redundant (can route around break)</td>
+<td>Slower, complex</td>
+</tr>
+<tr>
+<td><strong>Star</strong></td>
+<td>All nodes wire to a central hub</td>
+<td>Fast, easy diagnosis</td>
+<td>Hub failure = all dead</td>
+</tr>
+</tbody>
+</table>
+<p>CAN uses <strong>linear</strong> topology. byteflight uses <strong>star</strong> topology (each node has its own wire to the gateway).</p>
+<h3>Master-Slave communication</h3>
+<blockquote>
+<p><em>Notebook (IMG 002647 bottom + IMG 002653 top):</em>
+Diagram: "Master ←→ Slave / Slave"
+Margin: "right to send message"</p>
+</blockquote>
+<p>A <strong>master-slave</strong> bus has one ECU in charge (master) that initiates all communication; slaves only speak when polled.</p>
+<blockquote>
+<p><em>Notebook (IMG 002653):</em> "<strong>Multi-master system</strong>:
+– There is possibility of more than one master.
+– So slave can become master &amp; master can become [slave].
+– At a time when line of bus system is busy for sending message (like mobile calling)."</p>
+</blockquote>
+<p><strong>Multi-master</strong> = any node can initiate a message at any time. Requires <strong>arbitration</strong> to resolve collisions (covered in <a href="11-can-lin-most-byteflight.html">CAN chapter</a>).</p>
+<table>
+<thead>
+<tr>
+<th>Master-slave</th>
+<th>Multi-master</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple — one master controls all</td>
+<td>Complex — needs arbitration</td>
+</tr>
+<tr>
+<td>Predictable timing</td>
+<td>Better bandwidth utilisation</td>
+</tr>
+<tr>
+<td>Used in: LIN sub-buses</td>
+<td>Used in: CAN main buses</td>
+</tr>
+</tbody>
+</table>
+<h3>Data-transmission types</h3>
+<blockquote>
+<p><em>Notebook (IMG 002706):</em>
+"<strong>Parallel data transmission</strong> — High speed, many cables (e.g., 8-bit parallel uses 8 wires)
+<strong>Serial data transmission</strong> — Save no. of cables (one wire + shield for earthing)
+<strong>Bidirectional data transmission</strong> — Data can be sent &amp; received in both directions"</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Parallel</th>
+<th>Serial</th>
+<th>Bidirectional</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wires</td>
+<td>Many (8, 16, 32)</td>
+<td>One (or twisted pair)</td>
+<td>One pair, bi-directional</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>Very high</td>
+<td>Lower per pin but adequate</td>
+<td>Variable</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>High</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Where used</td>
+<td>Inside chips, memory bus</td>
+<td>Vehicle buses (CAN, LIN, MOST)</td>
+<td>All modern vehicle buses</td>
+</tr>
+</tbody>
+</table>
+<p>Modern vehicle buses are <strong>all serial + bidirectional</strong>.</p>
+<h3>Bus message structure</h3>
+<blockquote>
+<p><em>Notebook (IMG 002706 bottom):</em>
+"Bus system message:
+– Data
+– Identifier
+– Check total"</p>
+</blockquote>
+<p>A bus message is a structured packet:
+- <strong>Identifier</strong> — tells receivers what the message is about (priority + content type).
+- <strong>Data</strong> — the actual payload (sensor value, command, etc.).
+- <strong>Check total</strong> — CRC or checksum so receiver can detect corruption.</p>
+<p>CAN messages typically: 11-bit identifier + 0-8 bytes data + 16-bit CRC.</p>
+<h3>Synchronous data transmission</h3>
+<blockquote>
+<p><em>Notebook (IMG 002715):</em> "<strong>Synchronous data transmission</strong>: CCC clock signal with data 1001010"</p>
+</blockquote>
+<p>In <strong>synchronous</strong> transmission, a separate clock line accompanies the data → receiver knows exactly when each bit starts/ends. Clean, but needs extra wire.</p>
+<p>In <strong>asynchronous</strong> transmission, the receiver locks onto each transmission separately using <strong>start/stop bits</strong> → no extra clock wire needed (uses bus traffic to recover timing).</p>
+<p>Margin: "<strong>No. of cycles per second</strong>" — i.e., the <strong>bit rate</strong> (or <strong>baud rate</strong> for raw symbol rate).</p>
+<h3>K-bus</h3>
+<blockquote>
+<p><em>Notebook:</em> "<strong>K-bus</strong>: Asynchronous data transmission using single wire."</p>
+</blockquote>
+<p>The BMW <strong>K-bus</strong> (Karosserie-Bus = body bus) is a slow asynchronous single-wire bus used by older BMW comfort modules — wipers, central locking, instrument cluster. Largely replaced by K-CAN in modern cars but still appears in vintage/older E-chassis.</p>
+<h2>Force Path / Process Flow</h2>
+<pre><code>   ECU communication WITHOUT bus (legacy):
+   ─────────────────────────────────────────
+
+       Wheel speed sensor ─── wire ─── ABS ECU
+                          ─── wire ─── Instrument cluster
+                          ─── wire ─── Navigation ECU
+                          ─── wire ─── Speed-limit DSC
+                          ─── wire ─── DME
+                          ─── wire ─── EGS
+
+       → 6 separate wires from ONE sensor to 6 ECUs
+       → Multiply by 100+ sensors × 50+ ECUs = miles of wire
+       → Heavy, expensive, fault-prone
+
+   ECU communication WITH bus:
+   ────────────────────────────
+
+       Wheel speed sensor ─── 1 wire ─── ABS ECU
+                                          │ (broadcasts on CAN)
+                                          │
+                ┌──── CAN bus ───────────┴───────────┐
+                │                                     │
+            ┌───┴──┐  ┌───────────┐  ┌──────────┐  ┌──┴──┐
+            │ DME  │  │ Cluster   │  │ Navigation│  │ EGS │
+            └──────┘  └───────────┘  └──────────┘  └─────┘
+
+       → 1 sensor → 1 wire → bus reaches everyone
+       → Same physical wiring for ANY new bus consumer
+       → Less weight, less cost, easier diagnosis
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bus wire (twisted pair)</strong></td>
+<td>Physical medium — typically 2 wires, twisted to reject electromagnetic noise</td>
+</tr>
+<tr>
+<td><strong>Bus terminator</strong></td>
+<td>Resistor at each end of the bus to prevent signal reflections</td>
+</tr>
+<tr>
+<td><strong>Bus transceiver IC</strong> (in each ECU)</td>
+<td>Converts ECU's digital logic to bus-level differential signals and back</td>
+</tr>
+<tr>
+<td><strong>Bus controller</strong> (often in ECU's μP)</td>
+<td>Manages timing, arbitration, message ID matching</td>
+</tr>
+<tr>
+<td><strong>Gateway (SGM)</strong></td>
+<td>Bridges two different buses (e.g., PT-CAN ↔ K-CAN) — translates messages</td>
+</tr>
+<tr>
+<td><strong>Identifier (in message)</strong></td>
+<td>First field of each message — tells receivers what's being sent</td>
+</tr>
+<tr>
+<td><strong>Data payload</strong></td>
+<td>The actual bytes of information being transmitted</td>
+</tr>
+<tr>
+<td><strong>Check total (CRC)</strong></td>
+<td>Error-detection field</td>
+</tr>
+<tr>
+<td><strong>Arbitration logic</strong></td>
+<td>Resolves collisions when two nodes try to send simultaneously</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>What "Terminator" means</h3>
+<blockquote>
+<p><em>Notebook (margin):</em> "Terminator (just know what is in memory)"</p>
+</blockquote>
+<p>A <strong>bus terminator</strong> is a <strong>120 Ω resistor</strong> at each physical end of a CAN bus that absorbs the signal and prevents reflections. Without proper termination, signals bounce back and corrupt new messages → bus errors. Two terminators per bus (one at each physical end).</p>
+<p>The trainer's "just know what is in memory" margin note seems unrelated — possibly a personal note about something else on the page.</p>
+<h3>Gateway module (SGM)</h3>
+<blockquote>
+<p><em>Notebook (margin):</em> "<strong>SGM</strong> — Safety &amp; Gateway Module"</p>
+</blockquote>
+<p>The SGM is a <strong>multi-bus router</strong> — it sits on every bus simultaneously and forwards messages between them as needed. So an ECU on K-CAN can talk to an ECU on PT-CAN through the SGM's translation. This is essential because different buses run at different speeds and use slightly different protocols.</p>
+<h3>Why two wires (twisted pair) for CAN</h3>
+<p><strong>Differential signalling</strong>: the bus uses two wires (CAN-H and CAN-L) that always have opposite voltages. Receivers measure the <strong>difference</strong> between them, which automatically cancels out any noise that affects both wires equally → CAN is extremely robust against electromagnetic interference even in the harsh under-bonnet environment.</p>
+<h3>"Like mobile calling" — the trainer's multi-master analogy</h3>
+<blockquote>
+<p><em>Notebook:</em> "At a time when line of bus system is busy for sending message (like mobile calling)."</p>
+</blockquote>
+<p>Cell phones: when you call someone whose line is busy, you get a busy tone → try again later. Same on a multi-master bus: if your node wants to send when the bus is occupied, you wait until it's clear. Modern CAN uses <strong>arbitration</strong> — the higher-priority message wins instantly, the lower waits.</p>
+<h2>Visual Diagram</h2>
+<pre><code>   3 BUS TOPOLOGIES:
+   ─────────────────
+
+   LINEAR:                                        
+
+       ┌──┐    ┌──┐    ┌──┐    ┌──┐               
+       │A │────│B │────│C │────│D │               
+       └──┘    └──┘    └──┘    └──┘               
+       ◄────── bus wire ──────►                  
+
+   ✓ Cheap, simple                              
+   ✗ Single break → bus split                    
+
+
+   RING:                                          
+
+              ┌──┐                                
+        ┌─────│A │─────┐                          
+        │     └──┘     │                          
+        │              │                          
+       ┌──┐           ┌──┐                        
+       │D │           │B │                        
+       └──┘           └──┘                        
+        │              │                          
+        │     ┌──┐     │                          
+        └─────│C │─────┘                          
+              └──┘                                
+
+   ✓ Redundant (route around break)              
+   ✗ More complex, slower                        
+
+
+   STAR:                                          
+
+                ┌──┐                              
+                │HUB│                             
+              ┌─└──┘─┐                            
+            ┌─┘  │  └─┐                           
+          ┌─┘    │    └─┐                         
+          ▼      ▼      ▼                          
+        ┌──┐   ┌──┐   ┌──┐                       
+        │A │   │B │   │C │                       
+        └──┘   └──┘   └──┘                       
+
+   ✓ Fast, easy to diagnose                     
+   ✗ Hub failure → all nodes dead                
+</code></pre>
+<h2>Key Facts</h2>
+<ul>
+<li><strong>Bus system</strong> = shared communication medium connecting many ECUs.</li>
+<li><strong>Motivation</strong>: more features + less space → can't run point-to-point wires anymore.</li>
+<li><strong>BMW bus families</strong>: PT-CAN (powertrain, 500 kbit/s), K-CAN (body, 100 kbit/s), byteflight (safety, 10 Mbit/s), MOST (audio/video, 25 Mbit/s, fibre-optic), LIN (sub-bus, 19.2 kbit/s).</li>
+<li><strong>6 advantages</strong>: less wiring, lower cost, more functions, less space, reliable, easy diagnosis.</li>
+<li><strong>3 topologies</strong>: linear (CAN), ring, star (byteflight).</li>
+<li><strong>Master-slave</strong> (one boss) vs <strong>multi-master</strong> (any can initiate, needs arbitration).</li>
+<li><strong>Message structure</strong>: identifier + data + check total (CRC).</li>
+<li><strong>Synchronous</strong> (with clock wire) vs <strong>asynchronous</strong> (start/stop bits).</li>
+<li><strong>K-bus</strong> = old BMW single-wire async body bus.</li>
+<li><strong>Differential signalling + twisted pair</strong> = noise immunity.</li>
+<li><strong>Bus terminator</strong> = 120 Ω resistor at each end of CAN bus.</li>
+<li><strong>SGM (Safety &amp; Gateway Module)</strong> routes between different buses.</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="09-control-unit-modules.html">Control unit modules</a></li>
+<li><a href="11-can-lin-most-byteflight.html">CAN, LIN, MOST, byteflight detailed</a></li>
+<li><a href="12-energy-management-system.html">Energy management — uses K-CAN status</a></li>
+<li><a href="14-adaptive-headlights-ahl-system.html">Adaptive headlights — uses PT-CAN + LIN</a></li>
+<li><a href="13-telematic-and-signal-types.html">Telematic + signal types</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>"Terminator (just know what is in memory)"</strong> — interpretation uncertain; could be a teaching joke or unrelated personal note.</li>
+<li>[?] <strong>"telephone"</strong> as one of the customer-demanded systems — likely the in-car telephone/Bluetooth interface that became standard in the E60-era.</li>
+<li>[?] <strong>MOST bus speed of 25 Mbit/s</strong> — engineering context; not on this page. Trainer mentions MOST as one of the buses but speed comes from later pages.</li>
+<li>[?] <strong>byteflight speed 10 Mbit/s</strong> — confirmed by later pages.</li>
+<li>[?] <strong>PT-CAN at 500 kbit/s, K-CAN at 100 kbit/s</strong> — these specific numbers are in the <a href="11-can-lin-most-byteflight.html">CAN chapter</a> (IMG 002732).</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Electronics &amp; Electrical</a>
+      <span class="spacer"></span>
+      <a href="../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lead-Acid Battery — Chemistry &amp; SLI Fundamentals · Mechanical · Commonplace</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../../index.html">Mechanical</a><span class="sep">›</span><a href="../../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="../index.html">Electronics &amp; Electrical</a><span class="sep">›</span><a href="index.html">Battery</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Battery</div>  <h1>Lead-Acid Battery — Chemistry &amp; SLI Fundamentals</h1>  <div class="source">Source images: IMG20250514112543, IMG20250514112810</div></div>
+    <article>
+      <blockquote>
+<p><em>Note:</em> Both source pages were originally in <code>Engine_systems/</code> root and moved to <code>Electronics_electrical/Battery/</code> during Phase 1.</p>
+</blockquote>
+<p><img alt="Original notebook page — Pb-acid charge/discharge chemistry" src="../../../docs/Electronics_electrical/Battery/IMG20250514112543.jpg"></p>
+<h2>Overview</h2>
+<p>A <strong>lead-acid battery</strong> stores electrical energy as chemical energy in a <strong>reversible</strong> lead–lead-dioxide–sulfuric-acid reaction. The car's main battery is the <strong>SLI</strong> type — <strong>S</strong>tart-<strong>L</strong>ighting-<strong>I</strong>gnition — sized to deliver a brief high-current burst for starter cranking, then ride out occasional load with the alternator handling most everything else when running. The page covers the <strong>discharge and charge equations</strong>, the <strong>physical construction</strong> of the cells (6 cells × 2.1 V = 12.6 V), the <strong>electrolyte composition</strong> (35% sulfuric acid + 65% water), the <strong>Pb-alloy plate design</strong>, and the <strong>SLI vs deep-cycle</strong> distinction with the trainer's "100 m race vs marathon" analogy.</p>
+<h2>Working Principle</h2>
+<h3>Discharge reaction</h3>
+<blockquote>
+<p><em>Notebook (IMG 112543):</em>
+"2Pb + 2H₂SO₄ → 2PbSO₄ + 4H₂O <em>(simplified, see below)</em>
+Pb + PbO₂ ⇌ Pb + 2H₂SO₄ ⇌ 2PbSO₄ + H₂O"</p>
+</blockquote>
+<p>The actual full discharge reaction (correctly balanced):</p>
+<p>$$\text{Pb} + \text{PbO}_2 + 2\text{H}_2\text{SO}_4 \;\;\xrightarrow{\text{discharge}}\;\; 2\text{PbSO}_4 + 2\text{H}_2\text{O}$$</p>
+<p>What's happening:
+- <strong>Negative plate</strong> (porous Pb) gives up electrons → becomes PbSO₄.
+- <strong>Positive plate</strong> (PbO₂) accepts electrons → becomes PbSO₄.
+- <strong>H₂SO₄</strong> in the electrolyte combines with the lead to form <strong>PbSO₄</strong> (which precipitates on both plates) and <strong>H₂O</strong> (diluting the acid).</p>
+<blockquote>
+<p><em>Notebook:</em> "H₂SO₄ turns into H₂O when battery is discharging, so at the same time H₂SO₄ gets dilute because of H₂O."</p>
+</blockquote>
+<p>This is why a discharged battery's <strong>specific gravity drops</strong> (from ~1.28 fully charged to ~1.13 fully discharged) — the electrolyte is now mostly water.</p>
+<h3>Charge reaction (reverse direction)</h3>
+<blockquote>
+<p><em>Notebook:</em> "Now charging:
+PbSO₄ → Pb
+PbSO₄ → PbO₂
+H₂O → H₂SO₄"</p>
+</blockquote>
+<p>Electricity from the alternator pushes the reaction backward:</p>
+<p>$$2\text{PbSO}_4 + 2\text{H}_2\text{O} \;\;\xrightarrow{\text{charge}}\;\; \text{Pb} + \text{PbO}_2 + 2\text{H}_2\text{SO}_4$$</p>
+<p>The lead-sulfate on both plates breaks down → Pb returns to the negative plate, PbO₂ returns to the positive plate, water gives up its oxygen to reform sulfuric acid → electrolyte returns to ~1.28 SG.</p>
+<h3>The full reversible equation</h3>
+<blockquote>
+<p><em>Notebook box:</em> "Pb + PbO₂ + H₂SO₄ ⇌ H₂O + PbSO₄ (charging ←→ discharging)"</p>
+</blockquote>
+<p>Both directions:</p>
+<p>$$\text{Pb} + \text{PbO}_2 + 2\text{H}_2\text{SO}_4 \;\;\rightleftharpoons\;\; 2\text{PbSO}_4 + 2\text{H}_2\text{O}$$</p>
+<h3>SLI battery specs</h3>
+<blockquote>
+<p><em>Notebook:</em>
+"Below 12V battery [is] discharge[d].
+Buffer / flashlight reduce battery life.
+As it consume current from alternator.
+50 mA current is allowed to use.
+<strong>SLI battery</strong> (Start-Lighting-Ignition).
+Main power source.
+Total voltage <strong>12.6 volts</strong>.
+Each [cell] has <strong>2.1 volts</strong> potential.
+Also dil[ute] sulphuric acid as electrolyte — <strong>35% H₂SO₄ &amp; 65% H₂O</strong> called as electrolytic solution."</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Spec</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Total voltage (fully charged)</strong></td>
+<td>12.6 V</td>
+</tr>
+<tr>
+<td><strong>Number of cells</strong></td>
+<td>6 (each 2.1 V × 6 = 12.6 V)</td>
+</tr>
+<tr>
+<td><strong>Per-cell voltage</strong></td>
+<td>2.1 V (nominal); 2.0 V (resting); 2.4 V (during charge)</td>
+</tr>
+<tr>
+<td><strong>Electrolyte composition</strong></td>
+<td>35% H₂SO₄ + 65% H₂O</td>
+</tr>
+<tr>
+<td><strong>"Discharged" threshold</strong></td>
+<td>Below 12.0–12.2 V at rest</td>
+</tr>
+<tr>
+<td><strong>Permissible quiescent draw</strong></td>
+<td>&lt; 50 mA (else battery will drain)</td>
+</tr>
+</tbody>
+</table>
+<h3>Plate construction</h3>
+<blockquote>
+<p><em>Notebook (IMG 112810):</em>
+"Alloy of lead with Cd, Sb [Antimony].
+Shallow/large surface area of battery provides more charge.
+Truck has bigger battery while bikes have smaller."</p>
+</blockquote>
+<p>The plates are not pure lead — they're <strong>lead alloyed with antimony (Sb) and/or cadmium (Cd)</strong>:
+- <strong>Pure lead</strong> is too soft; alloys add mechanical strength.
+- <strong>Antimony</strong> historically (1-3%); gives strength but increases gassing (water loss).
+- <strong>Calcium</strong> (modern alternative, not in notes) replaces antimony in maintenance-free batteries.</p>
+<p><strong>Plate surface area</strong> directly determines current capacity:
+- Larger / more plates → more surface → more amps available.
+- Truck batteries are physically bigger (more plates) than bike batteries.
+- Plate <strong>thickness</strong> affects deep-cycle durability (thicker = survives more cycles but slower charge/discharge).</p>
+<h3>SLI vs deep-cycle — the "race vs marathon" analogy</h3>
+<blockquote>
+<p><em>Notebook (IMG 112810):</em>
+"<strong>[100 m race]</strong>: They provide high current for short time.
+<strong>Deep cycle</strong>:
+– Provide continuously provide power for long periods of time
+– Store energy from small wind turbine
+– Thicker plate to have greater capacity."</p>
+</blockquote>
+<p>Two opposing design goals:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>SLI (100 m race)</strong></th>
+<th><strong>Deep cycle (marathon)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Purpose</td>
+<td>Brief high-current burst (starter cranking)</td>
+<td>Steady moderate current for hours</td>
+</tr>
+<tr>
+<td>Plates</td>
+<td>Thin, many → high surface area → high current</td>
+<td>Thick, fewer → robust → many discharge cycles</td>
+</tr>
+<tr>
+<td>Discharge depth</td>
+<td>Shallow (5–10% per crank)</td>
+<td>Deep (50–80% per cycle)</td>
+</tr>
+<tr>
+<td>Cycle life</td>
+<td>Designed for ~ 10,000 shallow cycles</td>
+<td>Designed for ~ 500–1500 deep cycles</td>
+</tr>
+<tr>
+<td>Typical use</td>
+<td>Cars, motorcycles</td>
+<td>RV house batteries, off-grid solar/wind storage, golf carts</td>
+</tr>
+<tr>
+<td>Cranking amps</td>
+<td>Very high</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table>
+<p>A car battery is <strong>SLI</strong> — it dies fast if used deep-cycle (e.g., leaving lights on overnight repeatedly). Conversely, a deep-cycle battery doesn't have enough cranking current for a cold start.</p>
+<h3>Why "below 12 V the battery is discharged"</h3>
+<blockquote>
+<p><em>Notebook bullet:</em> "Below 12V battery discharge."</p>
+</blockquote>
+<p>A healthy 12.6 V battery dropping below 12.0 V means:
+- &gt; 80% of capacity is depleted (specific gravity has fallen to ~ 1.13).
+- The cranking current available will be marginal.
+- Continuing to draw below 11 V risks <strong>deep discharge</strong> which precipitates <strong>hard sulfation</strong> on the plates (irreversible PbSO₄ crystal growth) → permanent capacity loss.</p>
+<h3>Why 50 mA quiescent limit</h3>
+<blockquote>
+<p><em>Notebook:</em> "50 mA current is allowed to use."</p>
+</blockquote>
+<p>Cross-reference to the <a href="../12-energy-management-system.html">energy management system chapter</a>: after key-off and all ECUs asleep, total parasitic draw should be <strong>&lt; 50 mA</strong> (some specs cite &lt; 80 mA for newer cars). At 50 mA, a healthy 70 Ah battery survives <strong>~ 60 days</strong> parked.</p>
+<h2>Force Path / Process Flow</h2>
+<pre><code>   DISCHARGE (battery powering load):
+   ──────────────────────────────────
+
+   Positive plate     Electrolyte     Negative plate
+   PbO₂               H₂SO₄ + H₂O    Pb (porous)
+        │                                  ▲
+        │ electrons leave through external │
+        │ circuit ─────────────────────────┘
+        │
+        ▼
+   Lead sulfate forms on BOTH plates:
+   PbO₂ + 2H₂SO₄ + Pb → 2PbSO₄ + 2H₂O
+
+   → SG of electrolyte drops (gets watery).
+   → Voltage drops.
+   → If voltage drops below 12.0 V → discharged.
+
+
+   CHARGE (alternator pushing reaction backward):
+   ──────────────────────────────────────────────
+
+   Alternator output → through external circuit → into negative plate
+                                                       │
+        ┌──────────────────────────────────────────────┘
+        │
+        ▼
+   Lead sulfate breaks down:
+   2PbSO₄ + 2H₂O → PbO₂ + 2H₂SO₄ + Pb
+
+   → Lead returns to negative plate (now porous Pb).
+   → PbO₂ returns to positive plate.
+   → Water donates its O₂ → reforms H₂SO₄.
+   → SG of electrolyte rises (more acidic).
+   → Voltage returns to 12.6 V.
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Lead negative plate (Pb)</strong></td>
+<td>Porous lead sponge — gives up electrons during discharge</td>
+</tr>
+<tr>
+<td><strong>Lead dioxide positive plate (PbO₂)</strong></td>
+<td>Brown/black paste — accepts electrons during discharge</td>
+</tr>
+<tr>
+<td><strong>Plate alloy (Pb-Sb or Pb-Ca)</strong></td>
+<td>Adds mechanical strength to soft lead</td>
+</tr>
+<tr>
+<td><strong>Plate grid</strong></td>
+<td>Lattice that holds the active material</td>
+</tr>
+<tr>
+<td><strong>Plate separators</strong></td>
+<td>Microporous insulator between + and − plates</td>
+</tr>
+<tr>
+<td><strong>Electrolyte</strong></td>
+<td>35% H₂SO₄ + 65% H₂O (by weight, fully charged)</td>
+</tr>
+<tr>
+<td><strong>Cell case</strong></td>
+<td>Polypropylene or ABS plastic case</td>
+</tr>
+<tr>
+<td><strong>Cell connectors</strong></td>
+<td>Welded lead straps connecting cells in series</td>
+</tr>
+<tr>
+<td><strong>Vent caps</strong> <em>(serviceable batteries)</em></td>
+<td>Allow gas escape; access to top up electrolyte</td>
+</tr>
+<tr>
+<td><strong>Sealed-maintenance-free</strong></td>
+<td>Modern batteries — no caps, sealed for life</td>
+</tr>
+<tr>
+<td><strong>Terminal posts (+ and −)</strong></td>
+<td>Cast lead posts for external connections</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>Why 6 cells × 2.1 V = 12.6 V</h3>
+<p>The chemistry of lead-acid produces <strong>~ 2.1 V at the open-circuit terminals</strong> of one cell at rest. Six cells in series give the standard automotive 12 V (nominal) / 12.6 V (rested fully charged). For trucks and some heavy equipment, <strong>12 cells × 2 = 24 V</strong> systems are common.</p>
+<h3>Why 35% H₂SO₄ and not pure acid</h3>
+<ul>
+<li><strong>Pure H₂SO₄</strong>: would freeze around 10 °C, too viscous, attacks lead plates too aggressively.</li>
+<li><strong>35% / 65% mix</strong>: balances conductivity (peaks around 35-40% concentration) vs viscosity vs freezing point.</li>
+<li><strong>Specific gravity (SG)</strong> at 35% acid: ≈ <strong>1.28</strong> (fully charged). Drops with discharge as water is produced.</li>
+<li>A <strong>hydrometer</strong> measures SG directly → tells you the state of charge.</li>
+</ul>
+<h3>The "buffer / flashlight" caveat</h3>
+<blockquote>
+<p><em>Notebook:</em> "Buffer, flashlight reduce battery life. As it consume current from alternator."</p>
+</blockquote>
+<p>Cabin flashlight, dome light, glove-box light, etc. drawing from the battery when the engine isn't running cuts into available cranking capacity. The trainer's broader point: <strong>only allow the alternator to charge or essential loads to discharge</strong> the battery during operation. Leaving lights on at idle puts the alternator in a never-quite-keeping-up battle.</p>
+<h3>Modern alternative chemistries (not in notebook)</h3>
+<p>The notebook is from the <strong>flooded-cell (FLA)</strong> era. Modern variants:
+- <strong>AGM (Absorbent Glass Mat)</strong> — electrolyte absorbed in glass-fibre mats; sealed, deep-cycle capable.
+- <strong>Gel</strong> — electrolyte gelled with silica; deep-cycle.
+- <strong>EFB (Enhanced Flooded Battery)</strong> — improved flooded for start-stop applications.
+- <strong>Lithium-iron-phosphate (LiFePO₄)</strong> — racing, motorcycle, some BMW M cars.</p>
+<p>All current BMWs since the E90/E60 era use <strong>AGM</strong> (sealed, maintenance-free, more tolerant of deep discharge from accessories).</p>
+<h2>Visual Diagram</h2>
+<pre><code>   LEAD-ACID CELL CROSS SECTION (one of 6 cells):
+   ───────────────────────────────────────────────
+
+   ┌────────────────────────────────────────────┐
+   │ Cell case (plastic)                        │
+   │                                            │
+   │  ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐    │
+   │  │  +   │  │  −   │  │  +   │  │  −   │    │  ← alternating
+   │  │ PbO₂ │  │  Pb  │  │ PbO₂ │  │  Pb  │    │    plates
+   │  │      │  │      │  │      │  │      │    │
+   │  │ pos. │  │ neg. │  │ pos. │  │ neg. │    │
+   │  │      │  │      │  │      │  │      │    │
+   │  └──────┘  └──────┘  └──────┘  └──────┘    │
+   │                                            │
+   │  ◄─── 35% H₂SO₄ + 65% H₂O electrolyte ───►│
+   │  ◄──── (specific gravity ≈ 1.28 charged) ──►│
+   │                                            │
+   └────────────────────────────────────────────┘
+         │                          │
+         + terminal                 − terminal
+         (PbO₂ side)                (Pb side)
+         2.1 V                                              
+
+   × 6 cells in series → 12.6 V total
+</code></pre>
+<pre><code>   STATE OF CHARGE — voltage and SG indicators:
+   ────────────────────────────────────────────
+
+   SoC   |  Resting V  |  SG   |  Notes
+   ──────────────────────────────────────────────
+   100%  |   12.65 V   | 1.28  |  Fully charged
+    75%  |   12.45 V   | 1.23  |  Healthy
+    50%  |   12.20 V   | 1.18  |  Service soon
+    25%  |   12.00 V   | 1.13  |  Cranking marginal
+     0%  | &lt; 11.80 V   | 1.10  |  Deep discharge; risk of hard sulfation
+
+   ► After cranking, allow 1+ minute settling before reading resting V
+   ► Charging voltage (engine running) typically 13.8-14.4 V
+</code></pre>
+<h2>Key Facts</h2>
+<ul>
+<li><strong>Lead-acid chemistry</strong>: Pb + PbO₂ + 2H₂SO₄ ⇌ 2PbSO₄ + 2H₂O (reversible).</li>
+<li>During <strong>discharge</strong>: H₂SO₄ converts to H₂O → electrolyte dilutes.</li>
+<li>During <strong>charge</strong>: H₂O reforms H₂SO₄ → electrolyte re-concentrates.</li>
+<li><strong>SLI battery</strong> = <strong>S</strong>tart-<strong>L</strong>ighting-<strong>I</strong>gnition; the standard car battery.</li>
+<li><strong>12.6 V total</strong>, <strong>6 cells × 2.1 V each</strong>.</li>
+<li><strong>Electrolyte</strong>: 35% sulfuric acid + 65% water.</li>
+<li><strong>Plate alloy</strong> = Pb + Sb (or Pb + Ca on maintenance-free) for strength.</li>
+<li><strong>Larger plate area</strong> = more current capacity (truck &gt; car &gt; bike).</li>
+<li><strong>SLI vs Deep cycle</strong>: thin/many plates (high current, shallow discharge) vs thick plates (deep discharge, many cycles).</li>
+<li><strong>Below 12 V</strong> = discharged; risk of hard sulfation below ~ 11.8 V.</li>
+<li><strong>50 mA</strong> max permissible quiescent draw (key-off).</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="../12-energy-management-system.html">Energy management system</a> — IBS, BPM/APM, quiescent-draw limits</li>
+<li><a href="../02-electric-motors-and-sensors-overview.html">Electric motors and sensors overview</a></li>
+<li><a href="../01-vehicle-electrical-symbols-and-diagnostics.html">Vehicle electrical symbols &amp; diagnostics</a></li>
+<li><a href="../../Intro/01-training-program-overview.html">Phase 1 — Training program overview, module 4 "Battery"</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>Notebook discharge equation</strong> "2Pb + 2H₂SO₄ → 2PbSO₄ + 4H₂O" — incomplete (missing PbO₂ side). Full reaction shown in body text above.</li>
+<li>[?] <strong>"Oil sump"</strong> word at top of IMG 112543 — left over from the previous engine-systems page (this image was misfiled in Phase 1, the page above was Lubrication system). Ignore.</li>
+<li>[?] <strong>Margin philosophy notes</strong> ("Anyone stronger than me / I can beat anyone / No one can stand in front of me / Everyone's brain is equal" etc.) — personal motivational notes, not battery content.</li>
+<li>[?] <strong>Pb-Cd alloy</strong> mentioned — Cadmium is one alloying option but <strong>antimony (Sb)</strong> is the historical standard. Some modern batteries use Pb-Ca (calcium).</li>
+<li>[?] <strong>6 month freshness limit</strong> for new batteries → covered in <a href="02-battery-specifications-and-failure-modes.html">next file</a>.</li>
+<li>[?] <strong>Antimony causes gassing</strong> — not explicitly stated; relevant context for why maintenance-free batteries went to Pb-Ca.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Battery</a>
+      <span class="spacer"></span>
+      <a href="../../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>

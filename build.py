@@ -34,12 +34,32 @@ import markdown as md
 
 CONFIG = {
     "source_root": Path(r"D:\Coding\App_generation\Mechanical\Automobile_app\content"),
-    "output_root": Path(r"D:\Coding\App_generation\General_purpose\Commonplace\Mechanical"),
+    # The Automobile subject now lives under Mechanical/Automobile/. The Mechanical/
+    # folder itself becomes a hub (emit_hub_index) that lists subjects + related links.
+    "output_root": Path(r"D:\Coding\App_generation\General_purpose\Commonplace\Mechanical\Automobile"),
+    # Directory levels from the subject root (output_root) up to the Commonplace root.
+    # Commonplace/Mechanical/Automobile -> Commonplace is 2 hops. Used for "Commonplace
+    # home" links. If you move output_root, update this.
+    "root_offset": 2,
     "subject_title": "Automobile Mechanisms",
     "subject_tagline": "First-principles notes on engines, chassis, electronics, and dynamics — built from a 2013 BMW India dealer-training notebook.",
     "subject_status_badge": "Pass 1 in progress",
     "subject_kicker": "Mechanical",
     "home_href": "../index.html",
+    # The Mechanical hub page (one level above the subject).
+    "hub_title": "Mechanical",
+    "hub_kicker": "Commonplace",
+    "hub_tagline": "Mechanical engineering notes and study tools.",
+    # External / companion resources — rendered on the Mechanical hub only.
+    # These are NOT generated from the markdown content tree.
+    "related_links": [
+        {
+            "label": "External app · 507 movements",
+            "title": "Brown's 507 Mechanical Movements",
+            "summary": "Interactive study app for Henry T. Brown's 1868 classic — searchable diagrams, Wikimedia animations, notes, bookmarks, and dark mode.",
+            "href": "file:///D:/%23%23%23%23%23%23%23%23%23Database/%23Mechanical/3_Advanced_study/Mechanisms/mechanisms_book.html",
+        },
+    ],
 }
 
 # Display-name overrides for folders (preserves source spelling but cleans
@@ -459,10 +479,12 @@ def emit_page(mdfile: MdFile, output_root: Path) -> Path:
     depth = len(rel_out.parts) - 1   # 1 for top-level folder, 2 for nested
     up_href = "index.html"
     up_label = display_name(rel_out.parent.name) if depth > 0 else CONFIG["subject_title"]
-    home_href = "../" * (depth + 1) + "index.html"  # back to Commonplace root
+    home_href = "../" * (depth + CONFIG["root_offset"]) + "index.html"  # back to Commonplace root
+    hub_href = "../" * (depth + 1) + "index.html"                       # the Mechanical hub
 
-    # Breadcrumbs: Commonplace › Mechanical › Folder › ...
+    # Breadcrumbs: Commonplace › Mechanical › Automobile Mechanisms › Folder › ...
     crumbs = [('Commonplace', home_href),
+              (CONFIG["hub_title"], hub_href),
               (CONFIG["subject_title"], "../" * depth + "index.html")]
     walk = Path()
     for i, p in enumerate(rel_out.parts[:-1]):
@@ -502,10 +524,11 @@ def emit_folder_index(node: FolderNode, output_root: Path, is_subject_root: bool
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     depth = len(rel_out_dir.parts)
-    home_href = "../" * (depth + 1) + "index.html"
+    home_href = "../" * (depth + CONFIG["root_offset"]) + "index.html"
+    hub_href = "../" * (depth + 1) + "index.html"   # the Mechanical hub
 
-    # Breadcrumbs
-    crumbs = [('Commonplace', home_href)]
+    # Breadcrumbs: Commonplace › Mechanical › [Automobile Mechanisms › Folder …]
+    crumbs = [('Commonplace', home_href), (CONFIG["hub_title"], hub_href)]
     if not is_subject_root:
         crumbs.append((CONFIG["subject_title"], "../" * depth + "index.html"))
     walk = Path()
@@ -572,6 +595,55 @@ def emit_folder_index(node: FolderNode, output_root: Path, is_subject_root: bool
     return out_path
 
 
+def emit_hub_index(tree: FolderNode, output_root: Path) -> Path:
+    """Render the Mechanical hub index, one level above the subject root.
+
+    Lists each subject as a card plus any related/companion links. Written to
+    output_root.parent/index.html (e.g. Commonplace/Mechanical/index.html).
+    """
+    hub_dir = output_root.parent
+    out_path = hub_dir / "index.html"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # The hub sits one level below the Commonplace root.
+    home_href = "../index.html"
+    breadcrumbs_html = f'<a href="{html.escape(home_href)}">Commonplace</a>'
+
+    total = count_files(tree)
+    subject_card = (
+        f'<a class="card" href="{html.escape(output_root.name)}/index.html">'
+        f'  <span class="label">Subject · {total} {"topic" if total == 1 else "topics"}</span>'
+        f'  <div class="title">{html.escape(CONFIG["subject_title"])}</div>'
+        f'  <div class="summary">{html.escape(CONFIG["subject_tagline"])}</div>'
+        f'</a>'
+    )
+    sections = ['<h2>Subjects</h2><div class="grid">' + subject_card + "</div>"]
+
+    if CONFIG.get("related_links"):
+        cards = []
+        for link in CONFIG["related_links"]:
+            cards.append(
+                f'<a class="card" href="{html.escape(link["href"])}">'
+                f'  <span class="label">{html.escape(link.get("label", "Related"))}</span>'
+                f'  <div class="title">{html.escape(link["title"])}</div>'
+                f'  <div class="summary">{html.escape(link.get("summary", ""))}</div>'
+                f'</a>'
+            )
+        sections.append('<h2>Related</h2><div class="grid">' + "".join(cards) + "</div>")
+
+    out_html = INDEX_HTML.format(
+        title=html.escape(CONFIG["hub_title"]),
+        kicker=html.escape(CONFIG["hub_kicker"]),
+        tagline=html.escape(CONFIG["hub_tagline"]),
+        badge_html="",
+        sections_html="".join(sections),
+        breadcrumbs=breadcrumbs_html,
+        home_href=home_href,
+    )
+    out_path.write_text(out_html, encoding="utf-8")
+    return out_path
+
+
 def count_files(node: FolderNode) -> int:
     """Recursively count .md files under a folder node."""
     return len(node.files) + sum(count_files(s) for s in node.subfolders)
@@ -627,8 +699,11 @@ def main() -> int:
     counters = {"pages": 0, "indices": 0}
     walk_and_emit(tree, output_root, is_subject_root=True, counters=counters)
 
+    hub_path = emit_hub_index(tree, output_root)
+
     print(f"Wrote {counters['pages']} topic pages + {counters['indices']} index pages")
-    print(f"Output root: {output_root}")
+    print(f"Subject root: {output_root}")
+    print(f"Hub index:    {hub_path}")
     return 0
 
 

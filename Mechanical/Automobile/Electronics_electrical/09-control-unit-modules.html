@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Control Unit — Internal Modules · Mechanical · Commonplace</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"
+  onload="renderMathInElement(document.body, { delimiters: [
+    {left: '$$', right: '$$', display: true},
+    {left: '$', right: '$', display: false}
+  ], throwOnError: false });"></script>
+
+<style>
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --border-soft:#f1f3f5;
+    --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
+    --code-bg:#0f172a; --code-fg:#e0e7ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 80px; }
+
+  .module-hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 32px 36px 28px; margin-bottom: 32px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .module-hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); pointer-events: none;
+  }
+  .module-hero .meta { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 10px; }
+  .module-hero h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .module-hero .source { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; margin: 32px 0 12px; color: var(--text); scroll-margin-top: 80px; }
+  h3 { font-size: 18px; font-weight: 700; margin: 24px 0 8px; color: var(--text); scroll-margin-top: 80px; }
+  h4 { font-size: 14px; font-weight: 700; margin: 20px 0 6px; color: var(--accent); letter-spacing: 0.2px; }
+  p { color: var(--text-soft); margin: 12px 0; }
+  p strong, li strong { color: var(--text); }
+  ul, ol { color: var(--text-soft); padding-left: 24px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.15s; }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 1px 6px; border-radius: 4px; font-size: 0.93em;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-fg);
+    padding: 18px 20px; border-radius: 10px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.5; margin: 16px 0;
+    font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  blockquote {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 16px; margin: 16px 0; color: var(--text-soft); border-radius: 0 8px 8px 0;
+  }
+  blockquote p { margin: 4px 0; }
+  blockquote p:first-child { margin-top: 0; }
+  blockquote p:last-child { margin-bottom: 0; }
+
+  table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px;
+    background: var(--paper); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f9fafb; font-weight: 700; color: var(--text); font-size: 12.5px;
+        text-transform: uppercase; letter-spacing: 0.5px; }
+  tr:last-child td { border-bottom: none; }
+
+  img {
+    max-width: 100%; height: auto; border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin: 16px 0;
+    background: #f3f4f6;
+  }
+  img:not([src]), img[src=""] { display: none; }
+
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  .footer-nav {
+    display: flex; justify-content: space-between; gap: 16px; margin-top: 48px;
+    padding-top: 24px; border-top: 1px solid var(--border); font-size: 14px;
+  }
+  .footer-nav a { color: var(--text-soft); padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .footer-nav a:hover { border-color: var(--accent); color: var(--accent); }
+  .footer-nav .spacer { flex: 1; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 18px 16px 60px; }
+    .module-hero { padding: 24px 22px; }
+    .module-hero h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="dot"></span>Commonplace</a>
+    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Mechanical</a><span class="sep">›</span><a href="../index.html">Automobile Mechanisms</a><span class="sep">›</span><a href="index.html">Electronics &amp; Electrical</a></div>
+  </nav>
+  <div class="wrap">
+    <div class="module-hero">  <div class="meta">Electronics &amp; Electrical</div>  <h1>Control Unit — Internal Modules</h1>  <div class="source">Source images: IMG20250515002622</div></div>
+    <article>
+      <p><img alt="Original notebook page — internal modules of a control unit" src="../../docs/Electronics_electrical/IMG20250515002622.jpg"></p>
+<h2>Overview</h2>
+<p>What's inside an <strong>automotive ECU</strong> when you open the case: the <strong>microprocessor</strong> (arithmetic + decision-making brain), <strong>input module</strong> (reads sensors), <strong>output module</strong> (drives actuators), <strong>storage module</strong> (RAM/EEPROM for adapted values + DTCs), <strong>interface module</strong> (CAN/LIN/MOST bus drivers), <strong>special module</strong> (custom IC chips for application-specific tasks like ABS), <strong>field-effect transistors</strong> (the output power-switching MOSFETs), and <strong>voltage regulator</strong> (creates clean 5 V from messy 12 V battery). Together these eight building blocks make up every BMW DME, EGS, DSC, SRS, IHKA, or any other "K" / "control unit" in the car.</p>
+<h2>Working Principle</h2>
+<h3>The 8 functional modules (notebook list)</h3>
+<blockquote>
+<p><em>Notebook (IMG 002622):</em>
+"<strong>Microprocessor</strong>: Arithmetic module
+<strong>Input module</strong>: I/p from sensor
+<strong>Output module</strong>: Provide o/p signal from CPU to actuator in form of current/voltage
+★ <strong>Storage module</strong>: Stores different information, like 'fuel level is low'
+<strong>Interface module</strong>:
+<strong>Special module</strong>: IC chips for ABS, ...
+<strong>Field-effect transistors</strong>: Amplifies current or voltage
+<strong>Voltage regulator</strong>:"</p>
+</blockquote>
+<h3>Module-by-module breakdown</h3>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>What it does</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Microprocessor</strong></td>
+<td>The "brain" — runs the algorithm: reads inputs, decides outputs, manages timing.</td>
+<td>Specialised automotive μP (e.g., Motorola/NXP, Infineon TriCore) — 8/16/32-bit; runs at 10-200 MHz</td>
+</tr>
+<tr>
+<td><strong>Input module</strong></td>
+<td>Receives signals from sensors → conditions them (filters noise, amplifies tiny signals) → converts to digital values via <strong>A/D converter</strong></td>
+<td>Op-amps + RC filters + ADC chip</td>
+</tr>
+<tr>
+<td><strong>Output module</strong></td>
+<td>Takes digital output commands → converts to current/voltage signals strong enough to drive actuators</td>
+<td>DAC + driver transistors (BJTs or MOSFETs)</td>
+</tr>
+<tr>
+<td><strong>Storage module</strong></td>
+<td>Stores <strong>calibration data</strong> (maps for fuel, ignition, etc.), <strong>adaptation values</strong> (learned trims), <strong>diagnostic trouble codes (DTCs)</strong> in non-volatile memory</td>
+<td>EEPROM, flash memory + small SRAM working area</td>
+</tr>
+<tr>
+<td><strong>Interface module</strong></td>
+<td>Drives the <strong>vehicle bus</strong> (CAN, LIN, MOST) for communication with other ECUs</td>
+<td>CAN transceiver, LIN slave/master IC, MOST transceiver</td>
+</tr>
+<tr>
+<td><strong>Special module</strong></td>
+<td>Application-specific IC chips — for ABS, airbag triggering, immobiliser, etc.</td>
+<td>Custom ASICs or dedicated function chips</td>
+</tr>
+<tr>
+<td><strong>Field-effect transistors</strong></td>
+<td>The actual high-current switches that drive injectors, coils, motors, solenoids</td>
+<td>Power MOSFETs (see <a href="08-transistors-bipolar-mosfet.html">chapter 08</a>)</td>
+</tr>
+<tr>
+<td><strong>Voltage regulator</strong></td>
+<td>Converts 12 V battery (which varies 10-14 V) into clean stable rails (5 V for logic, 3.3 V for newer chips)</td>
+<td>Linear regulator (7805) or switching regulator (buck converter)</td>
+</tr>
+</tbody>
+</table>
+<h3>Why each is separated as a module</h3>
+<p>On a real ECU PCB, these aren't always distinct chips — but they're <strong>functionally distinct</strong> so they're taught as separate modules. A modern automotive ECU might integrate microprocessor + memory + ADC + CAN transceiver onto one SoC (System-on-Chip) to save board space and cost.</p>
+<h3>Example: simple DME signal path through modules</h3>
+<pre><code>   Sensor (e.g., MAP)
+        │  raw 0-5V analog
+        ▼
+   ┌────────────────┐
+   │ INPUT module   │ ── filter noise, ADC: 0-5V → 0-1023 digital
+   └───────┬────────┘
+           │
+           ▼
+   ┌────────────────┐
+   │ MICROPROCESSOR │ ── load = lookup_table(rpm, MAP)
+   │  arithmetic    │ ── injection_pulse = base_value × correction_factors
+   └───────┬────────┘
+           │
+           ▼
+   ┌────────────────┐
+   │ STORAGE module │ ── store: last injection event, fault if any, adaptation value
+   └────────────────┘
+           │
+           ▼
+   ┌────────────────┐
+   │ OUTPUT module  │ ── digital pulse width → MOSFET driver signal
+   └───────┬────────┘
+           │
+           ▼
+   ┌────────────────┐
+   │ FET (MOSFET)   │ ── switches 12 V × 5 A through injector coil
+   └───────┬────────┘
+           │
+           ▼
+   Injector fires → fuel sprayed
+
+   Meanwhile:
+   ┌────────────────┐
+   │ INTERFACE      │ ── reports load + injection event to engine-related ECUs
+   │ module (CAN)   │     via CAN bus
+   └────────────────┘
+</code></pre>
+<h2>Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Microprocessor (μP)</strong></td>
+<td>Decision-making logic</td>
+</tr>
+<tr>
+<td><strong>A/D Converter</strong> (input module)</td>
+<td>Analog sensor → digital number</td>
+</tr>
+<tr>
+<td><strong>D/A Converter</strong> or PWM (output module)</td>
+<td>Digital command → analog/PWM output</td>
+</tr>
+<tr>
+<td><strong>EEPROM</strong></td>
+<td>Non-volatile storage of calibration + DTCs</td>
+</tr>
+<tr>
+<td><strong>Flash memory</strong></td>
+<td>Stores program code; reprogrammable for software updates</td>
+</tr>
+<tr>
+<td><strong>SRAM</strong></td>
+<td>Working memory; volatile (lost when power off)</td>
+</tr>
+<tr>
+<td><strong>CAN transceiver IC</strong></td>
+<td>Bus driver for CAN communication</td>
+</tr>
+<tr>
+<td><strong>LIN driver</strong></td>
+<td>Bus driver for LIN sub-bus</td>
+</tr>
+<tr>
+<td><strong>Power MOSFETs</strong></td>
+<td>Output stage that drives injectors, coils, motors</td>
+</tr>
+<tr>
+<td><strong>Linear voltage regulator (LM7805)</strong></td>
+<td>12 V → 5 V conversion (simple, dissipates excess as heat)</td>
+</tr>
+<tr>
+<td><strong>Switching regulator (buck)</strong></td>
+<td>Higher-efficiency voltage conversion</td>
+</tr>
+<tr>
+<td><strong>Reverse-polarity protection diode</strong></td>
+<td>Protects ECU from accidental battery polarity reversal</td>
+</tr>
+<tr>
+<td><strong>ESD protection clamps</strong></td>
+<td>Protects inputs from transient over-voltage</td>
+</tr>
+</tbody>
+</table>
+<h2>Detailed Component Notes</h2>
+<h3>Why "Storage module" is highlighted with a star</h3>
+<blockquote>
+<p><em>Notebook ★:</em> "Stores different information, like 'fuel level is low'"</p>
+</blockquote>
+<p>The trainer drew a star on this entry — likely because it's the module that holds:
+- <strong>DTCs (Diagnostic Trouble Codes)</strong> — read by DIS during diagnosis (see <a href="../Engine_systems/N42/10-diagnosis-process-dis-and-test-plan.html">diagnosis chapter</a>).
+- <strong>Adaptation values</strong> — learned by the system over time (idle trim, fuel trim, transmission shift adaptation, etc.).
+- <strong>Coding data</strong> — vehicle-specific calibration (country, options, equipment).
+- <strong>Mileage/service intervals</strong> — many critical figures.</p>
+<p>If the storage module gets corrupted (battery disconnected too long, EEPROM aging), the ECU loses all this and reverts to default behaviour → noticeable change in feel + many warning lights → dealer reflash required.</p>
+<h3>Why "Special module"</h3>
+<p>Not every ECU needs every kind of processing power. Sometimes a specific function — like decoding an <strong>immobiliser transponder</strong>, running the <strong>ABS hydraulic solenoid sequence</strong>, or <strong>firing airbags within microseconds</strong> — is more efficiently done by a <strong>dedicated IC</strong> than a general-purpose microprocessor. The "special module" slot is where those custom chips live.</p>
+<p>Examples in real cars:
+- ABS ECU: hardware sequencer for solenoid pulses.
+- SRS (airbag) ECU: dedicated accelerometer-to-firing-logic ASIC for safety.
+- Immobiliser: dedicated crypto chip that verifies the key's rolling code.</p>
+<h3>Why a separate voltage regulator</h3>
+<p>The car's electrical bus is <strong>noisy</strong> (alternator ripple, load switching, cranking sags, etc.) and <strong>varies</strong> 10–14 V. Logic chips need a clean stable supply (5 V or 3.3 V) → a regulator separates the noise.</p>
+<p>The classic <strong>LM7805</strong> linear regulator dissipates the excess voltage as heat — fine for low-current loads but wasteful at 5+ A. Modern ECUs use <strong>switching regulators</strong> (buck converters) that are 90%+ efficient even from a 14 V → 3.3 V conversion.</p>
+<h3>What microprocessor does BMW DME use</h3>
+<p>The dealer-training-era DME (MS32 for N42, MS43 for N42/N46, etc.) used Motorola/NXP 32-bit microprocessors (HC12/HCS12 family or PowerPC variants). Later DME (MSV70, MSD81 for N54/N55) moved to <strong>Infineon TriCore</strong> — a 32-bit dual-core with hardware-level safety features for automotive (ASIL-D rated).</p>
+<h2>Key Facts</h2>
+<ul>
+<li><strong>8 functional modules</strong> inside any automotive ECU: microprocessor, input, output, storage, interface, special, FETs, voltage regulator.</li>
+<li><strong>Microprocessor</strong> = decision-making brain; reads inputs, decides outputs.</li>
+<li><strong>Input module</strong> filters + ADC-converts sensor signals to digital.</li>
+<li><strong>Output module</strong> drives actuators (via FET power stage).</li>
+<li><strong>Storage module</strong> holds calibration, adaptations, DTCs in EEPROM/flash.</li>
+<li><strong>Interface module</strong> = CAN/LIN/MOST bus driver(s).</li>
+<li><strong>Special module</strong> = application-specific IC (ABS, SRS, immobiliser).</li>
+<li><strong>FETs</strong> = power-switching MOSFETs at the output stage.</li>
+<li><strong>Voltage regulator</strong> = converts 12 V battery noisy supply → 5 V clean logic supply.</li>
+<li>Modern ECUs integrate multiple modules onto one <strong>System-on-Chip (SoC)</strong>.</li>
+</ul>
+<h2>Related Notes</h2>
+<ul>
+<li><a href="08-transistors-bipolar-mosfet.html">Transistors — bipolar and MOSFET</a></li>
+<li><a href="07-diode-applications-rectification-zener-led.html">Diodes — Zener voltage reference</a></li>
+<li><a href="10-bus-systems-overview-topologies-and-data-transmission.html">Bus systems overview</a></li>
+<li><a href="11-can-lin-most-byteflight.html">CAN, LIN, MOST</a></li>
+<li><a href="../Engine_systems/N42/09-engine-management-vanos-control-o2-loop.html">N42 engine management — concrete DME implementation</a></li>
+<li><a href="../Torque_convertor_gears/07-egs-electronic-gearbox.html">EGS electronic gearbox — concrete TCU implementation</a></li>
+<li><a href="../Engine_systems/N42/10-diagnosis-process-dis-and-test-plan.html">DIS diagnostic process — reads storage module</a></li>
+</ul>
+<hr>
+<h2>Open Questions / Uncertainty</h2>
+<ul>
+<li>[?] <strong>Interface module bullet</strong> is blank on the page (header listed, body empty). Notes filled with CAN/LIN/MOST role from context.</li>
+<li>[?] <strong>Voltage regulator bullet</strong> also blank in the notebook — content from engineering context.</li>
+<li>[?] <strong>"Field-effect transistors"</strong> as a separate module = the output power-switching MOSFETs that physically drive the load.</li>
+<li>[?] No mention of <strong>watchdog timer</strong> module — a standard safety feature in automotive ECUs that resets the microprocessor if it hangs. Implicit in modern designs.</li>
+<li>[?] <strong>Microprocessor brand</strong> (Motorola, NXP, Infineon, etc.) — not specified by the trainer; modern context only.</li>
+</ul>
+    </article>
+    <div class="footer-nav">
+      <a href="index.html">↑ Electronics &amp; Electrical</a>
+      <span class="spacer"></span>
+      <a href="../../../index.html">Commonplace home</a>
+    </div>
+  </div>
+</body>
+</html>
