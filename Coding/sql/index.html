@@ -20,6 +20,30 @@
   .module-card .num { font-size: 11px; font-weight: 700; color: #4f46e5; letter-spacing: 1.5px; text-transform: uppercase; }
   .module-card .title { font-size: 18px; font-weight: 700; margin: 6px 0 8px; }
   .module-card .summary { font-size: 13.5px; color: #6b7280; line-height: 1.55; }
+
+  /* SQLZoo tracker */
+  .zoo-head { margin: 44px 0 4px; }
+  .zoo-sub { font-size: 13.5px; color: #6b7280; margin: 0 0 18px; max-width: 660px; line-height: 1.55; }
+  .zoo-sub a { color: #4f46e5; }
+  .zoo-meter { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .zoo-bar { flex: 1; height: 8px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
+  .zoo-fill { height: 100%; width: 0; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 5px; transition: width 0.5s ease; }
+  .zoo-count { font-size: 12.5px; font-weight: 700; color: #4f46e5; white-space: nowrap; }
+  .zoo-sync { font-size: 11.5px; color: #9ca3af; margin-bottom: 16px; }
+  .zoo-list { display: flex; flex-direction: column; gap: 8px; }
+  .zoo-row { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e5e7eb; border-radius: 11px; padding: 12px 16px; transition: border-color 0.15s, background 0.15s; }
+  .zoo-row:hover { border-color: #c7d2fe; }
+  .zoo-row.done { background: #f5f3ff; border-color: #ddd6fe; }
+  .zoo-idx { font-size: 12px; font-weight: 700; color: #9ca3af; width: 18px; flex-shrink: 0; }
+  .zoo-name { flex: 1; font-size: 15px; font-weight: 600; color: #1f2937; }
+  .zoo-row.done .zoo-name { color: #6d28d9; }
+  .zoo-pill { font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 20px; cursor: pointer; border: none; font-family: inherit; transition: background 0.15s; white-space: nowrap; }
+  .pill-not { background: #f3f4f6; color: #9ca3af; }
+  .pill-prog { background: #fef3c7; color: #b45309; }
+  .pill-done { background: #dcfce7; color: #15803d; }
+  .zoo-open { font-size: 12.5px; font-weight: 700; color: #4f46e5; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+  .zoo-open:hover { text-decoration: underline; }
+  @media (max-width: 540px) { .zoo-name { font-size: 14px; } }
 </style>
 </head>
 <body>
@@ -72,6 +96,105 @@
       <div class="title">Capstone — Tiffinly</div>
 <div class="summary">One extended exercise that ties everything together. Design a schema for a small tiffin delivery startup, load it with data, answer business questions across modules 1–8, wrap it with views and a Python operationalization layer. No new syntax — just integration.</div>    </a>
   </div>
+
+  <div class="zoo-head"><h2>External Practice · SQLZoo</h2></div>
+  <p class="zoo-sub">Nine classic <a href="https://sqlzoo.net" target="_blank" rel="noopener">SQLZoo</a> tutorials, in order. Open each one, solve it on their site, then tap the status to track where you are. Progress is saved on this device — and synced to your account automatically if you're signed in via the Practice Lab.</p>
+  <div class="zoo-meter">
+    <div class="zoo-bar"><div class="zoo-fill" id="zoo-fill"></div></div>
+    <span class="zoo-count" id="zoo-count">0 / 9 done</span>
+  </div>
+  <div class="zoo-sync" id="zoo-sync"></div>
+  <div class="zoo-list" id="zoo-list"></div>
+
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
+  var KEY = "commonplace_sqlzoo_progress";
+  var TUTORIALS = [
+    { k: "select_basics", n: "SELECT basics",          u: "https://sqlzoo.net/wiki/SELECT_basics" },
+    { k: "select_world",  n: "SELECT from WORLD",       u: "https://sqlzoo.net/wiki/SELECT_from_WORLD_Tutorial" },
+    { k: "select_nobel",  n: "SELECT from Nobel",       u: "https://sqlzoo.net/wiki/SELECT_from_Nobel_Tutorial" },
+    { k: "select_within", n: "SELECT within SELECT",    u: "https://sqlzoo.net/wiki/SELECT_within_SELECT_Tutorial" },
+    { k: "sum_count",     n: "SUM and COUNT",           u: "https://sqlzoo.net/wiki/SUM_and_COUNT" },
+    { k: "join",          n: "The JOIN operation",      u: "https://sqlzoo.net/wiki/The_JOIN_operation" },
+    { k: "more_join",     n: "More JOIN operations",    u: "https://sqlzoo.net/wiki/More_JOIN_operations" },
+    { k: "using_null",    n: "Using NULL",              u: "https://sqlzoo.net/wiki/Using_Null" },
+    { k: "self_join",     n: "Self JOIN",               u: "https://sqlzoo.net/wiki/Self_join" }
+  ];
+  var STATES = ["not_started", "in_progress", "done"];
+  var LABEL  = { not_started: "Not started", in_progress: "In progress", done: "Done ✓" };
+  var PILL   = { not_started: "pill-not", in_progress: "pill-prog", done: "pill-done" };
+
+  var progress = load();
+  var sb = null, session = null;
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }); } catch (e) {}
+
+  function load() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(progress)); } catch (e) {} }
+  function statusOf(k) { return progress[k] || "not_started"; }
+  function byId(id) { return document.getElementById(id); }
+
+  function render() {
+    var list = byId("zoo-list");
+    list.innerHTML = TUTORIALS.map(function (t, i) {
+      var s = statusOf(t.k);
+      return '<div class="zoo-row ' + (s === "done" ? "done" : "") + '">' +
+        '<span class="zoo-idx">' + (i + 1) + '</span>' +
+        '<span class="zoo-name">' + t.n + '</span>' +
+        '<button class="zoo-pill ' + PILL[s] + '" data-k="' + t.k + '">' + LABEL[s] + '</button>' +
+        '<a class="zoo-open" href="' + t.u + '" target="_blank" rel="noopener" data-k="' + t.k + '">Open ↗</a>' +
+      '</div>';
+    }).join("");
+    Array.prototype.forEach.call(list.querySelectorAll(".zoo-pill"), function (b) {
+      b.onclick = function () { cycle(b.getAttribute("data-k")); };
+    });
+    Array.prototype.forEach.call(list.querySelectorAll(".zoo-open"), function (a) {
+      a.onclick = function () { var k = a.getAttribute("data-k"); if (statusOf(k) === "not_started") setStatus(k, "in_progress"); };
+    });
+    var done = TUTORIALS.filter(function (t) { return statusOf(t.k) === "done"; }).length;
+    byId("zoo-count").textContent = done + " / " + TUTORIALS.length + " done";
+    byId("zoo-fill").style.width = (done / TUTORIALS.length * 100) + "%";
+  }
+  function cycle(k) { var c = statusOf(k); setStatus(k, STATES[(STATES.indexOf(c) + 1) % STATES.length]); }
+  function setStatus(k, s) { progress[k] = s; save(); render(); syncOne(k, s); }
+
+  function syncOne(k, s) {
+    if (!sb || !session) return;
+    var t = TUTORIALS.filter(function (x) { return x.k === k; })[0]; if (!t) return;
+    var now = new Date().toISOString();
+    sb.from("commonplace_external_resources").upsert({
+      user_id: session.user.id, resource_set: "sqlzoo", item_key: k, name: t.n, url: t.u,
+      order_index: TUTORIALS.indexOf(t), status: s, last_attempted: now, updated_at: now
+    }, { onConflict: "user_id,resource_set,item_key" }).then(function () {}, function () {});
+  }
+  function syncNote() {
+    byId("zoo-sync").textContent = session
+      ? "✓ Synced to your account"
+      : "Saved on this device · sign in via the Practice Lab to sync across devices";
+  }
+  function syncOnSignIn() {
+    if (!sb || !session) return;
+    sb.from("commonplace_external_resources").select("item_key,status").eq("resource_set", "sqlzoo")
+      .then(function (res) {
+        var remote = {};
+        if (!res.error && res.data) { res.data.forEach(function (r) { remote[r.item_key] = r.status; progress[r.item_key] = r.status; }); }
+        save(); render();
+        Object.keys(progress).forEach(function (k) {
+          if (progress[k] && progress[k] !== "not_started" && !(k in remote)) syncOne(k, progress[k]);
+        });
+      });
+  }
+
+  render();
+  if (sb) {
+    sb.auth.getSession().then(function (res) { session = res.data.session || null; syncNote(); syncOnSignIn(); });
+    sb.auth.onAuthStateChange(function (_e, s) { session = s; syncNote(); syncOnSignIn(); });
+  } else { syncNote(); }
+})();
+</script>
 </body>
 </html>
