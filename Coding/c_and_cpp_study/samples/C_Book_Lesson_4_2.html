@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 4.2 — Writing Your First Function · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e2e8f0; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #fdba74; font-weight: 700; }
+  pre.code .cm { color: #64748b; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .out { color: #67e8f9; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CLASSIC C TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13.5px; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Function Machine */
+  .fm-code { background: var(--terminal); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: 13.5px; color: #e2e8f0; line-height: 1.7; margin-bottom: 16px; }
+  .fm-code .kw { color: #fdba74; font-weight: 700; }
+  .fm-code .hl { color: #fde047; font-weight: 700; }
+  .fm-code .cm { color: #64748b; font-style: italic; }
+  .fm-ctrls { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .fm-ctrls label { font-size: 13px; color: var(--ink-soft); font-weight: 700; }
+  .fm-ctrls input[type=range] { accent-color: var(--orange); flex: 1; min-width: 120px; }
+  .fbox { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--orange-deep); background: white; border: 2px solid var(--orange-light); border-radius: 8px; padding: 1px 10px; }
+  .fm-flow { display: flex; align-items: stretch; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .fm-box { background: white; border: 2px solid var(--orange-light); border-radius: 14px; padding: 12px 16px; text-align: center; min-width: 96px; display: flex; flex-direction: column; justify-content: center; }
+  .fm-box .lab { font-size: 10.5px; color: var(--ink-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .fm-box .val { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--orange-deep); margin-top: 3px; }
+  .fm-box.fn { background: linear-gradient(135deg, var(--orange), var(--pink)); border-color: var(--orange); }
+  .fm-box.fn .lab { color: rgba(255,255,255,0.85); }
+  .fm-box.fn .val { color: white; font-size: 15px; }
+  .fm-arrow { display: flex; align-items: center; font-size: 22px; color: var(--orange); font-weight: 700; }
+  .fm-msg { margin-top: 16px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; }
+  .fm-msg b { color: var(--orange-deep); }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .pc-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    Time to actually write one! Return type, name, parameters, body, return. ✍️
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 4.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 28 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧰 PART IV &middot; FUNCTIONS</span>
+    <h1>Writing Your First Function</h1>
+    <p class="hero-sub">Last lesson was the <em>why</em>. Now the <em>how</em>: the exact shape of a function definition, how parameters carry values in, and how <code>return</code> hands a value back. By the end you'll be able to write and call your own.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>From idea to actual code ✍️</h2>
+
+    <div class="new-content">
+      In 4.1 you saw <em>why</em> functions are worth making. This lesson is the hands-on part: the precise syntax. A function definition is just four pieces in a fixed order — once you can read those four pieces, you can write any simple function and call it.
+    </div>
+
+    <p>We'll build one tiny function, take it apart piece by piece, and watch a value flow in as an argument and come back as a return value. Everything here stays at the level of values going in and a value coming out — pointers and arrays come later. Master this shape and you've got the backbone of every C program.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The shape</div>
+    <h2>Four pieces in order 🔧</h2>
+
+    <p>Here is a complete function. Read the first line as a sentence, then look at the body:</p>
+
+    <pre class="code"><span class="hl">int</span> <span class="kw">triple</span>(<span class="hl">int n</span>)   <span class="cm">// return type · name · parameter list</span>
+{                  <span class="cm">// body begins</span>
+    <span class="kw">return</span> n * 3;  <span class="cm">// compute a value and hand it back</span>
+}                  <span class="cm">// body ends</span></pre>
+
+    <ul>
+      <li><strong>Return type</strong> — <code>int</code>. The kind of value handed back. <code>void</code> if nothing comes back.</li>
+      <li><strong>Name</strong> — <code>triple</code>. What you call it by (a verb is ideal).</li>
+      <li><strong>Parameter list</strong> — <code>(int n)</code>. Named inputs with types, in parentheses. <code>(void)</code> or <code>()</code> if there are none.</li>
+      <li><strong>Body</strong> — the <code>{ … }</code>. The statements that run, ending with a <code>return</code> when there's a value to give back.</li>
+    </ul>
+
+    <div class="new-content">
+      That first line — <code>int triple(int n)</code> — is the function's <strong>header</strong>. It's a contract: "give me one <code>int</code>, I'll give you back one <code>int</code>." The body is how the contract is kept. Get the header right and the rest is just ordinary statements you already know.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Parameters carry values in</div>
+    <h2>Arguments become parameters 📥</h2>
+
+    <p>When you <strong>call</strong> the function, the values in the parentheses are <strong>arguments</strong>. Each argument is <em>copied</em> into the matching <strong>parameter</strong> — they line up by position:</p>
+
+    <pre class="code"><span class="kw">int</span> n = triple(<span class="hl">5</span>);   <span class="cm">// argument 5 is copied into parameter n</span>
+                       <span class="cm">// inside triple, n == 5</span></pre>
+
+    <div class="new-content">
+      Two words that sound alike but aren't: the <strong>parameter</strong> is the name in the function's header (<code>n</code>); the <strong>argument</strong> is the actual value you pass at the call (<code>5</code>). In C, the argument is <em>copied</em> into the parameter — the function works on its own copy. So changing <code>n</code> inside <code>triple</code> never touches the caller's variable. (That copy behaviour is exactly what the C++ book digs into; for C, parameters are always copies until you learn pointers.)
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> return hands a value back</div>
+    <h2>One value out, and you're done ↩️</h2>
+
+    <p>The <code>return</code> statement does two things at once: it sends a value back to the caller, and it <strong>ends the function immediately</strong>. The whole call expression then <em>becomes</em> that value:</p>
+
+    <pre class="code"><span class="kw">int</span> triple(<span class="kw">int</span> n) {
+    <span class="kw">return</span> n * 3;
+}
+
+printf(<span class="str">"%d\n"</span>, triple(5));   <span class="cm">// triple(5) becomes 15 → prints 15</span>
+<span class="kw">int</span> big = triple(5) + 1;       <span class="cm">// 15 + 1 → big is 16</span></pre>
+
+    <div class="new-content">
+      The return type must match what you hand back: <code>triple</code> returns an <code>int</code>, so <code>return n * 3;</code> gives an <code>int</code>. A <code>void</code> function returns nothing — it can still use a bare <code>return;</code> to stop early, but it can't return a value. And a non-<code>void</code> function must hit a <code>return</code> with a value on every path, or you'll get garbage.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Putting it together</div>
+    <h2>A whole little program 🧩</h2>
+
+    <p>Here's <code>triple</code> living in a real program. Notice it's defined <strong>above</strong> <code>main</code> so the compiler meets it first:</p>
+
+    <pre class="code"><span class="cm">#include &lt;stdio.h&gt;</span>
+
+<span class="kw">int</span> triple(<span class="kw">int</span> n) {     <span class="cm">// defined first…</span>
+    <span class="kw">return</span> n * 3;
+}
+
+<span class="kw">int</span> main(<span class="kw">void</span>) {
+    <span class="kw">int</span> result = triple(7);   <span class="cm">// …so main can call it. result is 21</span>
+    printf(<span class="str">"%d\n"</span>, result);
+    <span class="kw">return</span> 0;
+}</pre>
+
+    <div class="trap">
+      <h4>🚨 Calling before the compiler has met the function</h4>
+      <p>If <code>triple</code> is written <em>below</em> <code>main</code>, older C compilers silently assume it returns <code>int</code> and take whatever arguments you pass — an "implicit declaration" that hides real bugs (modern compilers warn or error). The simple rule for now: <strong>define functions above <code>main</code></strong>. Lesson 4.3 shows the alternative — a prototype — so you can put definitions anywhere.</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Function Lab</div>
+    <h2>Feed it a value 🔬</h2>
+
+    <p>Two tools. The <strong>Function Machine</strong> lets you slide an input and watch it become the argument, copy into the parameter, and come back as a return value. <strong>Predict the Output</strong> gives you small programs to trace.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🧰 Function Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="machine">Function Machine</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- FUNCTION MACHINE -->
+      <div class="tab-panel active" id="tab-machine">
+        <div class="fm-code">
+          <span class="kw">int</span> triple(<span class="kw">int</span> n) { <span class="kw">return</span> n * 3; }<br>
+          printf(<span style="color:#86efac">"%d"</span>, triple(<span class="hl" id="fmArg">4</span>));
+        </div>
+        <div class="fm-ctrls">
+          <label>argument</label>
+          <input type="range" id="fmRange" min="0" max="12" value="4" />
+          <span class="fbox" id="fmBox">4</span>
+        </div>
+        <div class="fm-flow">
+          <div class="fm-box"><span class="lab">argument</span><span class="val" id="fmIn">4</span></div>
+          <div class="fm-arrow">→</div>
+          <div class="fm-box"><span class="lab">parameter n</span><span class="val" id="fmN">4</span></div>
+          <div class="fm-arrow">→</div>
+          <div class="fm-box fn"><span class="lab">returns n * 3</span><span class="val" id="fmCalc">4 * 3</span></div>
+          <div class="fm-arrow">→</div>
+          <div class="fm-box"><span class="lab">output</span><span class="val" id="fmOut">12</span></div>
+        </div>
+        <div class="fm-msg" id="fmMsg"></div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="count-btns" id="poBtns"></div>
+        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does a <code>return</code> statement do?
+      </div>
+      <button class="opt" data-correct="true"><span>Hands a value back to the caller <em>and</em> ends the function right there</span></button>
+      <button class="opt" data-correct="false"><span>Prints the value, then keeps running the function</span></button>
+      <button class="opt" data-correct="false"><span>Saves the value into a global variable for later</span></button>
+      <button class="opt" data-correct="false"><span>Pauses the function until it's called again</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: think about what happens to the lines <em>after</em> a <code>return</code>.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🚪</div>
+      <div class="mistake-body">
+        <strong>A non-<code>void</code> function with no <code>return</code> value</strong>
+        <small>If <code>triple</code> reaches its end without <code>return</code>ing an <code>int</code>, the caller gets garbage. Every path of a value-returning function must end in a <code>return value;</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔁</div>
+      <div class="mistake-body">
+        <strong>Expecting changes to a parameter to reach the caller</strong>
+        <small>In C the argument is <em>copied</em> into the parameter. Doing <code>n = n + 1;</code> inside the function changes only the copy — the caller's variable is untouched. (Pointers, later, are how you reach back out.)</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔢</div>
+      <div class="mistake-body">
+        <strong>Mismatched return type</strong>
+        <small>If a function is declared <code>int</code> but you <code>return 3.9;</code>, the value is truncated to <code>3</code>. Make the return type match the value you actually intend to hand back.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Write <code>square</code>.</strong> Define <code>int square(int n)</code> that returns <code>n * n</code>. Call it from <code>main</code> and print the square of 6. Remember to define it above <code>main</code>.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Two parameters.</strong> Write <code>int max2(int a, int b)</code> that returns the larger of <code>a</code> and <code>b</code> (use an <code>if</code>). Test it with a few pairs from <code>main</code>.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>A <code>void</code> helper.</strong> Write <code>void print_line(int width)</code> that prints <code>width</code> dashes followed by a newline, using a loop. It returns nothing — call it to underline a heading. Notice you call it as a statement, not inside a <code>printf</code>.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>A definition has four pieces:</strong> return type, name, parameter list, body.</li>
+        <li><strong>Arguments are copied into parameters</strong> by position — the function works on its own copy.</li>
+        <li><strong><code>return value;</code></strong> hands one value back <em>and</em> ends the function; the call becomes that value.</li>
+        <li><strong><code>void</code></strong> = nothing returned; a bare <code>return;</code> just stops early.</li>
+        <li><strong>Define above <code>main</code></strong> (or use a prototype — lesson 4.3) so the compiler knows it first.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_4_1.html" class="nav-btn prev">
+      <small>← Previous</small>
+      4.1  Why functions exist
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      4.3  Function prototypes
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Time to write one for real — four pieces in a fixed order. ✍️",
+    "Return type, name, parameters, body. The header is the contract. 🔧",
+    "Arguments get copied into parameters by position. n becomes 5. 📥",
+    "<code>return</code> hands a value back AND ends the function. ↩️",
+    "Define triple above main so the compiler meets it first. 🧩",
+    "Slide the input — watch it copy into n and come back tripled! 🔬",
+    "return ends the function. Lines after it never run. 🎯",
+    "Copies in, one value out, define above main. You've got this! 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 4.2 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Function Machine =====
+  const fmRange = document.getElementById('fmRange');
+  const fmBox = document.getElementById('fmBox');
+  const fmArg = document.getElementById('fmArg');
+  const fmIn = document.getElementById('fmIn');
+  const fmN = document.getElementById('fmN');
+  const fmCalc = document.getElementById('fmCalc');
+  const fmOut = document.getElementById('fmOut');
+  const fmMsg = document.getElementById('fmMsg');
+  let fmTouched = false;
+
+  function renderFM() {
+    const n = parseInt(fmRange.value, 10);
+    fmBox.textContent = n;
+    fmArg.textContent = n;
+    fmIn.textContent = n;
+    fmN.textContent = n;
+    fmCalc.textContent = n + ' * 3';
+    fmOut.textContent = n * 3;
+    fmMsg.innerHTML = `Call <code>triple(${n})</code>: the argument <b>${n}</b> is copied into parameter <b>n</b>, the body computes <b>n * 3 = ${n * 3}</b> and <code>return</code>s it. The call <code>triple(${n})</code> becomes <b>${n * 3}</b>, which gets printed.`;
+    if (!fmTouched) { fmTouched = true; addXP(5, window.innerWidth / 2, 280, '🔬 Value in, value out! +5 XP'); }
+  }
+  fmRange.addEventListener('input', renderFM);
+  renderFM();
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'int triple(int n) { return n * 3; }\nint main(void) {\n  printf("%d", triple(4));\n}',
+      opts: ['12', '7', '43', '34'],
+      answer: '12',
+      why: 'triple(4) returns 4 * 3 = <strong>12</strong>, which printf prints.'
+    },
+    {
+      code: 'void dashes(void) { printf("---"); }\nint main(void) {\n  dashes();\n  printf("end");\n}',
+      opts: ['---end', 'end---', 'end', '---'],
+      answer: '---end',
+      why: 'dashes() runs first and prints "---", then main prints "end" → <strong>---end</strong>.'
+    },
+    {
+      code: 'int add(int a, int b) { return a + b; }\nint main(void) {\n  printf("%d", add(2, 3) + 1);\n}',
+      opts: ['6', '5', '231', '15'],
+      answer: '6',
+      why: 'add(2,3) returns 5; the call becomes 5, then 5 + 1 = <strong>6</strong>.'
+    },
+    {
+      code: 'int sq(int n) { return n * n; }\nint main(void) {\n  printf("%d", sq(sq(2)));\n}',
+      opts: ['16', '8', '4', '256'],
+      answer: '16',
+      why: 'Inner sq(2)=4 returns first, then sq(4)=16. A returned value flows into the next call → <strong>16</strong>.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'cbtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.cbtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. Work out what each call returns, then what gets printed and in what order.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>return value;</code> sends the value back and ends the function on the spot — any lines below it never run, and the call expression becomes that value.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Value goes back, function ends immediately.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. <code>return</code> doesn\'t print or save anything by itself — it hands a value back to whoever called the function and stops the function right there.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
