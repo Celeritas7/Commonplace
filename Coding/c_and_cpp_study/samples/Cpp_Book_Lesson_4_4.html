@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 4.4 — Recursion · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Call Stack */
+  .cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .cs-grid { grid-template-columns: 1fr; } }
+  .cs-code { background: var(--terminal); border-radius: 12px; padding: 14px 16px; font-family: var(--mono); font-size: 12.5px; line-height: 1.8; color: #e0e7ff; }
+  .cs-code .kw { color: #c4b5fd; font-weight: 700; }
+  .cs-code .cm { color: #818cf8; font-style: italic; }
+  .cs-stack-wrap { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 12px; }
+  .cs-stack-wrap h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-dim); font-weight: 700; }
+  .cs-stack { display: flex; flex-direction: column-reverse; gap: 6px; justify-content: flex-end; min-height: 150px; }
+  .cs-frame { border-radius: 9px; padding: 7px 11px; font-family: var(--mono); font-size: 12.5px; font-weight: 700; border: 2px solid; animation: pop-in 0.3s var(--bouncy); }
+  @keyframes pop-in { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .cs-frame.wait { background: #ede9fe; border-color: var(--purple-light); color: var(--purple-deep); }
+  .cs-frame.base { background: #fef3c7; border-color: #fcd34d; color: #b45309; }
+  .cs-frame.ret { background: #dcfce7; border-color: #86efac; color: #166534; }
+  .cs-frame .sub { display: block; font-weight: 500; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .cs-empty { color: var(--ink-dim); font-size: 13px; font-style: italic; }
+  .sbtn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 10px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .sbtn:hover:not(:disabled) { transform: translateY(-2px); }
+  .sbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .sbtn.ghost { background: white; color: var(--ink-soft); border: 2px solid var(--bg3); }
+  .cs-buttons { display: flex; gap: 8px; margin-top: 14px; }
+  .cs-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.6); border-radius: 10px; padding: 9px 13px; line-height: 1.5; min-height: 38px; }
+  .cs-msg b { color: var(--purple-deep); }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .po-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Recursion: a function that calls itself. It needs a base case, or it never stops. 🪞
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 4.4</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 27 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧰 PART IV &middot; FUNCTIONS</span>
+    <h1>Recursion</h1>
+    <p class="hero-sub">A function is allowed to call <em>itself</em>. That sounds like a recipe for an infinite loop — and it is, unless you give it a way to stop. Done right, recursion solves naturally self-similar problems in a few elegant lines.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Some problems contain themselves 🧠</h2>
+
+    <div class="new-content">
+      A few problems are <strong>self-similar</strong>: a factorial is a number times a <em>smaller</em> factorial; a folder contains files and <em>smaller</em> folders; a row of dominoes falls one, then the rest. For those, a loop can feel clumsy, but a function that calls a smaller version of itself fits like a glove. That's <strong>recursion</strong>.
+    </div>
+
+    <p>You already know functions call other functions. Recursion is just a function calling <em>itself</em> — with a slightly smaller job each time — until the job is small enough to answer outright. The magic and the danger are the same thing: if it never reaches that "small enough" case, it calls forever. So every recursion has two parts you must get right.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The two parts</div>
+    <h2>Base case + recursive case 🧩</h2>
+
+    <p>Every recursive function needs a <strong>base case</strong> (a condition that stops, returning an answer directly) and a <strong>recursive case</strong> (which does a little work and calls itself on a <em>smaller</em> input). Here's the classic, factorial:</p>
+
+    <pre class="code"><span class="kw">int</span> fact(<span class="kw">int</span> n) {
+    <span class="kw">if</span> (n &lt;= 1) <span class="kw">return</span> <span class="hl">1</span>;          <span class="cm">// base case: stop here</span>
+    <span class="kw">return</span> n * fact(n - 1);        <span class="cm">// recursive case: smaller n</span>
+}</pre>
+
+    <div class="new-content">
+      Read it as a definition: "the factorial of <code>n</code> is <code>n</code> times the factorial of <code>n − 1</code>, and the factorial of 1 is just 1." The recursive case must move <strong>toward</strong> the base case — here <code>n - 1</code> shrinks <code>n</code> on every call, so it's guaranteed to hit <code>n &lt;= 1</code> eventually. Miss that, and it never stops.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> The call stack</div>
+    <h2>Calls wait, then unwind 📚</h2>
+
+    <p>How can <code>fact(4)</code> finish before <code>fact(3)</code> does? It can't — so it <strong>waits</strong>. Each call is paused mid-expression, stacked on top of the previous one, until the base case returns. Then the answers flow back down, each waiting call finishing its multiplication:</p>
+
+    <pre class="code"><span class="out">fact(4) = 4 * fact(3)
+        = 4 * (3 * fact(2))
+        = 4 * (3 * (2 * fact(1)))
+        = 4 * (3 * (2 * 1))      // base case reached
+        = 4 * (3 * 2)
+        = 4 * 6
+        = 24</span></pre>
+
+    <div class="new-content">
+      That pile of paused calls is the <strong>call stack</strong> — the same mechanism behind every ordinary function call, just stacked deeper. Each call keeps its own copy of <code>n</code> (remember scope: locals are per-call), which is why <code>fact(4)</code> still knows its <code>n</code> is 4 when control finally returns to it. The Call Stack tool below animates this build-up and unwind.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Another shape</div>
+    <h2>Do work on the way down — or up ⬇️⬆️</h2>
+
+    <p>Where you put the work relative to the recursive call changes the order things happen. Compare a countdown and a count-up:</p>
+
+    <pre class="code"><span class="kw">void</span> down(<span class="kw">int</span> n) {
+    <span class="kw">if</span> (n == 0) <span class="kw">return</span>;
+    std::cout &lt;&lt; n &lt;&lt; <span class="str">" "</span>;   <span class="cm">// print BEFORE recursing</span>
+    down(n - 1);
+}   <span class="cm">// down(3) → 3 2 1</span>
+
+<span class="kw">void</span> up(<span class="kw">int</span> n) {
+    <span class="kw">if</span> (n == 0) <span class="kw">return</span>;
+    up(n - 1);
+    std::cout &lt;&lt; n &lt;&lt; <span class="str">" "</span>;   <span class="cm">// print AFTER recursing</span>
+}   <span class="cm">// up(3) → 1 2 3</span></pre>
+
+    <div class="new-content">
+      Same structure, opposite output. <code>down</code> prints on the way <em>down</em> the stack, so the biggest number comes first. <code>up</code> recurses all the way to the base case first, then prints as the stack <em>unwinds</em> — so the smallest prints first. Tracing where the <code>cout</code> sits relative to the recursive call is the key to predicting recursive output.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Watch out</div>
+    <h2>No base case, no mercy 💥</h2>
+
+    <p>If the recursion never reaches its base case, each call stacks another frame until the call stack runs out of memory — a <strong>stack overflow</strong>, and your program crashes.</p>
+
+    <div class="trap">
+      <h4>🚨 Missing or unreachable base case</h4>
+      <p><code>int bad(int n) { return n + bad(n - 1); }</code> has no <code>if</code> to stop it, so it calls forever (well — until the stack overflows and it crashes). Always include a base case, and make sure every recursive call moves toward it. And remember: anything recursion does, a loop can do too — recursion is for when the <em>self-similar</em> shape makes the code clearer, not a tool you must use.</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Recursion Lab</div>
+    <h2>Build and unwind the stack 🔬</h2>
+
+    <p>Two tools. The <strong>Call Stack</strong> steps through <code>fact(4)</code> — watch the frames pile up to the base case, then collapse back with each answer. <strong>Predict the Output</strong> tests recursive programs, including the down-vs-up order.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🧰 Recursion Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="stack">Call Stack</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- CALL STACK -->
+      <div class="tab-panel active" id="tab-stack">
+        <div class="cs-grid">
+          <div class="cs-code">
+            <span class="kw">int</span> fact(<span class="kw">int</span> n) {<br>
+            &nbsp;&nbsp;<span class="kw">if</span> (n &lt;= 1) <span class="kw">return</span> 1;<br>
+            &nbsp;&nbsp;<span class="kw">return</span> n * fact(n-1);<br>
+            }<br><br>
+            fact(4);
+          </div>
+          <div class="cs-stack-wrap">
+            <h4>Call stack</h4>
+            <div class="cs-stack" id="csStack"></div>
+          </div>
+        </div>
+        <div class="cs-buttons">
+          <button class="sbtn" id="csStep">▶ Step</button>
+          <button class="sbtn ghost" id="csReset">↺ Reset</button>
+        </div>
+        <div class="cs-msg" id="csMsg">Click Step to watch fact(4) build the stack, then unwind.</div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="out-btns" id="poBtns"></div>
+        <div class="po-fb" id="poFb">What does this program print?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What must every recursive function have to avoid running forever?
+      </div>
+      <button class="opt" data-correct="true"><span>A base case — a condition that returns an answer without calling itself again</span></button>
+      <button class="opt" data-correct="false"><span>A global variable to count the calls</span></button>
+      <button class="opt" data-correct="false"><span>A <code>for</code> loop inside the function</span></button>
+      <button class="opt" data-correct="false"><span>At least two parameters</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: something has to make it <em>stop</em> calling itself.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">💥</div>
+      <div class="mistake-body">
+        <strong>No base case (or you can't reach it)</strong>
+        <small>Without a stopping condition — or if the recursive call doesn't shrink toward it — the function calls forever and overflows the stack. Always check: does every path move toward the base case?</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔙</div>
+      <div class="mistake-body">
+        <strong>Forgetting to <code>return</code> the recursive result</strong>
+        <small>In a value-returning recursion, write <code>return n * fact(n - 1);</code>. Calling <code>fact(n - 1)</code> without <code>return</code> throws the answer away and the result is wrong.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔀</div>
+      <div class="mistake-body">
+        <strong>Mixing up "before" vs "after" the call</strong>
+        <small>Work done <em>before</em> the recursive call happens on the way down; work done <em>after</em> happens as the stack unwinds. That placement decides the output order (the <code>down</code> vs <code>up</code> example).</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Countdown.</strong> Write <code>void countdown(int n)</code> that prints <code>n, n-1, …, 1</code> then "Liftoff!", using recursion with a base case at <code>n == 0</code>.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Sum to n.</strong> Write <code>int sumTo(int n)</code> that returns <code>1 + 2 + … + n</code> recursively (<code>sumTo(n) = n + sumTo(n-1)</code>, base case <code>sumTo(0) = 0</code>). Test it against the formula <code>n*(n+1)/2</code>.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Fibonacci, then reflect.</strong> Write <code>int fib(int n)</code> returning the nth Fibonacci number (base cases <code>fib(0)=0</code>, <code>fib(1)=1</code>; otherwise <code>fib(n-1)+fib(n-2)</code>). Then think about why <code>fib(40)</code> is slow — it re-computes the same calls many times. (A loop, or remembering results, fixes it.)
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>Recursion</strong> is a function calling itself on a smaller input.</li>
+        <li><strong>Two parts:</strong> a base case that stops, and a recursive case that moves toward it.</li>
+        <li><strong>Calls stack up and wait</strong>, then unwind once the base case returns — each call keeps its own variables.</li>
+        <li><strong>Work before vs after the recursive call</strong> decides whether things happen on the way down or back up.</li>
+        <li><strong>No reachable base case → stack overflow.</strong> Anything recursion does, a loop can too — use it when the shape fits.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_4_3.html" class="nav-btn prev">
+      <small>← Previous</small>
+      4.3  Default args &amp; overloading
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      4.5  Lambda expressions
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Some problems contain a smaller copy of themselves — that's where recursion shines. 🧠",
+    "Two parts always: a base case that stops, and a recursive case on a smaller input. 🧩",
+    "Calls can't finish early — they wait, stack up, then unwind. That's the call stack. 📚",
+    "Work before the call happens going down; work after happens coming back up. ⬇️⬆️",
+    "No reachable base case → the stack overflows and the program crashes. 💥",
+    "Step fact(4): watch the frames pile to the base case, then collapse to 24! 🔬",
+    "Every recursion needs a base case — something that stops it calling itself. 🎯",
+    "Base case, shrink toward it, return the result, mind the order. 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 4.4 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Call Stack =====
+  // each step = array of frames (bottom -> top), with class + label + sub
+  const CS_STEPS = [
+    { frames: [['wait', 'fact(4)', 'n=4 · needs fact(3)']], msg: 'main calls <b>fact(4)</b>. n=4 is not ≤ 1, so it needs <code>fact(3)</code> before it can multiply.' },
+    { frames: [['wait', 'fact(4)', 'n=4 · 4 × fact(3)'], ['wait', 'fact(3)', 'n=3 · needs fact(2)']], msg: '<b>fact(3)</b> is pushed on top. fact(4) is paused, waiting.' },
+    { frames: [['wait', 'fact(4)', 'n=4 · 4 × fact(3)'], ['wait', 'fact(3)', 'n=3 · 3 × fact(2)'], ['wait', 'fact(2)', 'n=2 · needs fact(1)']], msg: '<b>fact(2)</b> pushed. Three calls are now paused, stacked up.' },
+    { frames: [['wait', 'fact(4)', 'n=4 · 4 × fact(3)'], ['wait', 'fact(3)', 'n=3 · 3 × fact(2)'], ['wait', 'fact(2)', 'n=2 · 2 × fact(1)'], ['base', 'fact(1)', 'n=1 ≤ 1 → returns 1']], msg: '<b>fact(1)</b>: n ≤ 1, the <b>base case!</b> It returns 1 with no further call. The stack stops growing.' },
+    { frames: [['wait', 'fact(4)', 'n=4 · 4 × fact(3)'], ['wait', 'fact(3)', 'n=3 · 3 × fact(2)'], ['ret', 'fact(2)', '2 × 1 → returns 2']], msg: 'fact(1) returned 1. <b>fact(2)</b> unpauses: 2 × 1 = <b>2</b>, and pops off.' },
+    { frames: [['wait', 'fact(4)', 'n=4 · 4 × fact(3)'], ['ret', 'fact(3)', '3 × 2 → returns 6']], msg: '<b>fact(3)</b> unpauses: 3 × 2 = <b>6</b>, and pops off.' },
+    { frames: [['ret', 'fact(4)', '4 × 6 → returns 24']], msg: '<b>fact(4)</b> unpauses: 4 × 6 = <b>24</b>.' },
+    { frames: [], msg: '✓ <b>fact(4)</b> returns <b>24</b> to main. The stack is empty again. 🎉', done: true }
+  ];
+  const csStack = document.getElementById('csStack');
+  const csMsg = document.getElementById('csMsg');
+  const csStep = document.getElementById('csStep');
+  let csIdx = -1, csTouched = false, csDone = false;
+
+  function renderCS() {
+    const s = csIdx >= 0 ? CS_STEPS[csIdx] : null;
+    if (!s || s.frames.length === 0) {
+      csStack.innerHTML = '<div class="cs-empty">' + (s && s.done ? '(empty — all returned)' : 'Empty. Click Step.') + '</div>';
+    } else {
+      csStack.innerHTML = s.frames.map(f =>
+        `<div class="cs-frame ${f[0]}">${f[1]}<span class="sub">${f[2]}</span></div>`).join('');
+    }
+    csMsg.innerHTML = s ? s.msg : 'Click Step to watch fact(4) build the stack, then unwind.';
+  }
+  function csDoStep() {
+    if (csDone) return;
+    csIdx++;
+    if (csIdx >= CS_STEPS.length) csIdx = CS_STEPS.length - 1;
+    renderCS();
+    if (!csTouched) { csTouched = true; addXP(4, window.innerWidth / 2, 280); }
+    if (CS_STEPS[csIdx].done) { csDone = true; csStep.disabled = true; csStep.textContent = '✓ Done'; burst(); addXP(10, window.innerWidth / 2, 280, '📚 Stack unwound! fact(4) = 24 · +10 XP'); }
+  }
+  csStep.addEventListener('click', csDoStep);
+  document.getElementById('csReset').addEventListener('click', () => { csIdx = -1; csDone = false; csStep.disabled = false; csStep.textContent = '▶ Step'; renderCS(); });
+  renderCS();
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'int fact(int n) {\n  if (n <= 1) return 1;\n  return n * fact(n - 1);\n}\nint main() { std::cout << fact(4); }',
+      opts: ['24', '10', '12', '4'],
+      answer: '24',
+      why: '4 × 3 × 2 × 1 = 24.'
+    },
+    {
+      code: 'void down(int n) {\n  if (n == 0) return;\n  std::cout << n << " ";\n  down(n - 1);\n}\nint main() { down(3); }',
+      opts: ['3 2 1 ', '1 2 3 ', '3 2 1 0 ', '0 1 2 3 '],
+      answer: '3 2 1 ',
+      why: 'It prints BEFORE recursing, so the biggest prints first: 3 2 1. (It stops at 0.)'
+    },
+    {
+      code: 'int sum(int n) {\n  if (n == 0) return 0;\n  return n + sum(n - 1);\n}\nint main() { std::cout << sum(4); }',
+      opts: ['10', '4', '24', '0'],
+      answer: '10',
+      why: '4 + 3 + 2 + 1 + 0 = 10.'
+    },
+    {
+      code: 'void up(int n) {\n  if (n == 0) return;\n  up(n - 1);\n  std::cout << n << " ";\n}\nint main() { up(3); }',
+      opts: ['1 2 3 ', '3 2 1 ', '0 1 2 3 ', '3 2 1 0 '],
+      answer: '1 2 3 ',
+      why: 'It recurses to the base case FIRST, then prints as the stack unwinds → 1 2 3.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'obtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.obtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. Trace to the base case, then unwind — and watch whether the work is before or after the recursive call.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The base case is the stopping condition — it returns an answer directly instead of recursing, so the stack stops growing and starts unwinding.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> The base case is what makes it stop.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. None of those stop the recursion. What stops it is a <strong>base case</strong> — a condition that returns without calling itself again.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
