@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 6.4 — Constructors · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Constructor Picker */
+  .bp { background: var(--terminal); border-radius: 12px; padding: 16px 18px 14px; font-family: var(--mono); font-size: 12.5px; color: #e0e7ff; line-height: 1.7; margin-bottom: 14px; position: relative; }
+  .bp::before { content: "📐 class Dog — three constructors"; position: absolute; top: -10px; left: 12px; background: var(--purple); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; font-family: var(--sans); }
+  .bp .kw { color: #c4b5fd; font-weight: 700; }
+  .bp .cm { color: #818cf8; font-style: italic; }
+  .obj-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; min-height: 20px; }
+  .obj-card { background: white; border: 2px solid var(--purple-light); border-radius: 14px; padding: 12px 14px; min-width: 140px; box-shadow: var(--shadow-sm); animation: pop-in 0.4s var(--bouncy); }
+  .obj-card .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 9px; letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 8px; color: white; }
+  .obj-card .badge.def { background: var(--blue); }
+  .obj-card .badge.par { background: var(--purple); }
+  .obj-card .badge.cpy { background: var(--cyan); }
+  .obj-card .of { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
+  .obj-card .of b { color: var(--ink); }
+  .iw-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sbtn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .sbtn:hover:not(:disabled) { transform: translateY(-2px); }
+  .sbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .sbtn.ghost { background: white; color: var(--ink-soft); border: 2px solid var(--bg3); }
+  .iw-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .iw-msg b { color: var(--purple-deep); }
+  .iw-msg .grn { color: #166534; font-weight: 700; }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .po-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    A constructor runs the moment an object is born — its job is to set it up properly. 🏗️
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 6.4</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 39 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🏛️ PART VI &middot; OBJECT-ORIENTED PROGRAMMING</span>
+    <h1>Constructors</h1>
+    <p class="hero-sub">A <strong>constructor</strong> is a special method that runs automatically the instant an object is created — its job is to put the object into a valid starting state. C++ gives you three kinds to know: the <strong>default</strong>, the <strong>parameterized</strong>, and the <strong>copy</strong> constructor.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Born ready 🧠</h2>
+
+    <div class="new-content">
+      So far you've made an object and then set its members one by one with the dot. That's fragile — forget a line and the object starts life half-built, holding garbage. A <strong>constructor</strong> fixes this: it's code that runs <em>automatically</em> when the object is created, guaranteeing every object begins in a sensible, complete state. No object can exist without one running.
+    </div>
+
+    <p>You've leaned on constructors already without naming them: <code>std::string s("hi");</code> and <code>std::vector&lt;int&gt; v(3, 0);</code> both call constructors. Now you'll write your own.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> What a constructor is</div>
+    <h2>A special method 🏗️</h2>
+
+    <p>A constructor is a member function with two distinctive rules: it has the <strong>same name as the class</strong>, and it has <strong>no return type</strong> (not even <code>void</code>). It runs once, automatically, when an object is created:</p>
+
+    <pre class="code"><span class="kw">struct</span> Dog {
+    std::string name;
+    <span class="kw">int</span> age;
+
+    Dog() {                  <span class="cm">// constructor: name of the class, no return type</span>
+        name = <span class="str">"(unnamed)"</span>;
+        age = 0;
+        std::cout &lt;&lt; <span class="str">"a Dog was born!\n"</span>;
+    }
+};
+
+Dog d;   <span class="cm">// the constructor runs right here, automatically</span></pre>
+
+    <div class="new-content">
+      You never call a constructor by hand like <code>d.Dog()</code> — writing <code>Dog d;</code> <em>is</em> the call. By the time that line finishes, the constructor has run and <code>d</code> is fully set up. Think of it as the object's "setup routine," fired at birth.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> The default constructor</div>
+    <h2>No arguments 🆓</h2>
+
+    <p>A constructor that takes <strong>no parameters</strong> is the <em>default constructor</em> — it's the one that runs for <code>Dog d;</code>. If you write <strong>no</strong> constructors at all, the compiler quietly generates an empty one for you, which is why your earlier classes worked:</p>
+
+    <pre class="code"><span class="kw">struct</span> Point {
+    <span class="kw">int</span> x = 0, y = 0;     <span class="cm">// default member values</span>
+    <span class="cm">// no constructor written → compiler supplies an empty default one</span>
+};
+
+Point p;   <span class="cm">// fine: p.x and p.y are 0</span></pre>
+
+    <div class="new-content">
+      Combine a default constructor with default member values (<code>int x = 0;</code>) and every object starts clean with zero effort. The moment you need <em>custom</em> setup logic — validation, a message, computed fields — you write the constructor body yourself.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The parameterized constructor</div>
+    <h2>Set it up with arguments 🎛️</h2>
+
+    <p>Far more useful day-to-day: a constructor that <strong>takes arguments</strong>, so you build an object with its values in one step:</p>
+
+    <pre class="code"><span class="kw">struct</span> Dog {
+    std::string name;
+    <span class="kw">int</span> age;
+
+    Dog(std::string n, <span class="kw">int</span> a) {   <span class="cm">// parameterized constructor</span>
+        name = n;
+        age = a;
+    }
+};
+
+Dog d(<span class="str">"Rex"</span>, <span class="hl">3</span>);   <span class="cm">// name = "Rex", age = 3 — set at birth</span></pre>
+
+    <div class="new-content">
+      One line builds a ready-to-use <code>Dog</code>. (There's a tidier way to write this with a <em>member initializer list</em> — <code>Dog(std::string n, int a) : name(n), age(a) {}</code> — which you'll meet in 6.9; the assignment form above does the same job for now.) A class can have <strong>several</strong> constructors with different parameters — that's just overloading, which you saw with functions in 4.3.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> The copy constructor</div>
+    <h2>A new object from an old one 📋</h2>
+
+    <p>The third kind makes a new object as a <strong>copy</strong> of an existing one. You trigger it by initializing one object from another:</p>
+
+    <pre class="code">Dog a(<span class="str">"Rex"</span>, 3);
+Dog b = a;      <span class="cm">// copy constructor: b is a duplicate of a</span>
+<span class="cm">// b.name == "Rex", b.age == 3 — but b is independent</span></pre>
+
+    <div class="new-content">
+      You don't have to write a copy constructor — the compiler provides one that copies each member across, which is exactly right for simple classes like this. The copy is <strong>independent</strong>: changing <code>b.age</code> later doesn't touch <code>a</code>. (When a class manages a resource like heap memory, the default member-wise copy can be wrong — that's a topic for RAII and the "rule of three" later in the book.)
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Constructor Picker</div>
+    <h2>Which constructor runs? 🔬</h2>
+
+    <p>Two tools. The <strong>Constructor Picker</strong> lets you create <code>Dog</code> objects three ways and shows which constructor fired and the object it built. <strong>Predict the Output</strong> tests default, parameterized, and copy.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🏗️ Constructor Picker</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="ctor">Constructor Picker</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- CONSTRUCTOR PICKER -->
+      <div class="tab-panel active" id="tab-ctor">
+        <div class="bp"><span class="kw">struct</span> Dog {<br>
+        &nbsp;&nbsp;std::string name; <span class="kw">int</span> age;<br>
+        &nbsp;&nbsp;Dog() { name=<span class="cm">"(unnamed)"</span>; age=0; }&nbsp;&nbsp;<span class="cm">// default</span><br>
+        &nbsp;&nbsp;Dog(std::string n, <span class="kw">int</span> a) { name=n; age=a; }&nbsp;&nbsp;<span class="cm">// parameterized</span><br>
+        &nbsp;&nbsp;<span class="cm">// copy constructor: compiler-provided</span><br>
+        };</div>
+        <div class="obj-row" id="ctorRow"></div>
+        <div class="iw-buttons">
+          <button class="sbtn" data-act="def">Dog d;</button>
+          <button class="sbtn" data-act="par">Dog d("Bella", 5);</button>
+          <button class="sbtn" data-act="cpy">Dog copy = d;</button>
+          <button class="sbtn ghost" data-act="reset">↺ reset</button>
+        </div>
+        <div class="iw-msg" id="ctorMsg">Create a <code>Dog</code> three ways and watch which constructor runs. <code>Dog d;</code> → default · <code>Dog d("Bella", 5);</code> → parameterized · <code>Dog copy = d;</code> → copy of the last object.</div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="out-btns" id="poBtns"></div>
+        <div class="po-fb" id="poFb">What does this program print (or does it compile)?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What is a constructor?
+      </div>
+      <button class="opt" data-correct="true"><span>A special member function that runs <strong>automatically when an object is created</strong>, to initialize it</span></button>
+      <button class="opt" data-correct="false"><span>A method you must call by hand after creating the object</span></button>
+      <button class="opt" data-correct="false"><span>A function that destroys an object</span></button>
+      <button class="opt" data-correct="false"><span>Just another name for a getter</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: same name as the class, no return type, fires the moment you write <code>Dog d;</code>.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🚫</div>
+      <div class="mistake-body">
+        <strong>Expecting a default after writing another constructor</strong>
+        <small>Once you define <em>any</em> constructor, the compiler stops giving you the free default. If you still want <code>Dog d;</code> to work, add <code>Dog() {}</code> (or <code>Dog() = default;</code>) yourself.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">↩️</div>
+      <div class="mistake-body">
+        <strong>Giving a constructor a return type</strong>
+        <small>Constructors have <em>no</em> return type — not even <code>void</code> — and must share the class's name exactly. <code>void Dog() {...}</code> is just an ordinary method named <code>Dog</code>, not a constructor.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🗑️</div>
+      <div class="mistake-body">
+        <strong>Leaving members uninitialized</strong>
+        <small>Without a constructor or default member values, members hold garbage. A constructor (or <code>int x = 0;</code> defaults) guarantees a valid starting state — rely on it.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>A parameterized type.</strong> Write <code>struct Rect</code> with a constructor <code>Rect(int w, int h)</code> that sets two members. Create <code>Rect r(3, 4);</code> and print width and height.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Both constructors.</strong> Add a default constructor that sets a 1×1 rectangle. Create one <code>Rect</code> each way (<code>Rect a;</code> and <code>Rect b(5, 2);</code>) and print both — confirm <code>a</code> is 1×1.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Copy and diverge.</strong> Make <code>Rect b = a;</code> (copy), print <code>b</code> to confirm it matches <code>a</code>, then change <code>b</code>'s width and print both — show that <code>a</code> is unchanged, proving the copy is independent.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>A constructor is a special method</strong> (same name as the class, no return type) that runs when an object is created.</li>
+        <li><strong>The default constructor takes no arguments</strong> — the compiler supplies one only if you define no constructors.</li>
+        <li><strong>A parameterized constructor takes arguments</strong> to initialize the object: <code>Dog d("Rex", 3);</code>.</li>
+        <li><strong>The copy constructor</strong> builds a new object as a copy of an existing one (<code>Dog b = a;</code>); the default copies each member.</li>
+        <li><strong>Define any constructor and the free default disappears</strong> — add <code>Dog() {}</code> if you still need it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_6_3.html" class="nav-btn prev">
+      <small>← Previous</small>
+      6.3  Access specifiers
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      6.5  Destructors &amp; lifecycle
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Constructors guarantee an object starts life in a valid state. 🧠",
+    "A constructor = special method, class's name, no return type, runs on creation. 🏗️",
+    "Default ctor takes no args: Dog d; — compiler gives one if you define none. 🆓",
+    "Parameterized ctor takes args: Dog d(\"Rex\", 3); 🎛️",
+    "Copy ctor builds a new object from an existing one: Dog b = a; 📋",
+    "Pick how you create an object — see which constructor fires! 🔬",
+    "Constructor: same name as class, no return type, runs at creation. 🎯",
+    "Default, parameterized, copy — define one and the implicit default is gone. 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 6.4 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Constructor Picker =====
+  let objs = [], ctorTouched = false;
+  const ctorRow = document.getElementById('ctorRow');
+  const ctorMsg = document.getElementById('ctorMsg');
+
+  function renderCtor() {
+    ctorRow.innerHTML = objs.map(o => {
+      const cls = o.via === 'default' ? 'def' : (o.via === 'parameterized' ? 'par' : 'cpy');
+      const lab = o.via === 'default' ? 'default ctor' : (o.via === 'parameterized' ? 'param ctor' : 'copy ctor');
+      return `<div class="obj-card">
+        <span class="badge ${cls}">${lab}</span>
+        <div class="of">${o.varname}.name = <b>"${o.name}"</b></div>
+        <div class="of">${o.varname}.age &nbsp;= <b>${o.age}</b></div>
+      </div>`;
+    }).join('');
+  }
+  function ctorAct(act, e) {
+    if (act === 'reset') { objs = []; renderCtor(); ctorMsg.innerHTML = 'Cleared. Create a <code>Dog</code> three ways and watch which constructor runs.'; return; }
+    if (act === 'def') {
+      objs.push({ varname: 'd' + (objs.length + 1), name: '(unnamed)', age: 0, via: 'default' });
+      ctorMsg.innerHTML = `<code>Dog d;</code> → the <b>default constructor</b> ran (no arguments). It set <code>name = "(unnamed)"</code>, <code>age = 0</code> — a valid object with no info supplied.`;
+    } else if (act === 'par') {
+      objs.push({ varname: 'd' + (objs.length + 1), name: 'Bella', age: 5, via: 'parameterized' });
+      ctorMsg.innerHTML = `<code>Dog d("Bella", 5);</code> → the <b>parameterized constructor</b> ran. It took the arguments and set <code>name = "Bella"</code>, <code>age = 5</code> in one step.`;
+    } else if (act === 'cpy') {
+      if (!objs.length) { ctorMsg.innerHTML = `<span class="grn">Nothing to copy yet.</span> Make a <code>Dog</code> first (default or parameterized), then <code>Dog copy = d;</code> duplicates it.`; return; }
+      const src = objs[objs.length - 1];
+      objs.push({ varname: 'copy', name: src.name, age: src.age, via: 'copy' });
+      ctorMsg.innerHTML = `<code>Dog copy = ${src.varname};</code> → the <b>copy constructor</b> ran. It duplicated <code>${src.varname}</code> member-by-member → <code>name = "${src.name}"</code>, <code>age = ${src.age}</code>. The copy is <span class="grn">independent</span> of the original.`;
+    }
+    renderCtor();
+    if (!ctorTouched && e) { ctorTouched = true; addXP(5, e.clientX, e.clientY, '🏗️ Constructor fired! +5 XP'); }
+  }
+  document.querySelectorAll('#tab-ctor .sbtn').forEach(b => b.addEventListener('click', (e) => ctorAct(b.dataset.act, e)));
+  renderCtor();
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'struct Point {\n  int x = 0, y = 0;\n  Point() { x = 1; }   // default ctor\n};\nint main() {\n  Point p;\n  std::cout << p.x;\n}',
+      opts: ['1', '0', '2', 'error'],
+      answer: '1',
+      why: 'Point p; runs the default constructor, which sets x = 1.'
+    },
+    {
+      code: 'struct Dog {\n  std::string name; int age;\n  Dog(std::string n, int a) { name = n; age = a; }\n};\nint main() {\n  Dog d("Rex", 3);\n  std::cout << d.age;\n}',
+      opts: ['3', '0', 'Rex', 'error'],
+      answer: '3',
+      why: 'The parameterized constructor set age = a = 3.'
+    },
+    {
+      code: 'struct Box { int w; };\nint main() {\n  Box a; a.w = 7;\n  Box b = a;        // copy\n  std::cout << b.w;\n}',
+      opts: ['7', '0', 'error', 'garbage'],
+      answer: '7',
+      why: 'The copy constructor duplicates members, so b.w becomes 7.'
+    },
+    {
+      code: 'struct Dog {\n  std::string name;\n  Dog(std::string n) { name = n; }\n};\nint main() {\n  Dog d;            // no arguments\n}',
+      opts: ['error', 'compiles', '(nothing)', 'Rex'],
+      answer: 'error',
+      why: 'Defining a constructor removes the free default, so Dog d; (no args) won\'t compile.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print (or does it compile)?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'obtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.obtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. The constructor runs at creation; defining one removes the free default; copy duplicates members.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> A constructor runs <em>automatically</em> when an object is created, to set it up. It shares the class\'s name, has no return type, and you trigger it just by writing <code>Dog d;</code> — never by calling it by hand.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> It runs at creation to initialize the object.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. A constructor isn\'t called by hand, doesn\'t destroy the object (that\'s a destructor), and isn\'t a getter — it runs at creation to initialize.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

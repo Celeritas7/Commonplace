@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 5.5 — string.h Functions · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e2e8f0; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #fdba74; font-weight: 700; }
+  pre.code .cm { color: #64748b; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .out { color: #67e8f9; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CLASSIC C TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--orange-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* strcmp Explorer */
+  .sc-group { margin-bottom: 12px; }
+  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
+  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 7px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .sc-result { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; text-align: center; margin: 14px 0 0; }
+  .sc-result .call { font-family: var(--mono); font-size: 14px; color: var(--ink-soft); }
+  .sc-result .val { font-family: var(--mono); font-size: 26px; font-weight: 700; margin: 4px 0; }
+  .sc-result.eq { border-color: var(--green); background: linear-gradient(135deg, #dcfce7, #f0fdf4); }
+  .sc-result.eq .val { color: #166534; }
+  .sc-result.lt, .sc-result.gt { border-color: var(--orange); }
+  .sc-result.lt .val, .sc-result.gt .val { color: var(--orange-deep); }
+  .sc-result .verdict { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+  .sc-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; }
+  .sc-msg b { color: var(--orange-deep); }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .pc-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    You can't use <code>=</code> or <code>==</code> on C strings. <code>&lt;string.h&gt;</code> gives you the real tools. 🧰
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 5.5</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 37 / 55</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">📦 PART V &middot; ARRAYS &amp; STRINGS</span>
+    <h1>The &lt;string.h&gt; Toolkit</h1>
+    <p class="hero-sub">Since a C string is just a char array, you can't copy it with <code>=</code> or compare it with <code>==</code>. The <code>&lt;string.h&gt;</code> library gives you the proper tools: <code>strlen</code>, <code>strcpy</code>, <code>strcat</code>, <code>strcmp</code> — and their safer, length-limited cousins.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Strings need functions, not operators 🧠</h2>
+
+    <div class="new-content">
+      In most languages you copy a string with <code>=</code> and compare with <code>==</code>. In C those <em>seem</em> to work but do the wrong thing: a C string is an <strong>array</strong>, so <code>==</code> compares <em>addresses</em>, not letters, and you can't assign one array to another at all. To actually work with text you call functions from <code>&lt;string.h&gt;</code>.
+    </div>
+
+    <p>This is the standard string toolbox every C programmer uses daily: measure (<code>strlen</code>), copy (<code>strcpy</code>), join (<code>strcat</code>), and compare (<code>strcmp</code>). Each is simple, and each shares the same responsibility you learned in 5.4 — <em>you</em> must make sure the destination has room, including the <code>'\0'</code>. We'll cover the everyday four, plus the <code>strn*</code> versions that guard against overruns.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The everyday four</div>
+    <h2>length, copy, join, compare 🧰</h2>
+
+    <table class="op-table">
+      <thead><tr><th>Function</th><th>What it does</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">strlen(s)</td><td class="mono plain">length (letters before <code>'\0'</code>)</td><td class="mono">strlen("cat") → 3</td></tr>
+        <tr><td class="mono">strcpy(d, s)</td><td class="mono plain">copy s into d (with its <code>'\0'</code>)</td><td class="mono">strcpy(d, "hi")</td></tr>
+        <tr><td class="mono">strcat(d, s)</td><td class="mono plain">append s to the end of d</td><td class="mono">"foot" + "ball"</td></tr>
+        <tr><td class="mono">strcmp(a, b)</td><td class="mono plain">compare; <code>0</code> if equal</td><td class="mono">strcmp("a","a") → 0</td></tr>
+      </tbody>
+    </table>
+
+    <pre class="code"><span class="cm">#include &lt;string.h&gt;</span>
+
+<span class="kw">char</span> dest[20] = <span class="str">"foot"</span>;
+strcat(dest, <span class="str">"ball"</span>);     <span class="cm">// dest is now "football"</span>
+printf(<span class="str">"%lu\n"</span>, strlen(dest)); <span class="cm">// 8</span></pre>
+
+    <div class="new-content">
+      <code>strcpy(dest, src)</code> reads "copy <em>into</em> dest" — the destination comes first (like <code>dest = src</code>). The same order holds for <code>strcat(dest, src)</code>: it tacks <code>src</code> onto the end of <code>dest</code>. Both write a fresh <code>'\0'</code> at the end for you — but only if there's room.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> strcmp — the surprising one</div>
+    <h2><code>0</code> means equal ⚖️</h2>
+
+    <p>Comparing strings trips up everyone, because <code>strcmp</code> returns <strong>0 when the strings are equal</strong> — not 1, not "true." It returns a negative number if the first string comes before the second alphabetically, positive if after:</p>
+
+    <pre class="code"><span class="kw">if</span> (strcmp(a, b) == 0)    <span class="cm">// THE way to check equality</span>
+    printf(<span class="str">"same\n"</span>);
+
+<span class="cm">// strcmp("apple", "banana")  → negative ('a' &lt; 'b')</span>
+<span class="cm">// strcmp("cat",   "cat")     → 0        (equal)</span>
+<span class="cm">// strcmp("dog",   "cat")     → positive ('d' &gt; 'c')</span></pre>
+
+    <div class="trap">
+      <h4>🚨 Using <code>==</code> to compare strings</h4>
+      <p><code>if (a == b)</code> does <em>not</em> compare the text — it compares the two arrays' memory addresses, which are almost never equal, so it's nearly always false even for identical text. To compare contents you must write <code>strcmp(a, b) == 0</code>. Read it as "their difference is zero, so they're the same." This is one of the most common C bugs there is.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The destination must have room</div>
+    <h2>You own the buffer 📦</h2>
+
+    <p>These functions write into a buffer <em>you</em> provide, and they don't check its size. If the destination is too small to hold the result plus its <code>'\0'</code>, they write past the end — a <strong>buffer overflow</strong>, the classic C security bug.</p>
+
+    <pre class="code"><span class="kw">char</span> small[4];
+strcpy(small, <span class="str">"hello"</span>);   <span class="cm">// 🚨 "hello" needs 6 bytes, small holds 4 — OVERFLOW</span></pre>
+
+    <div class="new-content">
+      The array must be big enough for the <em>final</em> string plus the terminator. For <code>strcat</code>, that means room for both pieces joined together. The compiler won't warn you — sizing the buffer correctly is entirely your job, exactly like the bounds-checking from lesson 5.1. This risk is why the safer versions exist.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> The safer <code>strn*</code> versions</div>
+    <h2>Add a length limit 🛡️</h2>
+
+    <p>Each risky function has an <code>n</code> cousin that takes a <strong>maximum number of characters</strong>, so it can't write more than you allow: <code>strncpy</code>, <code>strncat</code>, <code>strncmp</code>.</p>
+
+    <pre class="code"><span class="kw">char</span> dest[8];
+strncpy(dest, src, <span class="hl">7</span>);   <span class="cm">// copy at most 7 chars…</span>
+dest[7] = <span class="str">'\0'</span>;          <span class="cm">// …and terminate yourself, to be safe</span>
+
+<span class="kw">if</span> (strncmp(a, b, 3) == 0)  <span class="cm">// compare only the first 3 characters</span>
+    printf(<span class="str">"same start\n"</span>);</pre>
+
+    <div class="new-content">
+      The limit caps how far they'll write or read, which prevents the overflow. One gotcha: <code>strncpy</code> does <em>not</em> always add a <code>'\0'</code> (if the source is as long as the limit, it stops without one), so it's good practice to place the terminator yourself afterward. As a beginner: prefer the <code>strn*</code> versions, and always remember the destination still needs room for the terminator.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — String Functions Lab</div>
+    <h2>Compare two words 🔬</h2>
+
+    <p>Two tools. The <strong>strcmp Explorer</strong> lets you pick two words and see what <code>strcmp</code> returns — and why <code>0</code> means equal. <strong>Predict the Output</strong> tests <code>strlen</code>, <code>strcmp</code>, and <code>strcat</code>.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🧰 String Functions Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="strcmp">strcmp Explorer</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- STRCMP EXPLORER -->
+      <div class="tab-panel active" id="tab-strcmp">
+        <div class="sc-group">
+          <div class="sc-glabel">string a</div>
+          <div class="sc-words" id="scA"></div>
+        </div>
+        <div class="sc-group">
+          <div class="sc-glabel">string b</div>
+          <div class="sc-words" id="scB"></div>
+        </div>
+        <div class="sc-result" id="scResult"></div>
+        <div class="sc-msg" id="scMsg">Pick two words. <code>strcmp</code> returns 0 if they're equal, negative if a comes first alphabetically, positive if a comes after.</div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="count-btns" id="poBtns"></div>
+        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        How do you check whether two C strings <code>a</code> and <code>b</code> are equal?
+      </div>
+      <button class="opt" data-correct="true"><span><code>strcmp(a, b) == 0</code> — strcmp returns 0 when they match</span></button>
+      <button class="opt" data-correct="false"><span><code>a == b</code></span></button>
+      <button class="opt" data-correct="false"><span><code>strcmp(a, b) == 1</code></span></button>
+      <button class="opt" data-correct="false"><span><code>a.equals(b)</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: <code>==</code> compares addresses, and strcmp returns 0 (not 1) for equal.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">⚖️</div>
+      <div class="mistake-body">
+        <strong>Comparing with <code>==</code> (or expecting strcmp to return 1)</strong>
+        <small><code>a == b</code> compares addresses, not text. And <code>strcmp</code> returns <strong>0</strong> for equal — so the check is <code>strcmp(a, b) == 0</code>, not <code>== 1</code> or a bare <code>if (strcmp(a, b))</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">📦</div>
+      <div class="mistake-body">
+        <strong>A destination too small</strong>
+        <small><code>strcpy</code>/<code>strcat</code> don't check the buffer size. The destination must hold the final string <em>plus</em> the <code>'\0'</code>, or you overflow. Size it generously, or use the <code>strn*</code> versions.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🟰</div>
+      <div class="mistake-body">
+        <strong>Assigning strings with <code>=</code></strong>
+        <small><code>dest = "hello";</code> doesn't copy text into an array (you can't assign to an array). Use <code>strcpy(dest, "hello")</code> to actually put the characters in.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Greet by name.</strong> Read a name into a <code>char</code> buffer, then build a greeting in a second buffer using <code>strcpy</code> (copy "Hello, ") and <code>strcat</code> (append the name). Print it. Make sure the buffer is big enough.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Password check.</strong> Read a word and compare it to a fixed password with <code>strcmp(...) == 0</code>, printing "correct" or "wrong." Then deliberately try <code>if (word == password)</code> and see that it doesn't work.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Roll your own strlen.</strong> Write your own <code>my_strlen(const char *s)</code> that counts characters until <code>'\0'</code>, and your own <code>my_strcmp</code> that walks both strings comparing characters. Compare results with the real ones — you'll understand exactly what the library does.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>C strings need functions, not operators</strong> — include <code>&lt;string.h&gt;</code>.</li>
+        <li><strong>The everyday four:</strong> <code>strlen</code> (length), <code>strcpy</code> (copy), <code>strcat</code> (append), <code>strcmp</code> (compare).</li>
+        <li><strong><code>strcmp</code> returns 0 when equal</strong> — check with <code>strcmp(a, b) == 0</code>; never use <code>==</code>.</li>
+        <li><strong>You own the buffer:</strong> the destination must have room for the result <em>plus</em> the <code>'\0'</code>.</li>
+        <li><strong>Prefer the <code>strn*</code> versions</strong> (<code>strncpy</code>, <code>strncat</code>, <code>strncmp</code>) with a length limit to avoid overflows.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_5_4.html" class="nav-btn prev">
+      <small>← Previous</small>
+      5.4  C strings
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      5.6  Arrays as function arguments
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "You can't <code>=</code> or <code>==</code> C strings. <code>&lt;string.h&gt;</code> has the real tools. 🧠",
+    "The four: strlen, strcpy, strcat, strcmp. Destination comes first. 🧰",
+    "strcmp returns 0 when EQUAL — not 1. Check <code>strcmp(a,b)==0</code>. ⚖️",
+    "strcpy/strcat don't check the buffer. The destination must have room + '\\0'. 📦",
+    "Safer: strncpy/strncat/strncmp take a max length. Cap the writes! 🛡️",
+    "Pick two words — see strcmp return 0 for equal, ± for the order. 🔬",
+    "Compare strings with strcmp(a,b)==0. == compares addresses. 🎯",
+    "Functions not operators, strcmp==0 for equal, size the buffer, prefer strn*. 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 5.5 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== strcmp Explorer =====
+  const SC_WORDS = ['apple', 'banana', 'cat', 'dog'];
+  let selA = 'cat', selB = 'cat', scTouched = false;
+  const scA = document.getElementById('scA');
+  const scB = document.getElementById('scB');
+  const scResult = document.getElementById('scResult');
+  const scMsg = document.getElementById('scMsg');
+
+  scA.innerHTML = SC_WORDS.map(w => `<button class="sc-word${w === selA ? ' active' : ''}" data-w="${w}">"${w}"</button>`).join('');
+  scB.innerHTML = SC_WORDS.map(w => `<button class="sc-word${w === selB ? ' active' : ''}" data-w="${w}">"${w}"</button>`).join('');
+
+  function renderSC() {
+    const cmp = selA < selB ? -1 : (selA > selB ? 1 : 0);
+    let cls, val, verdict;
+    if (cmp === 0) { cls = 'eq'; val = '0'; verdict = `equal — the strings match`; }
+    else if (cmp < 0) { cls = 'lt'; val = 'negative (&lt; 0)'; verdict = `"${selA}" comes before "${selB}" alphabetically`; }
+    else { cls = 'gt'; val = 'positive (&gt; 0)'; verdict = `"${selA}" comes after "${selB}" alphabetically`; }
+    scResult.className = 'sc-result ' + cls;
+    scResult.innerHTML = `<div class="call">strcmp("${selA}", "${selB}")</div><div class="val">${val}</div><div class="verdict">${verdict}</div>`;
+    scMsg.innerHTML = cmp === 0
+      ? `Both words are the same, so <code>strcmp</code> returns <b>0</b>. That\'s why the equality check is <code>strcmp(a, b) == 0</code> — zero means "no difference."`
+      : `<code>strcmp</code> returns a <b>${cmp < 0 ? 'negative' : 'positive'}</b> number here — it only returns <b>0</b> when the strings are identical.`;
+  }
+  Array.prototype.forEach.call(scA.querySelectorAll('.sc-word'), b => b.addEventListener('click', (e) => {
+    selA = b.dataset.w; scA.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x.dataset.w === selA)); renderSC();
+    if (!scTouched) { scTouched = true; addXP(5, e.clientX, e.clientY, '🔬 Comparing strings! +5 XP'); }
+  }));
+  Array.prototype.forEach.call(scB.querySelectorAll('.sc-word'), b => b.addEventListener('click', (e) => {
+    selB = b.dataset.w; scB.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x.dataset.w === selB)); renderSC();
+    if (!scTouched) { scTouched = true; addXP(5, e.clientX, e.clientY); }
+  }));
+  renderSC();
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: '#include <string.h>\nint main(void) {\n  printf("%d", strcmp("hi", "hi"));\n}',
+      opts: ['0', '1', '-1', '2'],
+      answer: '0',
+      why: 'The strings are identical, so strcmp returns 0.'
+    },
+    {
+      code: '#include <string.h>\nint main(void) {\n  printf("%lu", strlen("hello"));\n}',
+      opts: ['5', '6', '4', '1'],
+      answer: '5',
+      why: 'strlen counts the 5 letters before the \'\\0\'.'
+    },
+    {
+      code: '#include <string.h>\nint main(void) {\n  // strcmp returns the SIGN of the difference\n  printf("%s", strcmp("apple","banana") < 0 ? "neg" : "pos");\n}',
+      opts: ['neg', 'pos', '0', 'equal'],
+      answer: 'neg',
+      why: '"apple" comes before "banana" (\'a\' < \'b\'), so strcmp is negative → "neg".'
+    },
+    {
+      code: '#include <string.h>\nint main(void) {\n  char s[20] = "foot";\n  strcat(s, "ball");\n  printf("%s", s);\n}',
+      opts: ['football', 'ballfoot', 'foot', 'ball'],
+      answer: 'football',
+      why: 'strcat appends "ball" to the end of "foot" → "football".'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'cbtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.cbtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. strcmp returns 0 for equal; strcat appends src to dest.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>strcmp(a, b)</code> returns 0 when the strings are equal, so the check is <code>== 0</code>. Using <code>==</code> on the strings compares their addresses (almost never equal), and <code>strcmp</code> never returns 1 for equality.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> strcmp(a, b) == 0.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. <code>==</code> compares addresses, not text; <code>strcmp</code> returns <strong>0</strong> (not 1) when equal; and C has no <code>.equals</code>. The answer is <code>strcmp(a, b) == 0</code>.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

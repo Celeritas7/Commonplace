@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 7.2 — Inheritance Access · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Inheritance Mode Explorer */
+  .im-decl { background: var(--terminal); border-radius: 12px; padding: 14px 16px; font-family: var(--mono); font-size: 14px; color: #e0e7ff; text-align: center; margin-bottom: 12px; }
+  .im-decl .kw { color: #c4b5fd; } .im-decl .mode { color: #fde047; font-weight: 700; }
+  .im-modes { display: flex; gap: 8px; margin-bottom: 12px; }
+  .imbtn { flex: 1; background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .imbtn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .im-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+  .im-row { display: flex; align-items: center; gap: 12px; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 10px 16px; transition: all 0.25s var(--bouncy); }
+  .im-row.ok { border-color: var(--green); background: linear-gradient(135deg, #f0fdf4, white); }
+  .im-row.no { border-color: var(--red); background: linear-gradient(135deg, #fff1f2, white); }
+  .im-row .code { font-family: var(--mono); font-weight: 700; font-size: 13.5px; color: var(--ink); flex: 1; }
+  .im-row .who { font-size: 12px; color: var(--ink-dim); }
+  .im-row .verdict { font-weight: 700; font-size: 14px; }
+  .im-row.ok .verdict { color: #166534; } .im-row.no .verdict { color: var(--red); }
+  .iw-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .iw-msg b { color: var(--purple-deep); }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .po-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    The keyword before the base — public / protected / private — sets the inheritance mode. 🔑
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 7.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 48 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧬 PART VII &middot; INHERITANCE &amp; POLYMORPHISM</span>
+    <h1>Inheritance Access</h1>
+    <p class="hero-sub">When you wrote <code>: public Animal</code> in 7.1, that <code>public</code> was the <strong>inheritance mode</strong> — and it can also be <code>protected</code> or <code>private</code>. The mode controls how the base's members are <em>exposed</em> through the derived class. <code>public</code> is the everyday choice; here's the short overview of all three.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>One keyword, big effect 🧠</h2>
+
+    <div class="new-content">
+      The word right before the base class — <code>class Dog : <strong>public</strong> Animal</code> — isn't decoration. It's the <strong>inheritance access mode</strong>, and it decides how everyone <em>outside</em> sees the members <code>Dog</code> inherited from <code>Animal</code>. With <code>public</code> (the normal case), <code>Animal</code>'s public interface stays public on a <code>Dog</code>. Swap in <code>protected</code> or <code>private</code> and that inherited interface gets locked down. You'll almost always want <code>public</code> — but knowing what the alternatives do (and that the default is <em>private</em> for a <code>class</code>) saves you from baffling errors.
+    </div>
+
+    <p>This is a short, "good to know" lesson. The headline: use <code>public</code> for "is-a," and understand why.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> public inheritance</div>
+    <h2>The everyday one 🌳</h2>
+
+    <p>With <strong>public inheritance</strong>, the base's members keep their access level in the derived class — public stays public, protected stays protected. The inherited public interface is fully usable from outside:</p>
+
+    <pre class="code"><span class="kw">class</span> Animal { <span class="kw">public</span>: <span class="kw">void</span> breathe() {} };
+
+<span class="kw">class</span> Dog : <span class="hl">public</span> Animal { };
+
+Dog d;
+d.breathe();   <span class="cm">// ✅ breathe() is public on Dog too</span></pre>
+
+    <div class="new-content">
+      This is the mode that models a true "is-a" relationship — a <code>Dog</code> <em>is</em> an <code>Animal</code>, so it should offer everything an <code>Animal</code> offers. It's what 7.1 used and what you'll reach for the vast majority of the time. The other two modes restrict the inherited interface instead.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> protected &amp; private inheritance</div>
+    <h2>Locking down the interface 🔒</h2>
+
+    <p>The other two modes <em>shrink</em> how the inherited members are exposed. They're uncommon — think of them as "implemented in terms of," not "is-a":</p>
+
+    <table class="op-table">
+      <thead><tr><th>Inheritance mode</th><th>Base's public members become…</th><th>Usable from outside?</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">public</td><td class="mono plain">public in the derived class</td><td class="mono plain">yes</td></tr>
+        <tr><td class="mono">protected</td><td class="mono plain">protected in the derived class</td><td class="mono plain">no (but further-derived classes can)</td></tr>
+        <tr><td class="mono">private</td><td class="mono plain">private in the derived class</td><td class="mono plain">no (only inside the derived class)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      With <code>private</code> inheritance, the derived class can still <em>use</em> the base internally, but no one outside can call the inherited methods through it — which is much closer to composition than to "is-a." With <code>protected</code>, only further-derived classes get access. Both are niche; you'll rarely write them, but you'll now recognise them.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> What it doesn't change</div>
+    <h2>The base's privates stay private 🎯</h2>
+
+    <p>One thing the inheritance mode never affects: the base's own <code>private</code> members. Those are hidden from the derived class no matter which mode you use — exactly as in 7.1:</p>
+
+    <pre class="code"><span class="kw">class</span> Base {
+    <span class="kw">int</span> secret;          <span class="cm">// private to Base</span>
+<span class="kw">public</span>:
+    <span class="kw">int</span> value;
+};
+<span class="kw">class</span> D : <span class="kw">public</span> Base {
+    <span class="kw">void</span> f() {
+        value = 1;       <span class="cm">// ✅ public base member, fine</span>
+        <span class="cm">// secret = 1;       // ❌ still hidden — mode can't unlock it</span>
+    }
+};</pre>
+
+    <div class="new-content">
+      So keep two ideas separate. The base's <em>own</em> access specifiers (6.3) decide what a derived class can touch at all — and <code>private</code> base members are always off-limits. The <em>inheritance mode</em> only decides how the members the derived class <em>did</em> inherit are re-exposed to the outside world. The mode can restrict, never expand.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> The takeaway</div>
+    <h2>Default to public ⚖️</h2>
+
+    <p>The practical rule is short: <strong>use <code>public</code> inheritance for is-a relationships</strong> — which is nearly always what you want. Reach for <code>protected</code>/<code>private</code> inheritance only in special cases (and often composition is the clearer choice anyway, per 6.11):</p>
+
+    <div class="trap">
+      <h4>🚨 <code>class</code> defaults to <code>private</code> inheritance</h4>
+      <p>If you forget the keyword — <code>class Dog : Animal</code> — you get <strong>private</strong> inheritance, so the inherited public interface becomes private and <code>d.breathe()</code> won't compile from outside. This is a common, confusing beginner error. Always write the mode explicitly: <code>class Dog : public Animal</code>. (A <code>struct</code> defaults to <em>public</em> inheritance, mirroring its member-access default — but spell out <code>public</code> anyway so the intent is clear at a glance.)</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Inheritance Mode Explorer</div>
+    <h2>Who can still call it? 🔬</h2>
+
+    <p>Two tools. The <strong>Explorer</strong> lets you switch the inheritance mode and see who can call <code>Animal</code>'s public <code>info()</code> through <code>Dog</code> — outside code, or a further-derived class. <strong>Predict the Output</strong> tests the modes and defaults.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🔑 Inheritance Mode Explorer</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="im">Mode Explorer</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- MODE EXPLORER -->
+      <div class="tab-panel active" id="tab-im">
+        <div class="im-decl">class Dog : <span class="mode" id="imMode">public</span> Animal { };&nbsp;&nbsp;<span style="color:#818cf8;font-style:italic">// Animal has a public info()</span></div>
+        <div class="im-modes" id="imModes"></div>
+        <div class="im-rows" id="imRows"></div>
+        <div class="iw-msg" id="imMsg">Pick an inheritance mode and see who can still call the inherited <code>info()</code> — outside code, or a further-derived class.</div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="out-btns" id="poBtns"></div>
+        <div class="po-fb" id="poFb">What does this program print (or does it compile)?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does the inheritance mode (<code>public</code> / <code>protected</code> / <code>private</code>) control?
+      </div>
+      <button class="opt" data-correct="true"><span>How the base class's members are <strong>exposed</strong> through the derived class (e.g. <code>public</code> inheritance keeps the base's public interface public)</span></button>
+      <button class="opt" data-correct="false"><span>Whether the derived class can see the base's <em>private</em> members</span></button>
+      <button class="opt" data-correct="false"><span>The order constructors run in</span></button>
+      <button class="opt" data-correct="false"><span>Whether inheritance is allowed at all</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: it can only <em>restrict</em> the inherited interface — it never unlocks the base's private members.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔑</div>
+      <div class="mistake-body">
+        <strong>Forgetting the keyword (class default = private)</strong>
+        <small><code>class D : Base</code> is <em>private</em> inheritance, which hides the base's interface. For an is-a relationship, always write <code>: public Base</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔐</div>
+      <div class="mistake-body">
+        <strong>Thinking the mode unlocks the base's privates</strong>
+        <small>It never does. The base's <code>private</code> members stay hidden from the derived class regardless of mode. The mode only re-exposes the members that <em>were</em> inherited.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🤔</div>
+      <div class="mistake-body">
+        <strong>Reaching for private/protected inheritance casually</strong>
+        <small>They're niche ("implemented-in-terms-of"). For is-a use <code>public</code>; for reuse without is-a, composition (6.11) is usually clearer.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Public works.</strong> Write <code>struct Base { void hi(); }</code> and <code>struct D : public Base { }</code>. Call <code>d.hi()</code> from <code>main</code> — it compiles, because the inherited interface stays public.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Private blocks it.</strong> Change to <code>class D : private Base { }</code> and try calling the inherited method from <code>main</code> — read the compiler error. Then switch back to <code>public</code> and watch it compile.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Implemented-in-terms-of.</strong> With <code>private</code> inheritance, add a public method in <code>D</code> that internally calls the base's method. <code>D</code> uses the base but doesn't expose it — the "implemented-in-terms-of" idea private inheritance is for.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>The inheritance mode</strong> (the keyword before the base) controls how the base's members are <em>exposed</em> through the derived class.</li>
+        <li><strong><code>public</code> inheritance</strong> keeps the base's public/protected members public/protected — models "is-a" (the everyday choice).</li>
+        <li><strong><code>protected</code>/<code>private</code> inheritance</strong> make them protected/private in the derived class — rare, "implemented-in-terms-of," not is-a.</li>
+        <li><strong>The mode never grants access to the base's <code>private</code> members</strong> (always hidden).</li>
+        <li><strong>Default: <code>class</code> → private, <code>struct</code> → public</strong> — always write the keyword (usually <code>public</code>).</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_7_1.html" class="nav-btn prev">
+      <small>← Previous</small>
+      7.1  Single inheritance
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      7.3  Virtual functions
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "The keyword before the base (public/protected/private) is the inheritance MODE. 🧠",
+    "public inheritance: base's public stays public → models is-a. The normal one. 🌳",
+    "protected/private inheritance shrink the base's exposed access. Rare. 🔒",
+    "The mode controls EXPOSURE — it never reveals the base's private members. 🎯",
+    "Use public for is-a; private/protected are niche (prefer composition). ⚖️",
+    "Toggle the mode — see who can still call the inherited method! 🔬",
+    "Inheritance mode = how the base's members are exposed via the derived class. 🎯",
+    "public=is-a (default it!), protected/private rare, private base stays hidden. 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 7.2 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Inheritance Mode Explorer =====
+  let imTouched = false;
+  const imMode = document.getElementById('imMode');
+  const imModes = document.getElementById('imModes');
+  const imRows = document.getElementById('imRows');
+  const imMsg = document.getElementById('imMsg');
+  const MODES = {
+    public: { outside: true, derived: true,
+      msg: '<b>public inheritance</b> — the inherited <code>info()</code> stays public, so <em>everyone</em> can call it: outside code AND a further-derived class. This models "is-a." The everyday choice.' },
+    protected: { outside: false, derived: true,
+      msg: '<b>protected inheritance</b> — the inherited <code>info()</code> becomes protected, so outside code <em>can\'t</em> call it, but a further-derived class still can. Uncommon.' },
+    private: { outside: false, derived: false,
+      msg: '<b>private inheritance</b> — the inherited <code>info()</code> becomes private to <code>Dog</code>: only <code>Dog</code>\'s own methods can use it, not outside code and not further-derived classes. Closer to composition than is-a. Rare.' }
+  };
+  imModes.innerHTML = Object.keys(MODES).map((m, i) => `<button class="imbtn${i === 0 ? ' active' : ''}" data-m="${m}">${m}</button>`).join('');
+  function renderIM(m) {
+    const d = MODES[m];
+    imMode.textContent = m;
+    imRows.innerHTML =
+      `<div class="im-row ${d.outside ? 'ok' : 'no'}"><span class="code">d.info();</span><span class="who">from outside (main)</span><span class="verdict">${d.outside ? '✓ ok' : '✗ error'}</span></div>` +
+      `<div class="im-row ${d.derived ? 'ok' : 'no'}"><span class="code">info();</span><span class="who">inside class E : public Dog</span><span class="verdict">${d.derived ? '✓ ok' : '✗ error'}</span></div>`;
+    imMsg.innerHTML = d.msg;
+  }
+  imModes.querySelectorAll('.imbtn').forEach(b => b.addEventListener('click', (e) => {
+    imModes.querySelectorAll('.imbtn').forEach(x => x.classList.toggle('active', x === b));
+    renderIM(b.dataset.m);
+    if (!imTouched) { imTouched = true; addXP(5, e.clientX, e.clientY, '🔑 Switching modes! +5 XP'); }
+  }));
+  renderIM('public');
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'struct Base { int v() { return 1; } };\nstruct D : public Base { };\nint main() { D d; std::cout << d.v(); }',
+      opts: ['1', 'error', '0', 'D'],
+      answer: '1',
+      why: 'public inheritance keeps v() public on D, so d.v() works → 1.'
+    },
+    {
+      code: 'class Base { public: int v() { return 1; } };\nclass D : private Base { };\nint main() { D d; std::cout << d.v(); }',
+      opts: ['error', '1', '0', 'nothing'],
+      answer: 'error',
+      why: 'private inheritance makes the inherited v() private in D — d.v() from outside is a compile error.'
+    },
+    {
+      code: 'class Base { public: int v() { return 1; } };\nclass D : Base { };   // no keyword → private\nint main() { D d; std::cout << d.v(); }',
+      opts: ['error', '1', '0', 'nothing'],
+      answer: 'error',
+      why: 'class defaults to private inheritance, so v() is private in D — d.v() won\'t compile.'
+    },
+    {
+      code: 'struct Base { int v() { return 1; } };\nstruct D : Base { };   // struct → public\nint main() { D d; std::cout << d.v(); }',
+      opts: ['1', 'error', '0', 'D'],
+      answer: '1',
+      why: 'struct defaults to public inheritance, so v() stays public → prints 1.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print (or does it compile)?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'obtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.obtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. public keeps the interface public; private (and the class default) hide it; struct defaults to public.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The inheritance mode sets how the base\'s members are <em>exposed</em> through the derived class. <code>public</code> keeps the interface public (is-a); <code>protected</code>/<code>private</code> restrict it. It can only restrict — never unlock the base\'s privates.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> It controls how the base\'s members are exposed.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. It doesn\'t reveal the base\'s private members, doesn\'t change construction order, and doesn\'t enable/disable inheritance — it controls how inherited members are exposed.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

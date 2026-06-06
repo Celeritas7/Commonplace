@@ -460,6 +460,45 @@ def build_breadcrumbs(rel: Path, home_label: str) -> str:
     return sep.join(rendered)
 
 
+# --------------------------------------------------------------------------- #
+# Reader-mode cleanup
+#
+# The v2 source markdown is the Pass-1 transcription audit trail — it includes
+# scaffolding the reader on the train doesn't need:
+#   - "## Open Questions / Uncertainty" section at the bottom
+#   - inline "[?]" uncertainty markers
+#   - "[MISFILED CONTENT — preserved in place]" blockquote callouts
+# Reader mode is on by default. Pass --raw to keep everything.
+# --------------------------------------------------------------------------- #
+
+READER_MODE = True
+
+_OPEN_QUESTIONS_RE = re.compile(
+    r"\n+(?:---\s*\n+)?##\s+Open\s+Questions[\s\S]*$",
+    re.IGNORECASE,
+)
+_MISFILED_RE = re.compile(
+    r"""
+    (?:^---[ \t]*\n+)?              # optional preceding horizontal rule
+    ^>\s*\*\*`?\[MISFILED\sCONTENT  # blockquote opener with the marker
+    [^\n]*                          # rest of the opening line
+    (?:\n>[^\n]*)*                  # remaining blockquote lines (incl. empty `>`)
+    \n*                             # any blank lines after
+    (?:^---[ \t]*\n+)?              # optional trailing horizontal rule
+    """,
+    re.MULTILINE | re.VERBOSE,
+)
+_INLINE_UNCERTAINTY_RE = re.compile(r"\s*\[\?\]\s*")
+
+
+def apply_reader_mode(md_text: str) -> str:
+    """Strip Pass-1 transcription scaffolding for clean reading."""
+    md_text = _OPEN_QUESTIONS_RE.sub("\n", md_text)
+    md_text = _MISFILED_RE.sub("", md_text)
+    md_text = _INLINE_UNCERTAINTY_RE.sub(" ", md_text)
+    return md_text
+
+
 def emit_page(mdfile: MdFile, output_root: Path) -> Path:
     """Render one .md file to .html, return the output path."""
     src_text = mdfile.src.read_text(encoding="utf-8")
@@ -467,6 +506,9 @@ def emit_page(mdfile: MdFile, output_root: Path) -> Path:
     # Strip the leading H1 + Source-images blockquote (we render those in the hero)
     body_text = re.sub(r"^#\s+.+?\n", "", src_text, count=1, flags=re.M)
     body_text = re.sub(r"^>\s*\*\*Source images:\*\*[^\n]*\n", "", body_text, count=1, flags=re.M)
+
+    if READER_MODE:
+        body_text = apply_reader_mode(body_text)
 
     body_html = render_markdown(body_text)
     body_html = rewrite_links(body_html)
@@ -680,7 +722,16 @@ def walk_and_emit(node: FolderNode, output_root: Path, is_subject_root: bool, co
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="(reserved — currently always rebuilds)")
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="Keep the Pass-1 transcription scaffolding (Open Questions, [?] markers, MISFILED callouts). "
+             "Default is reader mode: those are stripped.",
+    )
     args = parser.parse_args()
+
+    global READER_MODE
+    READER_MODE = not args.raw
 
     source_root: Path = CONFIG["source_root"]
     output_root: Path = CONFIG["output_root"]
@@ -691,6 +742,7 @@ def main() -> int:
 
     output_root.mkdir(parents=True, exist_ok=True)
 
+    print(f"Mode: {'reader (cleaned)' if READER_MODE else 'raw (full transcription)'}")
     print(f"Scanning {source_root} ...")
     tree = scan(source_root, source_root)
     total = count_files(tree)
