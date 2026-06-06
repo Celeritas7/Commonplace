@@ -123,7 +123,7 @@
   <!-- Editor panel -->
   <div class="panel">
     <div class="panel-head">
-      <span class="ttl">🧪 Your code <span class="hint" id="ver-hint">(g++ 10.2.0)</span></span>
+      <span class="ttl">🧪 Your code <span class="hint" id="ver-hint">(Judge0 CE · g++)</span></span>
       <span class="spacer"></span>
       <button class="btn btn-ghost btn-sm" id="reset-btn" type="button">↺ Reset</button>
     </div>
@@ -179,8 +179,9 @@
 /* ---------- config ---------- */
 var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
 var SUPABASE_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
-var PISTON = "https://emkc.org/api/v2/piston";
-var CPP_VERSION = "10.2.0"; // refined from /runtimes on load
+// Code execution goes through the Supabase edge function `code-exec`,
+// which proxies to Judge0 CE (the RapidAPI key stays server-side). Judge0
+// CE uses a fixed compiler, so there is no runtime version to refine.
 
 var DEFAULT_CODE =
 "#include <iostream>\n" +
@@ -251,13 +252,6 @@ sb.auth.onAuthStateChange(function(_event, session){
 });
 
 /* ---------- run ---------- */
-function refineVersion(){
-  fetch(PISTON + "/runtimes").then(function(r){return r.json();}).then(function(list){
-    var cpp = list.find(function(x){ return x.language==="c++"; });
-    if(cpp && cpp.version){ CPP_VERSION = cpp.version; $("ver-hint").textContent = "(g++ "+CPP_VERSION+")"; }
-  }).catch(function(){});
-}
-
 function runCode(){
   var code = cm.getValue();
   var stdin = $("stdin").value || "";
@@ -267,47 +261,71 @@ function runCode(){
   $("run-btn").disabled = true;
   var t0 = Date.now();
 
-  fetch(PISTON + "/execute", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      language: "c++", version: CPP_VERSION,
-      files: [{ name: "main.cpp", content: code }],
-      stdin: stdin, compile_timeout: 10000, run_timeout: 6000
-    })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){
+  // Execution requires a signed-in user (the edge function enforces this to
+  // protect the RapidAPI quota); guard here so unsigned users get a clear
+  // message instead of an opaque 401.
+  if(!currentUser){
+    setStatus("chip-err","error");
+    $("term").innerHTML = '<span class="err">Sign in (top right) to run code — execution now requires an account.</span>';
+    $("run-btn").disabled = false;
+    return;
+  }
+
+  function showRunError(msg){
+    setStatus("chip-err","error");
+    $("term").innerHTML = '<span class="err">'+esc(msg)+'</span>';
+  }
+
+  // code-exec proxies to Judge0 CE and returns already-decoded text:
+  // { status:{id,description}, stdout, stderr, compile_output, exit_code, ... }
+  sb.functions.invoke("code-exec", { body: { source_code: code, stdin: stdin } })
+  .then(function(res){
     var dur = Date.now() - t0;
-    if(d.message){ // piston-level error
-      setStatus("chip-err","error");
-      $("term").innerHTML = '<span class="err">'+esc(d.message)+'</span>';
+    if(res.error){
+      // supabase-js carries the function's HTTP error body in error.context
+      var ctx = res.error.context;
+      if(ctx && typeof ctx.json === "function"){
+        return ctx.json().then(function(b){
+          showRunError((b && b.error) || res.error.message || "Execution failed.");
+        }, function(){ showRunError(res.error.message || "Execution failed."); });
+      }
+      showRunError(res.error.message || "Execution failed.");
       return;
     }
-    var comp = d.compile || {};
-    var run = d.run || {};
-    var compileFailed = comp && typeof comp.code === "number" && comp.code !== 0;
-    var runFailed = run && typeof run.code === "number" && run.code !== 0;
-    var hadError = compileFailed || runFailed;
+    var d = res.data || {};
+    if(d.error){ showRunError(d.error); return; }
+
+    var status = d.status || {};
+    var sid = status.id;
+    var compileFailed = sid === 6;           // Judge0: Compilation Error
+    var success = sid === 3;                  // Judge0: Accepted
+    var hadError = !success;
 
     // render terminal
     var html = "";
-    if(comp.stderr && comp.stderr.trim()){ html += '<span class="err">'+esc(comp.stderr)+'</span>\n'; }
-    if(run.stdout){ html += esc(run.stdout); }
-    if(run.stderr && run.stderr.trim()){ html += '<span class="err">'+esc(run.stderr)+'</span>'; }
+    if(compileFailed && d.compile_output && d.compile_output.trim()){
+      html += '<span class="err">'+esc(d.compile_output)+'</span>\n';
+    }
+    if(d.stdout){ html += esc(d.stdout); }
+    if(d.stderr && d.stderr.trim()){ html += '<span class="err">'+esc(d.stderr)+'</span>'; }
+    if(!success && !compileFailed && status.description){
+      if(html && html.charAt(html.length-1) !== "\n"){ html += "\n"; }
+      html += '<span class="err">'+esc(status.description)+'</span>';
+    }
     if(!html.trim()){ html = '<span class="meta">(no output)</span>'; }
-    html += '\n<span class="meta">— exit '+(run.code!=null?run.code:"?")+' · '+dur+' ms</span>';
+    html += '\n<span class="meta">— exit '+(d.exit_code!=null?d.exit_code:"?")+' · '+dur+' ms</span>';
     $("term").innerHTML = html;
     setStatus(hadError ? "chip-err" : "chip-ok", hadError ? (compileFailed?"compile error":"runtime error") : "ran clean");
 
-    // persist
-    var reason = compileFailed ? "compile_error" : (runFailed ? "runtime_error" : null);
+    // persist — same commonplace_attempts columns as before; Judge0's
+    // compile_output/stderr are folded into the existing stderr column.
+    var reason = compileFailed ? "compile_error" : (hadError ? "runtime_error" : null);
     saveAttempt({
       code: code,
-      stdout: run.stdout || "",
-      stderr: ((comp.stderr||"") + (run.stderr? ("\n"+run.stderr):"")).trim() || null,
-      exit_code: (run.code!=null? run.code : null),
-      passed: !hadError,
+      stdout: d.stdout || "",
+      stderr: ((d.compile_output||"") + (d.stderr? ("\n"+d.stderr):"")).trim() || null,
+      exit_code: (d.exit_code!=null? d.exit_code : null),
+      passed: success,
       duration_ms: dur
     }, reason);
   })
@@ -419,7 +437,6 @@ $("refresh-m").onclick = loadMistakes;
 cm.setOption("extraKeys", { "Cmd-Enter": runCode, "Ctrl-Enter": runCode });
 
 renderAuth();
-refineVersion();
 sb.auth.getSession().then(function(res){
   currentUser = res.data.session ? res.data.session.user : null;
   renderAuth();
