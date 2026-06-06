@@ -97,6 +97,52 @@
   .m-actions { display: flex; flex-direction: column; gap: 6px; }
   .btn-sm { font-size: 12.5px; padding: 7px 12px; border-radius: 11px; }
 
+  /* exercises */
+  .ex-body { padding: 6px 18px 18px; }
+  .ex-empty { font-size: 14px; color: var(--ink-dim); padding: 12px 0; }
+  .ex-row { border: 1.5px solid #ece7f6; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .ex-row.active { border-color: var(--purple); box-shadow: 0 0 0 2px rgba(139,92,246,.18); }
+  .ex-row .ex-main { flex: 1; min-width: 220px; }
+  .ex-title { font-weight: 700; font-size: 14.5px; color: var(--ink); }
+  .ex-prompt { font-size: 13px; color: var(--ink-soft); margin-top: 6px; white-space: pre-wrap; }
+  .ex-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 5px; }
+  .chip-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 9px; background: #f1ecfb; color: var(--purple-deep); }
+  .badge-diff { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9px; }
+  .d-easy { background: rgba(34,197,94,.15); color: #15803d; }
+  .d-medium { background: rgba(245,158,11,.18); color: #b45309; }
+  .d-stretch { background: rgba(236,72,153,.15); color: #be185d; }
+  .badge-mode { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9px; }
+  .mode-auto { background: rgba(6,182,212,.16); color: #0e7490; }
+  .mode-self { background: rgba(139,92,246,.15); color: var(--purple-deep); }
+  .ex-actions { display: flex; flex-direction: column; gap: 6px; }
+  .ex-toggle { cursor: pointer; user-select: none; }
+  .ex-caret { font-size: 12px; color: var(--ink-dim); margin-left: 2px; }
+  .ex-body.collapsed { display: none; }
+  .ex-change { background: none; border: none; padding: 0; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; text-decoration: underline; }
+
+  /* active-exercise banner (in the editor panel) — sticky so the title stays in view while you scroll the code */
+  .active-ex { display: none; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 18px; background: #f6f2fe; border-bottom: 1px solid #ddd2f3; font-size: 13px; position: sticky; top: 0; z-index: 5; box-shadow: 0 3px 8px rgba(109,40,217,.07); }
+  .active-ex.on { display: flex; }
+  .active-ex .ae-t { font-weight: 700; color: var(--purple-deep); }
+  .active-ex .ae-title { cursor: pointer; user-select: none; }
+  .ae-prompt { display: none; flex-basis: 100%; width: 100%; margin-top: 6px; font-size: 13px; color: var(--ink-soft); white-space: pre-wrap; background: #fff; border: 1px solid #ece7f6; border-radius: 10px; padding: 10px 12px; max-height: 200px; overflow: auto; }
+  .ae-prompt.on { display: block; }
+  /* the panel clips with overflow:hidden, which would break sticky — let the editor panel escape that clip */
+  #editor-panel { overflow: visible; }
+  #editor-panel .panel-head { border-radius: 18px 18px 0 0; }
+
+  /* grade (in the output panel) */
+  .grade { margin-top: 12px; }
+  .verdict { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 12px; }
+  .v-pass { background: rgba(34,197,94,.16); color: #15803d; }
+  .v-fail { background: rgba(239,68,68,.15); color: #b91c1c; }
+  .self-grade { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+  .self-grade .sg-q { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-right: 4px; }
+  .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .diff-grid h5 { margin: 0 0 4px; font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-dim); }
+  .diff-grid pre { font-family: var(--mono); font-size: 12px; background: #f7f5fc; border-radius: 10px; padding: 8px 10px; margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 160px; overflow: auto; }
+  @media (max-width: 640px) { .diff-grid { grid-template-columns: 1fr; } }
+
   .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; padding: 11px 20px; border-radius: 14px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: all .35s var(--bouncy); z-index: 100; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
@@ -120,13 +166,26 @@
     <p>Type C++ below and hit Run — it compiles in the cloud and shows you the output. Sign in once and every attempt is saved; anything that fails is filed under "Mistakes to redo" so you can practise it again later.</p>
   </div>
 
+  <!-- Exercises panel -->
+  <div class="panel" id="ex-panel">
+    <div class="panel-head">
+      <span class="ttl ex-toggle" id="ex-toggle" role="button" tabindex="0" title="Show / hide the problem list">🎯 Practice problems <span class="hint" id="ex-count"></span> <span class="ex-caret" id="ex-caret">▾</span></span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost btn-sm" id="refresh-ex" type="button">⟳ Refresh</button>
+    </div>
+    <div class="ex-body" id="exercises">
+      <div class="ex-empty">Sign in to load your practice problems.</div>
+    </div>
+  </div>
+
   <!-- Editor panel -->
-  <div class="panel">
+  <div class="panel" id="editor-panel">
     <div class="panel-head">
       <span class="ttl">🧪 Your code <span class="hint" id="ver-hint">(Judge0 CE · g++)</span></span>
       <span class="spacer"></span>
       <button class="btn btn-ghost btn-sm" id="reset-btn" type="button">↺ Reset</button>
     </div>
+    <div class="active-ex" id="active-ex"></div>
     <textarea id="code"></textarea>
     <details class="stdin">
       <summary>⌨ Program input (stdin) — optional</summary>
@@ -150,6 +209,7 @@
     <div class="out-wrap">
       <pre class="term" id="term">Run your code to see the output here.</pre>
       <div class="savenote" id="savenote"></div>
+      <div class="grade" id="grade"></div>
     </div>
   </div>
 
@@ -197,7 +257,12 @@ var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
 var currentUser = null;
-var lastAttemptId = null; // for "save as mistake"
+var lastAttemptId = null; // for "save as mistake" and self-grade
+var lastAttemptExerciseId = null; // exercise the last saved attempt was bound to (null = free play)
+var activeExercise = null; // selected exercise row, or null = Free play
+var lastTemplate = "";     // last text we loaded into the editor (overwrite guard)
+var exercises = [];        // cached commonplace_exercises rows
+var exCollapsed = false;   // is the practice-problem list folded away?
 
 /* ---------- editor ---------- */
 var cm = CodeMirror.fromTextArea(document.getElementById("code"), {
@@ -248,7 +313,7 @@ function sendMagicLink(){
 sb.auth.onAuthStateChange(function(_event, session){
   currentUser = session ? session.user : null;
   renderAuth();
-  if(currentUser){ loadMistakes(); } else { renderMistakes([]); }
+  if(currentUser){ loadMistakes(); loadExercises(); } else { renderMistakes([]); renderExercises([]); }
 });
 
 /* ---------- run ---------- */
@@ -258,6 +323,7 @@ function runCode(){
   setStatus("chip-run", "running…");
   $("term").innerHTML = '<span class="meta">Compiling &amp; running…</span>';
   $("savenote").textContent = "";
+  $("grade").innerHTML = "";
   $("run-btn").disabled = true;
   var t0 = Date.now();
 
@@ -317,17 +383,39 @@ function runCode(){
     $("term").innerHTML = html;
     setStatus(hadError ? "chip-err" : "chip-ok", hadError ? (compileFailed?"compile error":"runtime error") : "ran clean");
 
-    // persist — same commonplace_attempts columns as before; Judge0's
-    // compile_output/stderr are folded into the existing stderr column.
+    // grade: branch on the active exercise's expected_output
+    var exp = (activeExercise && activeExercise.expected_output != null && String(activeExercise.expected_output).length)
+      ? String(activeExercise.expected_output) : null;
+    var mode = !activeExercise ? "free" : (exp != null ? "auto" : "self");
+    var autoPass = (mode === "auto") ? (success && outputsMatch(d.stdout || "", exp)) : null;
+    // passed: Free play → Judge0 success; auto → output match; self → null until tapped
+    var passedToSave = (mode === "free") ? success : (mode === "auto" ? autoPass : null);
+
+    // persist — same commonplace_attempts columns as before, now stamped with
+    // the active exercise; Judge0's compile_output/stderr fold into stderr.
     var reason = compileFailed ? "compile_error" : (hadError ? "runtime_error" : null);
-    saveAttempt({
+    var saved = saveAttempt({
+      exercise_id: activeExercise ? activeExercise.id : null,
+      subject: activeExercise ? (activeExercise.subject || "cpp") : "cpp",
+      language: activeExercise ? (activeExercise.language || "cpp") : "cpp",
       code: code,
       stdout: d.stdout || "",
       stderr: ((d.compile_output||"") + (d.stderr? ("\n"+d.stderr):"")).trim() || null,
       exit_code: (d.exit_code!=null? d.exit_code : null),
-      passed: success,
+      passed: passedToSave,
       duration_ms: dur
     }, reason);
+
+    showGrade(mode, d, autoPass, exp);
+
+    // Phase 4: in auto mode the verdict also drives the redo queue (self mode is handled on button tap)
+    if(mode === "auto" && saved && saved.then){
+      saved.then(function(){
+        if(!lastAttemptId || !lastAttemptExerciseId){ return; }
+        if(autoPass){ resolveExerciseMistake(lastAttemptExerciseId); }
+        else { openExerciseMistake(lastAttemptExerciseId, lastAttemptId, "wrong_output"); }
+      });
+    }
   })
   .catch(function(e){
     setStatus("chip-err","error");
@@ -342,14 +430,18 @@ function saveAttempt(row, mistakeReason){
   if(!currentUser){
     note.className = "savenote warn";
     note.textContent = "⚠ Not signed in — this attempt was not saved. Sign in (top right) to keep your history.";
-    lastAttemptId = null;
+    lastAttemptId = null; lastAttemptExerciseId = null;
     return;
   }
-  row.subject = "cpp"; row.language = "cpp"; row.user_id = currentUser.id;
-  sb.from("commonplace_attempts").insert(row).select("id").single()
+  row.subject = row.subject || "cpp";
+  row.language = row.language || "cpp";
+  if(!row.hasOwnProperty("exercise_id")){ row.exercise_id = activeExercise ? activeExercise.id : null; }
+  row.user_id = currentUser.id;
+  return sb.from("commonplace_attempts").insert(row).select("id").single()
     .then(function(res){
       if(res.error){ note.className="savenote err"; note.textContent="Could not save attempt: "+res.error.message; return; }
       lastAttemptId = res.data.id;
+      lastAttemptExerciseId = row.exercise_id || null;
       if(mistakeReason){
         return sb.from("commonplace_mistakes").insert({
           user_id: currentUser.id, attempt_id: lastAttemptId, subject: "cpp", reason: mistakeReason
@@ -362,6 +454,34 @@ function saveAttempt(row, mistakeReason){
       }
     })
     .catch(function(e){ note.className="savenote err"; note.textContent="Save failed: "+e.message; });
+}
+
+/* ---------- exercise ↔ redo-queue links (Phase 4) ---------- */
+// One open mistake per exercise: refresh the existing unresolved row if present, else insert.
+function openExerciseMistake(exId, attemptId, reason){
+  if(!currentUser || !exId || !attemptId){ return; }
+  sb.from("commonplace_mistakes").select("id")
+    .eq("exercise_id", exId).eq("subject","cpp").eq("resolved", false).limit(1)
+    .then(function(res){
+      if(res.error){ return; }
+      var existing = (res.data && res.data[0]) ? res.data[0].id : null;
+      if(existing){
+        return sb.from("commonplace_mistakes")
+          .update({ attempt_id: attemptId, reason: reason, created_at: new Date().toISOString() })
+          .eq("id", existing).then(function(){ loadMistakes(); });
+      }
+      return sb.from("commonplace_mistakes")
+        .insert({ user_id: currentUser.id, attempt_id: attemptId, exercise_id: exId, subject: "cpp", reason: reason })
+        .then(function(){ loadMistakes(); });
+    });
+}
+// Passing a bound exercise clears its open mistake.
+function resolveExerciseMistake(exId){
+  if(!currentUser || !exId){ return; }
+  sb.from("commonplace_mistakes")
+    .update({ resolved: true, resolved_at: new Date().toISOString() })
+    .eq("exercise_id", exId).eq("subject","cpp").eq("resolved", false)
+    .then(function(res){ if(!res.error){ loadMistakes(); } });
 }
 
 function saveAsMistake(){
@@ -384,7 +504,7 @@ function saveAsMistake(){
 function loadMistakes(){
   if(!currentUser){ renderMistakes([]); return; }
   sb.from("commonplace_mistakes")
-    .select("id, reason, created_at, attempt_id, commonplace_attempts(code, stdout, stderr)")
+    .select("id, reason, created_at, attempt_id, exercise_id, commonplace_attempts(code, stdout, stderr)")
     .eq("subject","cpp").eq("resolved", false)
     .order("created_at", { ascending:false })
     .then(function(res){
@@ -398,27 +518,42 @@ function renderMistakes(rows){
   $("m-count").textContent = currentUser ? ("· "+rows.length+" open") : "";
   if(!currentUser){ box.innerHTML = '<div class="m-empty">Sign in to see and practise your saved mistakes.</div>'; return; }
   if(!rows.length){ box.innerHTML = '<div class="m-empty">Nothing to redo right now — clean slate! 🎉</div>'; return; }
-  var reasonMap = { compile_error:["Compile error","r-compile"], runtime_error:["Runtime error","r-runtime"], self_marked:["Marked to redo","r-self"] };
+  var reasonMap = { compile_error:["Compile error","r-compile"], runtime_error:["Runtime error","r-runtime"], self_marked:["Marked to redo","r-self"], needs_work:["Needs work","r-self"], wrong_output:["Wrong output","r-compile"] };
   box.innerHTML = rows.map(function(m){
     var att = m.commonplace_attempts || {};
     var code = att.code || "";
     var snip = code.split("\n").slice(0,5).join("\n");
     var rm = reasonMap[m.reason] || ["Mistake","r-self"];
     var dt = new Date(m.created_at).toLocaleString();
+    var exId = m.exercise_id || null;
+    var ex = exId ? exercises.filter(function(e){ return e.id === exId; })[0] : null;
+    var titleLine = ex ? '<div style="font-weight:700;color:var(--ink);font-size:13px;margin:2px 0 4px">'+esc(ex.title||"Exercise")+'</div>' : '';
+    // exercise-linked rows reload the problem (like the picker); free-play / compile-error rows keep loading the saved code
+    var primaryBtn = ex
+      ? '<button class="btn btn-primary btn-sm m-redo" data-ex="'+esc(exId)+'">↻ Redo problem</button>'
+      : '<button class="btn btn-primary btn-sm m-load" data-code="'+encodeURIComponent(code)+'">↥ Load &amp; redo</button>';
     return '<div class="m-row" data-id="'+m.id+'">' +
       '<div class="m-main">' +
         '<span class="m-reason '+rm[1]+'">'+rm[0]+'</span>' +
+        titleLine +
         '<div class="m-snip">'+esc(snip)+(code.split("\n").length>5?"\n…":"")+'</div>' +
         '<div class="m-date">'+esc(dt)+'</div>' +
       '</div>' +
       '<div class="m-actions">' +
-        '<button class="btn btn-primary btn-sm m-load" data-code="'+encodeURIComponent(code)+'">↥ Load &amp; redo</button>' +
+        primaryBtn +
         '<button class="btn btn-ghost btn-sm m-solve">✓ Mark solved</button>' +
       '</div>' +
     '</div>';
   }).join("");
   Array.prototype.forEach.call(box.querySelectorAll(".m-load"), function(b){
     b.onclick = function(){ cm.setValue(decodeURIComponent(b.getAttribute("data-code"))); window.scrollTo({top:0,behavior:"smooth"}); toast("Loaded into the editor — give it another go!"); };
+  });
+  Array.prototype.forEach.call(box.querySelectorAll(".m-redo"), function(b){
+    b.onclick = function(){
+      var id = b.getAttribute("data-ex");
+      var ex = exercises.filter(function(e){ return e.id === id; })[0];
+      if(ex){ loadIntoEditor(ex); } else { toast("Couldn't find that problem — hit ⟳ Refresh on the problems list"); }
+    };
   });
   Array.prototype.forEach.call(box.querySelectorAll(".m-solve"), function(b){
     b.onclick = function(){
@@ -429,18 +564,185 @@ function renderMistakes(rows){
   });
 }
 
+/* ---------- exercises: picker ---------- */
+function loadExercises(){
+  if(!currentUser){ renderExercises([]); return; }
+  sb.from("commonplace_exercises").select("*").eq("subject","cpp").order("order_index")
+    .then(function(res){
+      if(res.error){ $("exercises").innerHTML = '<div class="ex-empty">Could not load problems: '+esc(res.error.message)+'</div>'; return; }
+      exercises = res.data || [];
+      renderExercises(exercises);
+    });
+}
+function isAuto(ex){ return !!(ex && ex.expected_output != null && String(ex.expected_output).length); }
+function renderExercises(rows){
+  var box = $("exercises");
+  $("ex-count").textContent = currentUser ? ("· "+rows.length) : "";
+  if(!currentUser){ box.innerHTML = '<div class="ex-empty">Sign in to load your practice problems.</div>'; return; }
+  var freeRow =
+    '<div class="ex-row" data-id="__free">' +
+      '<div class="ex-main">' +
+        '<div class="ex-title">🎈 Free play</div>' +
+        '<div class="ex-prompt">Write anything — runs won\'t be bound to an exercise.</div>' +
+      '</div>' +
+      '<div class="ex-actions"><button class="btn btn-ghost btn-sm ex-free">Use free play</button></div>' +
+    '</div>';
+  var cards = rows.map(function(ex){
+    var auto = isAuto(ex);
+    var diff = (ex.difficulty||"").toLowerCase();
+    var diffBadge = diff ? '<span class="badge-diff d-'+esc(diff)+'">'+esc(diff)+'</span>' : '';
+    var modeBadge = '<span class="badge-mode '+(auto?"mode-auto":"mode-self")+'">'+(auto?"auto":"self")+'</span>';
+    var tags = (ex.tags||[]).map(function(t){ return '<span class="chip-tag">'+esc(t)+'</span>'; }).join("");
+    return '<div class="ex-row" data-id="'+esc(ex.id)+'">' +
+      '<div class="ex-main">' +
+        '<div class="ex-title">'+esc(ex.title||"Untitled")+'</div>' +
+        '<div class="ex-meta">'+diffBadge+modeBadge+tags+'</div>' +
+        '<div class="ex-prompt">'+esc(ex.prompt||"")+'</div>' +
+      '</div>' +
+      '<div class="ex-actions"><button class="btn btn-primary btn-sm ex-load">↥ Load into editor</button></div>' +
+    '</div>';
+  }).join("");
+  box.innerHTML = freeRow + (rows.length ? cards : '<div class="ex-empty">No practice problems yet.</div>');
+  Array.prototype.forEach.call(box.querySelectorAll(".ex-load"), function(b){
+    b.onclick = function(){
+      var id = b.closest(".ex-row").getAttribute("data-id");
+      var ex = exercises.filter(function(e){ return e.id === id; })[0];
+      if(ex){ loadIntoEditor(ex); }
+    };
+  });
+  var fb = box.querySelector(".ex-free");
+  if(fb){ fb.onclick = function(){ setActive(null); toast("Free play — runs won't be bound to an exercise"); }; }
+  highlightActive();
+}
+
+/* ---------- exercises: load into editor ---------- */
+function buildTemplate(ex){
+  var promptLines = String(ex.prompt||"").split("\n");
+  var banner = "/*\n * " + (ex.title||"Exercise") + "\n *\n" +
+    promptLines.map(function(l){ return " * " + l; }).join("\n") + "\n */\n\n";
+  var body = (ex.starter_code && ex.starter_code.trim())
+    ? ex.starter_code
+    : "#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}\n";
+  return banner + body;
+}
+function loadIntoEditor(ex){
+  var tpl = buildTemplate(ex);
+  var cur = cm.getValue();
+  // overwrite guard: ask only if there's real, non-template work in the editor
+  var dirty = cur.trim() !== "" && cur !== lastTemplate && cur !== DEFAULT_CODE;
+  if(dirty && !window.confirm("Replace your current code with this problem?\nYour unsaved code will be lost.")){ return; }
+  cm.setValue(tpl);
+  lastTemplate = tpl;
+  setActive(ex);
+  $("grade").innerHTML = "";
+  $("term").textContent = "Run your code to see the output here.";
+  setStatus("chip-idle","idle");
+  $("savenote").textContent = "";
+  setExCollapsed(true);   // fold the list away so the editor is reachable
+  var ep = document.getElementById("editor-panel");
+  if(ep){ ep.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  toast("Loaded — solve it and hit Run");
+}
+function setActive(ex){
+  activeExercise = ex || null;
+  var bar = $("active-ex");
+  if(!activeExercise){ bar.className = "active-ex"; bar.innerHTML = ""; setExCollapsed(false); highlightActive(); return; }
+  var auto = isAuto(activeExercise);
+  bar.className = "active-ex on";
+  bar.innerHTML =
+    '<span class="ae-t ae-title" id="ae-title" role="button" tabindex="0" title="Show / hide the full problem">Working on: '+esc(activeExercise.title||"Exercise")+' <span class="ex-caret" id="ae-caret">▸</span></span>' +
+    '<span class="badge-mode '+(auto?"mode-auto":"mode-self")+'">'+(auto?"auto-check":"self-grade")+'</span>' +
+    '<button class="ex-change" id="change-ex" type="button">Change problem</button>' +
+    '<span class="spacer"></span>' +
+    '<button class="btn btn-ghost btn-sm" id="free-play" type="button">✕ Free play</button>' +
+    '<div class="ae-prompt" id="ae-prompt">'+esc(activeExercise.prompt||"")+'</div>';
+  var toggleAePrompt = function(){ var p=$("ae-prompt"), c=$("ae-caret"); var on=p.classList.toggle("on"); if(c){ c.textContent = on ? "▾" : "▸"; } };
+  $("ae-title").onclick = toggleAePrompt;
+  $("ae-title").addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); toggleAePrompt(); } });
+  $("change-ex").onclick = function(){ setExCollapsed(false); var p=$("ex-panel"); if(p){ p.scrollIntoView({ behavior:"smooth", block:"start" }); } };
+  $("free-play").onclick = function(){ setActive(null); toast("Free play — runs won't be bound to an exercise"); };
+  highlightActive();
+}
+function highlightActive(){
+  Array.prototype.forEach.call(document.querySelectorAll(".ex-row"), function(r){
+    r.classList.toggle("active", !!activeExercise && r.getAttribute("data-id") === activeExercise.id);
+  });
+}
+function setExCollapsed(v){
+  exCollapsed = !!v;
+  var body = $("exercises"), car = $("ex-caret");
+  if(body){ body.classList.toggle("collapsed", exCollapsed); }
+  if(car){ car.textContent = exCollapsed ? "▸" : "▾"; }
+}
+
+/* ---------- grading ---------- */
+function normOut(s){
+  s = (s == null ? "" : String(s)).replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  var lines = s.split("\n").map(function(l){ return l.replace(/[ \t]+$/,""); }); // trim trailing ws per line
+  while(lines.length && lines[lines.length-1] === ""){ lines.pop(); }            // drop trailing blank lines
+  return lines.join("\n");
+}
+function outputsMatch(a, b){ return normOut(a) === normOut(b); }
+function showGrade(mode, d, autoPass, exp){
+  var g = $("grade");
+  if(mode === "free"){ g.innerHTML = ""; return; }
+  if(mode === "auto"){
+    var yours = normOut(d.stdout || "");
+    var want = normOut(exp);
+    g.innerHTML =
+      '<span class="verdict '+(autoPass?"v-pass":"v-fail")+'">'+(autoPass?"✓ Output matches expected":"✗ Output differs from expected")+'</span>' +
+      '<div class="diff-grid">' +
+        '<div><h5>Your output</h5><pre>'+esc(yours || "(empty)")+'</pre></div>' +
+        '<div><h5>Expected</h5><pre>'+esc(want || "(empty)")+'</pre></div>' +
+      '</div>';
+    return;
+  }
+  // self
+  g.innerHTML =
+    '<div class="self-grade">' +
+      '<span class="sg-q">How did it go?</span>' +
+      '<button class="btn btn-primary btn-sm sg" data-v="got" type="button">Got it</button>' +
+      '<button class="btn btn-ghost btn-sm sg" data-v="ok" type="button">OK</button>' +
+      '<button class="btn btn-ghost btn-sm sg" data-v="needs" type="button">Needs work</button>' +
+      '<span class="savenote" id="sg-note"></span>' +
+    '</div>';
+  Array.prototype.forEach.call(g.querySelectorAll(".sg"), function(b){
+    b.onclick = function(){ gradeSelf(b.getAttribute("data-v") !== "needs"); };
+  });
+}
+function gradeSelf(pass){
+  var n = $("sg-note");
+  if(!lastAttemptId){ if(n){ n.className="savenote warn"; n.textContent="Still saving your run — try again in a moment."; } return; }
+  sb.from("commonplace_attempts").update({ passed: pass }).eq("id", lastAttemptId)
+    .then(function(res){
+      if(res.error){ if(n){ n.className="savenote err"; n.textContent="Couldn't save: "+res.error.message; } return; }
+      if(n){
+        n.className = "savenote " + (pass ? "ok" : "warn");
+        n.textContent = pass ? "Marked as passed ✓" : "Marked as needs work — practise it again 🚩";
+      }
+      // Phase 4: link the bound exercise to the redo queue
+      if(lastAttemptExerciseId){
+        if(pass){ resolveExerciseMistake(lastAttemptExerciseId); }
+        else { openExerciseMistake(lastAttemptExerciseId, lastAttemptId, "needs_work"); }
+      }
+    });
+}
+
 /* ---------- wire up ---------- */
 $("run-btn").onclick = runCode;
 $("mistake-btn").onclick = saveAsMistake;
-$("reset-btn").onclick = function(){ cm.setValue(DEFAULT_CODE); $("term").textContent="Run your code to see the output here."; setStatus("chip-idle","idle"); $("savenote").textContent=""; };
+$("reset-btn").onclick = function(){ cm.setValue(DEFAULT_CODE); $("term").textContent="Run your code to see the output here."; setStatus("chip-idle","idle"); $("savenote").textContent=""; $("grade").innerHTML=""; };
 $("refresh-m").onclick = loadMistakes;
+$("refresh-ex").onclick = loadExercises;
+$("ex-toggle").onclick = function(){ setExCollapsed(!exCollapsed); };
+$("ex-toggle").addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); setExCollapsed(!exCollapsed); } });
 cm.setOption("extraKeys", { "Cmd-Enter": runCode, "Ctrl-Enter": runCode });
 
 renderAuth();
 sb.auth.getSession().then(function(res){
   currentUser = res.data.session ? res.data.session.user : null;
   renderAuth();
-  if(currentUser){ loadMistakes(); }
+  if(currentUser){ loadMistakes(); loadExercises(); }
 });
 </script>
 </body>
