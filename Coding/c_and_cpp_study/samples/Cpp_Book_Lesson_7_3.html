@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 7.3 — Virtual Functions · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Dynamic Dispatch Explorer */
+  .dd-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .dd-toggle .lab { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+  .ddbtn { background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 16px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ddbtn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .dd-decl { background: var(--terminal); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; color: #e0e7ff; line-height: 1.7; margin-bottom: 12px; }
+  .dd-decl .kw { color: #c4b5fd; } .dd-decl .v { color: #fde047; font-weight: 700; } .dd-decl .cm { color: #818cf8; font-style: italic; }
+  .dd-targets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .ddt { flex: 1; min-width: 90px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ddt.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ddt:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .dd-result { background: var(--terminal); border-radius: 12px; padding: 14px 16px; text-align: center; margin-bottom: 6px; }
+  .dd-result .call { font-family: var(--mono); font-size: 13px; color: #818cf8; }
+  .dd-result .out { font-family: var(--mono); font-size: 24px; font-weight: 700; color: #fde047; margin-top: 4px; }
+  .iw-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .iw-msg b { color: var(--purple-deep); }
+  .iw-msg .grn { color: #166534; font-weight: 700; } .iw-msg .red { color: var(--red); font-weight: 700; }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .po-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Mark a base method <code>virtual</code> and a base pointer calls the <em>derived</em> version. That's polymorphism! ✨
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 7.3</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 49 / 70</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧬 PART VII &middot; INHERITANCE &amp; POLYMORPHISM</span>
+    <h1>Virtual Functions</h1>
+    <p class="hero-sub">Inheritance lets a <code>Dog</code> <em>be</em> an <code>Animal</code>. <strong>Virtual functions</strong> let you <em>call the right behaviour</em> through a base pointer: <code>Animal* a = &amp;dog; a-&gt;speak();</code> should say "Woof". This runtime choice — <strong>dynamic dispatch</strong> — is the heart of polymorphism in C++.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>One pointer, many behaviours 🧠</h2>
+
+    <div class="new-content">
+      Here's the dream: write code that works with an <code>Animal</code>, and have it automatically do the right thing whether that animal is really a <code>Dog</code>, a <code>Cat</code>, or a <code>Cow</code>. You loop over a list of <code>Animal*</code> and call <code>speak()</code> on each — and each makes <em>its own</em> sound. This is <strong>polymorphism</strong>: many types, treated uniformly through a common base, each behaving as itself. <code>virtual</code> functions are the mechanism that makes it happen, and they're what most of object-oriented C++ is built on.
+    </div>
+
+    <p>This is the payoff of Part VII. Inheritance set it up; <code>virtual</code> delivers the magic.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The problem without virtual</div>
+    <h2>A base pointer calls the base 🤔</h2>
+
+    <p>Suppose <code>Dog</code> overrides <code>Animal</code>'s <code>speak()</code>, but <code>speak()</code> is an ordinary (non-virtual) method. Call it through an <code>Animal</code> pointer and you get the <em>base</em> version — not the dog's:</p>
+
+    <pre class="code"><span class="kw">struct</span> Animal { std::string speak() { <span class="kw">return</span> <span class="str">"..."</span>; } };
+<span class="kw">struct</span> Dog : Animal { std::string speak() { <span class="kw">return</span> <span class="str">"Woof"</span>; } };
+
+Dog d;
+Animal* a = &amp;d;
+a-&gt;speak();   <span class="cm">// "..."  — the BASE version, not "Woof"! 🤔</span></pre>
+
+    <div class="new-content">
+      The compiler picks the function based on the pointer's <em>declared</em> type (<code>Animal*</code>), not what it actually points at. That's <strong>static dispatch</strong> — decided at compile time. It's almost never what you want when you're working through a base pointer: you wanted the dog to bark, and you got a generic "..." instead.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> virtual — let the object decide</div>
+    <h2>Dynamic dispatch ✨</h2>
+
+    <p>Add the keyword <code>virtual</code> to the base method, and everything changes. Now the call looks at the <em>actual object</em> at runtime and runs <em>its</em> version:</p>
+
+    <pre class="code"><span class="kw">struct</span> Animal { <span class="hl">virtual</span> std::string speak() { <span class="kw">return</span> <span class="str">"..."</span>; } };
+<span class="kw">struct</span> Dog : Animal { std::string speak() <span class="kw">override</span> { <span class="kw">return</span> <span class="str">"Woof"</span>; } };
+
+Dog d;
+Animal* a = &amp;d;
+a-&gt;speak();   <span class="cm">// "Woof"  — the DOG's version! ✨</span></pre>
+
+    <div class="new-content">
+      With <code>virtual</code>, the choice of which <code>speak()</code> to run is made at <strong>runtime</strong>, based on the real type of the object — that's <strong>dynamic dispatch</strong>. A single line, <code>a-&gt;speak()</code>, now does different things depending on what <code>a</code> points at. That's polymorphism in action, and it all hinges on that one keyword in the base class.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> override — let the compiler check</div>
+    <h2>Catch silent mistakes ✅</h2>
+
+    <p>You may have noticed <code>override</code> on the derived method. It's optional but strongly recommended: it tells the compiler "this is meant to override a base virtual," so it can <strong>verify</strong> that it actually does:</p>
+
+    <pre class="code"><span class="kw">struct</span> Dog : Animal {
+    std::string speak() <span class="hl">override</span> { <span class="kw">return</span> <span class="str">"Woof"</span>; }   <span class="cm">// ✅ checked</span>
+    <span class="cm">// std::string speek() override {...}   // ❌ won't compile — typo, no such base virtual</span>
+};</pre>
+
+    <div class="new-content">
+      Without <code>override</code>, a tiny mismatch — a typo, a wrong parameter type, a missing <code>const</code> — quietly creates a <em>new</em> function instead of an override, and the base version keeps running. The bug is maddening to find. Adding <code>override</code> turns it into an immediate compile error. Use it on every override; it's free insurance (C++11).
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Why it's powerful</div>
+    <h2>Treat many types as one 🔁</h2>
+
+    <p>The real power shows up when you collect different derived objects and handle them through a base pointer. One loop, and each object behaves as itself:</p>
+
+    <pre class="code">std::vector&lt;Animal*&gt; zoo = { &amp;dog, &amp;cat, &amp;cow };
+<span class="kw">for</span> (Animal* a : zoo)
+    std::cout &lt;&lt; a-&gt;speak();   <span class="cm">// "Woof" "Meow" "Moo" — each its own!</span></pre>
+
+    <div class="trap">
+      <h4>🚨 A polymorphic base needs a virtual destructor</h4>
+      <p>If you ever <code>delete</code> a derived object <em>through</em> a base pointer (common with heap allocation), the base class must have a <strong>virtual destructor</strong> — otherwise only the base part is destroyed and the derived part leaks (undefined behaviour). The rule of thumb: <em>any class with virtual functions should have a virtual destructor</em> (<code>virtual ~Animal() = default;</code>). We'll cover the details in the next lesson; for now, just know it goes hand-in-hand with virtual methods.</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Dynamic Dispatch Explorer</div>
+    <h2>virtual on vs off 🔬</h2>
+
+    <p>Two tools. The <strong>Explorer</strong> aims an <code>Animal*</code> at a Dog, Cat, or Cow — toggle <code>virtual</code> and watch which <code>speak()</code> runs. <strong>Predict the Output</strong> tests dispatch through pointers and references.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">✨ Dynamic Dispatch Explorer</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="dd">Dispatch Explorer</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- EXPLORER -->
+      <div class="tab-panel active" id="tab-dd">
+        <div class="dd-toggle">
+          <span class="lab">Animal::speak() is:</span>
+          <button class="ddbtn active" id="ddVirt">virtual</button>
+          <button class="ddbtn" id="ddPlain">non-virtual</button>
+        </div>
+        <div class="dd-decl" id="ddDecl"></div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-bottom:6px">Animal* a points at →</div>
+        <div class="dd-targets" id="ddTargets"></div>
+        <div class="dd-result" id="ddResult"><div class="call">a-&gt;speak()</div><div class="out">—</div></div>
+        <div class="iw-msg" id="ddMsg">Pick what <code>a</code> points at, and toggle <code>virtual</code>. With virtual, the object's own <code>speak()</code> runs; without it, you always get Animal's.</div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="out-btns" id="poBtns"></div>
+        <div class="po-fb" id="poFb">What does this program print?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does declaring a base method <code>virtual</code> enable?
+      </div>
+      <button class="opt" data-correct="true"><span>When you call it through a base pointer or reference, the <strong>derived (overriding) version runs</strong> — dynamic dispatch</span></button>
+      <button class="opt" data-correct="false"><span>It makes the method run faster</span></button>
+      <button class="opt" data-correct="false"><span>It prevents the method from being overridden</span></button>
+      <button class="opt" data-correct="false"><span>It makes the method static / shared across objects</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: without it, a base pointer runs the base version (static dispatch) regardless of the real object.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🚫</div>
+      <div class="mistake-body">
+        <strong>Forgetting <code>virtual</code></strong>
+        <small>Without it, a call through a base pointer/reference runs the <em>base</em> version, not the override (static dispatch). Mark the base method <code>virtual</code> to get polymorphism.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">✍️</div>
+      <div class="mistake-body">
+        <strong>A silent non-override (signature mismatch)</strong>
+        <small>If your "override" has a slightly different signature, it's a brand-new function and the base version still runs. Add <code>override</code> so the compiler catches the mismatch.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🧹</div>
+      <div class="mistake-body">
+        <strong>No virtual destructor on a polymorphic base</strong>
+        <small>Deleting a derived object through a base pointer without a virtual destructor destroys only the base part (undefined behaviour). A class with virtual functions should have <code>virtual ~Base() = default;</code>.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Make it bark.</strong> Give <code>Animal</code> a <code>virtual std::string speak()</code> returning "..." and <code>Dog</code> an <code>override</code> returning "Woof". Call <code>speak()</code> through an <code>Animal&amp;</code> that refers to a <code>Dog</code> — confirm you get "Woof".
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Feel the difference.</strong> Remove <code>virtual</code> and run again — now the same call returns "..." (the base version). Add it back and watch "Woof" return. That one keyword is the whole effect.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>A talking zoo.</strong> Make <code>Cat</code> and <code>Cow</code> too, put several animals as <code>Animal*</code> in a <code>std::vector</code>, and loop calling <code>speak()</code> — each prints its own sound. Runtime polymorphism over a collection.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>A <code>virtual</code> function in the base can be overridden</strong> by a derived class.</li>
+        <li><strong>Called through a base pointer or reference, the derived version runs</strong> — this is dynamic dispatch (runtime polymorphism).</li>
+        <li><strong>Without <code>virtual</code></strong>, the call uses the pointer's static type and runs the base version.</li>
+        <li><strong>Mark overrides with <code>override</code></strong> (C++11) so the compiler verifies they really override.</li>
+        <li><strong>A polymorphic base needs a virtual destructor</strong> — coming up next.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_7_2.html" class="nav-btn prev">
+      <small>← Previous</small>
+      7.2  Inheritance access
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      7.4  Abstract classes
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "virtual + override = call the right behaviour through a base pointer. Polymorphism! 🧠",
+    "No virtual? A base pointer calls the BASE version, even pointing at a Dog. 🤔",
+    "Mark the base method virtual → the derived override runs. Dynamic dispatch! ✨",
+    "Add 'override' so the compiler checks your override really overrides. ✅",
+    "Loop over base pointers, call the virtual — each type does its own thing. 🔁",
+    "Toggle virtual on/off — see which speak() runs! 🔬",
+    "virtual: base pointer/ref → derived version runs (runtime polymorphism). 🎯",
+    "virtual to enable, override to verify, base pointer dispatches to derived. 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 7.3 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Dynamic Dispatch Explorer =====
+  let isVirtual = true, target = 'Dog', ddTouched = false;
+  const ANIMALS = { Dog: 'Woof', Cat: 'Meow', Cow: 'Moo' };
+  const ddDecl = document.getElementById('ddDecl');
+  const ddTargets = document.getElementById('ddTargets');
+  const ddResult = document.getElementById('ddResult');
+  const ddMsg = document.getElementById('ddMsg');
+  const ddVirt = document.getElementById('ddVirt');
+  const ddPlain = document.getElementById('ddPlain');
+
+  ddTargets.innerHTML = Object.keys(ANIMALS).map((k, i) => `<button class="ddt${i === 0 ? ' active' : ''}" data-k="${k}">${k}</button>`).join('');
+
+  function renderDD() {
+    ddDecl.innerHTML = `<span class="kw">struct</span> Animal { ${isVirtual ? '<span class="v">virtual</span> ' : ''}string speak() { <span class="cm">"..."</span> } };<br>` +
+      `<span class="kw">struct</span> ${target} : Animal { string speak()${isVirtual ? ' override' : ''} { <span class="cm">"${ANIMALS[target]}"</span> } };`;
+    const out = isVirtual ? ANIMALS[target] : '...';
+    ddResult.innerHTML = `<div class="call">Animal* a = &amp;${target.toLowerCase()};  a-&gt;speak()</div><div class="out">"${out}"</div>`;
+    ddMsg.innerHTML = isVirtual
+      ? `<b>virtual is ON.</b> <code>a-&gt;speak()</code> looks at the <em>real object</em> (a ${target}) at runtime → runs <code>${target}::speak()</code> → <span class="grn">"${ANIMALS[target]}"</span>. That's <b>dynamic dispatch</b>.`
+      : `<b>virtual is OFF.</b> <code>a-&gt;speak()</code> uses the pointer's type (<code>Animal*</code>) at compile time → always runs <code>Animal::speak()</code> → <span class="red">"..."</span>, no matter what it points at. Static dispatch.`;
+  }
+  ddVirt.addEventListener('click', (e) => { isVirtual = true; ddVirt.classList.add('active'); ddPlain.classList.remove('active'); renderDD(); if (!ddTouched) { ddTouched = true; addXP(5, e.clientX, e.clientY, '✨ Dynamic dispatch! +5 XP'); } });
+  ddPlain.addEventListener('click', (e) => { isVirtual = false; ddPlain.classList.add('active'); ddVirt.classList.remove('active'); renderDD(); if (!ddTouched) { ddTouched = true; addXP(5, e.clientX, e.clientY); } });
+  ddTargets.querySelectorAll('.ddt').forEach(b => b.addEventListener('click', (e) => {
+    target = b.dataset.k; ddTargets.querySelectorAll('.ddt').forEach(x => x.classList.toggle('active', x === b)); renderDD();
+    if (!ddTouched) { ddTouched = true; addXP(5, e.clientX, e.clientY); }
+  }));
+  renderDD();
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'struct Animal { virtual std::string speak() { return "..."; } };\nstruct Dog : Animal { std::string speak() override { return "Woof"; } };\nint main() {\n  Dog d;\n  Animal& a = d;\n  std::cout << a.speak();\n}',
+      opts: ['Woof', '...', 'error', 'Animal'],
+      answer: 'Woof',
+      why: 'speak() is virtual, so calling through Animal& runs the real object\'s version → "Woof".'
+    },
+    {
+      code: 'struct Animal { std::string speak() { return "..."; } };   // not virtual\nstruct Dog : Animal { std::string speak() { return "Woof"; } };\nint main() {\n  Dog d;\n  Animal& a = d;\n  std::cout << a.speak();\n}',
+      opts: ['...', 'Woof', 'error', 'nothing'],
+      answer: '...',
+      why: 'Without virtual, the call uses the reference\'s type (Animal) → the base version "...".'
+    },
+    {
+      code: 'struct Animal { virtual std::string speak() { return "..."; } };\nstruct Dog : Animal { std::string speak() override { return "Woof"; } };\nint main() {\n  Dog d;\n  std::cout << d.speak();   // direct, on a Dog\n}',
+      opts: ['Woof', '...', 'error', 'Dog'],
+      answer: 'Woof',
+      why: 'Called directly on a Dog, you always get Dog::speak() → "Woof" (virtual or not).'
+    },
+    {
+      code: 'struct A { virtual int id() { return 0; } };\nstruct B : A { int id() override { return 1; } };\nint main() {\n  A* p = new B();\n  std::cout << p->id();\n  delete p;\n}',
+      opts: ['1', '0', 'error', '2'],
+      answer: '1',
+      why: 'id() is virtual; through A* pointing at a B, B::id() runs → 1.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'obtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.obtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. virtual → derived runs through a base pointer/ref; non-virtual → base runs; direct calls always use the real type.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>virtual</code> makes the call resolve at <em>runtime</em> based on the real object — so calling through a base pointer or reference runs the derived override. That\'s dynamic dispatch, the basis of polymorphism.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> The derived version runs — dynamic dispatch.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. <code>virtual</code> doesn\'t speed things up, doesn\'t prevent overriding (it <em>enables</em> it), and doesn\'t make the method static — it enables runtime dynamic dispatch.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

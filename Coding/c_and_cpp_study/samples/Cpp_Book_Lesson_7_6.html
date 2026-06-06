@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 7.6 — override &amp; final · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Specifier Checker */
+  .dd-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .dd-toggle .lab { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); min-width: 130px; }
+  .ddbtn { background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ddbtn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .dd-decl { background: var(--terminal); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; color: #e0e7ff; line-height: 1.7; margin: 4px 0 12px; }
+  .dd-decl .kw { color: #c4b5fd; } .dd-decl .v { color: #fde047; font-weight: 700; } .dd-decl .cm { color: #818cf8; font-style: italic; } .dd-decl .bad { color: #fca5a5; font-weight: 700; }
+  .dd-result { background: var(--terminal); border-radius: 12px; padding: 14px 16px; text-align: center; margin-bottom: 6px; }
+  .dd-result .call { font-family: var(--mono); font-size: 13px; color: #818cf8; }
+  .dd-result .out { font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fde047; margin-top: 4px; }
+  .iw-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .iw-msg b { color: var(--purple-deep); }
+  .iw-msg .grn { color: #166534; font-weight: 700; } .iw-msg .red { color: var(--red); font-weight: 700; } .iw-msg .amb { color: #b45309; font-weight: 700; }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .po-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    <code>override</code> makes the compiler verify your override; <code>final</code> seals a method or class. ✅🔒
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 7.6</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 52 / 84</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧬 PART VII &middot; INHERITANCE &amp; POLYMORPHISM</span>
+    <h1>override &amp; final</h1>
+    <p class="hero-sub">Virtual functions are powerful but easy to get subtly wrong — a one-letter typo can silently create a brand-new function instead of an override. Two C++11 keywords fix that: <strong>override</strong> makes the compiler <em>verify</em> your intent, and <strong>final</strong> lets you <em>seal</em> a method or a whole class against further overriding.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Intent the compiler can check 🧠</h2>
+
+    <div class="new-content">
+      You've been writing <code>override</code> since lesson 7.3 — now let's see exactly what it (and its partner <code>final</code>) buys you. Overriding a virtual function depends on the derived method matching the base's <em>signature</em> precisely. Get one detail wrong — a typo, a missing <code>const</code>, a different parameter type — and C++ doesn't override; it quietly makes a <em>new, unrelated</em> function, and the base version keeps running. These two keywords turn fuzzy intent into something the compiler enforces: <code>override</code> says "this must override," and <code>final</code> says "no one may override this further."
+    </div>
+
+    <p>Small keywords, large payoff in safety and clarity.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> override</div>
+    <h2>"Make sure this really overrides" ✅</h2>
+
+    <p>Put <code>override</code> after a derived method's signature. It compiles only if the method genuinely overrides a base virtual — otherwise you get an immediate error:</p>
+
+    <pre class="code"><span class="kw">struct</span> Animal { <span class="kw">virtual</span> std::string speak() { <span class="kw">return</span> <span class="str">"..."</span>; } };
+
+<span class="kw">struct</span> Dog : Animal {
+    std::string speak() <span class="hl">override</span> { <span class="kw">return</span> <span class="str">"Woof"</span>; }   <span class="cm">// ✅ verified override</span>
+    <span class="cm">// std::string speek() override {...}   // ❌ won't compile — no base "speek"</span>
+};</pre>
+
+    <div class="new-content">
+      Without <code>override</code>, that <code>speek</code> typo would compile happily as a brand-new method, and <code>Animal::speak()</code> would keep running through a base pointer — a bug that can cost hours. With <code>override</code>, the compiler checks the base for a matching virtual and rejects the code if it doesn't find one. It costs nothing and catches a whole family of silent mistakes, so the guidance is simple: <strong>put <code>override</code> on every override.</strong>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> final on a method</div>
+    <h2>"No one may override this further" 🔒</h2>
+
+    <p><code>final</code> marks a virtual method as the <em>last</em> override — any class deriving further can't override it again:</p>
+
+    <pre class="code"><span class="kw">struct</span> Animal { <span class="kw">virtual</span> std::string speak() { <span class="kw">return</span> <span class="str">"..."</span>; } };
+<span class="kw">struct</span> Dog : Animal {
+    std::string speak() <span class="kw">override</span> <span class="hl">final</span> { <span class="kw">return</span> <span class="str">"Woof"</span>; }  <span class="cm">// sealed here</span>
+};
+<span class="kw">struct</span> Puppy : Dog {
+    <span class="bad">std::string speak() override { return "Yip"; }   // ❌ error: Dog::speak is final</span>
+};</pre>
+
+    <div class="new-content">
+      Here <code>Dog</code> overrides <code>speak()</code> and then locks it: <code>Puppy</code> may inherit it but cannot change it. You can write <code>override final</code> together (verify <em>and</em> seal) or just <code>final</code>. Use it when a behaviour must not be altered downstream — it documents that intent and lets the compiler enforce it (and can even help it optimize the call).
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> final on a class</div>
+    <h2>"You can't inherit from me" 🚫</h2>
+
+    <p>Put <code>final</code> after a class name and nothing can derive from it at all:</p>
+
+    <pre class="code"><span class="kw">struct</span> Widget <span class="hl">final</span> {   <span class="cm">// no class may inherit from Widget</span>
+    <span class="kw">void</span> draw() {}
+};
+
+<span class="bad">struct Button : Widget { };   // ❌ error: cannot derive from 'final' class Widget</span></pre>
+
+    <div class="new-content">
+      Sealing a whole class says "this type is complete — it isn't designed to be a base." That's useful for leaf types you don't want extended, and it gives the compiler a guarantee it can use to devirtualize calls (a small speed win). Reach for class-level <code>final</code> deliberately, though: it forecloses future extension, so use it when you're sure the type shouldn't be a base.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> When to use which</div>
+    <h2>Verify vs seal 📜</h2>
+
+    <table class="op-table">
+      <thead><tr><th>Keyword</th><th>Where</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">override</td><td class="mono plain">after a derived method</td><td class="mono plain">compiler verifies it overrides a base virtual</td></tr>
+        <tr><td class="mono">final</td><td class="mono plain">after a virtual method</td><td class="mono plain">no further class may override it</td></tr>
+        <tr><td class="mono">final</td><td class="mono plain">after a class name</td><td class="mono plain">no class may inherit from it</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      Think of it as <strong>verify</strong> vs <strong>seal</strong>. Use <code>override</code> liberally — on essentially every override, for safety. Use <code>final</code> sparingly and on purpose, where you genuinely want to stop further overriding or inheritance. Both are <em>contextual</em> keywords: they only have special meaning in these positions, so existing variables named <code>final</code> still work elsewhere.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Specifier Checker</div>
+    <h2>Override or silent bug? 🔬</h2>
+
+    <p>Two tools. The <strong>Checker</strong> lets you set the derived method's signature and whether it's marked <code>override</code> — and see whether it compiles, overrides, or silently makes a new function. <strong>Predict the Output</strong> tests <code>override</code> and <code>final</code>.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">✅ Specifier Checker</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="dd">Specifier Checker</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- CHECKER -->
+      <div class="tab-panel active" id="tab-dd">
+        <div class="dd-toggle">
+          <span class="lab">Derived signature:</span>
+          <button class="ddbtn active" id="sigMatch">speak() — matches</button>
+          <button class="ddbtn" id="sigTypo">speek() — typo</button>
+        </div>
+        <div class="dd-toggle">
+          <span class="lab">Marked override?</span>
+          <button class="ddbtn active" id="ovYes">override</button>
+          <button class="ddbtn" id="ovNo">no override</button>
+        </div>
+        <div class="dd-decl" id="ddDecl"></div>
+        <div class="dd-result" id="ddResult"></div>
+        <div class="iw-msg" id="ddMsg"></div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="out-btns" id="poBtns"></div>
+        <div class="po-fb" id="poFb">What does this program do?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        What does adding <code>override</code> to a derived method do?
+      </div>
+      <button class="opt" data-correct="true"><span>Makes the compiler <strong>verify it really overrides a base virtual</strong> — a typo or signature mismatch becomes a compile error</span></button>
+      <button class="opt" data-correct="false"><span>Makes the method virtual even if the base one isn't</span></button>
+      <button class="opt" data-correct="false"><span>Prevents the method from being overridden further</span></button>
+      <button class="opt" data-correct="false"><span>Makes the call run faster at runtime</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: that last one (sealing) is <code>final</code>, not <code>override</code>.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">✍️</div>
+      <div class="mistake-body">
+        <strong>Skipping <code>override</code> and getting a silent non-override</strong>
+        <small>Without it, a signature mismatch creates a new function and the base version still runs — no error. Add <code>override</code> so the compiler catches it instantly.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔒</div>
+      <div class="mistake-body">
+        <strong>Thinking <code>override</code> seals the method</strong>
+        <small><code>override</code> only <em>verifies</em>; it doesn't stop further overriding. To seal, use <code>final</code> (you can combine them: <code>override final</code>).</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🚫</div>
+      <div class="mistake-body">
+        <strong>Sealing too eagerly with class <code>final</code></strong>
+        <small>Marking a class <code>final</code> forecloses all future inheritance. It's great for true leaf types, but don't reach for it by default — only when you're sure the type shouldn't be a base.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Catch a typo.</strong> Give <code>Animal</code> a <code>virtual void speak()</code> and write <code>Dog</code> with <code>void speek() override {}</code>. Watch it fail to compile, then fix the spelling and confirm it builds.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Seal a method.</strong> Override <code>speak()</code> in <code>Dog</code> with <code>override final</code>, then try to override it again in a <code>Puppy : Dog</code>. Read the error that <code>final</code> produces.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Seal a class.</strong> Mark a small class <code>final</code> and attempt to derive from it. Then remove <code>final</code> and confirm the derivation now compiles — proving what the keyword was doing.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong><code>override</code></strong> tells the compiler "this overrides a base virtual" — and it errors if it doesn't (catches typos / signature mismatches).</li>
+        <li><strong>Without <code>override</code></strong>, a mismatch silently creates a new function and the base version keeps running.</li>
+        <li><strong><code>final</code> on a method</strong> stops any further class from overriding it.</li>
+        <li><strong><code>final</code> on a class</strong> stops any class from inheriting from it.</li>
+        <li><strong>Verify vs seal:</strong> use <code>override</code> everywhere; use <code>final</code> deliberately. Both are C++11.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_7_5.html" class="nav-btn prev">
+      <small>← Previous</small>
+      7.5  Virtual destructors
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      7.7  Multiple inheritance
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Two keywords make your override intentions explicit and enforceable. 🧠",
+    "override: the compiler verifies your method really overrides a base virtual. ✅",
+    "Typo or wrong signature + override → instant compile error, not a silent bug. 🎯",
+    "final on a method: no further overriding allowed below it. 🔒",
+    "final on a class: nothing can inherit from it. 🚫",
+    "Toggle signature & override — see compile vs silent bug! 🔬",
+    "Use override on every override; final to seal a method or class. 📜",
+    "override = verify; final = seal. Safer, clearer class hierarchies. 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 7.6 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Specifier Checker =====
+  let sig = 'match', ov = 'yes', ddTouched = false;
+  const ddDecl = document.getElementById('ddDecl');
+  const ddResult = document.getElementById('ddResult');
+  const ddMsg = document.getElementById('ddMsg');
+  const sigMatch = document.getElementById('sigMatch');
+  const sigTypo = document.getElementById('sigTypo');
+  const ovYes = document.getElementById('ovYes');
+  const ovNo = document.getElementById('ovNo');
+
+  function renderDD() {
+    const name = sig === 'match' ? 'speak' : 'speek';
+    const ovTxt = ov === 'yes' ? ' <span class="kw">override</span>' : '';
+    const lineClass = (sig === 'typo' && ov === 'yes') ? 'bad' : '';
+    ddDecl.innerHTML =
+      `<span class="kw">struct</span> Animal { <span class="kw">virtual</span> string speak() { <span class="cm">"..."</span> } };<br>` +
+      `<span class="kw">struct</span> Dog : Animal { <span class="${lineClass}">string ${name}()${ovTxt} { <span class="cm">"Woof"</span> }</span> };`;
+
+    let verdict, msg;
+    if (sig === 'match' && ov === 'yes') {
+      verdict = '✅ compiles · overrides (verified)';
+      msg = `<b>Signature matches</b> and <code>override</code> confirms it: <code>Dog::speak()</code> overrides <code>Animal::speak()</code>. <span class="grn">Exactly what you want.</span>`;
+    } else if (sig === 'match' && ov === 'no') {
+      verdict = '✅ compiles · overrides (unchecked)';
+      msg = `It <b>does</b> override (the signature matches), but without <code>override</code> the compiler didn't <em>verify</em> it — it works here only because the names line up. <span class="amb">Add override for safety.</span>`;
+    } else if (sig === 'typo' && ov === 'yes') {
+      verdict = '❌ compile error';
+      msg = `<code>speek</code> doesn't match any base virtual, but it's marked <code>override</code> → <span class="grn">the compiler rejects it immediately</span>. The typo is caught at build time. ✅`;
+    } else {
+      verdict = '⚠️ compiles · NEW function (silent bug)';
+      msg = `<code>speek</code> is a <b>brand-new</b> function, not an override — and with no <code>override</code> keyword, nothing complains. <code>Animal::speak()</code> still runs through a base pointer. <span class="red">A silent bug override would have caught.</span>`;
+    }
+    ddResult.innerHTML = `<div class="call">Dog d;  Animal* a = &amp;d;  a-&gt;speak();</div><div class="out">${verdict}</div>`;
+    ddMsg.innerHTML = msg;
+  }
+  function setSig(v, e) { sig = v; sigMatch.classList.toggle('active', v === 'match'); sigTypo.classList.toggle('active', v === 'typo'); renderDD(); poke(e); }
+  function setOv(v, e) { ov = v; ovYes.classList.toggle('active', v === 'yes'); ovNo.classList.toggle('active', v === 'no'); renderDD(); poke(e); }
+  function poke(e) { if (!ddTouched) { ddTouched = true; addXP(5, e.clientX, e.clientY, '🔬 Specifier explored! +5 XP'); } }
+  sigMatch.addEventListener('click', (e) => setSig('match', e));
+  sigTypo.addEventListener('click', (e) => setSig('typo', e));
+  ovYes.addEventListener('click', (e) => setOv('yes', e));
+  ovNo.addEventListener('click', (e) => setOv('no', e));
+  renderDD();
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'struct A { virtual int id() const { return 0; } };\nstruct B : A { int id() const override { return 7; } };\nint main() {\n  B b;\n  A& r = b;\n  std::cout << r.id();\n}',
+      opts: ['7', '0', 'error', '1'],
+      answer: '7',
+      why: 'Signatures match and override verifies it; through A&, the virtual call runs B::id() → 7.'
+    },
+    {
+      code: 'struct A { virtual void f() {} };\nstruct B : A { void f() final {} };\nstruct C : B { void f() override {} };  // try to override again\nint main() { }',
+      opts: ['error', 'compiles', 'nothing', '0'],
+      answer: 'error',
+      why: 'B::f is marked final, so C may not override it again → compile error.'
+    },
+    {
+      code: 'struct A final { };\nstruct B : A { };   // inherit from a final class\nint main() { }',
+      opts: ['error', 'compiles', 'nothing', '0'],
+      answer: 'error',
+      why: 'A is a final class, so nothing may derive from it. struct B : A is a compile error.'
+    },
+    {
+      code: 'struct A { virtual void f(int) {} };\nstruct B : A { void f(double) override {} };  // different param\nint main() { }',
+      opts: ['error', 'compiles', 'nothing', '0'],
+      answer: 'error',
+      why: 'f(double) does not match the base f(int), so it overrides nothing — and override makes that a compile error.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program do?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'obtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.obtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. override errors on a non-match; final blocks further overriding (method) or inheritance (class).`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>override</code> asks the compiler to confirm the method really overrides a base virtual. If the signature doesn\'t match — a typo, a wrong parameter, a missing const — it\'s a compile error instead of a silent new function.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> It verifies the override at compile time.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. <code>override</code> doesn\'t make a method virtual on its own, doesn\'t seal it (that\'s <code>final</code>), and doesn\'t change runtime speed — it <em>verifies</em> the override at compile time.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

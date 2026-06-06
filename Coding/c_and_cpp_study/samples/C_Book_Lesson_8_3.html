@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 8.3 — enum: Named Constants · The C Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #fff7ed; --bg2: #ffedd5; --bg3: #ffe4c4;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --orange: #f97316; --orange-light: #fdba74; --orange-deep: #c2410c;
+    --pink: #ec4899; --purple: #8b5cf6; --blue: #3b82f6;
+    --teal: #14b8a6; --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --cyan: #06b6d4;
+    --terminal: #0f172a;
+    --shadow-sm: 0 2px 4px rgba(194, 65, 12, 0.08);
+    --shadow: 0 4px 16px rgba(194, 65, 12, 0.12);
+    --shadow-lg: 0 12px 32px rgba(194, 65, 12, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--orange-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--orange), var(--pink)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--orange-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--yellow), var(--orange)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .bit-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .bit-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--orange); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .bit-bubble { background: white; border: 2px solid var(--orange-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: bit-in 0.5s var(--bouncy); }
+  .bit-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--orange-light) transparent transparent; }
+  @keyframes bit-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .bit-name { font-weight: 700; color: var(--orange-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .bit-companion { max-width: 240px; bottom: 12px; left: 12px; } .bit-avatar { width: 50px; height: 50px; } .bit-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-c { color: var(--orange-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-c::before { content: "🟠 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(249, 115, 22, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--orange), var(--pink)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--orange) 0%, var(--pink) 60%, var(--purple) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(249, 115, 22, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(236, 72, 153, 0.08)); color: var(--orange-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(249, 115, 22, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #fef3c7, #fed7aa); padding: 2px 8px; border-radius: 6px; color: var(--orange-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e2e8f0; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #fdba74; font-weight: 700; }
+  pre.code .cm { color: #64748b; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 CLASSIC C TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--orange-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #fff7ed, #fffbeb); border: 2px solid var(--orange); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--orange-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--orange-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--orange-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Enum Explorer */
+  .se-decl { background: var(--terminal); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: 13px; color: #e2e8f0; line-height: 1.8; margin-bottom: 12px; }
+  .se-decl .kw { color: #fdba74; } .se-decl .hl { color: #fde047; font-weight: 700; } .se-decl .cm { color: #64748b; font-style: italic; }
+  .se-fields { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sebtn { flex: 1; min-width: 70px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .sebtn.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .sebtn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .se-result { background: var(--terminal); border-radius: 12px; padding: 14px 16px; text-align: center; margin-bottom: 6px; }
+  .se-result .call { font-family: var(--mono); font-size: 13px; color: #64748b; }
+  .se-result .out { font-family: var(--mono); font-size: 24px; font-weight: 700; color: #fde047; margin-top: 4px; }
+  .se-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .se-msg b { color: var(--orange-deep); } .se-msg .grn { color: #166534; font-weight: 700; }
+  .se-msg code { font-size: 0.92em; }
+
+  /* Predict the Output */
+  .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
+  .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .pc-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #f3e8ff, #fce7f3); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.6); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--teal); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--orange); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--orange), var(--pink), var(--purple)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--orange); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--orange-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="bit-companion" id="bitCompanion">
+  <div class="bit-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="14" width="52" height="52" rx="10" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="8" y1="26" x2="14" y2="26"/><line x1="8" y1="40" x2="14" y2="40"/><line x1="8" y1="54" x2="14" y2="54"/><line x1="66" y1="26" x2="72" y2="26"/><line x1="66" y1="40" x2="72" y2="40"/><line x1="66" y1="54" x2="72" y2="54"/><line x1="26" y1="8" x2="26" y2="14"/><line x1="40" y1="8" x2="40" y2="14"/><line x1="54" y1="8" x2="54" y2="14"/><line x1="26" y1="66" x2="26" y2="72"/><line x1="40" y1="66" x2="40" y2="72"/><line x1="54" y1="66" x2="54" y2="72"/></g>
+      <circle cx="30" cy="36" r="4" fill="#1a202c"/><circle cx="50" cy="36" r="4" fill="#1a202c"/>
+      <circle cx="31" cy="34.5" r="1.3" fill="#fff"/><circle cx="51" cy="34.5" r="1.3" fill="#fff"/>
+      <path d="M 30 50 Q 40 58 50 50" stroke="#1a202c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/><circle cx="56" cy="46" r="2.5" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+  <div class="bit-bubble" id="bitBubble">
+    <span class="bit-name">Bit</span>
+    <code>enum</code> gives names to a set of integer constants — readable code instead of magic numbers. 🔢
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-c">THE C BOOK &middot; 8.3</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 55 / 72</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧱 PART VIII &middot; BUILDING YOUR OWN TYPES</span>
+    <h1>enum — Named Constants</h1>
+    <p class="hero-sub">Code full of bare numbers — <code>state == 2</code>, <code>if (color == 1)</code> — is a puzzle to read. An <strong>enum</strong> gives a set of related integer values real names: <code>RED</code>, <code>GREEN</code>, <code>BLUE</code> instead of 0, 1, 2. Same numbers underneath, but now your code says what it means.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
+      <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
+      <circle cx="38" cy="46" r="5" fill="#1a202c"/><circle cx="62" cy="46" r="5" fill="#1a202c"/>
+      <circle cx="39" cy="44" r="1.5" fill="#fff"/><circle cx="63" cy="44" r="1.5" fill="#fff"/>
+      <path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="30" cy="58" r="3" fill="#fdba74" opacity="0.7"/><circle cx="70" cy="58" r="3" fill="#fdba74" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Names beat magic numbers 🧠</h2>
+
+    <div class="new-content">
+      Imagine reading <code>if (s == 2) ...</code> — what's 2? You'd have to hunt for a comment. Now imagine <code>if (s == PAUSED)</code> — instantly clear. An <strong>enum</strong> defines a group of named integer constants, so you write the <em>name</em> and the compiler fills in the number. It makes code self-explanatory, keeps related values together in one place, and pairs perfectly with <code>switch</code> for handling each case. It's the third of your custom-type tools, after <code>struct</code> and <code>typedef</code>.
+    </div>
+
+    <p>A tiny feature that quietly makes a whole program easier to read.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> Declaring an enum</div>
+    <h2>Auto-numbered from zero 🏷️</h2>
+
+    <p>List the names inside braces. By default the first is <code>0</code> and each one counts up by one:</p>
+
+    <pre class="code"><span class="kw">enum</span> Color { <span class="hl">RED</span>, <span class="hl">GREEN</span>, <span class="hl">BLUE</span> };
+<span class="cm">//            0      1       2     ← assigned automatically</span>
+
+<span class="kw">enum</span> Color c = GREEN;     <span class="cm">// c holds 1</span>
+printf(<span class="str">"%d\n"</span>, c);       <span class="cm">// prints 1</span>
+printf(<span class="str">"%d\n"</span>, BLUE);    <span class="cm">// prints 2</span></pre>
+
+    <div class="new-content">
+      Each name inside the braces is an <strong>enumerator</strong> — a named integer constant. <code>RED</code> is just a readable spelling of <code>0</code>, <code>GREEN</code> of <code>1</code>, and so on. You can use them anywhere a number fits: assign them, compare them, print them. The type's full name is <code>enum Color</code> (you'll shorten that with <code>typedef</code> shortly).
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Choosing the values</div>
+    <h2>Set your own numbers 🎯</h2>
+
+    <p>You can give any enumerator an explicit value. Ones <em>after</em> it keep counting up from there:</p>
+
+    <pre class="code"><span class="kw">enum</span> Status { OK = <span class="hl">200</span>, REDIRECT = <span class="hl">300</span>, NOT_FOUND = <span class="hl">404</span> };
+
+<span class="kw">enum</span> Signal { LOW, HIGH, ERR = <span class="hl">10</span>, FATAL };
+<span class="cm">//            0     1    10        11   ← FATAL resumes from ERR+1</span></pre>
+
+    <div class="new-content">
+      Explicit values are handy when the numbers <em>mean</em> something (HTTP codes, hardware registers) or when you want a clean mapping. The key rule to remember: assigning one enumerator doesn't reset the counter — the next unassigned name is simply <em>the previous value plus one</em>. So in <code>Signal</code>, <code>FATAL</code> becomes <code>11</code>, not <code>2</code>.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> They're just ints</div>
+    <h2>Perfect partners with switch 🔁</h2>
+
+    <p>An enum value is an ordinary integer, so it works in comparisons, arithmetic, and especially <code>switch</code> — the natural way to handle each case by name:</p>
+
+    <pre class="code"><span class="kw">enum</span> Color c = GREEN;
+<span class="kw">switch</span> (c) {
+    <span class="kw">case</span> RED:   puts(<span class="str">"stop"</span>);  <span class="kw">break</span>;
+    <span class="kw">case</span> GREEN: puts(<span class="str">"go"</span>);    <span class="kw">break</span>;   <span class="cm">// ← runs this</span>
+    <span class="kw">case</span> BLUE:  puts(<span class="str">"cool"</span>);  <span class="kw">break</span>;
+}</pre>
+
+    <div class="new-content">
+      Reading <code>case GREEN:</code> instead of <code>case 1:</code> is the whole win — the switch documents itself. Because enumerators are real compile-time constants, they're also valid as array sizes and in other places that need a constant. Under the hood it's all just <code>int</code>, but on the page it reads like meaning.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> typedef + enum</div>
+    <h2>Drop the <code>enum</code> keyword 🧱</h2>
+
+    <p>Just like with structs, a <code>typedef</code> lets you skip writing <code>enum</code> every time:</p>
+
+    <pre class="code"><span class="kw">typedef</span> <span class="kw">enum</span> { MON, TUE, WED, THU, FRI } Day;
+
+Day today = WED;       <span class="cm">// no "enum" needed — today holds 2</span></pre>
+
+    <div class="trap">
+      <h4>🚨 An enum variable isn't range-checked</h4>
+      <p>In C, an enum is just a dressed-up <code>int</code> — there's <strong>no</strong> type safety. Nothing stops you writing <code>Day d = 99;</code> even though no enumerator has that value; it compiles fine. Enums improve <em>readability</em>, not correctness. (They also share the normal identifier namespace, so two enums can't both define a name like <code>RED</code> — the names would collide.)</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Enum Explorer</div>
+    <h2>What number is that name? 🔬</h2>
+
+    <p>Two tools. The <strong>Explorer</strong> lets you click an enumerator to see the integer it stands for, and why. <strong>Predict the Output</strong> tests auto-numbering, explicit values, and typedef'd enums.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🔢 Enum Explorer</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="se">Enum Explorer</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- EXPLORER -->
+      <div class="tab-panel active" id="tab-se">
+        <div class="se-decl" id="seDecl"></div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-bottom:6px">Click an enumerator to see its value →</div>
+        <div class="se-fields" id="seFields">
+          <button class="sebtn active" data-f="LOW">LOW</button>
+          <button class="sebtn" data-f="HIGH">HIGH</button>
+          <button class="sebtn" data-f="ERR">ERR</button>
+          <button class="sebtn" data-f="FATAL">FATAL</button>
+        </div>
+        <div class="se-result" id="seResult"></div>
+        <div class="se-msg" id="seMsg"></div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="count-btns" id="poBtns"></div>
+        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        In <code>enum E { A, B, C = 10, D };</code>, what is the value of <code>D</code>?
+      </div>
+      <button class="opt" data-correct="true"><span><strong>11</strong> — an unassigned enumerator is the previous value + 1, so <code>D = C + 1 = 11</code></span></button>
+      <button class="opt" data-correct="false"><span>3 — it keeps counting from where the auto-numbering left off</span></button>
+      <button class="opt" data-correct="false"><span>0 — the counter resets after an explicit value</span></button>
+      <button class="opt" data-correct="false"><span>Undefined — you must assign every value</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: A=0, B=1, C=10, then D follows C.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔢</div>
+      <div class="mistake-body">
+        <strong>Expecting the counter to reset</strong>
+        <small>After an explicit value, the next unassigned enumerator is the previous <em>plus one</em> — not back to 0 or to the original sequence. <code>{ LOW, HIGH, ERR=10, FATAL }</code> gives FATAL = 11.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">⚠️</div>
+      <div class="mistake-body">
+        <strong>Assuming type safety</strong>
+        <small>An enum is just an <code>int</code> in C. <code>Day d = 99;</code> compiles even though it's not a valid day. Use enums for clarity; validate values yourself if it matters.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">💥</div>
+      <div class="mistake-body">
+        <strong>Name collisions</strong>
+        <small>Enumerators live in the ordinary namespace, so two enums can't both define <code>RED</code> or <code>OK</code>. Prefix them (<code>COLOR_RED</code>, <code>HTTP_OK</code>) when clashes are likely.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Days of the week.</strong> Write <code>enum Day { MON, TUE, WED, THU, FRI, SAT, SUN };</code> and print the value of <code>SAT</code>. Confirm it's 5.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>A tiny state machine.</strong> Define <code>enum State { IDLE, RUNNING, PAUSED, STOPPED };</code> and write a <code>switch</code> that prints a message for each state. Drive it with a variable and watch the right case fire.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Explicit codes.</strong> Make <code>enum Http { OK = 200, MOVED = 301, NOT_FOUND = 404, ERROR = 500 };</code>. Print each, then add one unassigned enumerator right after <code>OK</code> and predict its value before running.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>An <code>enum</code> names a set of integer constants</strong> — <code>RED</code>, <code>GREEN</code>, <code>BLUE</code> instead of 0, 1, 2.</li>
+        <li><strong>Auto-numbering starts at 0</strong> and counts up; an explicit value sets the count, and the next name resumes from <em>there + 1</em>.</li>
+        <li><strong>Enumerators are plain ints</strong> — great in <code>switch</code>, comparisons, and as constants.</li>
+        <li><strong><code>typedef enum { … } Name;</code></strong> lets you drop the <code>enum</code> keyword.</li>
+        <li><strong>No type safety in C</strong> — any int fits an enum variable; the value is clarity, not correctness.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="C_Book_Lesson_8_2.html" class="nav-btn prev">
+      <small>← Previous</small>
+      8.2  typedef — naming types
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next lesson →</small>
+      8.4  Struct pointers &amp; the -&gt; operator
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "enum gives names to a set of integer constants. 🔢",
+    "enum Color { RED, GREEN, BLUE }; → RED=0, GREEN=1, BLUE=2. 🏷️",
+    "Set explicit values: { OK=200, NOT_FOUND=404 } — auto resumes after. 🎯",
+    "Enums are just ints — great in switch, comparisons, arithmetic. 🔁",
+    "typedef enum {..} Day; — drop the enum keyword. 🧱",
+    "Click an enumerator — see its underlying int! 🔬",
+    "No type safety in C — any int fits an enum variable. ⚠️",
+    "enum = named int constants; readable code instead of magic numbers. 📚"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 8.3 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const bitBubble = document.getElementById('bitBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    bitBubble.style.opacity = '0';
+    setTimeout(() => { bitBubble.innerHTML = `<span class="bit-name">Bit</span> ${line}`; bitBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Enum Explorer =====
+  const ENUMS = {
+    LOW:   { v: 0,  why: 'the <b>first</b> enumerator, no explicit value → starts at <code>0</code>.' },
+    HIGH:  { v: 1,  why: 'no explicit value → previous (<code>LOW=0</code>) + 1 = <code>1</code>.' },
+    ERR:   { v: 10, why: '<b>explicitly</b> set to <code>10</code>.' },
+    FATAL: { v: 11, why: 'no explicit value → previous (<code>ERR=10</code>) + 1 = <code>11</code> (it resumes from ERR, not from 2!).' }
+  };
+  let enr = 'LOW', seTouched = false;
+  const seDecl = document.getElementById('seDecl');
+  const seFields = document.getElementById('seFields');
+  const seResult = document.getElementById('seResult');
+  const seMsg = document.getElementById('seMsg');
+
+  seDecl.innerHTML = `<span class="kw">enum</span> Signal { <span class="hl">LOW</span>, <span class="hl">HIGH</span>, <span class="hl">ERR</span> = 10, <span class="hl">FATAL</span> };`;
+
+  function renderSE() {
+    const e = ENUMS[enr];
+    seResult.innerHTML = `<div class="call">(int) ${enr}</div><div class="out">${e.v}</div>`;
+    seMsg.innerHTML = `<b>${enr}</b> = <span class="grn">${e.v}</span> — ${e.why}`;
+  }
+  seFields.querySelectorAll('.sebtn').forEach(b => b.addEventListener('click', (e) => {
+    enr = b.dataset.f;
+    seFields.querySelectorAll('.sebtn').forEach(x => x.classList.toggle('active', x === b));
+    renderSE();
+    if (!seTouched) { seTouched = true; addXP(5, e.clientX, e.clientY, '🔢 Enum value! +5 XP'); }
+  }));
+  renderSE();
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'enum Color { RED, GREEN, BLUE };\nint main() {\n  printf("%d", GREEN);\n}',
+      opts: ['1', '0', '2', 'error'],
+      answer: '1',
+      why: 'Auto-numbering: RED=0, GREEN=1, BLUE=2. So GREEN prints 1.'
+    },
+    {
+      code: 'enum Signal { LOW, HIGH, ERR = 10, FATAL };\nint main() {\n  printf("%d", FATAL);\n}',
+      opts: ['11', '3', '2', '10'],
+      answer: '11',
+      why: 'LOW=0, HIGH=1, ERR=10, then FATAL resumes from ERR+1 = 11.'
+    },
+    {
+      code: 'enum { A = 1, B = 2, C = 4 };\nint main() {\n  printf("%d", A + C);\n}',
+      opts: ['5', '14', '3', 'error'],
+      answer: '5',
+      why: 'Enumerators are plain ints: A=1, C=4, so A + C = 5.'
+    },
+    {
+      code: 'typedef enum { MON, TUE, WED } Day;\nint main() {\n  Day d = WED;\n  printf("%d", d);\n}',
+      opts: ['2', '3', '1', 'error'],
+      answer: '2',
+      why: 'MON=0, TUE=1, WED=2. The typedef just lets you write Day; d holds 2.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'cbtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.cbtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. Auto-numbering starts at 0 and counts up; an explicit value sets the count and the next name resumes from there + 1.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> A=0, B=1, then C is set to 10. An unassigned enumerator takes the previous value + 1, so D = C + 1 = <strong>11</strong>. The counter doesn\'t reset after an explicit value.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> D = C + 1 = 11.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. After <code>C = 10</code>, the next enumerator is simply C + 1. So D = 11.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#f97316', '#ec4899', '#8b5cf6', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
