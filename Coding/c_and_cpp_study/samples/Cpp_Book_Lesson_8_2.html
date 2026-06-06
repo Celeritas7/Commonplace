@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 8.1 — RAII: The Central Idea · The C++ Book</title>
+<title>Lesson 8.2 — Copy Semantics · The C++ Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -101,19 +101,33 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* RAII Scope Tracer */
+  /* Copy Inspector */
   .dd-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .dd-toggle .lab { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); width: 100%; }
   .ddbtn { background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .ddbtn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ddbtn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .dd-decl { background: var(--terminal); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; color: #e0e7ff; line-height: 1.7; margin: 4px 0 12px; }
   .dd-decl .kw { color: #c4b5fd; } .dd-decl .v { color: #fde047; font-weight: 700; } .dd-decl .cm { color: #818cf8; font-style: italic; } .dd-decl .bad { color: #fca5a5; font-weight: 700; }
-  .dd-result { background: var(--terminal); border-radius: 12px; padding: 14px 16px; text-align: center; margin-bottom: 6px; }
-  .dd-result .call { font-family: var(--mono); font-size: 13px; color: #818cf8; }
-  .dd-result .out { font-family: var(--mono); font-size: 18px; font-weight: 700; color: #fde047; margin-top: 4px; }
+
+  /* memory diagram */
+  .mem { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: #0d1033; border-radius: 12px; padding: 18px 14px; margin-bottom: 6px; }
+  .mem-col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .mem-obj { background: #312e81; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 12px; color: #e0e7ff; text-align: center; min-width: 92px; }
+  .mem-obj .nm { color: #c4b5fd; font-weight: 700; }
+  .mem-arrow { font-family: var(--mono); font-size: 18px; font-weight: 700; color: #f472b6; }
+  .mem-heap { display: flex; flex-direction: column; gap: 10px; }
+  .mem-buf { background: #064e3b; border: 2px solid var(--green); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; color: #bbf7d0; text-align: center; min-width: 78px; }
+  .mem-buf.warn { background: #7f1d1d; border-color: var(--red); color: #fecaca; }
+  .mem-buf .cap { display:block; font-size: 9px; color: #6ee7b7; margin-top: 2px; }
+  .mem-buf.warn .cap { color: #fca5a5; }
   .iw-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
   .iw-msg b { color: var(--purple-deep); }
   .iw-msg .grn { color: #166534; font-weight: 700; } .iw-msg .red { color: var(--red); font-weight: 700; }
+  .cp-act { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
+  .cp-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .cp-btn:hover { transform: translateY(-2px); }
+  .cp-btn.ghost { background: white; color: var(--purple-deep); border: 2px solid var(--purple-light); }
 
   /* Predict the output */
   .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
@@ -200,22 +214,22 @@
   </div>
   <div class="pixel-bubble" id="pixelBubble">
     <span class="pixel-name">Pixel</span>
-    RAII: grab a resource in the constructor, release it in the destructor. Cleanup becomes automatic! 🔗
+    When an object owns a resource, copying it needs care — or two objects end up fighting over one buffer. 📋
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-cpp">THE C++ BOOK &middot; 8.1</span>
+    <span class="crumb-cpp">THE C++ BOOK &middot; 8.2</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 56 / 84</span>
+    <span>Lesson 57 / 84</span>
   </div>
 
   <div class="hero">
     <span class="hero-tag">♻️ PART VIII &middot; MODERN RESOURCE MANAGEMENT</span>
-    <h1>RAII — The Central Idea</h1>
-    <p class="hero-sub">Forgetting to free memory, close a file, or release a lock is the source of countless bugs. C++'s answer is its defining idiom: <strong>RAII</strong> — tie a resource's lifetime to an object's lifetime. Acquire it in the constructor, release it in the destructor, and cleanup happens <em>automatically</em> when the object goes out of scope. This opens <strong>Part VIII</strong>.</p>
+    <h1>Copy Semantics</h1>
+    <p class="hero-sub">RAII said: an object owns a resource and frees it in its destructor. But what happens when you <strong>copy</strong> that object? If you don't say, C++ copies it member by member — which for a raw pointer means two objects now own the <em>same</em> resource. Both will free it. That's a crash. This lesson is about controlling how your objects copy: the <strong>copy constructor</strong> and <strong>copy assignment operator</strong>.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
       <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
@@ -230,140 +244,139 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>Cleanup you can't forget 🧠</h2>
+    <h2>Copying isn't free 🧠</h2>
 
     <div class="new-content">
-      Every resource you acquire — heap memory (<code>new</code>), an open file, a network socket, a mutex lock — must eventually be released, exactly once. Doing that by hand is shockingly error-prone: you forget the <code>delete</code>, an early <code>return</code> skips the cleanup, or an exception jumps over it entirely. C++ solves this with <strong>RAII</strong> (Resource Acquisition Is Initialization): wrap the resource in an object that <em>acquires</em> it in its constructor and <em>releases</em> it in its destructor. Because C++ guarantees the destructor runs when the object leaves scope — on <em>every</em> path out — the cleanup can't be skipped. This is the idea the whole of modern C++ is built on, and it opens <strong>Part VIII — Modern Resource Management</strong>.
+      In C++ you copy objects constantly — passing by value, returning from a function, assigning one variable to another, putting things in a container. For a plain struct of <code>int</code>s, copying just duplicates the numbers and all is well. But the moment a class <em>owns a resource</em> — heap memory from <code>new</code>, a file handle, a buffer — a naive copy duplicates the <em>pointer</em>, not the thing it points to. Now two objects believe they own one resource, and when each runs its destructor, the resource is freed twice. Copy semantics is how you take control: you decide what "copy" means for your type so it stays safe.
     </div>
 
-    <p>It's why you've been told to give classes a destructor that tidies up.</p>
+    <p>This is the second pillar of Part VIII, built directly on the RAII idea from 8.1.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> The idea</div>
-    <h2>Acquire in ctor, release in dtor 🏗️</h2>
+    <div class="step-label"><span class="step-num">2</span> Two operations</div>
+    <h2>Copy constructor vs. copy assignment 👯</h2>
 
-    <p>Tie the resource to the object. The constructor takes ownership; the destructor gives it back. The object <em>is</em> the resource's keeper:</p>
+    <p>There are two distinct moments where copying happens, and C++ gives each its own special member function:</p>
 
-    <pre class="code"><span class="kw">class</span> File {
-    std::FILE* f;
+    <pre class="code"><span class="kw">class</span> Box {
 <span class="kw">public</span>:
-    File(<span class="kw">const</span> <span class="kw">char</span>* name) { f = std::fopen(name, <span class="str">"r"</span>); }   <span class="hl">// acquire</span>
-    ~File() { <span class="kw">if</span> (f) std::fclose(f); }                       <span class="hl">// release</span>
-    <span class="cm">// ... methods that use f ...</span>
+    Box(<span class="kw">const</span> Box&amp; other);              <span class="hl">// copy constructor — make a NEW Box from another</span>
+    Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other);   <span class="hl">// copy assignment — overwrite an EXISTING Box</span>
 };
 
-<span class="kw">void</span> read() {
-    File file(<span class="str">"data.txt"</span>);   <span class="cm">// opened here</span>
-    <span class="cm">// ... use file ...</span>
-}                            <span class="cm">// ← file's destructor runs → fclose, automatically</span></pre>
+Box a;
+Box b = a;   <span class="cm">// copy CONSTRUCTOR (b is being created)</span>
+Box c;
+c = a;       <span class="cm">// copy ASSIGNMENT (c already exists, now overwritten)</span></pre>
 
     <div class="new-content">
-      When <code>read()</code> ends, the local <code>file</code> goes out of scope and its destructor fires, closing the handle — you never write <code>fclose</code> at the call site. The resource's lifetime is now <em>welded</em> to the object's lifetime. Acquire when the object is born; release when it dies. That's the entire pattern, and its name ("acquisition is initialization") describes the first half.
+      The distinction is "is the target being <em>born</em>, or does it <em>already exist</em>?" <code>Box b = a;</code> creates <code>b</code> for the first time, so the <strong>copy constructor</strong> runs. <code>c = a;</code> takes an already-living <code>c</code> and replaces its contents, so the <strong>copy assignment operator</strong> runs. Passing an object by value and returning one by value also invoke the copy constructor. They feel similar, but assignment has an extra job the constructor doesn't: it must deal with the resource the target was <em>already</em> holding.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> Why it's bulletproof</div>
-    <h2>Destructors run on every exit 🛡️</h2>
+    <div class="step-label"><span class="step-num">3</span> The default is shallow</div>
+    <h2>What the compiler writes for you ⚙️</h2>
 
-    <p>Compare the fragile manual version with the RAII one. The manual one leaks if anything jumps over the cleanup:</p>
+    <p>If you don't declare them, the compiler generates both — and they do a <strong>member-wise</strong> copy: each member is copied with <em>its own</em> copy. That's perfect for value-like members and dangerous for raw pointers:</p>
 
-    <pre class="code"><span class="cm">// Manual — leaks on early return OR exception</span>
-<span class="kw">void</span> f() {
-    std::FILE* fp = std::fopen(<span class="str">"d.txt"</span>, <span class="str">"r"</span>);
-    <span class="kw">if</span> (bad()) <span class="kw">return</span>;            <span class="bad">// ← fclose never runs! leak</span>
-    risky();                       <span class="bad">// ← throws? fclose never runs! leak</span>
-    std::fclose(fp);               <span class="cm">// only reached on the happy path</span>
-}
+    <pre class="code"><span class="kw">struct</span> Box {
+    <span class="kw">int</span>* data;          <span class="cm">// owns a heap int</span>
+    Box(<span class="kw">int</span> v) { data = <span class="kw">new</span> <span class="kw">int</span>(v); }
+    ~Box() { <span class="kw">delete</span> data; }
+    <span class="cm">// no copy ctor written → compiler's default copies the POINTER value</span>
+};
 
-<span class="cm">// RAII — cleans up no matter how f() exits</span>
-<span class="kw">void</span> f() {
-    File file(<span class="str">"d.txt"</span>);          <span class="cm">// dtor will run on EVERY path out</span>
-    <span class="kw">if</span> (bad()) <span class="kw">return</span>;            <span class="grn">// ✅ file closed by ~File()</span>
-    risky();                       <span class="grn">// ✅ throws? stack unwinds → ~File() still runs</span>
-}                                  <span class="grn">// ✅ normal exit → ~File() runs</span></pre>
+Box a(5);
+Box b = a;   <span class="bad">// b.data == a.data  — same address! both point at one int</span></pre>
 
     <div class="new-content">
-      This is the magic: when control leaves a scope — by reaching the end, by <code>return</code>, or by an exception unwinding the stack — C++ runs the destructors of all local objects automatically. So an RAII object releases its resource on <em>every</em> exit path, with no extra code. The manual version, by contrast, only cleans up if execution happens to reach the <code>fclose</code> line. RAII turns "remember to clean up everywhere" into "clean up once, in the destructor."
+      The generated copy sets <code>b.data = a.data</code> — it copies the pointer's <em>value</em> (an address), so both objects point at the same heap <code>int</code>. Note the contrast: a <code>std::string</code> or <code>std::vector</code> member would copy itself <em>deeply</em>, because those types define their own correct copy semantics (they're RAII types). The danger is only with <strong>raw owning pointers</strong>, where the default's shallow copy leaves two owners of one resource.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Order &amp; ownership</div>
-    <h2>Last in, first out 🔁</h2>
+    <div class="step-label"><span class="step-num">4</span> Shallow vs. deep</div>
+    <h2>Sharing a buffer ends in tears 💥</h2>
 
-    <p>When a scope ends, its local objects are destroyed in <strong>reverse</strong> order of construction — the same rule you saw with base/derived destructors (7.5):</p>
+    <p>A <strong>shallow</strong> copy duplicates the pointer; a <strong>deep</strong> copy allocates a fresh resource and copies the contents. With the shallow default above, two problems appear:</p>
 
-    <pre class="code">{
-    Lock  lock(mtx);     <span class="cm">// 1st constructed</span>
-    File  file(<span class="str">"d"</span>);     <span class="cm">// 2nd constructed</span>
-    <span class="cm">// ... work ...</span>
-}   <span class="cm">// ~File() runs first, then ~Lock() — reverse order, automatically</span></pre>
+    <table class="op-table">
+      <thead><tr><th>Problem</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td class="mono plain">Aliasing</td><td class="mono plain">writing through <code>b.data</code> also changes <code>a</code> — they share one int</td></tr>
+        <tr><td class="mono plain">Double free</td><td class="mono plain">both destructors <code>delete</code> the same address → undefined behaviour / crash</td></tr>
+      </tbody>
+    </table>
+
+    <p>The fix is a deep copy — give the new object its own resource:</p>
+
+    <pre class="code">Box(<span class="kw">const</span> Box&amp; other) {
+    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);   <span class="hl">// allocate our OWN int, copy the value</span>
+}</pre>
 
     <div class="new-content">
-      Each object owns exactly one resource and cleans up exactly that one, and the reverse order means dependencies unwind sensibly (you release the file before the lock that guarded it). The principle underneath is <strong>single ownership with a clear lifetime</strong>: every resource has one owning object responsible for it. Get the ownership right and the cleanup takes care of itself.
+      Now <code>b</code> has its own heap <code>int</code> holding the same value, completely independent of <code>a</code>. Changing one doesn't touch the other, and each destructor frees its own allocation exactly once. "Deep" means you follow the pointer and duplicate what it owns, not just the pointer itself. The interactive below lets you flip between shallow and deep and watch the arrows either collide on one buffer or split into two.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> The big picture</div>
-    <h2>It's already everywhere 📦</h2>
+    <div class="step-label"><span class="step-num">5</span> Assignment &amp; the Rule of Three</div>
+    <h2>Free the old, guard yourself 📐</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Type</th><th>Acquires</th><th>Releases in dtor</th></tr></thead>
-      <tbody>
-        <tr><td class="mono">std::string</td><td class="mono plain">heap chars</td><td class="mono plain">frees them</td></tr>
-        <tr><td class="mono">std::vector</td><td class="mono plain">heap array</td><td class="mono plain">frees it</td></tr>
-        <tr><td class="mono">std::unique_ptr</td><td class="mono plain">a <code>new</code> object</td><td class="mono plain">deletes it</td></tr>
-        <tr><td class="mono">std::lock_guard</td><td class="mono plain">a mutex lock</td><td class="mono plain">unlocks it</td></tr>
-      </tbody>
-    </table>
+    <p>Copy <em>assignment</em> has the constructor's job plus one more: the target already owns a resource that must be released first — and you must survive <code>x = x;</code>:</p>
+
+    <pre class="code">Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other) {
+    <span class="kw">if</span> (<span class="kw">this</span> == &amp;other) <span class="kw">return</span> *<span class="kw">this</span>;   <span class="hl">// 1. guard self-assignment</span>
+    <span class="kw">delete</span> data;                          <span class="cm">// 2. free what we already had</span>
+    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);          <span class="cm">// 3. deep-copy the new value</span>
+    <span class="kw">return</span> *<span class="kw">this</span>;                          <span class="cm">// 4. return *this for chaining</span>
+}</pre>
 
     <div class="trap">
-      <h4>🚨 You've been using RAII all along</h4>
-      <p>Every one of those standard types is an RAII wrapper: it grabs a resource in its constructor and frees it in its destructor, so you never call <code>delete</code> or <code>unlock</code> yourself. That's why a <code>std::vector</code> "just works" with no manual cleanup, and why modern C++ rarely writes raw <code>new</code>/<code>delete</code>. The rest of Part VIII builds directly on this idea: how copying and moving an owning object should behave (copy/move semantics, the Rule of 0/3/5) and the standard smart pointers (<code>unique_ptr</code>, <code>shared_ptr</code>) that put RAII around heap memory for you.</p>
+      <h4>🚨 The Rule of Three</h4>
+      <p>If your class needs a custom <strong>destructor</strong>, a custom <strong>copy constructor</strong>, or a custom <strong>copy assignment</strong>, it almost certainly needs <em>all three</em> — they're a set. Writing a destructor that <code>delete</code>s a pointer but leaving the copies as the shallow default is the classic recipe for a double free. (Skip the self-assignment guard and <code>x = x</code> deletes <code>data</code> and then reads the freed pointer.) The modern shortcut: don't manage raw pointers at all — store a <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> and the Rule of Three collapses to the <strong>Rule of Zero</strong>, because those members already copy and clean up correctly.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — RAII Scope Tracer</div>
-    <h2>Manual leaks, RAII doesn't 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Copy Inspector</div>
+    <h2>Watch the buffers share or split 🔬</h2>
 
-    <p>Two tools. The <strong>Tracer</strong> lets you choose how a function exits (normal, early return, exception) and whether cleanup is manual or RAII — and shows whether the resource gets released. <strong>Predict the Output</strong> tests destructor timing and order.</p>
+    <p>Two tools. The <strong>Copy Inspector</strong> runs <code>Box b = a;</code> with either the shallow default or a deep copy ctor — change <code>b</code> and destruct both objects to see aliasing and double-frees appear or vanish. <strong>Predict the Output</strong> tests which operation runs and what the values become.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ RAII Scope Tracer</div>
+        <div class="play-title">📋 Copy Inspector</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="dd">Scope Tracer</button>
+        <button class="tab-btn active" data-tab="dd">Copy Inspector</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- TRACER -->
+      <!-- INSPECTOR -->
       <div class="tab-panel active" id="tab-dd">
         <div class="dd-toggle">
-          <span class="lab">Cleanup style:</span>
-          <button class="ddbtn active" id="stRaii">RAII (dtor)</button>
-          <button class="ddbtn" id="stManual">manual fclose</button>
+          <span class="lab">Copy behaviour for <code>Box b = a;</code> :</span>
+          <button class="ddbtn" id="cpShallow">shallow (default)</button>
+          <button class="ddbtn active" id="cpDeep">deep (custom copy ctor)</button>
         </div>
-        <div class="dd-toggle">
-          <span class="lab">How the function exits:</span>
-          <button class="ddbtn active" id="exNormal">normal</button>
-          <button class="ddbtn" id="exReturn">early return</button>
-          <button class="ddbtn" id="exThrow">exception</button>
+        <div class="dd-decl" id="cpDecl"></div>
+        <div class="mem" id="cpMem"></div>
+        <div class="cp-act">
+          <button class="cp-btn" id="cpChange">*b.data = 9;</button>
+          <button class="cp-btn" id="cpDestruct">end scope → destruct a &amp; b</button>
+          <button class="cp-btn ghost" id="cpReset">reset ↺</button>
         </div>
-        <div class="dd-decl" id="ddDecl"></div>
-        <div class="dd-result" id="ddResult"></div>
-        <div class="iw-msg" id="ddMsg"></div>
+        <div class="iw-msg" id="cpMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -388,13 +401,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What is the core idea of <strong>RAII</strong>?
+        Your class has a destructor that does <code>delete data;</code> on a raw pointer it owns. By the <strong>Rule of Three</strong>, what else must you provide?
       </div>
-      <button class="opt" data-correct="true"><span>Acquire a resource in the <strong>constructor</strong> and release it in the <strong>destructor</strong>, so cleanup happens automatically when the object leaves scope</span></button>
-      <button class="opt" data-correct="false"><span>Always call <code>delete</code> at the end of every function</span></button>
-      <button class="opt" data-correct="false"><span>Allocate all memory at program startup</span></button>
-      <button class="opt" data-correct="false"><span>Use <code>try</code>/<code>catch</code> around every resource</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: the destructor runs on every exit path — that's what makes it reliable.</div>
+      <button class="opt" data-correct="true"><span>A <strong>copy constructor</strong> and a <strong>copy assignment operator</strong> that deep-copy — or the default shallow copies will double-free</span></button>
+      <button class="opt" data-correct="false"><span>Nothing — a correct destructor is enough on its own</span></button>
+      <button class="opt" data-correct="false"><span>Only a copy constructor; assignment is handled automatically</span></button>
+      <button class="opt" data-correct="false"><span>Just mark the class <code>const</code> so it can't be copied</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: destructor, copy constructor, copy assignment — they travel as a set.</div>
     </div>
   </section>
 
@@ -406,26 +419,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🧹</div>
+      <div class="mistake-icon">💥</div>
       <div class="mistake-body">
-        <strong>Manual cleanup on every path</strong>
-        <small>Calling <code>delete</code>/<code>fclose</code> by hand leaks whenever an early return or exception skips it. Wrap the resource in an RAII object and let the destructor handle it once.</small>
+        <strong>Destructor without matching copies</strong>
+        <small>A custom destructor with the default shallow copy means two objects free one resource — a double free. Provide the copy ctor and copy assignment too (Rule of Three).</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🪤</div>
+      <div class="mistake-icon">🔁</div>
       <div class="mistake-body">
-        <strong>Releasing in the wrong place</strong>
-        <small>Don't free a resource in a regular method or rely on reaching some line. The destructor is the one place guaranteed to run — release there.</small>
+        <strong>Forgetting the self-assignment guard</strong>
+        <small>In <code>operator=</code>, <code>x = x;</code> without <code>if (this == &amp;other) return *this;</code> deletes <code>data</code> and then copies from the freed pointer. Guard it first.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">📋</div>
+      <div class="mistake-icon">🧱</div>
       <div class="mistake-body">
-        <strong>Reinventing what the library gives you</strong>
-        <small>Before writing your own RAII wrapper, reach for <code>std::vector</code>, <code>std::string</code>, <code>std::unique_ptr</code>, or <code>std::lock_guard</code> — they already do RAII correctly.</small>
+        <strong>Managing raw pointers by hand at all</strong>
+        <small>Most of the time you don't need the Rule of Three — use <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> members and copying just works (Rule of Zero).</small>
       </div>
     </div>
 
@@ -433,39 +446,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Trace a destructor.</strong> Write a class whose constructor prints "open" and destructor prints "close". Create one inside a block <code>{ }</code> and confirm "close" prints when the block ends.
+      <strong>Spot the operation.</strong> Give a class a copy constructor that prints <code>"ctor"</code> and a copy assignment that prints <code>"assign"</code>. Then write <code>X b = a;</code> and <code>c = a;</code> and predict, then confirm, which message each line prints.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Beat the early return.</strong> Put your tracer object in a function that returns early under some condition. Confirm the destructor still runs (cleanup happens) on both the early and normal paths.
+      <strong>Make it deep.</strong> Write a <code>Box</code> that owns an <code>int*</code>. Add a deep copy constructor and copy assignment (with the self-assignment guard). Copy a box, change one, and confirm the other is unaffected and nothing double-frees.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A real wrapper.</strong> Write a tiny <code>FileRAII</code> that <code>fopen</code>s in its constructor and <code>fclose</code>s in its destructor (guarding against null). Use it to read a file, then throw partway through and confirm the file still closes.
+      <strong>Rule of Zero.</strong> Rewrite that <code>Box</code> to hold a <code>std::vector&lt;int&gt;</code> instead of a raw pointer, and delete the destructor, copy ctor, and copy assignment entirely. Show it still copies correctly — the compiler's defaults are now safe.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>RAII</strong> = tie a resource's lifetime to an object's: acquire in the constructor, release in the destructor.</li>
-        <li><strong>The destructor runs on every exit</strong> — normal end, <code>return</code>, or exception — so cleanup can't be skipped.</li>
-        <li><strong>Objects are destroyed in reverse order</strong> of construction; each owns and releases one resource.</li>
-        <li><strong>The standard library is RAII:</strong> <code>vector</code>, <code>string</code>, <code>unique_ptr</code>, <code>lock_guard</code> all clean up in their destructors.</li>
-        <li><strong>It's the foundation of Part VIII</strong> — copy/move semantics and smart pointers all build on it.</li>
+        <li><strong>Two operations:</strong> the <em>copy constructor</em> builds a new object from another; <em>copy assignment</em> overwrites an existing one.</li>
+        <li><strong>The compiler's default copy is shallow</strong> (member-wise) — it copies a raw pointer's address, not what it points to.</li>
+        <li><strong>Shallow copy of an owning pointer</strong> causes aliasing and a double free; a <em>deep</em> copy allocates its own resource.</li>
+        <li><strong>Copy assignment also</strong> frees the old resource and guards against <code>x = x;</code> — then deep-copies.</li>
+        <li><strong>Rule of Three:</strong> need one of dtor / copy ctor / copy assignment, need all three — or sidestep it entirely with the <em>Rule of Zero</em>.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="Cpp_Book_Lesson_7_9.html" class="nav-btn prev">
+    <a href="Cpp_Book_Lesson_8_1.html" class="nav-btn prev">
       <small>← Previous</small>
-      7.9  Object slicing
+      8.1  RAII — the central idea
     </a>
-    <a href="Cpp_Book_Lesson_8_2.html" class="nav-btn next">
+    <a href="#" class="nav-btn next disabled">
       <small>Next lesson →</small>
-      8.2  Copy semantics
+      8.3  Move semantics
     </a>
   </div>
 
@@ -473,14 +486,14 @@
 
 <script>
   const BIT_LINES = [
-    "RAII: tie a resource's lifetime to an object's lifetime. 🔗",
-    "Acquire in the constructor, release in the destructor. 🏗️",
-    "Scope ends → destructor runs → resource freed. Automatically. ✨",
-    "Destructors run on EVERY exit — return, exception, normal. 🛡️",
-    "vector, string, unique_ptr, lock_guard — all RAII underneath. 📦",
-    "Toggle manual vs RAII on each exit path — see leaks vanish! 🔬",
-    "No manual cleanup, no forgotten frees, no leaks. ✅",
-    "RAII = owners release in their destructors. The soul of modern C++. 📚"
+    "When an object owns a resource, copying it needs care. 📋",
+    "Two operations: copy constructor (birth) and copy assignment (already alive). 👯",
+    "The compiler's default copy is member-wise — shallow. ⚙️",
+    "Shallow copy shares the pointer → aliasing and double-free. 💥",
+    "Deep copy allocates its own buffer and copies the contents. 🧬",
+    "Toggle shallow vs deep — watch the buffers share or split. 🔬",
+    "Rule of Three: write one of dtor/copy-ctor/copy-= , write all three. 📐",
+    "Own a resource? Define how it copies — or sidestep with Rule of Zero. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -512,7 +525,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 8.1 complete! Part VIII begun! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 8.2 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -544,77 +557,108 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== RAII Scope Tracer =====
-  let style = 'raii', exitPath = 'normal', ddTouched = false;
-  const ddDecl = document.getElementById('ddDecl');
-  const ddResult = document.getElementById('ddResult');
-  const ddMsg = document.getElementById('ddMsg');
-  const stRaii = document.getElementById('stRaii');
-  const stManual = document.getElementById('stManual');
-  const exNormal = document.getElementById('exNormal');
-  const exReturn = document.getElementById('exReturn');
-  const exThrow = document.getElementById('exThrow');
+  // ===== Copy Inspector =====
+  let mode = 'deep';          // 'shallow' | 'deep'
+  let valA = 5, valB = 5;     // values shown for a and b
+  let destructed = false, cpTouched = false;
+  const cpDecl = document.getElementById('cpDecl');
+  const cpMem = document.getElementById('cpMem');
+  const cpMsg = document.getElementById('cpMsg');
+  const cpShallow = document.getElementById('cpShallow');
+  const cpDeep = document.getElementById('cpDeep');
+  const cpChange = document.getElementById('cpChange');
+  const cpDestruct = document.getElementById('cpDestruct');
+  const cpReset = document.getElementById('cpReset');
 
-  function renderDD() {
-    let body;
-    if (style === 'raii') {
-      const exitLine = exitPath === 'normal' ? '<span class="cm">// reach the end</span>'
-        : exitPath === 'return' ? '<span class="kw">if</span> (cond) <span class="kw">return</span>;'
-        : 'mayThrow();  <span class="cm">// throws</span>';
-      body = `<span class="kw">void</span> f() {<br>&nbsp;&nbsp;File file("d");  <span class="cm">// RAII</span><br>&nbsp;&nbsp;${exitLine}<br>}`;
+  function shared() { return mode === 'shallow'; }
+
+  function renderDecl() {
+    if (mode === 'shallow') {
+      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;<span class="cm">// no copy ctor → default copies the pointer</span><br>};<br>Box b = a;  <span class="bad">// b.data == a.data</span>`;
     } else {
-      const exitLine = exitPath === 'normal' ? '<span class="cm">// reach fclose</span>'
-        : exitPath === 'return' ? '<span class="kw">if</span> (cond) <span class="bad">return;</span>'
-        : 'mayThrow();  <span class="bad">// throws</span>';
-      body = `<span class="kw">void</span> f() {<br>&nbsp;&nbsp;FILE* fp = fopen("d","r");<br>&nbsp;&nbsp;${exitLine}<br>&nbsp;&nbsp;fclose(fp);<br>}`;
-    }
-    ddDecl.innerHTML = body;
-    // released if RAII (always) or manual+normal
-    const released = style === 'raii' || exitPath === 'normal';
-    ddResult.innerHTML = `<div class="call">exit: ${exitPath}</div><div class="out">${released ? 'resource released  ✅' : 'LEAKED  ❌'}</div>`;
-    if (style === 'raii') {
-      ddMsg.innerHTML = `<b>RAII.</b> However <code>f()</code> exits — ${exitPath} — the local <code>file</code> leaves scope and <code>~File()</code> runs → <span class="grn">resource released</span>. The destructor can't be skipped.`;
-    } else if (exitPath === 'normal') {
-      ddMsg.innerHTML = `<b>Manual, normal exit.</b> Execution reaches <code>fclose(fp)</code> → <span class="grn">released</span> — but only because nothing jumped over it.`;
-    } else if (exitPath === 'return') {
-      ddMsg.innerHTML = `<b>Manual, early return.</b> The <code>return</code> jumps over <code>fclose(fp)</code> → it never runs → <span class="red">leak</span>.`;
-    } else {
-      ddMsg.innerHTML = `<b>Manual, exception.</b> The throw unwinds past <code>fclose(fp)</code> → it never runs → <span class="red">leak</span>.`;
+      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;Box(<span class="kw">const</span> Box&amp; o) { data = <span class="kw">new</span> <span class="kw">int</span>(*o.data); }<br>};<br>Box b = a;  <span class="v">// b gets its own int</span>`;
     }
   }
-  function poke(e) { if (!ddTouched) { ddTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Cleanup traced! +5 XP'); } }
-  stRaii.addEventListener('click', (e) => { style = 'raii'; stRaii.classList.add('active'); stManual.classList.remove('active'); renderDD(); poke(e); });
-  stManual.addEventListener('click', (e) => { style = 'manual'; stManual.classList.add('active'); stRaii.classList.remove('active'); renderDD(); poke(e); });
-  exNormal.addEventListener('click', (e) => { exitPath = 'normal'; exNormal.classList.add('active'); exReturn.classList.remove('active'); exThrow.classList.remove('active'); renderDD(); poke(e); });
-  exReturn.addEventListener('click', (e) => { exitPath = 'return'; exReturn.classList.add('active'); exNormal.classList.remove('active'); exThrow.classList.remove('active'); renderDD(); poke(e); });
-  exThrow.addEventListener('click', (e) => { exitPath = 'throw'; exThrow.classList.add('active'); exNormal.classList.remove('active'); exReturn.classList.remove('active'); renderDD(); poke(e); });
-  renderDD();
+  function renderMem() {
+    if (destructed) {
+      if (shared()) {
+        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
+          <div class="mem-arrow">⇒⇒</div>
+          <div class="mem-heap"><div class="mem-buf warn">freed 2× 💀<span class="cap">double free!</span></div></div>`;
+      } else {
+        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
+          <div class="mem-arrow">⇒</div>
+          <div class="mem-heap"><div class="mem-buf">freed ✓<span class="cap">int(${valA})</span></div><div class="mem-buf">freed ✓<span class="cap">int(${valB})</span></div></div>`;
+      }
+      return;
+    }
+    if (shared()) {
+      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
+        <div class="mem-arrow">⇒⇒</div>
+        <div class="mem-heap"><div class="mem-buf warn">int(${valA})<span class="cap">one shared buffer</span></div></div>`;
+    } else {
+      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
+        <div class="mem-arrow">⇒</div>
+        <div class="mem-heap"><div class="mem-buf">int(${valA})<span class="cap">a's own</span></div><div class="mem-buf">int(${valB})<span class="cap">b's own</span></div></div>`;
+    }
+  }
+  function setMode(m, e) {
+    mode = m; destructed = false; valA = 5; valB = 5;
+    cpShallow.classList.toggle('active', m === 'shallow');
+    cpDeep.classList.toggle('active', m === 'deep');
+    renderDecl(); renderMem();
+    cpMsg.innerHTML = m === 'shallow'
+      ? `<b>Shallow (default).</b> <code>b.data</code> holds the same address as <code>a.data</code> — <span class="red">one buffer, two owners.</span> Try changing <code>b</code> or ending the scope.`
+      : `<b>Deep copy.</b> The copy constructor gave <code>b</code> its own <code>int</code>. <span class="grn">Two independent buffers.</span> Try changing <code>b</code> or ending the scope.`;
+    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '📋 Copy traced! +5 XP'); }
+  }
+  function changeB(e) {
+    if (destructed) { cpMsg.innerHTML = `(Objects already destructed — hit <code>reset</code> first.)`; return; }
+    valB = 9;
+    if (shared()) { valA = 9; cpMsg.innerHTML = `<b>Aliasing!</b> <code>*b.data = 9;</code> changed the shared buffer, so <code>a</code> now reads <span class="red">9</span> too. They were never independent.`; }
+    else { cpMsg.innerHTML = `<b>Independent.</b> <code>*b.data = 9;</code> touched only <code>b</code>'s buffer — <code>a</code> still reads <span class="grn">5</span>.`; }
+    renderMem();
+    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '✏️ Mutated! +5 XP'); }
+  }
+  function destruct(e) {
+    if (destructed) return;
+    destructed = true; renderMem();
+    if (shared()) { cpMsg.innerHTML = `<b>End of scope.</b> Both destructors run <code>delete data;</code> on the <span class="red">same address</span> → <span class="red">double free</span> → undefined behaviour / crash. 💀`; }
+    else { cpMsg.innerHTML = `<b>End of scope.</b> Each destructor frees <span class="grn">its own</span> buffer exactly once. <span class="grn">Clean.</span> ✅`; }
+    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '🗑️ Destructed! +5 XP'); }
+  }
+  cpShallow.addEventListener('click', (e) => setMode('shallow', e));
+  cpDeep.addEventListener('click', (e) => setMode('deep', e));
+  cpChange.addEventListener('click', changeB);
+  cpDestruct.addEventListener('click', destruct);
+  cpReset.addEventListener('click', () => setMode(mode));
+  setMode('deep');
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'struct Guard { ~Guard() { std::cout << "released"; } };\nint main() {\n  { Guard g; std::cout << "using "; }\n  std::cout << "done";\n}',
-      opts: ['using releaseddone', 'using donereleased', 'releasedusing done', 'using done'],
-      answer: 'using releaseddone',
-      why: 'Inside the block: "using " prints, then the block ends and ~Guard() prints "released". Then "done".'
+      code: 'struct Box {\n  Box() {}\n  Box(const Box&) { std::cout << "copy "; }\n};\nvoid take(Box b) {}\nint main() { Box a; take(a); std::cout << "done"; }',
+      opts: ['copy done', 'done', 'copy copy done', 'done copy'],
+      answer: 'copy done',
+      why: 'Passing a by value into take() copies it → the copy constructor runs, printing "copy ". Then "done". (No copy is made returning void.)'
     },
     {
-      code: 'struct Guard { ~Guard() { std::cout << "R"; } };\nvoid f() { Guard g; std::cout << "A"; return; std::cout << "B"; }\nint main() { f(); std::cout << "C"; }',
-      opts: ['ARC', 'AC', 'ARBC', 'ACR'],
-      answer: 'ARC',
-      why: 'f prints "A", then returns — g is destroyed on the way out, printing "R" ("B" is unreachable). Then main prints "C".'
+      code: 'struct T {\n  T() {}\n  T(const T&) { std::cout << "C"; }\n  T& operator=(const T&) { std::cout << "A"; return *this; }\n};\nint main() {\n  T x;\n  T y = x;   // creating y\n  y = x;     // y already exists\n}',
+      opts: ['CA', 'AC', 'CC', 'AA'],
+      answer: 'CA',
+      why: '"T y = x;" creates y → copy constructor → "C". "y = x;" overwrites an existing y → copy assignment → "A". So "CA".'
     },
     {
-      code: 'struct Guard { char id; Guard(char c):id(c){} ~Guard(){ std::cout << id; } };\nint main() {\n  Guard a(\'a\'), b(\'b\'), c(\'c\');\n}',
-      opts: ['cba', 'abc', 'aabbcc', 'bca'],
-      answer: 'cba',
-      why: 'Local objects are destroyed in reverse order of construction: c, then b, then a → "cba".'
+      code: 'struct Buf {\n  int* p;\n  Buf(int v) { p = new int(v); }\n  // no custom copy ctor (shallow)\n};\nint main() {\n  Buf a(5);\n  Buf b = a;     // b.p == a.p\n  *b.p = 9;\n  std::cout << *a.p;\n}',
+      opts: ['9', '5', '0', 'crash'],
+      answer: '9',
+      why: 'The default shallow copy makes b.p the same address as a.p. Writing *b.p = 9 changes the one shared int, so *a.p is now 9 (aliasing).'
     },
     {
-      code: 'struct Guard { ~Guard() { std::cout << "X"; } };\nint main() {\n  Guard g;\n  { Guard h; }      // h destroyed here\n  std::cout << "M";\n}                    // g destroyed here',
-      opts: ['XMX', 'XXM', 'MXX', 'XM'],
-      answer: 'XMX',
-      why: 'h is destroyed when its inner block ends → "X". Then "M". Then g is destroyed at the end of main → "X". So "XMX".'
+      code: 'struct S {\n  int* p;\n  S(int v) { p = new int(v); }\n  S(const S& o) { p = new int(*o.p); }  // deep\n};\nint main() {\n  S a(5);\n  S b = a;\n  *b.p = 9;\n  std::cout << *a.p << *b.p;\n}',
+      opts: ['59', '99', '55', '95'],
+      answer: '59',
+      why: 'The deep copy ctor gives b its own int. Changing *b.p to 9 leaves a untouched, so *a.p is 5 and *b.p is 9 → "59".'
     }
   ];
   let poIdx = 0;
@@ -654,7 +698,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. A destructor runs when its object leaves scope (block end, return, exception), in reverse order of construction.`;
+          poFb.innerHTML = `❌ Not quite. Remember: creating from another = copy ctor; overwriting an existing one = copy assignment; shallow shares the pointer, deep duplicates it.`;
           breakStreak();
         }
       });
@@ -673,14 +717,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> RAII acquires a resource in the constructor and releases it in the destructor. Because the destructor runs automatically when the object leaves scope — on every exit path, including exceptions — cleanup is guaranteed without any manual calls.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Acquire in ctor, release in dtor.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The Rule of Three: a custom destructor almost always means you also need a copy constructor and copy assignment operator. Leave them as the shallow defaults and the two copies will both <code>delete</code> the same pointer — a double free. (Or skip raw pointers entirely for the Rule of Zero.)'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Destructor, copy ctor, copy assignment — all three.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. RAII isn\'t about manual <code>delete</code>, startup allocation, or wrapping everything in try/catch — it ties the resource to an object so the <em>destructor</em> releases it automatically.';
+      fb.innerHTML = '❌ Not quite. A destructor alone isn\'t enough — the default shallow copies still share the pointer and double-free. You need <em>both</em> the copy constructor and copy assignment (Rule of Three).';
       firstTry = false; breakStreak();
     }
   }));

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 9.1 — Text Files: fopen &amp; friends · The C Book</title>
+<title>Lesson 9.2 — Reading a File Line by Line · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -102,7 +102,7 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* File Simulator */
+  /* File / Line Reader */
   .fs-modes { display: flex; gap: 8px; margin-bottom: 12px; }
   .fsmode { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .fsmode.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
@@ -113,11 +113,17 @@
   .fs-line { display: flex; gap: 8px; }
   .fs-line .cur { color: var(--green); width: 14px; }
   .fs-line .txt { color: #e2e8f0; }
-  .fs-line.read .txt { color: #64748b; text-decoration: line-through; }
+  .fs-line.read .txt { color: #64748b; }
+  .fs-line .nl { color: #f472b6; }
   .fs-empty { color: #64748b; font-style: italic; }
-  .fs-act { display: flex; gap: 8px; margin-bottom: 10px; }
+  .fs-act { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .fs-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 10px 16px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
   .fs-btn:hover { transform: translateY(-2px); }
+  .fs-btn.ghost { background: white; color: var(--orange-deep); border: 2px solid var(--orange-light); }
+  .buf-view { background: #0b1220; border-radius: 10px; padding: 10px 14px; font-family: var(--mono); font-size: 13px; color: #e2e8f0; margin-bottom: 10px; line-height: 1.7; }
+  .buf-view .lbl { color: #94a3b8; font-size: 11px; }
+  .buf-view .val { color: #fde047; font-weight: 700; }
+  .buf-view .nl { color: #f472b6; font-weight: 700; }
   .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
   .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
@@ -204,22 +210,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Files let programs remember things! <code>fopen</code> to open, <code>fprintf</code>/<code>fgets</code> to read &amp; write, <code>fclose</code> when done. 📁
+    The everyday file task: read it one line at a time. <code>while (fgets(...))</code> until it returns <code>NULL</code>. 🔁
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 9.1</span>
+    <span class="crumb-c">THE C BOOK &middot; 9.2</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 59 / 72</span>
+    <span>Lesson 60 / 72</span>
   </div>
 
   <div class="hero">
     <span class="hero-tag">📁 PART IX &middot; FILES AND THE OUTSIDE WORLD</span>
-    <h1>Text Files: fopen &amp; friends</h1>
-    <p class="hero-sub">So far your programs forgot everything the moment they ended. <strong>Files</strong> change that: they let a program save data and read it back later. C's standard library gives you a small, dependable toolkit — <code>fopen</code> to open, <code>fprintf</code> and <code>fgets</code> to write and read, <code>fclose</code> to finish. This opens <strong>Part IX</strong>.</p>
+    <h1>Reading a File Line by Line</h1>
+    <p class="hero-sub">Last lesson you met <code>fgets</code>. Now we build the single most common file task in all of C: walk through a file <strong>one line at a time</strong>, from the first line to the last. The pattern is tiny and you'll use it forever — but it hides three sharp edges: the leftover newline, lines longer than your buffer, and the infamous <code>feof</code> trap.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -233,126 +239,122 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>Programs that remember 🧠</h2>
+    <h2>One line at a time 📄</h2>
 
     <div class="new-content">
-      Until now, every variable vanished when <code>main</code> returned. To save a high score, load a config, process a log, or write a report, a program needs to talk to <strong>files</strong> — data that lives on disk between runs. C handles this through its standard I/O library (<code>&lt;stdio.h&gt;</code>, the same header that gives you <code>printf</code>). The model is simple and consistent: you <em>open</em> a file to get a handle, <em>read or write</em> through that handle, and <em>close</em> it when you're done. Master those four steps and files stop being mysterious. This opens <strong>Part IX — Files and the Outside World</strong>.
+      Almost every program that reads text does it line by line: counting words in a file, parsing a config, scanning a log, loading a list of names. C has no built-in "read all lines" — you write a small loop yourself, and it's the same loop every time. Master it once and you can read any text file. The tool is <code>fgets</code> from <strong>9.1</strong>, but using it correctly in a loop has a few wrinkles that trip up nearly every beginner. This lesson nails the canonical loop and the three things that bite.
     </div>
 
-    <p>The same <code>printf</code>-style tools you know, now pointed at a file.</p>
+    <p>It's short — but getting the loop <em>condition</em> right is what separates working code from a subtle bug.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Opening &amp; closing</div>
-    <h2>fopen gives a FILE* 🔑</h2>
+    <div class="step-label"><span class="step-num">2</span> The canonical loop</div>
+    <h2>while (fgets(...)) 🔁</h2>
 
-    <p><code>fopen</code> takes a filename and a <em>mode</em>, and returns a <code>FILE *</code> handle — or <code>NULL</code> if it couldn't open. Always check, and always <code>fclose</code> when done:</p>
+    <p>Here it is — the loop you'll write for the rest of your C life. Open, loop on <code>fgets</code> until it returns <code>NULL</code>, close:</p>
 
-    <pre class="code"><span class="kw">FILE</span> *f = fopen(<span class="str">"data.txt"</span>, <span class="str">"r"</span>);   <span class="cm">// open for reading</span>
-<span class="kw">if</span> (f == NULL) {                       <span class="cm">// ALWAYS check!</span>
-    perror(<span class="str">"could not open data.txt"</span>);
-    <span class="kw">return</span> 1;
+    <pre class="code"><span class="kw">FILE</span> *f = fopen(<span class="str">"notes.txt"</span>, <span class="str">"r"</span>);
+<span class="kw">if</span> (!f) { perror(<span class="str">"open"</span>); <span class="kw">return</span> 1; }
+
+<span class="kw">char</span> line[256];
+<span class="kw">while</span> (fgets(line, <span class="kw">sizeof</span> line, f) != NULL) {   <span class="hl">// reads one line each pass</span>
+    printf(<span class="str">"%s"</span>, line);   <span class="cm">// line still has its '\n'</span>
 }
-<span class="cm">// ... use f ...</span>
-fclose(f);                             <span class="cm">// release the file when finished</span></pre>
-
-    <table class="op-table">
-      <thead><tr><th>Mode</th><th>Meaning</th><th>If the file…</th></tr></thead>
-      <tbody>
-        <tr><td class="mono">"r"</td><td class="mono plain">read</td><td class="mono plain">must exist, or fopen returns NULL</td></tr>
-        <tr><td class="mono">"w"</td><td class="mono plain">write</td><td class="mono plain">created, or <strong>truncated</strong> (emptied!)</td></tr>
-        <tr><td class="mono">"a"</td><td class="mono plain">append</td><td class="mono plain">created, or written to at the end</td></tr>
-      </tbody>
-    </table>
+fclose(f);</pre>
 
     <div class="new-content">
-      The <code>FILE *</code> is your handle to the open file — you pass it to every read/write call. The mode decides what's allowed and what happens to existing contents: <code>"r"</code> needs the file to exist, <code>"w"</code> starts it fresh (wiping anything there), and <code>"a"</code> keeps the old contents and adds to the end. Checking for <code>NULL</code> is not optional — files fail to open all the time (missing, no permission), and using a <code>NULL</code> handle crashes.
+      Each pass through the loop, <code>fgets</code> reads <strong>one line</strong> into <code>line</code> and returns the buffer (a non-<code>NULL</code> pointer). When there are no more lines, it returns <code>NULL</code> and the loop stops cleanly. Test the return value <em>directly</em> in the loop condition — <code>while (fgets(...) != NULL)</code> — because the return value is exactly the "did I get a line?" signal. Notice <code>sizeof line</code> as the size argument: it always matches the array, so you can never tell <code>fgets</code> the wrong size.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> Writing</div>
-    <h2>fprintf — printf to a file 📝</h2>
+    <div class="step-label"><span class="step-num">3</span> The leftover newline</div>
+    <h2>fgets keeps the \n — trim it ✂️</h2>
 
-    <p>Writing is just <code>printf</code> with a <code>FILE *</code> as the first argument. Everything you know about format strings carries over:</p>
+    <p><code>fgets</code> stores the line <em>including</em> the trailing <code>\n</code>. That surprises people: <code>"Ada"</code> in the file comes back as <code>"Ada\n"</code>. When you compare or print it, that newline is still there. The clean one-liner to chop it off:</p>
 
-    <pre class="code"><span class="kw">FILE</span> *f = fopen(<span class="str">"scores.txt"</span>, <span class="str">"w"</span>);
-fprintf(f, <span class="str">"%s %d\n"</span>, <span class="str">"Ada"</span>, 95);   <span class="cm">// writes "Ada 95\n" to the file</span>
-fprintf(f, <span class="str">"%s %d\n"</span>, <span class="str">"Bel"</span>, 88);
-fputs(<span class="str">"done\n"</span>, f);                  <span class="cm">// fputs writes a plain string</span>
-fclose(f);</pre>
+    <pre class="code"><span class="cm">// after fgets(line, sizeof line, f):</span>
+line[strcspn(line, <span class="str">"\n"</span>)] = <span class="str">'\0'</span>;   <span class="hl">// replace the first '\n' with end-of-string</span></pre>
 
     <div class="new-content">
-      <code>fprintf(f, …)</code> is to a file what <code>printf(…)</code> is to the screen — same format specifiers, same behaviour, just directed at <code>f</code>. (In fact <code>printf(...)</code> is essentially <code>fprintf(stdout, ...)</code>.) Use <code>\n</code> yourself when you want line breaks — nothing is added automatically. For writing a ready-made string with no formatting, <code>fputs</code> is the simple choice.
+      <code>strcspn(line, "\n")</code> (from <code>&lt;string.h&gt;</code>) returns the index of the first <code>\n</code> — or the length of the string if there's none. Writing <code>'\0'</code> at that index turns the newline into a string terminator, neatly trimming it. If the line had no newline (the last line of a file sometimes doesn't), <code>strcspn</code> returns the length and you harmlessly overwrite the existing <code>'\0'</code>. One safe line, every case handled — much tidier than poking at <code>line[strlen(line)-1]</code>, which misbehaves on empty input.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Reading</div>
-    <h2>fgets — a line at a time 📄</h2>
+    <div class="step-label"><span class="step-num">4</span> When the buffer is too small</div>
+    <h2>A line longer than the buffer 📏</h2>
 
-    <p>The safe, everyday way to read text is <code>fgets</code>: it reads up to one line into a buffer you provide, and won't overflow it. It returns <code>NULL</code> at end of file:</p>
+    <p><code>fgets(buf, size, f)</code> reads at most <code>size - 1</code> characters. If a line is longer than that, it does <strong>not</strong> overflow (that's the whole point of <code>fgets</code>) — it reads as much as fits and leaves the rest for the next call:</p>
 
-    <pre class="code"><span class="kw">char</span> line[256];
-<span class="kw">while</span> (fgets(line, <span class="kw">sizeof</span> line, f) != NULL) {   <span class="cm">// read until EOF</span>
-    printf(<span class="str">"got: %s"</span>, line);   <span class="cm">// note: line still has its '\n' on the end</span>
-}</pre>
+    <pre class="code"><span class="cm">// file line is: "abcdefgh\n"   (8 chars + newline)</span>
+<span class="kw">char</span> buf[5];                 <span class="cm">// holds 4 chars + '\0'</span>
+fgets(buf, <span class="kw">sizeof</span> buf, f);   <span class="cm">// buf = "abcd"   (no '\n' yet!)</span>
+fgets(buf, <span class="kw">sizeof</span> buf, f);   <span class="cm">// buf = "efgh"</span>
+fgets(buf, <span class="kw">sizeof</span> buf, f);   <span class="cm">// buf = "\n"     (the rest of the line)</span></pre>
 
     <div class="new-content">
-      <code>fgets(buf, size, f)</code> reads at most <code>size - 1</code> characters (leaving room for the terminating <code>\0</code>), stopping at a newline or end of file — so it can never write past your buffer. It keeps the trailing <code>\n</code> as part of the line, which surprises people; you often trim it. Looping until <code>fgets</code> returns <code>NULL</code> is the standard way to read a whole file line by line (the focus of the next lesson). There's also <code>fscanf</code> for parsing formatted fields, but <code>fgets</code> is the safer default.
+      The tell for "this was a partial read" is that the buffer does <em>not</em> end in <code>\n</code> (and you haven't hit end of file). A correct line is one that ends in <code>\n</code> — or the very last line, which may end at EOF instead. This is why a comfortable buffer matters: pick something larger than any line you reasonably expect (<code>256</code>, <code>1024</code>). If you must handle arbitrarily long lines, you loop reading chunks until you see the <code>\n</code>, growing storage as you go — but for everyday files, a generous fixed buffer is fine.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> The workflow</div>
-    <h2>Open, check, use, close 🔁</h2>
+    <div class="step-label"><span class="step-num">5</span> EOF vs. error</div>
+    <h2>Don't loop on feof 🐛</h2>
 
-    <p>Every file interaction follows the same four beats — the habit that keeps file code correct:</p>
+    <p>It's tempting to write <code>while (!feof(f))</code> — and it's <strong>wrong</strong>. <code>feof</code> only becomes true <em>after</em> a read has already failed at end of file, so the loop runs one extra time on stale data:</p>
 
-    <pre class="code"><span class="kw">FILE</span> *f = fopen(<span class="str">"notes.txt"</span>, <span class="str">"a"</span>);   <span class="cm">// 1. open (append)</span>
-<span class="kw">if</span> (!f) { perror(<span class="str">"open"</span>); <span class="kw">return</span> 1; }     <span class="cm">// 2. check</span>
-fprintf(f, <span class="str">"new note\n"</span>);                  <span class="cm">// 3. use</span>
-fclose(f);                                <span class="cm">// 4. close</span></pre>
+    <pre class="code"><span class="bad">// BUG: prints the last line twice</span>
+<span class="kw">while</span> (!feof(f)) {
+    fgets(line, <span class="kw">sizeof</span> line, f);   <span class="bad">// fails at EOF, leaves line unchanged</span>
+    printf(<span class="str">"%s"</span>, line);            <span class="bad">// prints the OLD line again</span>
+}</pre>
 
     <div class="trap">
-      <h4>🚨 "w" erases the file the instant you open it</h4>
-      <p>Opening with <code>"w"</code> <strong>truncates</strong> the file to empty <em>immediately</em> — before you write a single byte. If you meant to add to existing contents, that's data loss; use <code>"a"</code> (append) to keep what's there. And don't forget <code>fclose</code>: it flushes any buffered output to disk and releases the handle. Skip it and your last writes may never reach the file, and you leak a resource — exactly the kind of cleanup C++ will later automate with RAII.</p>
+      <h4>🚨 <code>while (!feof(f))</code> reads one time too many</h4>
+      <p>End-of-file isn't known until a read <em>tries</em> and comes up empty. So <code>feof</code> is still false when you're sitting on the last line; you read it, print it, loop again, the next <code>fgets</code> fails (but you don't check!), and <code>line</code> still holds the previous line — printed a second time. The fix is the loop from section 2: test what <code>fgets</code> <em>returns</em>. Reserve <code>feof</code> / <code>ferror</code> for <em>after</em> the loop, to ask why it stopped: <code>if (ferror(f)) perror("read");</code> tells you a real I/O error from a normal end of file.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — File Simulator</div>
-    <h2>Open a mode, read &amp; write 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Line Reader</div>
+    <h2>Step through the loop 🔬</h2>
 
-    <p>Two tools. The <strong>Simulator</strong> lets you open a file in <code>"w"</code>, <code>"a"</code>, or <code>"r"</code> and watch <code>fprintf</code> write lines and <code>fgets</code> read them back. <strong>Predict the Output</strong> tests modes, truncation, and <code>fgets</code>.</p>
+    <p>Two tools. The <strong>Line Reader</strong> runs <code>fgets</code> one call at a time over a sample file — toggle the buffer size and newline-trimming and watch the buffer fill and the cursor advance. <strong>Predict the Output</strong> tests the newline, partial reads, and the <code>feof</code> trap.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">📁 File Simulator</div>
+        <div class="play-title">📄 Line Reader</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="fs">File Simulator</button>
+        <button class="tab-btn active" data-tab="fs">Line Reader</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- SIMULATOR -->
+      <!-- LINE READER -->
       <div class="tab-panel active" id="tab-fs">
-        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-bottom:6px">fopen("notes.txt", ...) →</div>
-        <div class="fs-modes" id="fsModes">
-          <button class="fsmode active" data-m="w">"w"<small>write · truncates</small></button>
-          <button class="fsmode" data-m="a">"a"<small>append · keeps</small></button>
-          <button class="fsmode" data-m="r">"r"<small>read</small></button>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-bottom:6px">char buf[size]; &nbsp; while (fgets(buf, size, f)) ...</div>
+        <div class="fs-modes" id="fsSize">
+          <button class="fsmode active" data-s="big">buf[256]<small>plenty of room</small></button>
+          <button class="fsmode" data-s="tiny">buf[5]<small>4 chars + '\0'</small></button>
+        </div>
+        <div class="fs-modes" id="fsTrim">
+          <button class="fsmode active" data-t="off">raw line<small>keeps the \n</small></button>
+          <button class="fsmode" data-t="on">trim \n<small>strcspn chop</small></button>
         </div>
         <div class="fs-file" id="fsFile"></div>
+        <div class="buf-view" id="bufView"></div>
         <div class="fs-act">
-          <button class="fs-btn" id="fsAct"></button>
+          <button class="fs-btn" id="fsAct">fgets(buf, size, f)</button>
+          <button class="fs-btn ghost" id="fsReset">rewind ↺</button>
         </div>
         <div class="fs-msg" id="fsMsg"></div>
       </div>
@@ -379,13 +381,13 @@ fclose(f);                                <span class="cm">// 4. close</span></p
 
     <div class="quiz">
       <div class="quiz-q">
-        You want to <strong>add</strong> a line to an existing log file without erasing it. Which <code>fopen</code> mode?
+        What's the safe, standard way to read a text file line by line until the end?
       </div>
-      <button class="opt" data-correct="true"><span><code>"a"</code> — <strong>append</strong>: keeps existing contents and writes at the end</span></button>
-      <button class="opt" data-correct="false"><span><code>"w"</code> — write: it adds to the file</span></button>
-      <button class="opt" data-correct="false"><span><code>"r"</code> — read: it lets you write too</span></button>
-      <button class="opt" data-correct="false"><span>Any mode works; they all keep existing data</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: <code>"w"</code> truncates (empties) the file first.</div>
+      <button class="opt" data-correct="true"><span><code>while (fgets(line, sizeof line, f) != NULL) { ... }</code></span></button>
+      <button class="opt" data-correct="false"><span><code>while (!feof(f)) { fgets(line, sizeof line, f); ... }</code></span></button>
+      <button class="opt" data-correct="false"><span><code>for (;;) { fgets(line, sizeof line, f); ... }</code></span></button>
+      <button class="opt" data-correct="false"><span><code>while (fscanf(f, "%s", word) == 1) { ... }</code> — same thing</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: the loop should stop based on what <code>fgets</code> <em>returns</em>.</div>
     </div>
   </section>
 
@@ -397,26 +399,26 @@ fclose(f);                                <span class="cm">// 4. close</span></p
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">❓</div>
+      <div class="mistake-icon">🐛</div>
       <div class="mistake-body">
-        <strong>Not checking <code>fopen</code> for <code>NULL</code></strong>
-        <small>Files fail to open often (missing, no permission). Using a <code>NULL</code> <code>FILE*</code> crashes. Check every <code>fopen</code> before using the handle.</small>
+        <strong>Looping on <code>while (!feof(f))</code></strong>
+        <small>It runs one extra time and reprocesses the last line. Loop on what <code>fgets</code> returns instead, and check <code>feof</code>/<code>ferror</code> only after the loop.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🗑️</div>
+      <div class="mistake-icon">✂️</div>
       <div class="mistake-body">
-        <strong>Using <code>"w"</code> when you meant <code>"a"</code></strong>
-        <small><code>"w"</code> truncates the file to empty the moment it opens — instant data loss. To preserve and add, use <code>"a"</code>.</small>
+        <strong>Forgetting the trailing <code>\n</code></strong>
+        <small><code>fgets</code> keeps the newline, so <code>"Ada\n"</code> won't match <code>"Ada"</code>. Trim it with <code>line[strcspn(line, "\n")] = '\0';</code> before comparing.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">↩️</div>
+      <div class="mistake-icon">📏</div>
       <div class="mistake-body">
-        <strong>Forgetting the newline — or <code>fclose</code></strong>
-        <small><code>fgets</code> keeps the trailing <code>\n</code>; trim it if needed. And <code>fprintf</code> adds no newline for you. Always <code>fclose</code> to flush buffered writes and release the handle.</small>
+        <strong>Assuming one <code>fgets</code> = one whole line</strong>
+        <small>If a line is longer than the buffer, you only get part of it; the rest comes next call. Use a generous buffer, or detect a missing <code>\n</code> to know the line was cut.</small>
       </div>
     </div>
 
@@ -424,39 +426,39 @@ fclose(f);                                <span class="cm">// 4. close</span></p
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Write then read.</strong> Open <code>"hello.txt"</code> with <code>"w"</code>, <code>fprintf</code> two lines, <code>fclose</code>. Reopen with <code>"r"</code> and <code>fgets</code> them back, printing each. Check both <code>fopen</code> calls.
+      <strong>Count the lines.</strong> Open a file with <code>"r"</code> and loop with <code>fgets</code>, incrementing a counter each pass. Print the total at the end — a one-screen <code>wc -l</code>.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Append a log.</strong> Write a program that opens a file with <code>"a"</code> and adds a timestamped line each run. Run it a few times and confirm the file <em>grows</em> instead of resetting.
+      <strong>Number and clean.</strong> Read each line, trim the <code>\n</code> with <code>strcspn</code>, and print it back as <code>1: line</code>, <code>2: line</code>, … so the numbering sits flush against the text with no stray blank lines.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>Copy a file.</strong> Open one file for reading and another for writing, then loop with <code>fgets</code>/<code>fputs</code> to copy line by line. Handle the case where the source can't be opened.
+      <strong>grep, lite.</strong> Take a search word from <code>argv[1]</code>, read a file line by line, and print only the lines that contain it (use <code>strstr</code>). After the loop, call <code>ferror</code> and report if the read stopped on an error rather than EOF.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong><code>fopen(name, mode)</code></strong> returns a <code>FILE *</code> — or <code>NULL</code> on failure. Always check.</li>
-        <li><strong>Modes:</strong> <code>"r"</code> read (must exist), <code>"w"</code> write (<em>truncates!</em>), <code>"a"</code> append (keeps &amp; adds).</li>
-        <li><strong><code>fprintf(f, …)</code></strong> writes like <code>printf</code>; <code>fputs</code> writes a plain string.</li>
-        <li><strong><code>fgets(buf, size, f)</code></strong> reads a line safely, keeps the <code>\n</code>, and returns <code>NULL</code> at EOF.</li>
-        <li><strong>Open → check → use → <code>fclose</code></strong> — close to flush writes and free the handle.</li>
+        <li><strong>The loop:</strong> <code>while (fgets(line, sizeof line, f) != NULL) { ... }</code> — stop when it returns <code>NULL</code>.</li>
+        <li><strong>fgets keeps the <code>\n</code></strong> — trim with <code>line[strcspn(line, "\n")] = '\0';</code> when you don't want it.</li>
+        <li><strong>It reads at most <code>size - 1</code> chars</strong> — a too-long line comes back in pieces (no <code>\n</code> = partial).</li>
+        <li><strong>Never loop on <code>while (!feof(f))</code></strong> — it reprocesses the last line. Test <code>fgets</code>'s return value.</li>
+        <li><strong>After the loop,</strong> use <code>ferror(f)</code> to tell a real I/O error from a normal end of file.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_8_6.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_9_1.html" class="nav-btn prev">
       <small>← Previous</small>
-      8.6  union &amp; bit fields
+      9.1  Text files — fopen &amp; friends
     </a>
-    <a href="C_Book_Lesson_9_2.html" class="nav-btn next">
+    <a href="#" class="nav-btn next disabled">
       <small>Next lesson →</small>
-      9.2  Reading a file line by line
+      9.3  Writing a file safely
     </a>
   </div>
 
@@ -464,14 +466,14 @@ fclose(f);                                <span class="cm">// 4. close</span></p
 
 <script>
   const BIT_LINES = [
-    "Files let programs save data and talk to the outside world. 📁",
-    "fopen returns a FILE* — always check it for NULL. 🔑",
-    "Modes: \"r\" read, \"w\" write (truncates!), \"a\" append. ✍️",
-    "fprintf(f, ...) writes to a file just like printf to the screen. 📝",
-    "fgets reads a line safely — and keeps the trailing newline. 📄",
-    "Open → check → use → fclose. Try the simulator! 🔬",
-    "\"w\" erases the file first — use \"a\" to keep what's there. ⚠️",
-    "fopen, fprintf/fgets, fclose — the file workflow. 📚"
+    "Reading a file line by line is the everyday file task. 📄",
+    "The loop: while (fgets(line, sizeof line, f)) — stop at NULL. 🔁",
+    "fgets keeps the \\n — trim it with strcspn when you don't want it. ✂️",
+    "Buffer too small? fgets reads a partial line — the rest comes next. 📏",
+    "Don't loop on !feof — it reprocesses the last line! 🐛",
+    "Step through the reader — watch the cursor advance. 🔬",
+    "Stop on what fgets RETURNS; ask feof/ferror only after. 🛡️",
+    "fgets loop, trim the newline, stop at NULL. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -503,7 +505,7 @@ fclose(f);                                <span class="cm">// 4. close</span></p
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 9.1 complete! Part IX begun! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 9.2 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -535,82 +537,121 @@ fclose(f);                                <span class="cm">// 4. close</span></p
 
   const playCount = document.getElementById('playCount');
 
-  // ===== File Simulator =====
-  let lines = [];      // each: { text, read }
-  let mode = 'w', wcount = 1, fsTouched = false;
-  const MAXL = 6;
+  // ===== Line Reader =====
+  const FILE_LINES = ["Ada", "a-long-name-here", "Bel"];   // each ends with \n in the file
+  const fileText = FILE_LINES.map(l => l + "\n").join("");
+  let pos = 0, bufSize = 'big', trim = 'off', lastBuf = null, atEof = false, fsTouched = false;
+
   const fsFile = document.getElementById('fsFile');
-  const fsModes = document.getElementById('fsModes');
-  const fsAct = document.getElementById('fsAct');
+  const bufView = document.getElementById('bufView');
   const fsMsg = document.getElementById('fsMsg');
+  const fsSize = document.getElementById('fsSize');
+  const fsTrim = document.getElementById('fsTrim');
+  const fsAct = document.getElementById('fsAct');
+  const fsReset = document.getElementById('fsReset');
+
+  function vis(s) { return s.replace(/\n/g, '<span class="nl">\\n</span>'); }
 
   function renderFile() {
-    let body = `<span class="fname">notes.txt</span>`;
-    if (lines.length === 0) {
-      body += `<span class="fs-empty">(empty file)</span>`;
-    } else {
-      lines.forEach((ln, i) => {
-        const isNext = (mode === 'r' && !ln.read && (i === 0 || lines[i - 1].read));
-        body += `<div class="fs-line${ln.read ? ' read' : ''}"><span class="cur">${isNext ? '▸' : ''}</span><span class="txt">${ln.text}</span></div>`;
-      });
-    }
+    let body = `<span class="fname">notes.txt &nbsp;·&nbsp; read so far: ${pos} / ${fileText.length} chars</span>`;
+    FILE_LINES.forEach((ln, i) => {
+      // a line is fully "read" once pos has passed its trailing newline
+      let lineEnd = FILE_LINES.slice(0, i + 1).reduce((a, l) => a + l.length + 1, 0);
+      let lineStart = lineEnd - (ln.length + 1);
+      const done = pos >= lineEnd;
+      const onIt = pos >= lineStart && pos < lineEnd;
+      body += `<div class="fs-line${done ? ' read' : ''}"><span class="cur">${onIt ? '▸' : ''}</span><span class="txt">${ln}<span class="nl">\\n</span></span></div>`;
+    });
     fsFile.innerHTML = body;
   }
-  function setActLabel() {
-    fsAct.textContent = (mode === 'r') ? 'fgets(buf, size, f)' : 'fprintf(f, "...")';
+  function renderBuf() {
+    if (lastBuf === null) { bufView.innerHTML = `<span class="lbl">buf =</span> <span class="val">(not read yet)</span>`; return; }
+    if (lastBuf === 'NULL') { bufView.innerHTML = `<span class="lbl">fgets returned</span> <span class="nl">NULL</span> <span class="lbl">→ loop stops</span>`; return; }
+    let shown = lastBuf;
+    if (trim === 'on') shown = shown.replace(/\n$/, '');
+    bufView.innerHTML = `<span class="lbl">buf =</span> "<span class="val">${vis(shown)}</span>"`;
   }
-  function selectMode(m, e) {
-    mode = m;
-    fsModes.querySelectorAll('.fsmode').forEach(b => b.classList.toggle('active', b.dataset.m === m));
-    if (m === 'w') { lines = []; wcount = 1; fsMsg.innerHTML = `<b>fopen("notes.txt", "w")</b> — opened for writing. The file is <span class="red">truncated to empty</span> immediately.`; }
-    else if (m === 'a') { lines.forEach(l => l.read = false); fsMsg.innerHTML = `<b>fopen("notes.txt", "a")</b> — opened for append. Existing lines are <span class="grn">kept</span>; new writes go at the end.`; }
-    else { lines.forEach(l => l.read = false); fsMsg.innerHTML = `<b>fopen("notes.txt", "r")</b> — opened for reading from the top. Click <code>fgets</code> to read a line.`; }
-    setActLabel(); renderFile();
-    if (!fsTouched && e) { fsTouched = true; addXP(5, e.clientX, e.clientY, '📁 File opened! +5 XP'); }
-  }
-  fsModes.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => selectMode(b.dataset.m, e)));
-
-  fsAct.addEventListener('click', (e) => {
-    if (mode === 'r') {
-      const next = lines.find(l => !l.read);
-      if (next) { next.read = true; fsMsg.innerHTML = `<b>fgets</b> read <code>"${next.text}\\n"</code> into your buffer (the <code>\\n</code> is kept). The read cursor advanced.`; }
-      else { fsMsg.innerHTML = `<b>fgets</b> returned <span class="red">NULL</span> — end of file. (This is how a read loop knows to stop.)`; }
-    } else {
-      if (lines.length >= MAXL) { fsMsg.innerHTML = `(simulator full — switch to "w" to start fresh)`; renderFile(); return; }
-      const t = `Line ${wcount++}`;
-      lines.push({ text: t, read: false });
-      fsMsg.innerHTML = `<b>fprintf(f, "${t}\\n")</b> wrote a line ${mode === 'a' ? 'at the end (append)' : ''}. It now lives in the file.`;
+  function doFgets() {
+    const cap = bufSize === 'tiny' ? 4 : 255;   // size - 1 readable chars
+    if (pos >= fileText.length) { lastBuf = 'NULL'; atEof = true; return; }
+    let s = "";
+    while (s.length < cap && pos < fileText.length) {
+      const ch = fileText[pos++];
+      s += ch;
+      if (ch === '\n') break;
     }
-    renderFile();
-    if (!fsTouched) { fsTouched = true; addXP(5, e.clientX, e.clientY, '📝 File op! +5 XP'); }
+    lastBuf = s;
+  }
+  function classifyMsg() {
+    if (lastBuf === 'NULL') { fsMsg.innerHTML = `<b>fgets returned <span class="red">NULL</span></b> — no more data. The <code>while</code> loop ends here. (Now you'd <code>fclose</code>, and could check <code>ferror</code>.)`; return; }
+    const hasNL = lastBuf.endsWith('\n');
+    if (hasNL) {
+      fsMsg.innerHTML = `<b>Full line read.</b> It ends in <code>\\n</code>${trim === 'on' ? ' — which the <code>strcspn</code> trim just removed for display' : ' (kept by fgets)'}. <span class="grn">One complete line per pass.</span>`;
+    } else if (pos >= fileText.length) {
+      fsMsg.innerHTML = `<b>Last line, no newline.</b> The file ended before a <code>\\n</code> — that's the one legitimate line without one. Next <code>fgets</code> returns <code>NULL</code>.`;
+    } else {
+      fsMsg.innerHTML = `<b>Partial read!</b> The buffer filled before the line's <code>\\n</code> — no newline at the end. <span class="red">The rest of this line comes on the next fgets.</span> (Try a bigger buffer.)`;
+    }
+  }
+  function step() {
+    doFgets(); renderFile(); renderBuf(); classifyMsg();
+  }
+  function resetReader(keepMsg) {
+    pos = 0; lastBuf = null; atEof = false;
+    renderFile(); renderBuf();
+    if (!keepMsg) fsMsg.innerHTML = `Rewound to the top. Click <code>fgets</code> to read the first line.`;
+  }
+
+  fsSize.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => {
+    bufSize = b.dataset.s;
+    fsSize.querySelectorAll('.fsmode').forEach(x => x.classList.toggle('active', x === b));
+    resetReader(true);
+    fsMsg.innerHTML = bufSize === 'tiny'
+      ? `Buffer is now <code>buf[5]</code> — only 4 chars fit per read. Watch long lines arrive in pieces. (Rewound.)`
+      : `Buffer is now <code>buf[256]</code> — every line fits in one read. (Rewound.)`;
+    if (!fsTouched && e) { fsTouched = true; addXP(5, e.clientX, e.clientY, '📄 Reader poked! +5 XP'); }
+  }));
+  fsTrim.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => {
+    trim = b.dataset.t;
+    fsTrim.querySelectorAll('.fsmode').forEach(x => x.classList.toggle('active', x === b));
+    renderBuf();
+    fsMsg.innerHTML = trim === 'on'
+      ? `Trim on: <code>line[strcspn(line,"\\n")] = '\\0';</code> chops the trailing newline for display.`
+      : `Trim off: the buffer shows exactly what <code>fgets</code> stored — newline and all.`;
+    if (!fsTouched && e) { fsTouched = true; addXP(5, e.clientX, e.clientY, '✂️ Reader poked! +5 XP'); }
+  }));
+  fsAct.addEventListener('click', (e) => {
+    step();
+    if (!fsTouched) { fsTouched = true; addXP(5, e.clientX, e.clientY, '📄 First read! +5 XP'); }
   });
-  selectMode('w');
+  fsReset.addEventListener('click', () => resetReader(false));
+  resetReader(false);
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'FILE *f = fopen("out.txt", "w");\nfprintf(f, "Hi");\nfprintf(f, "There");\nfclose(f);\n// What does out.txt now contain?',
-      opts: ['HiThere', 'Hi There', 'Hi\\nThere', 'There'],
-      answer: 'HiThere',
-      why: 'fprintf adds nothing automatically — no space, no newline. The two writes concatenate: "HiThere".'
+      code: '// file line is exactly: Ada\\n\nchar line[256];\nfgets(line, sizeof line, f);\nprintf("[%s]", line);   // what prints?',
+      opts: ['[Ada]\\n then ]', '[Ada]', '[Ada\\n]', '[Ada ]'],
+      answer: '[Ada]\\n then ]',
+      why: 'fgets keeps the \\n, so line is "Ada\\n". Printing "[%s]" gives "[Ada" + newline + "]" — the bracket lands on the next line. Trim with strcspn to get a clean [Ada].'
     },
     {
-      code: '// out.txt already contains "OLD"\nFILE *f = fopen("out.txt", "w");   // truncates!\nfprintf(f, "NEW");\nfclose(f);\n// out.txt now contains?',
-      opts: ['NEW', 'OLDNEW', 'NEWOLD', 'OLD'],
-      answer: 'NEW',
-      why: 'Opening with "w" truncates the file to empty first, so "OLD" is gone. Only "NEW" remains.'
+      code: 'char line[256];\nfgets(line, sizeof line, f);   // reads "Ada\\n"\nline[strcspn(line, "\\n")] = \'\\0\';\nprintf("[%s]", line);',
+      opts: ['[Ada]', '[Ada\\n]', '[Ada ]', '[]'],
+      answer: '[Ada]',
+      why: 'strcspn finds the \\n at index 3; writing \'\\0\' there turns "Ada\\n" into "Ada". Now it prints cleanly as [Ada].'
     },
     {
-      code: 'FILE *f = fopen("/nope/missing.txt", "r");\nif (f == NULL) printf("failed");\nelse printf("ok");',
-      opts: ['failed', 'ok', '(nothing)', 'crash'],
-      answer: 'failed',
-      why: 'Opening a non-existent file for reading fails, so fopen returns NULL → prints "failed".'
+      code: '// the line in the file is: abcdefgh\\n\nchar buf[5];                 // 4 chars + \'\\0\'\nfgets(buf, sizeof buf, f);\nprintf("%s", buf);            // first read only',
+      opts: ['abcd', 'abcdefgh', 'abcde', 'abcdefgh\\n'],
+      answer: 'abcd',
+      why: 'fgets reads at most size-1 = 4 characters. It grabs "abcd" (no \\n yet) and leaves "efgh\\n" for the next call.'
     },
     {
-      code: '// a line in the file is exactly: hello\\n\nchar buf[100];\nfgets(buf, 100, f);\nprintf("%zu", strlen(buf));   // length of what was read',
-      opts: ['6', '5', '7', '100'],
-      answer: '6',
-      why: 'fgets keeps the trailing newline, so buf is "hello\\n" — 5 letters + 1 newline = length 6.'
+      code: '// file: two lines  A\\n  B\\n\nwhile (!feof(f)) {            // the classic bug\n    fgets(line, sizeof line, f);\n    printf("%s", line);\n}',
+      opts: ['A then B then B (last twice)', 'A then B', 'A then B then blank', 'infinite loop'],
+      answer: 'A then B then B (last twice)',
+      why: 'feof is still false after reading B, so the loop runs again; that fgets fails at EOF but the code ignores it, so line still holds "B" and prints it twice. Loop on fgets\'s return instead.'
     }
   ];
   let poIdx = 0;
@@ -650,7 +691,7 @@ fclose(f);                                <span class="cm">// 4. close</span></p
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. fprintf adds nothing extra; "w" truncates; a missing file fails to open for "r"; fgets keeps the \\n.`;
+          poFb.innerHTML = `❌ Not quite. Remember: fgets keeps the \\n, reads at most size-1 chars, and !feof loops one time too many.`;
           breakStreak();
         }
       });
@@ -669,14 +710,14 @@ fclose(f);                                <span class="cm">// 4. close</span></p
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>"a"</code> (append) opens the file keeping its current contents and writes at the end — perfect for a log. <code>"w"</code> would truncate it to empty first, losing everything.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> <code>"a"</code> appends; <code>"w"</code> truncates.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Looping on what <code>fgets</code> returns stops cleanly at <code>NULL</code> and never reprocesses a line. <code>!feof</code> runs one time too many; a bare <code>for(;;)</code> never stops; and <code>fscanf("%s")</code> splits on whitespace into words, not lines.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Test <code>fgets</code>\'s return value.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. <code>"w"</code> erases the file first, and <code>"r"</code> is read-only. To keep contents and add to the end, use <code>"a"</code>.';
+      fb.innerHTML = '❌ Not quite. <code>!feof</code> reprocesses the last line, <code>for(;;)</code> never ends, and <code>fscanf("%s")</code> reads whitespace-separated words. The line-by-line loop tests <code>fgets</code>\'s return.';
       firstTry = false; breakStreak();
     }
   }));
