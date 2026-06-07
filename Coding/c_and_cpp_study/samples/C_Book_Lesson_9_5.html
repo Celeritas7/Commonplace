@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 9.5 — Command-Line Arguments · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,30 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Arg Inspector */
+  .ai-prompt { display: flex; align-items: center; gap: 8px; background: var(--terminal); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+  .ai-prompt .dollar { color: #86efac; font-family: var(--mono); font-weight: 700; }
+  .ai-input { flex: 1; background: transparent; border: none; outline: none; color: #e2e8f0; font-family: var(--mono); font-size: 13.5px; }
+  .ai-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ai-chip { background: white; border: 2px solid var(--bg3); border-radius: 16px; padding: 5px 12px; font: inherit; font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ai-chip:hover { border-color: var(--orange); transform: translateY(-2px); }
+  .ai-argc { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); background: #fff7ed; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
+  .ai-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .av-row { display: flex; align-items: center; gap: 10px; background: var(--terminal); border-radius: 9px; padding: 7px 12px; font-family: var(--mono); font-size: 13px; }
+  .av-idx { color: #fdba74; font-weight: 700; min-width: 64px; }
+  .av-val { color: #e2e8f0; }
+  .av-row.prog .av-val { color: #67e8f9; }
+  .av-row.nullrow .av-val { color: #fca5a5; font-style: italic; }
+  .av-tag { margin-left: auto; font-size: 10px; color: #94a3b8; font-family: var(--sans); font-weight: 600; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +203,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Want input before the program even starts? <code>main(int argc, char* argv[])</code> hands you the command line! ⌨️
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 9.5</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 63 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">📁 PART IX &middot; FILES AND THE OUTSIDE WORLD</span>
+    <h1>Command-Line Arguments</h1>
+    <p class="hero-sub">When you type <code>gcc -o hello hello.c</code>, how does <code>gcc</code> know the filename and the options? Through <strong>command-line arguments</strong>. Give <code>main</code> two parameters — <code>argc</code> and <code>argv</code> — and the words a user typed after your program's name land right in your hands. This is how every real command-line tool reads its input.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,116 +232,117 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>Input before main runs ⌨️</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      So far your programs got their input from <code>scanf</code> or files. But command-line tools take input <em>as you launch them</em>: <code>cp source.txt backup.txt</code>, <code>grep error log.txt</code>, <code>gcc -O2 main.c</code>. Those words after the program name are <strong>command-line arguments</strong>, and C hands them to you through two parameters on <code>main</code>. This is what makes a program scriptable and composable — it can be told what to do without stopping to ask. Combined with the streams and files from this Part, <code>argc</code>/<code>argv</code> are the last piece for building a genuine Unix-style tool.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>It's a tiny bit of syntax that unlocks every program you've ever run from a terminal.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> main's two parameters</div>
+    <h2>argc and argv 🔢</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>Declare <code>main</code> with two parameters and the system fills them in for you:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code"><span class="kw">int</span> main(<span class="kw">int</span> argc, <span class="kw">char</span> *argv[]) {   <span class="hl">// argc = count, argv = the strings</span>
+    printf(<span class="str">"got %d arguments\n"</span>, argc);
+    <span class="kw">return</span> 0;
+}</pre>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+    <ul>
+      <li><strong><code>argc</code></strong> (argument count) — how many words were on the command line, <em>including</em> the program name.</li>
+      <li><strong><code>argv</code></strong> (argument vector) — an array of strings (<code>char *</code>), one per word.</li>
+    </ul>
+
+    <div class="new-content">
+      <code>char *argv[]</code> means "an array of <code>char *</code>" — an array of strings, since a C string is a <code>char *</code> (you saw this back in the strings and pointers parts). The system splits the command line into words and hands you the count in <code>argc</code> and the words themselves in <code>argv</code>. You don't allocate or free any of it — it's set up before <code>main</code> starts and cleaned up after.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> The layout</div>
+    <h2>argv[0] is the program name 0️⃣</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>The very first entry, <code>argv[0]</code>, is the program's own name — the real arguments start at <code>argv[1]</code>. After the last argument, <code>argv[argc]</code> is <code>NULL</code>:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
-
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+    <pre class="code"><span class="cm">// run as:   ./greet Ada 3</span>
+<span class="cm">// argc == 3</span>
+argv[0]  <span class="cm">// "./greet"   ← the program name</span>
+argv[1]  <span class="cm">// "Ada"       ← first real argument</span>
+argv[2]  <span class="cm">// "3"         ← second real argument</span>
+argv[3]  <span class="cm">// NULL        ← marks the end</span></pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      So if a user passes <em>N</em> real arguments, <code>argc</code> is <em>N + 1</em> (the extra one is the program name at index 0). That off-by-one is the thing to keep straight: a tool expecting one filename should check <code>argc == 2</code>, not <code>argc == 1</code>. The trailing <code>NULL</code> at <code>argv[argc]</code> is a convenience — you can loop until you hit it, though looping with <code>argc</code> is more common.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> Looping over them</div>
+    <h2>Visit each argument 🔁</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>To process the real arguments, loop from <code>1</code> (skipping the program name) up to <code>argc</code>:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
-
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+    <pre class="code"><span class="kw">for</span> (<span class="kw">int</span> i = 1; i &lt; argc; i++) {   <span class="hl">// start at 1, stop before argc</span>
+    printf(<span class="str">"arg %d: %s\n"</span>, i, argv[i]);
+}</pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      Start at <code>i = 1</code> to skip <code>argv[0]</code> (the program name) and stop at <code>i &lt; argc</code> so you never read past the last argument. Each <code>argv[i]</code> is a plain C string, so everything you know about strings applies: compare with <code>strcmp</code> (e.g. <code>if (strcmp(argv[i], "-v") == 0)</code> to detect a flag), measure with <code>strlen</code>, and so on. This little loop is the skeleton of every option parser.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Arguments are strings</div>
+    <h2>"42" is text, not a number 🔤</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>Every argument arrives as a <strong>string</strong>, even if it looks like a number. To do math with it, convert first — <code>atoi</code> for a quick <code>int</code>, or <code>strtol</code> for proper error checking:</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code"><span class="cm">// run as:   ./repeat 3</span>
+<span class="kw">int</span> n = atoi(argv[1]);   <span class="hl">// "3" (text) → 3 (int)</span>
+<span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; n; i++) puts(<span class="str">"hi"</span>);</pre>
+
+    <div class="trap">
+      <h4>🚨 Reading argv[i] without checking argc first</h4>
+      <p>If your program uses <code>argv[1]</code> but the user ran it with no arguments, <code>argv[1]</code> is the <code>NULL</code> terminator — and using it (e.g. <code>atoi(NULL)</code> or <code>printf("%s", argv[1])</code>) is undefined behaviour, often a crash. <strong>Always check <code>argc</code> before reading an argument:</strong> <code>if (argc &lt; 2) { fprintf(stderr, "usage: %s &lt;n&gt;\n", argv[0]); return 1; }</code>. And remember the values are <em>text</em>: comparing <code>argv[1] == "3"</code> compares pointers, not contents — use <code>strcmp</code>, and convert with <code>atoi</code>/<code>strtol</code> before doing arithmetic.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Arg Inspector</div>
+    <h2>Watch a command split into argv[] 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Arg Inspector</strong> lets you type a command line and see exactly how it becomes <code>argc</code> and the <code>argv[]</code> array — program name, each argument, and the trailing <code>NULL</code>. <strong>Predict the Output</strong> tests counting, indexing, and conversion.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">⌨️ Arg Inspector</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Arg Inspector</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- ARG INSPECTOR -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="ai-prompt">
+          <span class="dollar">$</span>
+          <input class="ai-input" id="aiInput" type="text" spellcheck="false" value="./greet -n 3 Ada">
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="ai-chips" id="aiChips"></div>
+        <div class="ai-argc" id="aiArgc"></div>
+        <div class="ai-list" id="aiList"></div>
+        <div class="fs-msg" id="aiMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +352,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +367,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        You run <code>./resize 800</code>. How does <code>800</code> arrive in <code>argv[1]</code>?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>As the text string <code>"800"</code> — you must convert it (e.g. <code>atoi</code>/<code>strtol</code>) to use it as a number</span></button>
+      <button class="opt" data-correct="false"><span>As the integer <code>800</code>, ready to do math with</span></button>
+      <button class="opt" data-correct="false"><span>As <code>argc</code>, the argument count</span></button>
+      <button class="opt" data-correct="false"><span>As a single <code>char</code>, <code>'8'</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: <code>argv</code> is an array of strings — always.</div>
     </div>
   </section>
 
@@ -391,26 +385,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">🧨</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Not checking <code>argc</code> before reading <code>argv[i]</code></strong>
+        <small>If the user gave too few arguments, <code>argv[i]</code> may be <code>NULL</code> — using it is undefined behaviour. Check <code>argc</code> and print a usage message first.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">🔢</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Forgetting <code>argv[0]</code> is the program name</strong>
+        <small>The first real argument is <code>argv[1]</code>, and <code>argc</code> counts the program name too. A tool needing one argument wants <code>argc == 2</code>.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">🔤</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Treating an argument as a number</strong>
+        <small><code>argv[i]</code> is text. Use <code>atoi</code>/<code>strtol</code> to convert, and <code>strcmp</code> (not <code>==</code>) to compare — <code>==</code> compares pointers, not the characters.</small>
       </div>
     </div>
 
@@ -418,39 +412,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Echo the args.</strong> Print <code>argc</code>, then loop from <code>1</code> to <code>argc</code> printing each <code>argv[i]</code> on its own line. Run it with different words and confirm the count and order.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Sum the numbers.</strong> Treat every argument as a number with <code>atoi</code> and print their total — <code>./sum 2 3 10</code> → <code>15</code>. First check <code>argc</code> and print a usage line if none were given.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>A tiny <code>cat</code>.</strong> Take a filename from <code>argv[1]</code>, open it with <code>"r"</code> (Part IX!), and print it line by line — handling both "no filename given" (check <code>argc</code>) and "file won't open" (check <code>fopen</code>). Add a <code>-n</code> flag that numbers the lines.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong><code>int main(int argc, char *argv[])</code></strong> receives the command line: <code>argc</code> is the count, <code>argv</code> the strings.</li>
+        <li><strong><code>argv[0]</code> is the program name</strong>; real arguments start at <code>argv[1]</code>; <code>argv[argc]</code> is <code>NULL</code>.</li>
+        <li><strong>Loop <code>for (int i = 1; i &lt; argc; i++)</code></strong> to visit each argument as a string.</li>
+        <li><strong>Arguments are text</strong> — convert with <code>atoi</code>/<code>strtol</code>, compare with <code>strcmp</code>, never <code>==</code>.</li>
+        <li><strong>Check <code>argc</code> first</strong> — reading a missing argument is undefined behaviour.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_9_4.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      9.4  Standard streams &amp; pipes
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_9_6.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      9.6  Binary I/O — fread &amp; fwrite
     </a>
   </div>
 
@@ -458,14 +452,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "Command-line arguments let users feed your program before it runs. ⌨️",
+    "main(int argc, char* argv[]): argc is the count, argv the strings. 🔢",
+    "argv[0] is the program name; real args start at argv[1]. 0️⃣",
+    "Loop from 1 to argc to visit each argument. 🔁",
+    "Every argument is a STRING — convert numbers with atoi/strtol. 🔤",
+    "Type a command and watch it split into argv[]. 🔬",
+    "Always check argc before touching argv[i] — or it's UB. 🛡️",
+    "argc/argv are how every CLI tool reads its options. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +491,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 9.5 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +523,69 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
-  };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
+  // ===== Arg Inspector =====
+  let aiTouched = false;
+  const aiInput = document.getElementById('aiInput');
+  const aiChips = document.getElementById('aiChips');
+  const aiArgc = document.getElementById('aiArgc');
+  const aiList = document.getElementById('aiList');
+  const aiMsg = document.getElementById('aiMsg');
+  const PRESETS = ['./greet -n 3 Ada', './cp source.txt backup.txt', './sum 2 3 10', './tool'];
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function renderAI() {
+    const raw = aiInput.value.trim();
+    const argv = raw.length ? raw.split(/\s+/) : [];
+    const argc = argv.length;
+    aiArgc.innerHTML = `argc = <span style="color:var(--pink)">${argc}</span> &nbsp;·&nbsp; ${argc === 0 ? 'type a command above' : (argc - 1) + ' real argument' + (argc - 1 === 1 ? '' : 's') + ' (after the program name)'}`;
+    let rows = '';
+    argv.forEach((a, i) => {
+      const cls = i === 0 ? 'av-row prog' : 'av-row';
+      const tag = i === 0 ? 'program name' : 'argv[' + i + ']';
+      rows += `<div class="${cls}"><span class="av-idx">argv[${i}]</span><span class="av-val">"${esc(a)}"</span><span class="av-tag">${tag}</span></div>`;
+    });
+    if (argc > 0) {
+      rows += `<div class="av-row nullrow"><span class="av-idx">argv[${argc}]</span><span class="av-val">NULL</span><span class="av-tag">end marker</span></div>`;
+    }
+    aiList.innerHTML = rows;
+    if (argc === 0) { aiMsg.innerHTML = `Type a command to see how the shell splits it into <code>argv[]</code>.`; return; }
+    aiMsg.innerHTML = `<b>argv[0]</b> is <span style="color:#0e7490">"${esc(argv[0])}"</span> (the program name). The <span class="grn">${argc - 1}</span> real argument${argc - 1 === 1 ? '' : 's'} live in <code>argv[1]</code>…<code>argv[${argc - 1}]</code>, and <code>argv[${argc}]</code> is <span class="red">NULL</span>.`;
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
-  }));
-  renderPSI('valid');
+  PRESETS.forEach(p => {
+    const c = document.createElement('button');
+    c.className = 'ai-chip'; c.textContent = p;
+    c.addEventListener('click', (e) => { aiInput.value = p; renderAI(); if (!aiTouched) { aiTouched = true; addXP(5, e.clientX, e.clientY, '⌨️ Parsed! +5 XP'); } });
+    aiChips.appendChild(c);
+  });
+  aiInput.addEventListener('input', () => { renderAI(); if (!aiTouched) { aiTouched = true; addXP(5, undefined, undefined, '⌨️ Parsed! +5 XP'); } });
+  renderAI();
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: '// run as:   ./prog a b c\nprintf("%d", argc);',
+      opts: ['4', '3', '2', '1'],
+      answer: '4',
+      why: 'argc counts the program name plus all arguments: ./prog + a + b + c = 4.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: '// run as:   ./tool hello\nprintf("%s", argv[0]);',
+      opts: ['./tool', 'hello', 'tool', '(empty)'],
+      answer: './tool',
+      why: 'argv[0] is always the program name as it was invoked — here "./tool". The argument "hello" is argv[1].'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: '// run as:   ./add 2 3\n#include <stdlib.h>\nprintf("%d", atoi(argv[1]) + atoi(argv[2]));',
+      opts: ['5', '23', '6', 'error'],
+      answer: '5',
+      why: 'argv[1] and argv[2] are the strings "2" and "3". atoi converts each to an int, and 2 + 3 = 5. (Without atoi, "2"+"3" would just be pointer math, not 5.)'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: '// run as:   ./prog          (no extra args)\n// the code, without checking argc:\nprintf("%s", argv[1]);',
+      opts: ['undefined behavior — argv[1] doesn\'t exist', '(an empty string)', 'the program name', '0'],
+      answer: 'undefined behavior — argv[1] doesn\'t exist',
+      why: 'With no arguments, argc is 1 and argv[1] is the NULL terminator. Passing NULL to printf("%s", ...) is undefined behaviour — often a crash. Always check argc first.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +600,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +625,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Remember: argc counts the program name too, argv[0] is that name, arguments are strings (use atoi), and a missing argv[i] is NULL.`;
           breakStreak();
         }
       });
@@ -669,14 +644,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Everything in <code>argv</code> is a string. <code>800</code> arrives as the three characters <code>"800"</code>, so to use it as a number you convert it — <code>atoi(argv[1])</code> for a quick int, or <code>strtol</code> when you want to detect bad input. The shell never converts types for you.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> It\'s the string <code>"800"</code> — convert with <code>atoi</code>/<code>strtol</code>.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. <code>argv</code> is always an array of <em>strings</em>, so <code>800</code> comes in as the text <code>"800"</code>. Convert it with <code>atoi</code> or <code>strtol</code> before doing arithmetic.';
       firstTry = false; breakStreak();
     }
   }));

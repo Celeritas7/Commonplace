@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 8.2 — Copy Semantics · The C++ Book</title>
+<title>Lesson 8.4 — Rule of 0 / 3 / 5 · The C++ Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -101,40 +101,38 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Copy Inspector */
+  /* Rule Picker */
   .dd-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .dd-toggle .lab { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); width: 100%; }
-  .ddbtn { background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ddbtn { background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .ddbtn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
   .ddbtn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .dd-decl { background: var(--terminal); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; color: #e0e7ff; line-height: 1.7; margin: 4px 0 12px; }
   .dd-decl .kw { color: #c4b5fd; } .dd-decl .v { color: #fde047; font-weight: 700; } .dd-decl .cm { color: #818cf8; font-style: italic; } .dd-decl .bad { color: #fca5a5; font-weight: 700; }
 
-  /* memory diagram */
-  .mem { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: #0d1033; border-radius: 12px; padding: 18px 14px; margin-bottom: 6px; }
-  .mem-col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-  .mem-obj { background: #312e81; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 12px; color: #e0e7ff; text-align: center; min-width: 92px; }
-  .mem-obj .nm { color: #c4b5fd; font-weight: 700; }
-  .mem-arrow { font-family: var(--mono); font-size: 18px; font-weight: 700; color: #f472b6; }
-  .mem-heap { display: flex; flex-direction: column; gap: 10px; }
-  .mem-buf { background: #064e3b; border: 2px solid var(--green); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; color: #bbf7d0; text-align: center; min-width: 78px; }
-  .mem-buf.warn { background: #7f1d1d; border-color: var(--red); color: #fecaca; }
-  .mem-buf .cap { display:block; font-size: 9px; color: #6ee7b7; margin-top: 2px; }
-  .mem-buf.warn .cap { color: #fca5a5; }
+  /* members table */
+  .rp-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .rp-row { display: flex; align-items: center; gap: 10px; background: #f5f3ff; border: 1.5px solid var(--bg3); border-radius: 10px; padding: 8px 12px; font-size: 13.5px; }
+  .rp-row .nm { font-family: var(--mono); font-weight: 700; color: var(--purple-deep); flex: 1; }
+  .rp-badge { font-family: var(--sans); font-weight: 700; font-size: 11.5px; padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+  .b-auto { background: #dcfce7; color: #166534; }       /* compiler, correct */
+  .b-write { background: #ede9fe; color: var(--purple-deep); border: 1px solid var(--purple-light); }  /* you write */
+  .b-bad { background: #fee2e2; color: #991b1b; }         /* compiler, WRONG */
+  .b-supp { background: #f3f4f6; color: #6b7280; }        /* suppressed */
+  .rp-verdict { font-weight: 700; font-size: 15px; text-align: center; padding: 10px; border-radius: 12px; margin-top: 2px; }
+  .v-zero { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #166534; }
+  .v-five { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: var(--purple-deep); }
+  .v-bad { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
   .iw-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
   .iw-msg b { color: var(--purple-deep); }
   .iw-msg .grn { color: #166534; font-weight: 700; } .iw-msg .red { color: var(--red); font-weight: 700; }
-  .cp-act { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
-  .cp-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
-  .cp-btn:hover { transform: translateY(-2px); }
-  .cp-btn.ghost { background: white; color: var(--purple-deep); border: 2px solid var(--purple-light); }
 
   /* Predict the output */
   .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
   .scenario-code { font-family: var(--mono); font-size: 12px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.55; white-space: pre-wrap; }
   .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -214,22 +212,22 @@
   </div>
   <div class="pixel-bubble" id="pixelBubble">
     <span class="pixel-name">Pixel</span>
-    When an object owns a resource, copying it needs care — or two objects end up fighting over one buffer. 📋
+    The five special members travel as a set. The best number to write yourself? <strong>Zero.</strong> 🖐️
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-cpp">THE C++ BOOK &middot; 8.2</span>
+    <span class="crumb-cpp">THE C++ BOOK &middot; 8.4</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 57 / 84</span>
+    <span>Lesson 59 / 84</span>
   </div>
 
   <div class="hero">
     <span class="hero-tag">♻️ PART VIII &middot; MODERN RESOURCE MANAGEMENT</span>
-    <h1>Copy Semantics</h1>
-    <p class="hero-sub">RAII said: an object owns a resource and frees it in its destructor. But what happens when you <strong>copy</strong> that object? If you don't say, C++ copies it member by member — which for a raw pointer means two objects now own the <em>same</em> resource. Both will free it. That's a crash. This lesson is about controlling how your objects copy: the <strong>copy constructor</strong> and <strong>copy assignment operator</strong>.</p>
+    <h1>Rule of 0 / 3 / 5</h1>
+    <p class="hero-sub">You've now met all the pieces — destructor, copy operations, move operations. They aren't independent: they form a <strong>coordinated set</strong>, and getting one without the others is how bugs sneak in. These three rules of thumb tell you exactly how many you should write yourself — and the surprising best answer is usually <strong>zero</strong>.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
       <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
@@ -244,139 +242,121 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>Copying isn't free 🧠</h2>
+    <h2>They come as a set 🧠</h2>
 
     <div class="new-content">
-      In C++ you copy objects constantly — passing by value, returning from a function, assigning one variable to another, putting things in a container. For a plain struct of <code>int</code>s, copying just duplicates the numbers and all is well. But the moment a class <em>owns a resource</em> — heap memory from <code>new</code>, a file handle, a buffer — a naive copy duplicates the <em>pointer</em>, not the thing it points to. Now two objects believe they own one resource, and when each runs its destructor, the resource is freed twice. Copy semantics is how you take control: you decide what "copy" means for your type so it stays safe.
+      Over the last three lessons you saw the destructor (8.1), copy constructor and copy assignment (8.2), and move constructor and move assignment (8.3). The trap is treating them as five unrelated functions. They're not — they all answer the same question: "what happens to the resource this object owns when it's destroyed, copied, or moved?" Get one right and the others wrong, and your class is subtly broken (a double free, a silent slow copy, a leak). The "Rule of 0/3/5" is the community's compact wisdom for keeping them <em>consistent</em>: it tells you, based on what your class holds, exactly how many of the five to write.
     </div>
 
-    <p>This is the second pillar of Part VIII, built directly on the RAII idea from 8.1.</p>
+    <p>Spoiler: the rule you should reach for almost every time is the Rule of <em>Zero</em>.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Two operations</div>
-    <h2>Copy constructor vs. copy assignment 👯</h2>
+    <div class="step-label"><span class="step-num">2</span> The five special members</div>
+    <h2>The cast of characters ⚙️</h2>
 
-    <p>There are two distinct moments where copying happens, and C++ gives each its own special member function:</p>
+    <p>These are the five functions the compiler will generate for you if you don't write them — the ones that govern an object's lifetime:</p>
 
-    <pre class="code"><span class="kw">class</span> Box {
-<span class="kw">public</span>:
-    Box(<span class="kw">const</span> Box&amp; other);              <span class="hl">// copy constructor — make a NEW Box from another</span>
-    Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other);   <span class="hl">// copy assignment — overwrite an EXISTING Box</span>
-};
-
-Box a;
-Box b = a;   <span class="cm">// copy CONSTRUCTOR (b is being created)</span>
-Box c;
-c = a;       <span class="cm">// copy ASSIGNMENT (c already exists, now overwritten)</span></pre>
+    <pre class="code"><span class="kw">struct</span> T {
+    ~T();                       <span class="cm">// 1. destructor       — clean up</span>
+    T(<span class="kw">const</span> T&amp;);              <span class="cm">// 2. copy constructor — build from an lvalue</span>
+    T&amp; <span class="kw">operator</span>=(<span class="kw">const</span> T&amp;);   <span class="cm">// 3. copy assignment  — overwrite from an lvalue</span>
+    T(T&amp;&amp;);                   <span class="cm">// 4. move constructor — build from an rvalue (C++11)</span>
+    T&amp; <span class="kw">operator</span>=(T&amp;&amp;);        <span class="cm">// 5. move assignment  — overwrite from an rvalue (C++11)</span>
+};</pre>
 
     <div class="new-content">
-      The distinction is "is the target being <em>born</em>, or does it <em>already exist</em>?" <code>Box b = a;</code> creates <code>b</code> for the first time, so the <strong>copy constructor</strong> runs. <code>c = a;</code> takes an already-living <code>c</code> and replaces its contents, so the <strong>copy assignment operator</strong> runs. Passing an object by value and returning one by value also invoke the copy constructor. They feel similar, but assignment has an extra job the constructor doesn't: it must deal with the resource the target was <em>already</em> holding.
+      By default the compiler synthesises all five, and for a class made of <em>value-like</em> members (numbers, <code>std::string</code>, <code>std::vector</code>) those defaults are exactly right — each member is copied or moved correctly. The rules below only matter when your class <strong>owns a raw resource</strong> (a <code>new</code>'d pointer, a file handle, a socket) where the compiler's member-wise default does the wrong thing.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> The default is shallow</div>
-    <h2>What the compiler writes for you ⚙️</h2>
+    <div class="step-label"><span class="step-num">3</span> Rule of Three</div>
+    <h2>One means three 📐</h2>
 
-    <p>If you don't declare them, the compiler generates both — and they do a <strong>member-wise</strong> copy: each member is copied with <em>its own</em> copy. That's perfect for value-like members and dangerous for raw pointers:</p>
+    <p>The classic (pre-C++11) rule: <strong>if you need to write a custom destructor, copy constructor, or copy assignment, you almost certainly need all three.</strong> Why? Because needing any one of them is a sign your class manages a resource by hand:</p>
 
-    <pre class="code"><span class="kw">struct</span> Box {
-    <span class="kw">int</span>* data;          <span class="cm">// owns a heap int</span>
-    Box(<span class="kw">int</span> v) { data = <span class="kw">new</span> <span class="kw">int</span>(v); }
-    ~Box() { <span class="kw">delete</span> data; }
-    <span class="cm">// no copy ctor written → compiler's default copies the POINTER value</span>
-};
-
-Box a(5);
-Box b = a;   <span class="bad">// b.data == a.data  — same address! both point at one int</span></pre>
+    <pre class="code"><span class="cm">// Has a destructor that frees data → MUST also define both copies</span>
+~Box() { <span class="kw">delete</span> data; }            <span class="cm">// custom dtor → resource ownership</span>
+Box(<span class="kw">const</span> Box&amp; o);              <span class="hl">// ...so define copy ctor (deep copy)</span>
+Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; o);   <span class="hl">// ...and copy assignment (deep + free old)</span></pre>
 
     <div class="new-content">
-      The generated copy sets <code>b.data = a.data</code> — it copies the pointer's <em>value</em> (an address), so both objects point at the same heap <code>int</code>. Note the contrast: a <code>std::string</code> or <code>std::vector</code> member would copy itself <em>deeply</em>, because those types define their own correct copy semantics (they're RAII types). The danger is only with <strong>raw owning pointers</strong>, where the default's shallow copy leaves two owners of one resource.
+      If you write the destructor but let the copies default, the defaults do a <em>shallow</em> copy (8.2) — two objects share one pointer and both free it: a double free. The three are a package because they all depend on the same fact: "this object owns something that needs deliberate cleanup and duplication." Write one, write them all.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Shallow vs. deep</div>
-    <h2>Sharing a buffer ends in tears 💥</h2>
+    <div class="step-label"><span class="step-num">4</span> Rule of Five</div>
+    <h2>Add the two moves ✋</h2>
 
-    <p>A <strong>shallow</strong> copy duplicates the pointer; a <strong>deep</strong> copy allocates a fresh resource and copies the contents. With the shallow default above, two problems appear:</p>
+    <p>Since C++11 there are five special members, so the rule grows: <strong>if your class manages a resource, define all five</strong> — the destructor, both copy operations, and both move operations. The moves let your class transfer ownership cheaply (8.3) instead of always deep-copying:</p>
 
     <table class="op-table">
-      <thead><tr><th>Problem</th><th>What happens</th></tr></thead>
+      <thead><tr><th>If you write…</th><th>…you should write</th></tr></thead>
       <tbody>
-        <tr><td class="mono plain">Aliasing</td><td class="mono plain">writing through <code>b.data</code> also changes <code>a</code> — they share one int</td></tr>
-        <tr><td class="mono plain">Double free</td><td class="mono plain">both destructors <code>delete</code> the same address → undefined behaviour / crash</td></tr>
+        <tr><td class="mono plain">any of dtor / copy ctor / copy =</td><td class="mono plain">all three (Rule of Three)</td></tr>
+        <tr><td class="mono plain">and you want cheap transfers</td><td class="mono plain">+ move ctor &amp; move = (Rule of Five)</td></tr>
       </tbody>
     </table>
 
-    <p>The fix is a deep copy — give the new object its own resource:</p>
-
-    <pre class="code">Box(<span class="kw">const</span> Box&amp; other) {
-    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);   <span class="hl">// allocate our OWN int, copy the value</span>
-}</pre>
-
-    <div class="new-content">
-      Now <code>b</code> has its own heap <code>int</code> holding the same value, completely independent of <code>a</code>. Changing one doesn't touch the other, and each destructor frees its own allocation exactly once. "Deep" means you follow the pointer and duplicate what it owns, not just the pointer itself. The interactive below lets you flip between shallow and deep and watch the arrows either collide on one buffer or split into two.
+    <div class="trap">
+      <h4>🚨 Declaring a destructor or copy quietly kills your moves</h4>
+      <p>Here's the subtle part that bites people: if you declare a destructor (or a copy operation), the compiler <strong>stops generating the move operations</strong> for you. Your class still <em>works</em> — it just silently falls back to <em>copying</em> everywhere a move could have happened, so a class you thought was fast quietly does deep copies. This is exactly why the rule jumps from three to five: once you're writing any of them by hand, you've turned off the automatic moves and need to provide them yourself (or explicitly <code>= default</code> them) to keep moves working.</p>
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Assignment &amp; the Rule of Three</div>
-    <h2>Free the old, guard yourself 📐</h2>
+    <div class="step-label"><span class="step-num">5</span> Rule of Zero</div>
+    <h2>The one to actually aim for 🎯</h2>
 
-    <p>Copy <em>assignment</em> has the constructor's job plus one more: the target already owns a resource that must be released first — and you must survive <code>x = x;</code>:</p>
+    <p>The modern best practice flips the whole problem around: <strong>don't manage raw resources yourself at all</strong>, so you write <em>none</em> of the five and the compiler's defaults are automatically correct. Hold members that already follow the Rule of Five internally:</p>
 
-    <pre class="code">Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other) {
-    <span class="kw">if</span> (<span class="kw">this</span> == &amp;other) <span class="kw">return</span> *<span class="kw">this</span>;   <span class="hl">// 1. guard self-assignment</span>
-    <span class="kw">delete</span> data;                          <span class="cm">// 2. free what we already had</span>
-    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);          <span class="cm">// 3. deep-copy the new value</span>
-    <span class="kw">return</span> *<span class="kw">this</span>;                          <span class="cm">// 4. return *this for chaining</span>
-}</pre>
+    <pre class="code"><span class="kw">struct</span> Box {
+    std::vector&lt;<span class="kw">int</span>&gt; data;   <span class="hl">// vector owns the memory and handles copy + move</span>
+    std::string  name;   <span class="hl">// string does too</span>
+    <span class="cm">// no destructor, no copy/move — the defaults are correct!</span>
+};</pre>
 
-    <div class="trap">
-      <h4>🚨 The Rule of Three</h4>
-      <p>If your class needs a custom <strong>destructor</strong>, a custom <strong>copy constructor</strong>, or a custom <strong>copy assignment</strong>, it almost certainly needs <em>all three</em> — they're a set. Writing a destructor that <code>delete</code>s a pointer but leaving the copies as the shallow default is the classic recipe for a double free. (Skip the self-assignment guard and <code>x = x</code> deletes <code>data</code> and then reads the freed pointer.) The modern shortcut: don't manage raw pointers at all — store a <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> and the Rule of Three collapses to the <strong>Rule of Zero</strong>, because those members already copy and clean up correctly.</p>
+    <div class="new-content">
+      Because <code>std::vector</code> and <code>std::string</code> (and <code>std::unique_ptr</code>, coming next) each clean up, copy, and move themselves correctly, a class built only from them gets correct compiler-generated versions of all five — for free. No double frees, no leaks, no forgotten move. This is the <strong>Rule of Zero</strong>, and it's the goal: reach for <code>vector</code>/<code>string</code>/smart pointers as members, and you almost never write a special member again. Hand-writing the Rule of Five is for the rare case where you're <em>building</em> one of those resource wrappers yourself.
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Copy Inspector</div>
-    <h2>Watch the buffers share or split 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Rule Picker</div>
+    <h2>How many must you write? 🔬</h2>
 
-    <p>Two tools. The <strong>Copy Inspector</strong> runs <code>Box b = a;</code> with either the shallow default or a deep copy ctor — change <code>b</code> and destruct both objects to see aliasing and double-frees appear or vanish. <strong>Predict the Output</strong> tests which operation runs and what the values become.</p>
+    <p>Two tools. The <strong>Rule Picker</strong> lets you choose what your class holds and shows which of the five members the compiler gives you (and whether they're correct) versus which you must write — landing on Rule of 0, 3/5, or a broken class. <strong>Predict the Output</strong> tests the defaults and the move-suppression gotcha.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">📋 Copy Inspector</div>
+        <div class="play-title">🖐️ Rule Picker</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="dd">Copy Inspector</button>
+        <button class="tab-btn active" data-tab="dd">Rule Picker</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- INSPECTOR -->
+      <!-- RULE PICKER -->
       <div class="tab-panel active" id="tab-dd">
         <div class="dd-toggle">
-          <span class="lab">Copy behaviour for <code>Box b = a;</code> :</span>
-          <button class="ddbtn" id="cpShallow">shallow (default)</button>
-          <button class="ddbtn active" id="cpDeep">deep (custom copy ctor)</button>
+          <span class="lab">Your class holds…</span>
+          <button class="ddbtn active" id="rpValues">values / vector / string</button>
+          <button class="ddbtn" id="rpRaw">a raw owning int*</button>
+          <button class="ddbtn" id="rpDtorOnly">raw int* + only a dtor</button>
         </div>
-        <div class="dd-decl" id="cpDecl"></div>
-        <div class="mem" id="cpMem"></div>
-        <div class="cp-act">
-          <button class="cp-btn" id="cpChange">*b.data = 9;</button>
-          <button class="cp-btn" id="cpDestruct">end scope → destruct a &amp; b</button>
-          <button class="cp-btn ghost" id="cpReset">reset ↺</button>
-        </div>
-        <div class="iw-msg" id="cpMsg"></div>
+        <div class="dd-decl" id="rpDecl"></div>
+        <div class="rp-list" id="rpList"></div>
+        <div class="rp-verdict" id="rpVerdict"></div>
+        <div class="iw-msg" id="rpMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -401,13 +381,13 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
     <div class="quiz">
       <div class="quiz-q">
-        Your class has a destructor that does <code>delete data;</code> on a raw pointer it owns. By the <strong>Rule of Three</strong>, what else must you provide?
+        What's the best default to aim for with the special member functions?
       </div>
-      <button class="opt" data-correct="true"><span>A <strong>copy constructor</strong> and a <strong>copy assignment operator</strong> that deep-copy — or the default shallow copies will double-free</span></button>
-      <button class="opt" data-correct="false"><span>Nothing — a correct destructor is enough on its own</span></button>
-      <button class="opt" data-correct="false"><span>Only a copy constructor; assignment is handled automatically</span></button>
-      <button class="opt" data-correct="false"><span>Just mark the class <code>const</code> so it can't be copied</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: destructor, copy constructor, copy assignment — they travel as a set.</div>
+      <button class="opt" data-correct="true"><span><strong>Rule of Zero</strong> — hold RAII members (<code>vector</code>/<code>string</code>/<code>unique_ptr</code>) so you write <em>none</em> of the five and the compiler's versions are correct</span></button>
+      <button class="opt" data-correct="false"><span>Always hand-write all five for maximum control</span></button>
+      <button class="opt" data-correct="false"><span>Always write just the destructor and let the rest default</span></button>
+      <button class="opt" data-correct="false"><span>Never let the compiler generate any of them</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: the fewer special members you write by hand, the fewer you can get wrong.</div>
     </div>
   </section>
 
@@ -421,24 +401,24 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     <div class="mistake">
       <div class="mistake-icon">💥</div>
       <div class="mistake-body">
-        <strong>Destructor without matching copies</strong>
-        <small>A custom destructor with the default shallow copy means two objects free one resource — a double free. Provide the copy ctor and copy assignment too (Rule of Three).</small>
+        <strong>Writing only the destructor</strong>
+        <small>A custom destructor with default (shallow) copies = double free. If you write one of the three, write all three — or better, avoid the raw resource entirely.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🔁</div>
+      <div class="mistake-icon">🐌</div>
       <div class="mistake-body">
-        <strong>Forgetting the self-assignment guard</strong>
-        <small>In <code>operator=</code>, <code>x = x;</code> without <code>if (this == &amp;other) return *this;</code> deletes <code>data</code> and then copies from the freed pointer. Guard it first.</small>
+        <strong>Forgetting that a dtor suppresses moves</strong>
+        <small>Declaring a destructor (or copy) stops the compiler generating move operations, so your class silently copies instead of moving. Add the moves (or <code>= default</code>) to keep them.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🧱</div>
+      <div class="mistake-icon">🔧</div>
       <div class="mistake-body">
-        <strong>Managing raw pointers by hand at all</strong>
-        <small>Most of the time you don't need the Rule of Three — use <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> members and copying just works (Rule of Zero).</small>
+        <strong>Hand-writing the Rule of Five when you don't need to</strong>
+        <small>If your members are already RAII types, writing special members by hand just adds bugs. Prefer the Rule of Zero — let <code>vector</code>/<code>string</code>/<code>unique_ptr</code> do the work.</small>
       </div>
     </div>
 
@@ -446,39 +426,39 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Spot the operation.</strong> Give a class a copy constructor that prints <code>"ctor"</code> and a copy assignment that prints <code>"assign"</code>. Then write <code>X b = a;</code> and <code>c = a;</code> and predict, then confirm, which message each line prints.
+      <strong>Count the generated.</strong> Write a struct of two <code>int</code>s with no special members. Copy it and move it, and confirm both work — the compiler gave you all five for free (Rule of Zero).
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Make it deep.</strong> Write a <code>Box</code> that owns an <code>int*</code>. Add a deep copy constructor and copy assignment (with the self-assignment guard). Copy a box, change one, and confirm the other is unaffected and nothing double-frees.
+      <strong>Watch a move vanish.</strong> Add a destructor that just prints <code>"~"</code> to a class with a copy ctor (prints <code>"C"</code>) and a move ctor (prints <code>"M"</code>). Then add a second class with the same copy/move but <em>no</em> user destructor. Move both and see which one actually moves.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>Rule of Zero.</strong> Rewrite that <code>Box</code> to hold a <code>std::vector&lt;int&gt;</code> instead of a raw pointer, and delete the destructor, copy ctor, and copy assignment entirely. Show it still copies correctly — the compiler's defaults are now safe.
+      <strong>Five → Zero.</strong> Implement a raw-pointer <code>Buffer</code> with a correct Rule of Five (all five members, with prints). Then rewrite it to hold a <code>std::vector&lt;int&gt;</code> and delete all five. Prove the rewrite still copies and moves correctly with no hand-written members.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Two operations:</strong> the <em>copy constructor</em> builds a new object from another; <em>copy assignment</em> overwrites an existing one.</li>
-        <li><strong>The compiler's default copy is shallow</strong> (member-wise) — it copies a raw pointer's address, not what it points to.</li>
-        <li><strong>Shallow copy of an owning pointer</strong> causes aliasing and a double free; a <em>deep</em> copy allocates its own resource.</li>
-        <li><strong>Copy assignment also</strong> frees the old resource and guards against <code>x = x;</code> — then deep-copies.</li>
-        <li><strong>Rule of Three:</strong> need one of dtor / copy ctor / copy assignment, need all three — or sidestep it entirely with the <em>Rule of Zero</em>.</li>
+        <li><strong>Five special members</strong> govern lifetime: destructor, copy ctor, copy =, move ctor, move = — all auto-generated by default.</li>
+        <li><strong>Rule of Three:</strong> need a custom destructor, copy ctor, or copy assignment? Write all three.</li>
+        <li><strong>Rule of Five:</strong> managing a resource by hand? Define all five, including the two moves.</li>
+        <li><strong>Declaring a dtor or copy suppresses the implicit moves</strong> — your class silently copies unless you add them back.</li>
+        <li><strong>Rule of Zero (the goal):</strong> hold RAII members so you write <em>none</em> of the five and the defaults are correct.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="Cpp_Book_Lesson_8_1.html" class="nav-btn prev">
+    <a href="Cpp_Book_Lesson_8_3.html" class="nav-btn prev">
       <small>← Previous</small>
-      8.1  RAII — the central idea
-    </a>
-    <a href="Cpp_Book_Lesson_8_3.html" class="nav-btn next">
-      <small>Next lesson →</small>
       8.3  Move semantics
+    </a>
+    <a href="Cpp_Book_Lesson_8_5.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      8.5  std::unique_ptr — owning a thing
     </a>
   </div>
 
@@ -486,14 +466,14 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
 <script>
   const BIT_LINES = [
-    "When an object owns a resource, copying it needs care. 📋",
-    "Two operations: copy constructor (birth) and copy assignment (already alive). 👯",
-    "The compiler's default copy is member-wise — shallow. ⚙️",
-    "Shallow copy shares the pointer → aliasing and double-free. 💥",
-    "Deep copy allocates its own buffer and copies the contents. 🧬",
-    "Toggle shallow vs deep — watch the buffers share or split. 🔬",
-    "Rule of Three: write one of dtor/copy-ctor/copy-= , write all three. 📐",
-    "Own a resource? Define how it copies — or sidestep with Rule of Zero. 📚"
+    "The five special members travel as a coordinated set. 🖐️",
+    "dtor, copy ctor, copy=, move ctor, move= — all auto-generated by default. ⚙️",
+    "Rule of Three: need one of dtor/copy-ctor/copy=, write all three. 📐",
+    "Rule of Five: managing a resource? Define all five (incl. moves). ✋",
+    "Declaring a dtor or copy suppresses the implicit moves. 🚫",
+    "Pick what your class holds → see which members you must write. 🔬",
+    "Rule of Zero: hold RAII members, write NONE — that's the goal. 🎯",
+    "Best class = no hand-written special members at all. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -525,7 +505,7 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 8.2 complete! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 8.4 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -557,108 +537,89 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Copy Inspector =====
-  let mode = 'deep';          // 'shallow' | 'deep'
-  let valA = 5, valB = 5;     // values shown for a and b
-  let destructed = false, cpTouched = false;
-  const cpDecl = document.getElementById('cpDecl');
-  const cpMem = document.getElementById('cpMem');
-  const cpMsg = document.getElementById('cpMsg');
-  const cpShallow = document.getElementById('cpShallow');
-  const cpDeep = document.getElementById('cpDeep');
-  const cpChange = document.getElementById('cpChange');
-  const cpDestruct = document.getElementById('cpDestruct');
-  const cpReset = document.getElementById('cpReset');
+  // ===== Rule Picker =====
+  let rpMode = 'values', rpTouched = false;
+  const MEMBERS = ['destructor', 'copy constructor', 'copy assignment', 'move constructor', 'move assignment'];
+  const rpDecl = document.getElementById('rpDecl');
+  const rpList = document.getElementById('rpList');
+  const rpVerdict = document.getElementById('rpVerdict');
+  const rpMsg = document.getElementById('rpMsg');
+  const rpValues = document.getElementById('rpValues');
+  const rpRaw = document.getElementById('rpRaw');
+  const rpDtorOnly = document.getElementById('rpDtorOnly');
 
-  function shared() { return mode === 'shallow'; }
+  // status per member: ['auto'|'write'|'bad'|'supp', label]
+  const CONFIG = {
+    values: {
+      decl: `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;std::vector&lt;<span class="kw">int</span>&gt; data;<br>&nbsp;&nbsp;std::string name;<br>&nbsp;&nbsp;<span class="cm">// nothing written</span><br>};`,
+      st: ['auto', 'auto', 'auto', 'auto', 'auto'],
+      verdict: ['v-zero', '✅ Rule of Zero — you write 0'],
+      msg: `<b>Rule of Zero.</b> Every member is a type that manages itself, so the compiler generates all five <span class="grn">correctly</span>. You write nothing — fewest members to write means fewest to get wrong. <b>This is the goal.</b>`
+    },
+    raw: {
+      decl: `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;  <span class="cm">// raw owning pointer</span><br>&nbsp;&nbsp;<span class="cm">// you write ALL five</span><br>};`,
+      st: ['write', 'write', 'write', 'write', 'write'],
+      verdict: ['v-five', '✍️ Rule of Five — you write all 5'],
+      msg: `<b>Rule of Five.</b> A raw owning pointer means the compiler's member-wise defaults are <span class="red">wrong</span> (shallow copy → double free). You must hand-write all five: dtor, both copies (deep), both moves (steal + null). This is the rare "building a wrapper" case.`
+    },
+    dtorOnly: {
+      decl: `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }  <span class="bad">// only this</span><br>};`,
+      st: ['write', 'bad', 'bad', 'supp', 'supp'],
+      verdict: ['v-bad', '⚠️ Broken — shallow copies + no moves'],
+      msg: `<b>The classic bug.</b> You wrote only the destructor. The copies still default to a <span class="red">shallow copy</span> (two owners → double free), and declaring the dtor <span class="red">suppressed both moves</span> (so it silently copies). This is precisely why "write one → write all five."`
+    }
+  };
+  const BADGE = { auto: ['b-auto', '✅ compiler · correct'], write: ['b-write', '✍️ you write it'], bad: ['b-bad', '❌ compiler · WRONG (shallow)'], supp: ['b-supp', '🚫 suppressed'] };
 
-  function renderDecl() {
-    if (mode === 'shallow') {
-      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;<span class="cm">// no copy ctor → default copies the pointer</span><br>};<br>Box b = a;  <span class="bad">// b.data == a.data</span>`;
-    } else {
-      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;Box(<span class="kw">const</span> Box&amp; o) { data = <span class="kw">new</span> <span class="kw">int</span>(*o.data); }<br>};<br>Box b = a;  <span class="v">// b gets its own int</span>`;
-    }
+  function renderRP() {
+    const c = CONFIG[rpMode];
+    rpDecl.innerHTML = c.decl;
+    rpList.innerHTML = MEMBERS.map((m, i) => {
+      const [cls, lab] = BADGE[c.st[i]];
+      return `<div class="rp-row"><span class="nm">${m}</span><span class="rp-badge ${cls}">${lab}</span></div>`;
+    }).join('');
+    rpVerdict.className = 'rp-verdict ' + c.verdict[0];
+    rpVerdict.textContent = c.verdict[1];
+    rpMsg.innerHTML = c.msg;
   }
-  function renderMem() {
-    if (destructed) {
-      if (shared()) {
-        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
-          <div class="mem-arrow">⇒⇒</div>
-          <div class="mem-heap"><div class="mem-buf warn">freed 2× 💀<span class="cap">double free!</span></div></div>`;
-      } else {
-        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
-          <div class="mem-arrow">⇒</div>
-          <div class="mem-heap"><div class="mem-buf">freed ✓<span class="cap">int(${valA})</span></div><div class="mem-buf">freed ✓<span class="cap">int(${valB})</span></div></div>`;
-      }
-      return;
-    }
-    if (shared()) {
-      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
-        <div class="mem-arrow">⇒⇒</div>
-        <div class="mem-heap"><div class="mem-buf warn">int(${valA})<span class="cap">one shared buffer</span></div></div>`;
-    } else {
-      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
-        <div class="mem-arrow">⇒</div>
-        <div class="mem-heap"><div class="mem-buf">int(${valA})<span class="cap">a's own</span></div><div class="mem-buf">int(${valB})<span class="cap">b's own</span></div></div>`;
-    }
+  function setRP(m, e) {
+    rpMode = m;
+    rpValues.classList.toggle('active', m === 'values');
+    rpRaw.classList.toggle('active', m === 'raw');
+    rpDtorOnly.classList.toggle('active', m === 'dtorOnly');
+    renderRP();
+    if (!rpTouched && e) { rpTouched = true; addXP(5, e.clientX, e.clientY, '🖐️ Rule picked! +5 XP'); }
   }
-  function setMode(m, e) {
-    mode = m; destructed = false; valA = 5; valB = 5;
-    cpShallow.classList.toggle('active', m === 'shallow');
-    cpDeep.classList.toggle('active', m === 'deep');
-    renderDecl(); renderMem();
-    cpMsg.innerHTML = m === 'shallow'
-      ? `<b>Shallow (default).</b> <code>b.data</code> holds the same address as <code>a.data</code> — <span class="red">one buffer, two owners.</span> Try changing <code>b</code> or ending the scope.`
-      : `<b>Deep copy.</b> The copy constructor gave <code>b</code> its own <code>int</code>. <span class="grn">Two independent buffers.</span> Try changing <code>b</code> or ending the scope.`;
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '📋 Copy traced! +5 XP'); }
-  }
-  function changeB(e) {
-    if (destructed) { cpMsg.innerHTML = `(Objects already destructed — hit <code>reset</code> first.)`; return; }
-    valB = 9;
-    if (shared()) { valA = 9; cpMsg.innerHTML = `<b>Aliasing!</b> <code>*b.data = 9;</code> changed the shared buffer, so <code>a</code> now reads <span class="red">9</span> too. They were never independent.`; }
-    else { cpMsg.innerHTML = `<b>Independent.</b> <code>*b.data = 9;</code> touched only <code>b</code>'s buffer — <code>a</code> still reads <span class="grn">5</span>.`; }
-    renderMem();
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '✏️ Mutated! +5 XP'); }
-  }
-  function destruct(e) {
-    if (destructed) return;
-    destructed = true; renderMem();
-    if (shared()) { cpMsg.innerHTML = `<b>End of scope.</b> Both destructors run <code>delete data;</code> on the <span class="red">same address</span> → <span class="red">double free</span> → undefined behaviour / crash. 💀`; }
-    else { cpMsg.innerHTML = `<b>End of scope.</b> Each destructor frees <span class="grn">its own</span> buffer exactly once. <span class="grn">Clean.</span> ✅`; }
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '🗑️ Destructed! +5 XP'); }
-  }
-  cpShallow.addEventListener('click', (e) => setMode('shallow', e));
-  cpDeep.addEventListener('click', (e) => setMode('deep', e));
-  cpChange.addEventListener('click', changeB);
-  cpDestruct.addEventListener('click', destruct);
-  cpReset.addEventListener('click', () => setMode(mode));
-  setMode('deep');
+  rpValues.addEventListener('click', (e) => setRP('values', e));
+  rpRaw.addEventListener('click', (e) => setRP('raw', e));
+  rpDtorOnly.addEventListener('click', (e) => setRP('dtorOnly', e));
+  setRP('values');
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'struct Box {\n  Box() {}\n  Box(const Box&) { std::cout << "copy "; }\n};\nvoid take(Box b) {}\nint main() { Box a; take(a); std::cout << "done"; }',
-      opts: ['copy done', 'done', 'copy copy done', 'done copy'],
-      answer: 'copy done',
-      why: 'Passing a by value into take() copies it → the copy constructor runs, printing "copy ". Then "done". (No copy is made returning void.)'
+      code: 'struct Bag { std::vector<int> v; };   // Rule of Zero\nint main() {\n  Bag a; a.v.push_back(7);\n  Bag b = a;      // default copy\n  b.v[0] = 9;\n  std::cout << a.v[0] << b.v[0];\n}',
+      opts: ['79', '99', '77', 'crash'],
+      answer: '79',
+      why: 'The compiler-generated copy copies each member, and std::vector copies itself deeply. So b gets its own vector: a.v[0] stays 7, b.v[0] becomes 9 → "79".'
     },
     {
-      code: 'struct T {\n  T() {}\n  T(const T&) { std::cout << "C"; }\n  T& operator=(const T&) { std::cout << "A"; return *this; }\n};\nint main() {\n  T x;\n  T y = x;   // creating y\n  y = x;     // y already exists\n}',
-      opts: ['CA', 'AC', 'CC', 'AA'],
-      answer: 'CA',
-      why: '"T y = x;" creates y → copy constructor → "C". "y = x;" overwrites an existing y → copy assignment → "A". So "CA".'
+      code: 'struct W {\n  W() {}\n  W(const W&) { std::cout << "C"; }\n  ~W() {}                 // user destructor\n};\nint main() {\n  W a;\n  W b = std::move(a);     // try to move\n}',
+      opts: ['C', 'M', 'CM', '(nothing)'],
+      answer: 'C',
+      why: 'Declaring the destructor suppresses the implicit move constructor, so there is no move to select. std::move(a) falls back to the copy constructor → "C".'
     },
     {
-      code: 'struct Buf {\n  int* p;\n  Buf(int v) { p = new int(v); }\n  // no custom copy ctor (shallow)\n};\nint main() {\n  Buf a(5);\n  Buf b = a;     // b.p == a.p\n  *b.p = 9;\n  std::cout << *a.p;\n}',
-      opts: ['9', '5', '0', 'crash'],
-      answer: '9',
-      why: 'The default shallow copy makes b.p the same address as a.p. Writing *b.p = 9 changes the one shared int, so *a.p is now 9 (aliasing).'
+      code: 'struct P { int x; int y; };   // Rule of Zero\nint main() {\n  P a{1, 2};\n  P b = a;             // default copy\n  P c = std::move(a);  // default move (copies ints)\n  std::cout << b.x << c.y;\n}',
+      opts: ['12', '00', '11', '21'],
+      answer: '12',
+      why: 'With only int members the defaults just copy the values (moving an int is a copy). b.x is 1 and c.y is 2 → "12".'
     },
     {
-      code: 'struct S {\n  int* p;\n  S(int v) { p = new int(v); }\n  S(const S& o) { p = new int(*o.p); }  // deep\n};\nint main() {\n  S a(5);\n  S b = a;\n  *b.p = 9;\n  std::cout << *a.p << *b.p;\n}',
-      opts: ['59', '99', '55', '95'],
-      answer: '59',
-      why: 'The deep copy ctor gives b its own int. Changing *b.p to 9 leaves a untouched, so *a.p is 5 and *b.p is 9 → "59".'
+      code: 'struct N {\n  N() = default;\n  N(const N&) = delete;   // non-copyable\n};\nvoid take(N n) {}         // takes by value → needs a copy\nint main() {\n  N a;\n  take(a);\n}',
+      opts: ['compile error — copy is deleted', 'prints nothing, runs fine', 'runtime crash', 'a is moved instead'],
+      answer: 'compile error — copy is deleted',
+      why: 'take(N n) needs to copy a into the parameter, but the copy constructor is = deleted. The compiler rejects the call — a compile error, not a runtime one.'
     }
   ];
   let poIdx = 0;
@@ -698,7 +659,7 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. Remember: creating from another = copy ctor; overwriting an existing one = copy assignment; shallow shares the pointer, deep duplicates it.`;
+          poFb.innerHTML = `❌ Not quite. Remember: RAII members copy/move correctly by default; a user destructor suppresses moves (→ copy); and = delete makes a member unusable (compile error).`;
           breakStreak();
         }
       });
@@ -717,14 +678,14 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The Rule of Three: a custom destructor almost always means you also need a copy constructor and copy assignment operator. Leave them as the shallow defaults and the two copies will both <code>delete</code> the same pointer — a double free. (Or skip raw pointers entirely for the Rule of Zero.)'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Destructor, copy ctor, copy assignment — all three.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The Rule of Zero says: build your class from members that already manage themselves (<code>vector</code>, <code>string</code>, <code>unique_ptr</code>), and write none of the five. The compiler then generates correct copy, move, and destruction for free. Hand-writing all five is reserved for the rare case of building a resource wrapper yourself.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Aim for the Rule of Zero — write none of the five.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. A destructor alone isn\'t enough — the default shallow copies still share the pointer and double-free. You need <em>both</em> the copy constructor and copy assignment (Rule of Three).';
+      fb.innerHTML = '❌ Not quite. Hand-writing all five (or just the destructor) is exactly where bugs come from. The best default is the Rule of Zero: use RAII members and write none of the five.';
       firstTry = false; breakStreak();
     }
   }));

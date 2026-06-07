@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 6.9 — Pointers to Pointers &amp; Function Pointers · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,29 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Function Pointer Dispatch */
+  .fp-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .fpmode { flex: 1; min-width: 70px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .fpmode.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .fpmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .fpmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .fp-wire { background: #0d1320; border-radius: 12px; padding: 14px 16px; font-family: var(--mono); font-size: 13px; color: #e2e8f0; line-height: 1.8; margin-bottom: 10px; }
+  .fp-wire .var { color: #67e8f9; font-weight: 700; }
+  .fp-wire .arrow { color: #f472b6; font-weight: 700; }
+  .fp-wire .fn { color: #fdba74; font-weight: 700; }
+  .fp-call { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .fp-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 10px 16px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .fp-btn:hover { transform: translateY(-2px); }
+  .fp-res { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--orange-deep); }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +202,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Two pointer power-tools: a pointer <em>to a pointer</em> (<code>int**</code>), and a pointer to a <em>function</em>. Brief but mighty! 🔌
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 6.9</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 47 / 72</span>
   </div>
 
   <div class="hero">
     <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <h1>Pointers to Pointers &amp; Function Pointers</h1>
+    <p class="hero-sub">Two more pointer ideas, briefly — both things you'll <em>meet</em> in real code even if you rarely write them. A <strong>pointer to a pointer</strong> (<code>int **</code>) is just an address of a pointer, and it's how a function can change <em>your</em> pointer. A <strong>function pointer</strong> holds the address of a function, so one variable can call different functions — the basis of callbacks.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,116 +231,124 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>Two pointer power-tools 🔌</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      You've mastered the everyday pointer. Two variations round out the toolkit. A <strong>pointer to a pointer</strong> (<code>int **</code>) sounds scary but is just "the address of a pointer variable" — and it's the standard way a function modifies a pointer the caller owns (or builds a list of strings, like the <code>char **argv</code> from command-line arguments). A <strong>function pointer</strong> stores the address of a function, letting you pass behaviour around as data — call different functions through one variable, register callbacks, build dispatch tables. This is a brief tour: enough to recognise both and use the common patterns.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>Same rules you know (<code>&amp;</code> takes an address, <code>*</code> follows one) — applied one level deeper, and to functions.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> Pointer to a pointer</div>
+    <h2>An address of an address 🪆</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>If <code>int *p</code> holds the address of an <code>int</code>, then <code>int **pp</code> holds the address of <code>p</code>. You follow it with <code>*</code> one extra time:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code"><span class="kw">int</span>  x  = 5;
+<span class="kw">int</span> *p  = &amp;x;     <span class="cm">// p points to x</span>
+<span class="kw">int</span> **pp = &amp;p;     <span class="hl">// pp points to p</span>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+*pp        <span class="cm">// → p          (the int*)</span>
+**pp       <span class="cm">// → x's value  (5)  — dereference twice</span></pre>
+
+    <div class="new-content">
+      Read the type right-to-left: <code>int **pp</code> is "a pointer to a pointer to <code>int</code>." Each <code>*</code> you write peels off one layer: <code>*pp</code> gives you back <code>p</code> (an <code>int *</code>), and <code>**pp</code> follows that to reach <code>x</code> itself. It's the same address-of / dereference dance you already know, just nested one level. You don't reach for this often — but two patterns make it essential.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> Why you'd use it</div>
+    <h2>Changing the caller's pointer 🔧</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>The classic use: a function that needs to modify the caller's <em>pointer</em> (not just what it points to) — for example, to allocate memory and hand the address back:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
+    <pre class="code"><span class="kw">void</span> make_array(<span class="kw">int</span> **out, <span class="kw">int</span> n) {
+    *out = malloc(n * <span class="kw">sizeof</span> <span class="kw">int</span>);   <span class="hl">// write through to the caller's pointer</span>
+}
 
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+<span class="kw">int</span> *arr = NULL;
+make_array(&amp;arr, 10);   <span class="cm">// pass the ADDRESS of arr; now arr points to the memory</span></pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      Remember from 6.6: to change a caller's variable, a function takes a pointer <em>to</em> it. So to change a caller's <code>int *</code>, the function takes a pointer to that pointer — an <code>int **</code>. Passing <code>&amp;arr</code> lets <code>make_array</code> set <code>arr</code> for you. The other place you've already met <code>**</code> is <code>char *argv[]</code> (i.e. <code>char **</code>) — an array of string pointers (Lesson 9.5). Same idea: a pointer that points at pointers.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> Function pointers</div>
+    <h2>A variable that holds a function ⚡</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>A function has an address too, and you can store it in a <strong>function pointer</strong>. The type spells out the signature; then you call through it like a normal function:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
+    <pre class="code"><span class="kw">int</span> add(<span class="kw">int</span> a, <span class="kw">int</span> b) { <span class="kw">return</span> a + b; }
+<span class="kw">int</span> sub(<span class="kw">int</span> a, <span class="kw">int</span> b) { <span class="kw">return</span> a - b; }
 
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+<span class="kw">int</span> (*op)(<span class="kw">int</span>, <span class="kw">int</span>) = add;   <span class="hl">// op points to add</span>
+op(2, 3);                       <span class="cm">// → 5   (calls add)</span>
+op = sub;                       <span class="hl">// now op points to sub</span>
+op(2, 3);                       <span class="cm">// → -1  (calls sub)</span></pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      The declaration <code>int (*op)(int, int)</code> reads "op is a pointer to a function taking two <code>int</code>s and returning <code>int</code>." The parentheses around <code>*op</code> are essential (more on that in the trap). Assign any matching function's name to it — a function name <em>is</em> its address, so no <code>&amp;</code> needed — and then <code>op(2, 3)</code> calls whatever it currently points to. One variable, swappable behaviour.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Where function pointers shine</div>
+    <h2>Callbacks &amp; dispatch 🎛️</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>Function pointers let you pass <em>behaviour</em> as an argument. The standard library's <code>qsort</code> is the classic example — you hand it a comparison function:</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code"><span class="kw">int</span> cmp(<span class="kw">const</span> <span class="kw">void</span> *a, <span class="kw">const</span> <span class="kw">void</span> *b) {
+    <span class="kw">return</span> *(<span class="kw">const</span> <span class="kw">int</span>*)a - *(<span class="kw">const</span> <span class="kw">int</span>*)b;
+}
+qsort(arr, n, <span class="kw">sizeof</span> arr[0], cmp);   <span class="hl">// pass cmp as a callback</span></pre>
+
+    <div class="trap">
+      <h4>🚨 The parentheses matter: <code>int (*op)(...)</code> vs <code>int *op(...)</code></h4>
+      <p>Declaration syntax is the tricky part. <code>int (*op)(int, int)</code> is a <strong>pointer to a function</strong> returning <code>int</code>. Drop the parentheses — <code>int *op(int, int)</code> — and you've instead declared a <em>function</em> named <code>op</code> that <em>returns</em> <code>int *</code>. Completely different! The <code>(*name)</code> grouping is what makes it a function pointer. Two more notes: function pointers are how you build <strong>dispatch tables</strong> (an array of function pointers indexed by a command), and how libraries take <strong>callbacks</strong> (<code>qsort</code>, event handlers, threads). When the syntax gets dense, a <code>typedef</code> helps: <code>typedef int (*BinOp)(int, int);</code> lets you write <code>BinOp op = add;</code>.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Function Pointer Dispatch</div>
+    <h2>One variable, many functions 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Dispatch</strong> demo lets you point one function pointer <code>op</code> at different functions and call it — watch the same <code>op(6, 2)</code> do different things. <strong>Predict the Output</strong> tests both <code>**</code> and function pointers.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">⚡ Function Pointer Dispatch</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fp">Dispatch</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- DISPATCH -->
+      <div class="tab-panel active" id="tab-fp">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-bottom:6px">int (*op)(int, int);  &nbsp; // point it at a function:</div>
+        <div class="fp-modes" id="fpMode">
+          <button class="fpmode active" data-m="add">add<small>a + b</small></button>
+          <button class="fpmode" data-m="sub">sub<small>a - b</small></button>
+          <button class="fpmode" data-m="mul">mul<small>a * b</small></button>
+          <button class="fpmode" data-m="max">max<small>bigger</small></button>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="fp-wire" id="fpWire"></div>
+        <div class="fp-call">
+          <button class="fp-btn" id="fpRun">op(6, 2)</button>
+          <span class="fp-res" id="fpRes"></span>
+        </div>
+        <div class="fs-msg" id="fpMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +358,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +373,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        Why would a function take an <code>int **</code> (a pointer to a pointer)?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>So it can <strong>modify the caller's pointer itself</strong> — e.g. allocate memory and store the new address back into the caller's <code>int *</code></span></button>
+      <button class="opt" data-correct="false"><span>To make the pointer twice as fast</span></button>
+      <button class="opt" data-correct="false"><span>Because two stars means it can point to two ints at once</span></button>
+      <button class="opt" data-correct="false"><span>It's required for every function that uses pointers</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: to change a caller's <code>int</code> you pass <code>int *</code>; to change a caller's <code>int *</code>…</div>
     </div>
   </section>
 
@@ -391,26 +391,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">📐</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Dropping the parentheses in a function pointer</strong>
+        <small><code>int (*op)(int,int)</code> is a function pointer; <code>int *op(int,int)</code> is a function returning <code>int*</code>. Keep the <code>(*op)</code> grouping — or use a <code>typedef</code>.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">🪆</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Wrong number of stars</strong>
+        <small>To change a caller's <code>int *</code> you need <code>int **</code> and must pass <code>&amp;ptr</code>. Passing the pointer by value lets the function change only what it points to, not the pointer itself.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">⚠️</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Mismatched function-pointer signature</strong>
+        <small>The pointer's parameter and return types must match the function exactly. Assigning a function with a different signature is an error (or undefined behaviour if forced).</small>
       </div>
     </div>
 
@@ -418,39 +418,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Double dereference.</strong> Set up <code>int x</code>, <code>int *p = &amp;x</code>, <code>int **pp = &amp;p</code>. Print <code>**pp</code>, then do <code>**pp = 42;</code> and confirm <code>x</code> changed to 42.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>A tiny calculator.</strong> Write <code>add</code>, <code>sub</code>, <code>mul</code>. Make an array <code>int (*ops[])(int,int) = {add, sub, mul};</code> and call <code>ops[i](a, b)</code> based on a user's choice — a dispatch table.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Allocate through a pointer-to-pointer.</strong> Write <code>void make_array(int **out, int n)</code> that <code>malloc</code>s an <code>int[n]</code>, fills it, and stores the address in <code>*out</code>. Call it with <code>&amp;arr</code>, use the array, then <code>free</code> it. Bonus: sort it with <code>qsort</code> and your own comparator.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong><code>int **pp</code></strong> is a pointer to a pointer — <code>*pp</code> is the <code>int*</code>, <code>**pp</code> is the <code>int</code>. Read types right-to-left.</li>
+        <li><strong>Pass <code>int **</code></strong> when a function must change the caller's <em>pointer</em> (e.g. allocate and hand back the address); call it with <code>&amp;ptr</code>.</li>
+        <li><strong>A function pointer</strong> stores a function's address: <code>int (*op)(int,int) = add;</code> then <code>op(2,3)</code> — keep the <code>(*op)</code> parentheses.</li>
+        <li><strong>Function pointers enable callbacks &amp; dispatch tables</strong> — that's how <code>qsort</code> takes a comparator.</li>
+        <li><strong>A <code>typedef</code> tames the syntax:</strong> <code>typedef int (*BinOp)(int,int);</code> → <code>BinOp op = add;</code>.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_6_8.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      6.8  Null, dangling &amp; wild pointers
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_7_1.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      7.1  Stack vs heap
     </a>
   </div>
 
@@ -458,14 +458,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "Two power-tools: pointer-to-pointer (int**) and function pointers. 🔌",
+    "int **pp: *pp is the int*, **pp is the int. Peel one layer per *. 🪆",
+    "Pass int** to let a function change the caller's pointer itself. 🔧",
+    "int (*op)(int,int) = add; then op(2,3) calls add. ⚡",
+    "Function pointers = callbacks & dispatch tables (think qsort). 🎛️",
+    "Point op at add/sub/mul/max and call it. 🔬",
+    "Keep the (*op) parens, or you've declared something else! 📐",
+    "typedef tames the syntax: typedef int (*BinOp)(int,int); 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +497,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 6.9 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +529,65 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
+  // ===== Function Pointer Dispatch =====
+  let fpOp = 'add', fpTouched = false;
+  const FNS = {
+    add: { sym: '+', fn: (a, b) => a + b, name: 'add' },
+    sub: { sym: '-', fn: (a, b) => a - b, name: 'sub' },
+    mul: { sym: '*', fn: (a, b) => a * b, name: 'mul' },
+    max: { sym: 'max', fn: (a, b) => Math.max(a, b), name: 'max' }
   };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
+  const fpModeEl = document.getElementById('fpMode');
+  const fpWire = document.getElementById('fpWire');
+  const fpRes = document.getElementById('fpRes');
+  const fpMsg = document.getElementById('fpMsg');
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function renderWire() {
+    fpWire.innerHTML = `<span class="var">op</span> <span class="arrow">────▶</span> <span class="fn">${FNS[fpOp].name}()</span>  <span style="color:#64748b">// op now holds the address of ${FNS[fpOp].name}</span>`;
+    fpRes.textContent = '';
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
+  fpModeEl.querySelectorAll('.fpmode').forEach(b => b.addEventListener('click', (e) => {
+    fpOp = b.dataset.m;
+    fpModeEl.querySelectorAll('.fpmode').forEach(x => x.classList.toggle('active', x === b));
+    renderWire();
+    fpMsg.innerHTML = `<b>op = ${FNS[fpOp].name};</b> The function pointer now points at <code>${FNS[fpOp].name}</code>. Click <code>op(6, 2)</code> — the <em>same</em> call will run this function.`;
+    if (!fpTouched && e) { fpTouched = true; addXP(5, e.clientX, e.clientY, '⚡ Pointed! +5 XP'); }
   }));
-  renderPSI('valid');
+  document.getElementById('fpRun').addEventListener('click', (e) => {
+    const f = FNS[fpOp];
+    const r = f.fn(6, 2);
+    fpRes.textContent = `= ${r}`;
+    fpMsg.innerHTML = `<b>op(6, 2)</b> called <code>${f.name}(6, 2)</code> → <span class="grn">${r}</span>. One variable, but it ran <code>${f.name}</code> because that's what <code>op</code> currently points to. Point it elsewhere and the same call changes.`;
+    if (!fpTouched) { fpTouched = true; addXP(5, e.clientX, e.clientY, '⚡ Called! +5 XP'); }
+  });
+  renderWire();
+  fpMsg.innerHTML = `<code>op</code> points at <code>add</code>. Pick a different function above, then call <code>op(6, 2)</code> — watch one variable dispatch to whichever function it holds.`;
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: 'int x = 5;\nint *p = &x;\nint **pp = &p;\nprintf("%d", **pp);',
+      opts: ['5', 'address of x', 'address of p', 'garbage'],
+      answer: '5',
+      why: '*pp gives back p (the int*), and **pp follows that to x — so **pp is x\'s value, 5. Two dereferences peel both layers.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
-    },
-    {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
-    },
-    {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
+      code: 'int add(int a,int b){return a+b;}\nint sub(int a,int b){return a-b;}\nint (*op)(int,int) = sub;\nprintf("%d", op(10, 3));',
+      opts: ['7', '13', '30', 'error'],
       answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      why: 'op points at sub, so op(10, 3) calls sub(10, 3) = 7. The function pointer dispatches to whatever function it currently holds.'
+    },
+    {
+      code: 'void set(int **out) { static int v = 9; *out = &v; }\nint *p = NULL;\nset(&p);\nprintf("%d", *p);',
+      opts: ['9', '0', 'NULL', 'crash'],
+      answer: '9',
+      why: 'set takes int** and writes through *out, so p now points at v. *p is 9. Passing &p let the function change the caller\'s pointer itself.'
+    },
+    {
+      code: 'char *days[] = { "Mon", "Tue", "Wed" };\nchar **d = days;\nprintf("%s", *(d + 1));',
+      opts: ['Tue', 'Mon', 'Wed', 'T'],
+      answer: 'Tue',
+      why: 'days is an array of char* (so char** when it decays). d + 1 points at days[1]; *(d+1) is the string "Tue". This is the same shape as argv.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +602,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +627,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Peel one layer per <code>*</code>; a function pointer calls whatever it holds; <code>&amp;ptr</code> + <code>int**</code> changes the caller's pointer.`;
           breakStreak();
         }
       });
@@ -669,14 +646,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> To change a caller\'s <code>int</code>, a function takes <code>int *</code> and you pass <code>&amp;x</code>. By the same logic, to change a caller\'s <code>int *</code>, the function takes <code>int **</code> and you pass <code>&amp;ptr</code> — so it can, say, <code>malloc</code> and store the new address back into your pointer.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> <code>int**</code> lets a function modify the caller\'s pointer.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. It\'s not about speed or pointing at two things. <code>int **</code> is "a pointer to an <code>int *</code>" — you pass it so a function can change the caller\'s pointer itself.';
       firstTry = false; breakStreak();
     }
   }));

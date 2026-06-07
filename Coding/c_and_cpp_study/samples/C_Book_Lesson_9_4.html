@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 9.4 — Standard Streams &amp; Pipes · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,31 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Stream Router */
+  .fs-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .fsmode { flex: 1; min-width: 120px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 8px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .fsmode.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .fsmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .fsmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .sr-prog { background: var(--terminal); border-radius: 10px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: #94a3b8; line-height: 1.7; margin-bottom: 10px; }
+  .sr-prog .o { color: #86efac; } .sr-prog .e { color: #fca5a5; }
+  .sr-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sr-box { flex: 1; min-width: 150px; background: var(--terminal); border-radius: 12px; padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; color: #e2e8f0; line-height: 1.7; min-height: 92px; border: 2px solid #334155; }
+  .sr-box .hdr { color: #94a3b8; font-size: 11px; display: block; margin-bottom: 6px; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+  .sr-box.term { border-color: var(--cyan); } .sr-box.term .hdr { color: #67e8f9; }
+  .sr-box.file { border-color: var(--green); } .sr-box.file .hdr { color: #86efac; }
+  .sr-box.pipe { border-color: var(--yellow); } .sr-box.pipe .hdr { color: #fde047; }
+  .sr-out { color: #86efac; } .sr-err { color: #fca5a5; }
+  .sr-empty { color: #475569; font-style: italic; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; margin-top: 4px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +204,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Every program is born with three streams: <code>stdin</code>, <code>stdout</code>, <code>stderr</code>. They're how you talk to the world! 🔌
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 9.4</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 62 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">📁 PART IX &middot; FILES AND THE OUTSIDE WORLD</span>
+    <h1>Standard Streams &amp; Pipes</h1>
+    <p class="hero-sub">You've been using files you opened yourself. But every C program starts with <strong>three streams already open</strong>: <code>stdin</code> for input, <code>stdout</code> for normal output, <code>stderr</code> for errors. They're plain <code>FILE *</code>s — and because the shell can redirect and pipe them, getting these right is what lets your program plug into the whole Unix toolbox.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,116 +233,129 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>Three streams, already open 🔌</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      Before your <code>main</code> runs, the system hands every program three open streams: <strong><code>stdin</code></strong> (standard input — where keyboard or piped input arrives), <strong><code>stdout</code></strong> (standard output — your normal results), and <strong><code>stderr</code></strong> (standard error — messages and diagnostics). You've used them already without knowing: <code>printf</code> writes to <code>stdout</code> and <code>scanf</code> reads from <code>stdin</code>. They're all <code>FILE *</code>, so every function from this Part works on them too. The payoff is that the shell can <em>rewire</em> these streams to files or to other programs — and a program that uses them correctly becomes a reusable building block.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>This is the idea behind the Unix philosophy: small programs that read <code>stdin</code> and write <code>stdout</code> snap together like Lego.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> They're just FILE*</div>
+    <h2>printf is fprintf(stdout, …) 🖨️</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>The three streams are predefined <code>FILE *</code> values (from <code>&lt;stdio.h&gt;</code>). Anything you can do to a file you opened, you can do to them:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code">printf(<span class="str">"hello\n"</span>);                 <span class="cm">// exactly fprintf(stdout, "hello\n")</span>
+fprintf(stdout, <span class="str">"answer: %d\n"</span>, 42);  <span class="cm">// normal output</span>
+fprintf(stderr, <span class="str">"error: %s\n"</span>, msg); <span class="hl">// diagnostics go here, NOT stdout</span>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+<span class="kw">char</span> line[128];
+fgets(line, <span class="kw">sizeof</span> line, stdin);    <span class="cm">// read a line of input (like 9.2)</span></pre>
+
+    <table class="op-table">
+      <thead><tr><th>Stream</th><th>Purpose</th><th>Shortcut</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">stdin</td><td class="mono plain">input</td><td class="mono plain">scanf, getchar, fgets(…, stdin)</td></tr>
+        <tr><td class="mono">stdout</td><td class="mono plain">normal output</td><td class="mono plain">printf, putchar</td></tr>
+        <tr><td class="mono">stderr</td><td class="mono plain">errors / logs</td><td class="mono plain">fprintf(stderr, …)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      There's no magic: <code>printf(...)</code> is literally shorthand for <code>fprintf(stdout, ...)</code>, and <code>scanf(...)</code> is <code>fscanf(stdin, ...)</code>. The only one without a one-word shortcut is <code>stderr</code> — you write to it explicitly with <code>fprintf(stderr, …)</code>, which is exactly how you signal "this is a message, not a result."
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> Why stderr is separate</div>
+    <h2>Keep errors out of the data ⚠️</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>Why two output streams? Because output and <em>commentary about</em> output are different things. Results go to <code>stdout</code>; everything else — errors, warnings, progress — goes to <code>stderr</code>:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
-
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+    <pre class="code"><span class="kw">if</span> (!file) {
+    fprintf(stderr, <span class="str">"could not open %s\n"</span>, name);  <span class="hl">// to stderr</span>
+    <span class="kw">return</span> 1;
+}
+printf(<span class="str">"%d\n"</span>, total);   <span class="cm">// the actual result → stdout</span></pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      Keeping them apart means someone can capture your real output (redirect <code>stdout</code> to a file, or pipe it into another program) while still <em>seeing</em> the error messages on their screen. If errors went to <code>stdout</code>, they'd be mixed into the saved data or fed as bogus input to the next program. As a bonus, <code>stderr</code> is typically unbuffered (or line-buffered), so error messages appear immediately rather than waiting in a buffer — handy when a program crashes.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> Redirection</div>
+    <h2>The shell rewires the streams 🔀</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>Here's the powerful part: <strong>your program doesn't change</strong>. The shell can point the streams somewhere else before your program even starts:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
-
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+    <table class="op-table">
+      <thead><tr><th>Command</th><th>What the shell does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">prog &gt; out.txt</td><td class="mono plain">stdout → the file out.txt (stderr still to screen)</td></tr>
+        <tr><td class="mono">prog 2&gt; err.txt</td><td class="mono plain">stderr → the file err.txt (stdout still to screen)</td></tr>
+        <tr><td class="mono">prog &lt; in.txt</td><td class="mono plain">stdin ← the file in.txt (instead of the keyboard)</td></tr>
+        <tr><td class="mono">prog &gt; out 2&gt;&amp;1</td><td class="mono plain">stdout → out, and stderr → wherever stdout goes</td></tr>
+      </tbody>
+    </table>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      When you run <code>prog &gt; out.txt</code>, the program still just calls <code>printf</code> — but those bytes now land in <code>out.txt</code> instead of the terminal, because the OS connected <code>stdout</code> to the file. Same code, different destination. This is why a program should write its real output with <code>printf</code>/<code>stdout</code>: it makes the output capturable. The <code>2</code> in <code>2&gt;</code> is the number of the <code>stderr</code> stream (0 = stdin, 1 = stdout, 2 = stderr).
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Pipes</div>
+    <h2>One program's output, another's input 🪈</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>A <strong>pipe</strong> (<code>|</code>) connects the <code>stdout</code> of one program directly to the <code>stdin</code> of the next — no temp file needed:</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code">cat log.txt | grep ERROR | sort     <span class="cm"># each | feeds stdout → next stdin</span></pre>
+
+    <div class="trap">
+      <h4>🚨 Printing errors to stdout breaks pipes</h4>
+      <p>If your program prints an error with <code>printf</code> (i.e. to <code>stdout</code>) instead of <code>fprintf(stderr, …)</code>, that error text gets <em>piped into the next program as if it were data</em> — corrupting the pipeline — and it vanishes if someone redirects <code>stdout</code> to a file. Errors belong on <code>stderr</code> precisely so they stay out of the data stream and remain visible. One more gotcha: <code>stdout</code> is fully buffered when it's <em>not</em> a terminal (e.g. into a pipe or file), so if you interleave <code>stdout</code> and <code>stderr</code> writes they can appear out of order — call <code>fflush(stdout)</code> before writing to <code>stderr</code> if order matters.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Stream Router</div>
+    <h2>Watch where each message lands 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Stream Router</strong> runs a little program that writes one line to <code>stdout</code> and one to <code>stderr</code> — pick how you launch it (plain, <code>&gt;</code>, <code>2&gt;</code>, or <code>|</code>) and watch which destination each line reaches. <strong>Predict the Output</strong> tests redirection, pipes, and stdin.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">🔌 Stream Router</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Stream Router</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- STREAM ROUTER -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="sr-prog">
+          the program does:&nbsp; <span class="o">printf("RESULT: 42\n");</span> &nbsp;·&nbsp; <span class="e">fprintf(stderr, "warning: low fuel\n");</span>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="fs-modes" id="srMode">
+          <button class="fsmode active" data-m="plain">./prog<small>nothing redirected</small></button>
+          <button class="fsmode" data-m="rout">./prog &gt; out.txt<small>stdout → file</small></button>
+          <button class="fsmode" data-m="rerr">./prog 2&gt; err.txt<small>stderr → file</small></button>
+          <button class="fsmode" data-m="pipe">./prog | next<small>stdout → pipe</small></button>
+        </div>
+        <div class="sr-grid" id="srGrid"></div>
+        <div class="fs-msg" id="srMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +365,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +380,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        Why send error and diagnostic messages to <code>stderr</code> instead of <code>stdout</code>?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>So they stay <strong>separate from the real output</strong> — redirection and pipes capture <code>stdout</code>, leaving errors visible and out of the data stream</span></button>
+      <button class="opt" data-correct="false"><span><code>stderr</code> is faster than <code>stdout</code></span></button>
+      <button class="opt" data-correct="false"><span><code>stderr</code> automatically prints errors in red</span></button>
+      <button class="opt" data-correct="false"><span>There's no real difference — it's purely a style preference</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: think about what happens with <code>prog &gt; out.txt</code> or <code>prog | next</code>.</div>
     </div>
   </section>
 
@@ -391,26 +398,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">⚠️</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Printing errors to <code>stdout</code></strong>
+        <small>Use <code>fprintf(stderr, …)</code> for messages. On <code>stdout</code>, errors get redirected into files or piped into the next program as fake data.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">🧱</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Hard-coding a filename instead of reading <code>stdin</code></strong>
+        <small>A tool that reads <code>stdin</code> and writes <code>stdout</code> composes with pipes and redirection. Tying it to a fixed file makes it un-pluggable.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">🔀</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Assuming output order across streams</strong>
+        <small><code>stdout</code> is buffered when piped/redirected, so <code>stdout</code> and <code>stderr</code> lines can interleave oddly. <code>fflush(stdout)</code> before a <code>stderr</code> write if order matters.</small>
       </div>
     </div>
 
@@ -418,39 +425,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>cat, lite.</strong> Read <code>stdin</code> line by line with <code>fgets</code> and echo each to <code>stdout</code>. Run it three ways: type input, <code>prog &lt; file.txt</code>, and <code>echo hi | prog</code> — same code, three sources.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Results vs. messages.</strong> Write a program that prints its computed answer to <code>stdout</code> and a "done in N steps" note to <code>stderr</code>. Run <code>prog &gt; out.txt</code> and confirm <code>out.txt</code> has only the answer while the note still shows on screen.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>A pipe stage.</strong> Build a filter that reads <code>stdin</code>, uppercases each line, and writes <code>stdout</code> — with any errors to <code>stderr</code>. Drop it into a pipeline: <code>cat file | yourprog | sort</code> and confirm it behaves like a real Unix tool.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>Three streams open automatically:</strong> <code>stdin</code> (input), <code>stdout</code> (output), <code>stderr</code> (errors) — all <code>FILE *</code>.</li>
+        <li><strong><code>printf</code> = <code>fprintf(stdout, …)</code></strong>, <code>scanf</code> = <code>fscanf(stdin, …)</code>; write errors with <code>fprintf(stderr, …)</code>.</li>
+        <li><strong>Keep errors on <code>stderr</code></strong> so real output stays clean and capturable, and messages stay visible.</li>
+        <li><strong>The shell redirects</strong> with <code>&gt;</code> (stdout), <code>2&gt;</code> (stderr), <code>&lt;</code> (stdin) — your code is unchanged.</li>
+        <li><strong>A pipe <code>|</code></strong> wires one program's <code>stdout</code> into the next's <code>stdin</code> — the heart of composing Unix tools.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_9_3.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      9.3  Writing a file safely
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_9_5.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      9.5  Command-line arguments — argc &amp; argv
     </a>
   </div>
 
@@ -458,14 +465,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "Every program is born with three streams: stdin, stdout, stderr. 🔌",
+    "printf is just fprintf(stdout, ...); scanf reads from stdin. 🖨️",
+    "Send errors to stderr so they don't pollute your real output. ⚠️",
+    "The shell can redirect: > file, 2> file, < file. 🔀",
+    "A pipe | wires one program's stdout into the next's stdin. 🪈",
+    "Route the streams and see where each message lands. 🔬",
+    "Errors on stderr survive redirection and pipes — that's the point. 🛡️",
+    "Read stdin, write stdout, log to stderr — and you compose. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +504,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 9.4 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +536,68 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
-  };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
+  // ===== Stream Router =====
+  let srMode = 'plain', srTouched = false;
+  const OUT = 'RESULT: 42', ERRMSG = 'warning: low fuel';
+  const srModeEl = document.getElementById('srMode');
+  const srGrid = document.getElementById('srGrid');
+  const srMsg = document.getElementById('srMsg');
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function box(cls, hdr, body) {
+    return `<div class="sr-box ${cls}"><span class="hdr">${hdr}</span>${body || '<span class="sr-empty">(nothing)</span>'}</div>`;
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
+  function renderSR() {
+    const outLine = `<div class="sr-out">${OUT}</div>`;
+    const errLine = `<div class="sr-err">${ERRMSG}</div>`;
+    let html = '';
+    if (srMode === 'plain') {
+      html = box('term', '🖥️ terminal', outLine + errLine);
+      srMsg.innerHTML = `<b>Nothing redirected.</b> Both <code>stdout</code> and <code>stderr</code> point at the terminal, so <span class="grn">both lines</span> show on screen, mixed together.`;
+    } else if (srMode === 'rout') {
+      html = box('term', '🖥️ terminal', errLine) + box('file', '📄 out.txt', outLine);
+      srMsg.innerHTML = `<b><code>&gt; out.txt</code></b> sent <code>stdout</code> to the file, so <span class="grn">RESULT</span> landed in <code>out.txt</code>. <code>stderr</code> still goes to the <span class="red">terminal</span> — the warning is visible, not saved.`;
+    } else if (srMode === 'rerr') {
+      html = box('term', '🖥️ terminal', outLine) + box('file', '📄 err.txt', errLine);
+      srMsg.innerHTML = `<b><code>2&gt; err.txt</code></b> sent <code>stderr</code> to the file, so the <span class="red">warning</span> is captured in <code>err.txt</code> while <span class="grn">RESULT</span> still prints on the terminal.`;
+    } else {
+      html = box('term', '🖥️ terminal', errLine) + box('pipe', '🪈 → next program (stdin)', outLine);
+      srMsg.innerHTML = `<b><code>| next</code></b> wired <code>stdout</code> into the next program's <code>stdin</code>, so it receives only <span class="grn">RESULT</span>. The <span class="red">warning on stderr is NOT piped</span> — it stays on the terminal (good: it won't corrupt the pipeline).`;
+    }
+    srGrid.innerHTML = html;
+  }
+  srModeEl.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => {
+    srMode = b.dataset.m;
+    srModeEl.querySelectorAll('.fsmode').forEach(x => x.classList.toggle('active', x === b));
+    renderSR();
+    if (!srTouched) { srTouched = true; addXP(5, e.clientX, e.clientY, '🔌 Stream routed! +5 XP'); }
   }));
-  renderPSI('valid');
+  renderSR();
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: 'printf("hi");\nfprintf(stdout, "there");\n// what appears on stdout?',
+      opts: ['hithere', 'hi there', 'hi\\nthere', 'there'],
+      answer: 'hithere',
+      why: 'printf writes to stdout and fprintf(stdout, ...) writes to the same place, with nothing added between them → "hithere".'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: '// shell:  ./prog > out.txt\n// prog does:\nprintf("result\\n");\nfprintf(stderr, "oops\\n");\n// what ends up in out.txt?',
+      opts: ['result', 'result\\noops', 'oops', '(empty)'],
+      answer: 'result',
+      why: '"> out.txt" redirects only stdout, so "result" goes to the file. stderr still goes to the terminal, so "oops" is NOT in out.txt.'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: '// shell:  ./prog < data.txt    (data.txt contains: 7)\nint n;\nscanf("%d", &n);\nprintf("%d", n * 2);\n// program output?',
+      opts: ['14', '7', '0', 'error'],
+      answer: '14',
+      why: '"< data.txt" connects stdin to the file, so scanf reads 7 from it. 7 * 2 = 14 is printed to stdout.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: '// shell:  produce | consume\n// produce: printf("data\\n");\n//          fprintf(stderr, "log\\n");\n// consume reads its stdin.\n// What does consume receive?',
+      opts: ['just "data" — stderr is not piped', '"data" and "log"', 'just "log"', 'nothing'],
+      answer: 'just "data" — stderr is not piped',
+      why: 'A pipe connects produce\'s stdout to consume\'s stdin, so only "data" is piped. "log" went to stderr, which is not part of the pipe — it stays on the terminal.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +612,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +637,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Remember: > captures only stdout, < feeds stdin, and a pipe carries stdout (never stderr) to the next program.`;
           breakStreak();
         }
       });
@@ -669,14 +656,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Splitting results (<code>stdout</code>) from messages (<code>stderr</code>) means a user can redirect or pipe the real output while still seeing errors on screen — and errors never get mixed into saved data or fed to the next program. It\'s not about speed or colour.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Errors on <code>stderr</code> stay out of the captured output.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. It isn\'t about speed or colour. <code>stderr</code> is separate so redirection/pipes can capture <code>stdout</code> while errors stay visible and out of the data stream.';
       firstTry = false; breakStreak();
     }
   }));

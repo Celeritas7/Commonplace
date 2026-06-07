@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 10.4 — Debugging with gdb · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,8 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  pre.code .gp { color: #67e8f9; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +103,36 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* gdb Session */
+  .gd-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .gd-src { flex: 2; min-width: 230px; background: var(--terminal); border-radius: 12px; padding: 12px 8px; font-family: var(--mono); font-size: 12.5px; }
+  .gd-line { display: flex; gap: 8px; padding: 1px 8px; border-radius: 5px; color: #e2e8f0; }
+  .gd-line .ln { color: #475569; width: 18px; text-align: right; flex-shrink: 0; }
+  .gd-line.cur { background: rgba(249,115,22,0.28); }
+  .gd-line.cur .arrow { color: #fdba74; }
+  .gd-line .bp { color: #fca5a5; width: 12px; flex-shrink: 0; }
+  .gd-line .kw { color: #fdba74; } .gd-line .cm { color: #64748b; }
+  .gd-state { flex: 1; min-width: 150px; background: #0b1220; border-radius: 12px; padding: 12px 14px; font-family: var(--mono); font-size: 12px; color: #e2e8f0; }
+  .gd-state .hdr { color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 6px; font-family: var(--sans); font-weight: 700; }
+  .gd-state .vrow { display: flex; justify-content: space-between; padding: 2px 0; }
+  .gd-state .vn { color: #67e8f9; } .gd-state .vv { color: #fde047; font-weight: 700; }
+  .gd-cmds { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .gd-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 12px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12px; border-radius: 9px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .gd-btn:hover { transform: translateY(-2px); }
+  .gd-btn small { font-weight: 600; opacity: 0.85; }
+  .gd-btn.ghost { background: white; color: var(--orange-deep); border: 2px solid var(--orange-light); }
+  .gd-term { background: #0b1220; border-radius: 10px; padding: 10px 14px; font-family: var(--mono); font-size: 12px; color: #cbd5e1; line-height: 1.6; min-height: 56px; margin-bottom: 8px; }
+  .gd-term .p { color: #86efac; }
+  .gd-term .o { color: #fde047; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +210,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Stop guessing with scattered <code>printf</code>s — <strong>gdb</strong> pauses your program and lets you look inside. Five commands do 95%! 🐛
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 10.4</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 68 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">🧩 PART X &middot; PUTTING IT ALL TOGETHER</span>
+    <h1>Debugging with gdb</h1>
+    <p class="hero-sub">When a program misbehaves, sprinkling <code>printf</code>s everywhere is slow guesswork. <strong>gdb</strong> (the GNU debugger) lets you <em>pause</em> your running program, step through it one line at a time, and inspect any variable's real value. It has hundreds of commands — but five of them cover almost everything you'll do. This is your practical starter kit.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,128 +239,139 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>Look inside, don't guess 🐛</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      Everyone debugs with <code>printf</code> at first — add a print, recompile, run, read, repeat. It works, but it's slow and you have to guess <em>where</em> to look before you even start. A <strong>debugger</strong> flips that around: it runs your program under supervision so you can stop it at any line, look at every variable's actual value, and step forward instruction by instruction watching things change. When a program crashes, it can even tell you the exact line and the chain of function calls that led there. <strong>gdb</strong> is the standard debugger for C on Linux (with <code>lldb</code> as the close cousin on macOS), and learning a handful of commands repays itself the first time you'd otherwise have spent an hour adding prints.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>The one prerequisite: compile with debug info so gdb can map machine code back to your source.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> Getting in</div>
+    <h2>Compile with -g, then run gdb 🚪</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>gdb needs your program built with <strong><code>-g</code></strong>, which embeds the source line and variable info. Then you launch gdb on the program:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code">gcc <span class="hl">-g</span> -o prog main.c        <span class="cm"># -g = include debug info</span>
+gdb ./prog                     <span class="cm"># start gdb on your program</span>
+<span class="cm"># now you're at the (gdb) prompt, program not yet running</span></pre>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+    <div class="new-content">
+      Without <code>-g</code>, gdb still runs but can only show raw addresses and assembly — useless for everyday debugging. With it, you get your real variable names and line numbers. Starting gdb drops you at a <code>(gdb)</code> prompt where you type commands; your program isn't running yet — you typically set a breakpoint first, then start it. (The <code>-g</code> flag is exactly the one the <code>CFLAGS</code> in your Makefile from 10.3 already included.)
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> The five commands</div>
+    <h2>Break, run, print, next, backtrace 🎯</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>This tiny set handles the vast majority of debugging sessions:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
-
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+    <table class="op-table">
+      <thead><tr><th>Command (short)</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">break main / break 12 <span style="color:var(--ink-dim)">(b)</span></td><td class="mono plain">pause when execution reaches a function or line</td></tr>
+        <tr><td class="mono">run <span style="color:var(--ink-dim)">(r)</span></td><td class="mono plain">start the program (stops at the first breakpoint)</td></tr>
+        <tr><td class="mono">print x <span style="color:var(--ink-dim)">(p)</span></td><td class="mono plain">show the current value of a variable or expression</td></tr>
+        <tr><td class="mono">next / step <span style="color:var(--ink-dim)">(n / s)</span></td><td class="mono plain">run the next line — <code>step</code> goes <em>into</em> calls, <code>next</code> over them</td></tr>
+        <tr><td class="mono">backtrace <span style="color:var(--ink-dim)">(bt)</span></td><td class="mono plain">show the call stack — who called whom to get here</td></tr>
+      </tbody>
+    </table>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      A typical session reads like a sentence: <code>break</code> where you suspect trouble, <code>run</code> to get there, <code>print</code> the variables to see what's actually true, then <code>next</code> a few times watching them change until the wrong value appears. Add <code>continue</code> (<code>c</code>) to resume to the next breakpoint, and <code>quit</code> (<code>q</code>) to leave — but break/run/print/next/backtrace are the core. Most commands have one-letter shortcuts, and pressing <strong>Enter</strong> repeats the last command (great for stepping with <code>n</code>).
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> A real session</div>
+    <h2>Cornering a bug 🔎</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>Here's the rhythm — break before the suspect spot, run, then print and step to watch the wrong value emerge:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
-
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+    <pre class="code"><span class="gp">(gdb)</span> break 8          <span class="cm"># pause at line 8</span>
+<span class="gp">(gdb)</span> run              <span class="cm"># start; stops at line 8</span>
+<span class="gp">(gdb)</span> print sum        <span class="cm"># $1 = 0   ... so far so good</span>
+<span class="gp">(gdb)</span> next             <span class="cm"># run one line</span>
+<span class="gp">(gdb)</span> print sum        <span class="cm"># $2 = 5   ... watch it change</span>
+<span class="gp">(gdb)</span> print i          <span class="cm"># $3 = 3   ... aha, i is wrong!</span></pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      You're not changing the program — you're observing it. Each <code>print</code> shows the variable's <em>actual</em> value at that exact point, which is how you catch the moment reality diverges from what you expected. If the program crashes, just <code>run</code> it under gdb and, when it stops, type <code>backtrace</code> — gdb points at the precise line of the crash and the call chain that led there, which alone solves a huge fraction of segfaults.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Crashes &amp; backtrace</div>
+    <h2>Where did it die? 💥</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>The single highest-value move: when a program segfaults, run it in gdb and read the backtrace. gdb stops <em>at</em> the crash and tells you exactly where:</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code"><span class="gp">(gdb)</span> run
+<span class="bad">Program received signal SIGSEGV, Segmentation fault.</span>
+0x... in process (p=0x0) at main.c:14
+14:    return p-&gt;value;        <span class="cm"># crashed dereferencing p</span>
+<span class="gp">(gdb)</span> backtrace
+#0  process (p=0x0) at main.c:14   <span class="cm"># p is NULL here!</span>
+#1  main () at main.c:22           <span class="cm"># called from line 22</span></pre>
+
+    <div class="trap">
+      <h4>🚨 Debugging an optimized build with no <code>-g</code> is misery</h4>
+      <p>Two setup mistakes waste hours. First, forgetting <code>-g</code>: gdb can't show your variables or lines, only hex addresses — always build debug builds with <code>-g</code>. Second, debugging an <em>optimized</em> build (<code>-O2</code>): the compiler reorders and merges code, so the line gdb stops on and the variables it shows may not match your source ("value optimized out", lines jumping around). For debugging, compile with <code>-g</code> and <em>without</em> <code>-O</code> (or <code>-Og</code>, which optimizes lightly but keeps debugging sane). And note gdb shows you <em>where</em> and <em>what</em>, but not <em>why</em> — you still reason about the bug; gdb just hands you the facts instead of guesses.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — gdb Session</div>
+    <h2>Step through a buggy loop 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>gdb Session</strong> debugs a small sum-the-array program with a bug — set the breakpoint, run, and <code>next</code>/<code>print</code> to watch the variables and spot what's wrong. <strong>Predict the Output</strong> tests what each command does.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">🐛 gdb Session</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">gdb Session</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- GDB SESSION -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="gd-grid">
+          <div class="gd-src" id="gdSrc"></div>
+          <div class="gd-state" id="gdState"></div>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="gd-cmds">
+          <button class="gd-btn" id="gdBreak">break 6<br><small>at the loop</small></button>
+          <button class="gd-btn" id="gdRun">run</button>
+          <button class="gd-btn" id="gdNext">next</button>
+          <button class="gd-btn" id="gdPrint">print</button>
+          <button class="gd-btn ghost" id="gdReset">reset ↺</button>
+        </div>
+        <div class="gd-term" id="gdTerm"></div>
+        <div class="fs-msg" id="gdMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
       <div class="tab-panel" id="tab-out">
         <div class="scenario">
-          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-num" id="poNum">Question 1 / 4</div>
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
-          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+          <button class="scen-btn" id="poNext" disabled>Next question →</button>
         </div>
       </div>
     </div>
@@ -373,13 +384,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        Your program segfaults. What's the fastest first move in gdb?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span><code>run</code> it under gdb, and when it stops at the crash, type <code>backtrace</code> — it shows the exact line and the call chain that led there</span></button>
+      <button class="opt" data-correct="false"><span>Add more <code>printf</code> statements and recompile</span></button>
+      <button class="opt" data-correct="false"><span>Rebuild with <code>-O2</code> so it runs faster</span></button>
+      <button class="opt" data-correct="false"><span><code>print</code> every variable one by one before running</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: gdb stops <em>at</em> the crash — let it tell you where.</div>
     </div>
   </section>
 
@@ -391,26 +402,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">🏷️</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Forgetting <code>-g</code></strong>
+        <small>Without debug info gdb shows hex addresses, not your variables or lines. Always build debug builds with <code>-g</code> (it's in your Makefile's <code>CFLAGS</code>).</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">⚙️</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Debugging an optimized build</strong>
+        <small><code>-O2</code> reorders code so lines and variables don't match your source ("optimized out"). Debug with <code>-g</code> and no <code>-O</code> (or <code>-Og</code>).</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">🪜</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Confusing <code>step</code> and <code>next</code></strong>
+        <small><code>step</code> dives <em>into</em> a called function; <code>next</code> runs it and stops on the line after. Use <code>next</code> for code you trust, <code>step</code> to investigate a call.</small>
       </div>
     </div>
 
@@ -418,39 +429,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>First session.</strong> Compile a small program with <code>-g</code>, run <code>gdb ./prog</code>, set <code>break main</code>, <code>run</code>, then <code>next</code> a few times and <code>print</code> a variable at each step. Just get comfortable at the <code>(gdb)</code> prompt.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Catch a wrong value.</strong> Write a loop that computes a sum with an off-by-one or wrong index. Break at the loop, step through with <code>next</code>, and <code>print</code> the accumulator and index each pass until you see where it goes wrong.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Backtrace a segfault.</strong> Deliberately dereference a <code>NULL</code> pointer inside a helper function called from <code>main</code>. Run it under gdb, and from the crash use <code>backtrace</code> to identify both the crashing line and the caller. Then <code>print</code> the pointer to confirm it's <code>0x0</code>.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>A debugger beats <code>printf</code></strong> — pause the program, inspect any variable, step line by line.</li>
+        <li><strong>Compile with <code>-g</code></strong> (and without <code>-O</code>) so gdb sees your source lines and variable names.</li>
+        <li><strong>The five commands:</strong> <code>break</code>, <code>run</code>, <code>print</code>, <code>next</code>/<code>step</code>, <code>backtrace</code> — cover almost everything.</li>
+        <li><strong>On a crash, <code>backtrace</code></strong> shows the exact line and the call chain that led there — the fastest segfault finder.</li>
+        <li><strong><code>next</code> steps over calls, <code>step</code> goes into them;</strong> Enter repeats the last command, and most commands have one-letter shortcuts.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_10_3.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      10.3  A first Makefile
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_10_5.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      10.5  Undefined behaviour
     </a>
   </div>
 
@@ -458,14 +469,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "A debugger lets you pause and look inside — no more printf guessing. 🐛",
+    "Compile with -g so gdb sees your source lines and variables. 🚪",
+    "break, run, print, next, backtrace — five commands, 95% of debugging. 🎯",
+    "Break, run, then print & next to watch a value go wrong. 🔎",
+    "Crashed? run it, then backtrace — gdb names the exact line. 💥",
+    "Step the buggy loop and print the variables each pass. 🔬",
+    "next steps OVER calls; step goes INTO them. 🪜",
+    "gdb shows where & what; you still reason about why. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +508,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 10.4 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +540,151 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
-  };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
+  // ===== gdb Session =====
+  // sum-of-array with a bug: loop runs i<=n (off by one), reading one past the array
+  const CODE = [
+    { n: 1, t: 'int sum_array(int *a, int n) {', k: false },
+    { n: 2, t: '    int sum = 0;', k: false },
+    { n: 3, t: '    int i;', k: false },
+    { n: 4, t: '    // a = {10, 20, 30}, n = 3', k: true },
+    { n: 5, t: '', k: false, blank: true },
+    { n: 6, t: '    for (i = 0; i <= n; i++)   // BUG: <= ', k: false },
+    { n: 7, t: '        sum += a[i];', k: false },
+    { n: 8, t: '    return sum;', k: false },
+    { n: 9, t: '}', k: false }
+  ];
+  // execution model: program-counter over a flat step list
+  let bpLine = null, started = false, gdTouched = false;
+  let pc = 0;            // index into STEPS
+  let st = { i: '?', sum: '?', cur: null };
+  const ARR = [10, 20, 30], N = 3;
+  // STEPS: each is {line, apply} executed when we "land" on it
+  const gdSrc = document.getElementById('gdSrc');
+  const gdState = document.getElementById('gdState');
+  const gdTerm = document.getElementById('gdTerm');
+  const gdMsg = document.getElementById('gdMsg');
+  const gdBreak = document.getElementById('gdBreak');
+  const gdRun = document.getElementById('gdRun');
+  const gdNext = document.getElementById('gdNext');
+  const gdPrint = document.getElementById('gdPrint');
+  const gdReset = document.getElementById('gdReset');
+  let term = [];
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function renderSrc(curLine) {
+    gdSrc.innerHTML = CODE.map(c => {
+      if (c.blank) return `<div class="gd-line"><span class="bp"></span><span class="ln">${c.n}</span><span></span></div>`;
+      const isCur = c.n === curLine;
+      const isBp = c.n === bpLine;
+      let txt = c.t.replace(/\/\/.*$/, m => `<span class="cm">${m}</span>`).replace(/\b(int|for|return)\b/g, '<span class="kw">$1</span>');
+      return `<div class="gd-line${isCur ? ' cur' : ''}"><span class="bp">${isBp ? '●' : ''}</span><span class="ln">${c.n}</span><span class="arrow">${isCur ? '▸ ' : '&nbsp;&nbsp;'}</span><span>${txt}</span></div>`;
+    }).join('');
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
-  }));
-  renderPSI('valid');
+  function renderState() {
+    gdState.innerHTML = `<span class="hdr">variables</span>` +
+      `<div class="vrow"><span class="vn">i</span><span class="vv">${st.i}</span></div>` +
+      `<div class="vrow"><span class="vn">sum</span><span class="vv">${st.sum}</span></div>` +
+      `<div class="vrow"><span class="vn">n</span><span class="vv">${N}</span></div>` +
+      `<span class="hdr" style="margin-top:8px">a[]</span>` +
+      `<div class="vrow"><span class="vn">a[0..2]</span><span class="vv">10 20 30</span></div>` +
+      `<div class="vrow"><span class="vn">a[3]</span><span class="vv" style="color:#fca5a5">garbage</span></div>`;
+  }
+  function renderTerm() {
+    gdTerm.innerHTML = term.length ? term.join('<br>') : `<span class="skip">(gdb) — set a breakpoint, then run</span>`;
+  }
+  function pushTerm(s) { term.push(s); if (term.length > 6) term.shift(); renderTerm(); }
+
+  function fullReset() {
+    bpLine = null; started = false; pc = 0; st = { i: '?', sum: '?', cur: null }; term = [];
+    renderSrc(null); renderState(); renderTerm();
+    gdMsg.innerHTML = `Set <code>break 6</code> to pause at the loop, then <code>run</code>. Step with <code>next</code> and <code>print</code> the variables to find the bug.`;
+  }
+
+  gdBreak.addEventListener('click', (e) => {
+    bpLine = 6; renderSrc(st.cur);
+    pushTerm(`<span class="p">(gdb)</span> break 6`);
+    pushTerm(`Breakpoint 1 at main.c:6`);
+    gdMsg.innerHTML = `<b>Breakpoint set</b> at line 6 (the <code>for</code>). Now <code>run</code> — the program will stop there before the loop starts.`;
+    if (!gdTouched) { gdTouched = true; addXP(5, e.clientX, e.clientY, '🎯 Breakpoint! +5 XP'); }
+  });
+
+  gdRun.addEventListener('click', (e) => {
+    if (bpLine === null) { gdMsg.innerHTML = `Set a breakpoint first (<code>break 6</code>), or run would go straight to the end.`; return; }
+    started = true; st.i = 0; st.sum = 0; st.cur = 6; pc = 0;
+    renderSrc(6); renderState();
+    pushTerm(`<span class="p">(gdb)</span> run`);
+    pushTerm(`Breakpoint 1, sum_array (a=..., n=3) at main.c:6`);
+    gdMsg.innerHTML = `<b>Stopped at line 6.</b> The loop is about to start: <code>i = 0</code>, <code>sum = 0</code>. <code>print</code> them, or <code>next</code> to run a line.`;
+    if (!gdTouched) { gdTouched = true; addXP(5, e.clientX, e.clientY, '▶️ Running! +5 XP'); }
+  });
+
+  gdNext.addEventListener('click', (e) => {
+    if (!started) { gdMsg.innerHTML = `Program isn't running yet — <code>break 6</code> then <code>run</code> first.`; return; }
+    // advance: from line 6 (for header) we evaluate condition; if true go to 7 (body), execute sum+=a[i]; back to 6 (i++)
+    if (st.cur === 6) {
+      // checking condition i <= n
+      if (st.i <= N) {
+        st.cur = 7; renderSrc(7); pushTerm(`<span class="p">(gdb)</span> next   <span class="o">→ line 7</span>`);
+        gdMsg.innerHTML = `Line 6 → condition <code>${st.i} &lt;= ${N}</code> is <span class="grn">true</span>, so we enter the body (line 7). ${st.i === N ? '<span class="red">But i is already ' + N + ' — a[' + N + '] is past the array!</span>' : ''}`;
+      } else {
+        st.cur = 8; renderSrc(8); pushTerm(`<span class="p">(gdb)</span> next   <span class="o">→ line 8</span>`);
+        gdMsg.innerHTML = `Condition <code>${st.i} &lt;= ${N}</code> is now false — loop ends, on to <code>return</code> (line 8).`;
+      }
+    } else if (st.cur === 7) {
+      // execute sum += a[i]
+      const val = st.i < ARR.length ? ARR[st.i] : '(garbage)';
+      if (st.i < ARR.length) st.sum += ARR[st.i];
+      st.cur = 6; renderSrc(6); renderState();
+      pushTerm(`<span class="p">(gdb)</span> next   <span class="o">→ sum += a[${st.i}]${st.i < ARR.length ? ' ('+ARR[st.i]+')' : ' — OUT OF BOUNDS'}</span>`);
+      st.i += 1;
+      gdMsg.innerHTML = st.i - 1 < ARR.length
+        ? `Added <code>a[${st.i-1}] = ${ARR[st.i-1]}</code>; <code>sum</code> is now <span class="grn">${st.sum}</span>. Back to line 6, <code>i</code> becomes ${st.i}.`
+        : `<b class="red">Bug hit!</b> <code>i</code> was ${st.i-1}, but the array only has indices 0–2 — <code>a[${st.i-1}]</code> read <span class="red">past the end</span> (undefined behaviour). The <code>&lt;=</code> should be <code>&lt;</code>.`;
+    } else if (st.cur === 8) {
+      st.cur = 9; renderSrc(9);
+      pushTerm(`<span class="p">(gdb)</span> next   <span class="o">→ return ${st.sum}</span>`);
+      gdMsg.innerHTML = `<code>return sum;</code> — final value <span class="grn">${st.sum}</span>. The correct answer was 60; the off-by-one added garbage (or crashed). Found via stepping!`;
+    } else {
+      gdMsg.innerHTML = `Function done. Hit <code>reset</code> to debug again.`;
+    }
+    if (!gdTouched) { gdTouched = true; addXP(5, e.clientX, e.clientY, '🪜 Stepped! +5 XP'); }
+  });
+
+  gdPrint.addEventListener('click', (e) => {
+    if (!started) { gdMsg.innerHTML = `Nothing to print yet — <code>run</code> the program first.`; return; }
+    pushTerm(`<span class="p">(gdb)</span> print i      <span class="o">$ = ${st.i}</span>`);
+    pushTerm(`<span class="p">(gdb)</span> print sum    <span class="o">$ = ${st.sum}</span>`);
+    gdMsg.innerHTML = `<b>print</b> shows the live values: <code>i = ${st.i}</code>, <code>sum = ${st.sum}</code>. This is how you catch the exact moment a value goes wrong — no recompiling.`;
+    if (!gdTouched) { gdTouched = true; addXP(5, e.clientX, e.clientY, '🔍 Printed! +5 XP'); }
+  });
+
+  gdReset.addEventListener('click', fullReset);
+  fullReset();
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: 'You suspect a bug inside function compute().\nWhich command pauses the program when\nexecution reaches it?',
+      opts: ['break compute', 'print compute', 'run compute', 'next compute'],
+      answer: 'break compute',
+      why: 'break (b) sets a breakpoint — execution pauses when it reaches that function or line. Then you run to get there.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: 'You are paused at a line. You want to run\njust the next line WITHOUT diving into any\nfunction it calls. Which command?',
+      opts: ['next', 'step', 'backtrace', 'print'],
+      answer: 'next',
+      why: 'next (n) executes the next line and steps OVER any calls. step (s) would go INTO a called function instead.'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: 'Your program crashed with a segfault under\ngdb. Which command shows the line it died on\nand the chain of callers?',
+      opts: ['backtrace', 'print', 'run', 'break'],
+      answer: 'backtrace',
+      why: 'backtrace (bt) prints the call stack: frame #0 is where it crashed, then each caller. The fastest way to locate a segfault.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: 'You ran:  gcc -o prog main.c   (no -g)\nThen started gdb and set a breakpoint.\nWhat will print x show?',
+      opts: ['raw/limited info — no real variable values', 'the exact value of x', 'a compile error', 'the source of x'],
+      answer: 'raw/limited info — no real variable values',
+      why: 'Without -g there is no debug info, so gdb can\'t map back to your variables and lines — you get addresses/assembly, not x\'s value. Always compile debug builds with -g.'
     }
   ];
   let poIdx = 0;
@@ -624,10 +698,10 @@
   function loadPO() {
     const s = PO[poIdx];
     poCode.textContent = s.code;
-    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poNum.textContent = `Question ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
-    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next question →' : 'Restart ↺';
     poBtns.innerHTML = '';
     s.opts.forEach(o => {
       const b = document.createElement('button');
@@ -646,11 +720,11 @@
             setTimeout(() => playCount.style.transform = 'scale(1)', 200);
             addXP(5, e.clientX, e.clientY);
             bumpStreak();
-            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 answered! +20 XP'); }
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Recall: break=pause, run=start, print=show a value, next=over a call, step=into it, backtrace=the call stack.`;
           breakStreak();
         }
       });
@@ -669,14 +743,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Just <code>run</code> the program inside gdb and let it crash — gdb halts <em>at</em> the faulting line. Then <code>backtrace</code> shows that line plus every caller that led to it, so you instantly know where and how you got there. It\'s the single fastest way to pin down a segfault.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> <code>run</code>, then <code>backtrace</code> at the crash.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. More <code>printf</code>s are the slow way, <code>-O2</code> makes debugging harder, and printing before running shows nothing useful. Let gdb stop at the crash, then <code>backtrace</code>.';
       firstTry = false; breakStreak();
     }
   }));

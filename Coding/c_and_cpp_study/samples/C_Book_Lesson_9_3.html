@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 9.3 — Writing a File Safely · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,37 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Safe Writer */
+  .fs-modes { display: flex; gap: 8px; margin-bottom: 12px; }
+  .fsmode { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .fsmode.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .fsmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .fsmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .sw-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sw-box { flex: 1; min-width: 150px; background: var(--terminal); border-radius: 12px; padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; color: #e2e8f0; line-height: 1.7; min-height: 100px; border: 2px solid #334155; }
+  .sw-box.buffer { border-color: var(--yellow); }
+  .sw-box.disk { border-color: var(--green); }
+  .sw-box.disk.warn { border-color: var(--red); }
+  .sw-box .hdr { color: #94a3b8; font-size: 11px; display: block; margin-bottom: 6px; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+  .sw-box.buffer .hdr { color: #fde047; }
+  .sw-box.disk .hdr { color: #86efac; }
+  .sw-box.disk.warn .hdr { color: #fca5a5; }
+  .sw-empty { color: #64748b; font-style: italic; }
+  .sw-tmp { color: #c4b5fd; }
+  .fs-act { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .fs-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 10px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .fs-btn:hover { transform: translateY(-2px); }
+  .fs-btn.danger { background: linear-gradient(135deg, var(--red), #b91c1c); }
+  .fs-btn.ghost { background: white; color: var(--orange-deep); border: 2px solid var(--orange-light); }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +210,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Writing is where data goes to die if you're careless! Buffered output isn't on disk until you <code>fclose</code>. 💾
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 9.3</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 61 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">📁 PART IX &middot; FILES AND THE OUTSIDE WORLD</span>
+    <h1>Writing a File Safely</h1>
+    <p class="hero-sub">Reading a file can't really hurt you. <strong>Writing</strong> can — it's where data gets lost. Two surprises bite beginners: output is <em>buffered</em>, so it isn't on disk until you flush or close; and opening with <code>"w"</code> <em>empties the file the instant it opens</em>, so a failed write can wipe a good file and leave nothing. This lesson covers writing correctly, and the temp-file-and-rename trick the pros use to never lose data.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,116 +239,126 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>Where data goes to die 💾</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      You met <code>fopen</code> and <code>fprintf</code> back in 9.1. So why a whole lesson on writing? Because writing is where programs <em>lose</em> data, and the failures are quiet. You write a config, the program is killed, and the file is empty — because your output never left the buffer. Or you overwrite a file with <code>"w"</code>, the write fails halfway, and now both the old data <em>and</em> the new data are gone. Reading from a file leaves it untouched; writing changes the world, so it deserves care. This lesson is the habits that make writes survive.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>Two ideas do most of the work: <strong>flush before you trust it's saved</strong>, and <strong>write a temp file, then rename it into place</strong>.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> Mode decides what survives</div>
+    <h2>"w" empties, "a" keeps ✂️</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>The mode you pass to <code>fopen</code> decides the fate of whatever was already in the file — and <code>"w"</code> is ruthless. Always check the handle for <code>NULL</code> too:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code"><span class="kw">FILE</span> *f = fopen(<span class="str">"out.txt"</span>, <span class="str">"w"</span>);   <span class="hl">// file is EMPTIED right now, before any write</span>
+<span class="kw">if</span> (!f) { perror(<span class="str">"open out.txt"</span>); <span class="kw">return</span> 1; }   <span class="cm">// writes fail too — always check</span></pre>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+    <table class="op-table">
+      <thead><tr><th>Mode</th><th>Existing contents</th><th>Write position</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">"w"</td><td class="mono plain"><strong>truncated to empty</strong> at open</td><td class="mono plain">start</td></tr>
+        <tr><td class="mono">"a"</td><td class="mono plain">kept</td><td class="mono plain">always the end</td></tr>
+        <tr><td class="mono">"r+"</td><td class="mono plain">kept (file must exist)</td><td class="mono plain">start — overwrites in place</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      The key fact: <code>"w"</code> truncates the file <em>at the moment of opening</em>, not when you write. So the old contents are gone immediately — even if your program then crashes without writing a thing. Use <code>"a"</code> when you're adding to a log and must never lose the past. Use <code>"w"</code> when you genuinely mean "replace everything" — but read section 5 first, because replacing safely takes one more step.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> The writing calls</div>
+    <h2>fprintf, fputs, fputc ✍️</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>Three everyday ways to put text into a file. None of them adds a newline for you — that's always your job:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
-
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+    <pre class="code">fprintf(f, <span class="str">"%s scored %d\n"</span>, name, score);  <span class="cm">// formatted, like printf</span>
+fputs(<span class="str">"a plain line\n"</span>, f);                  <span class="cm">// a ready-made string</span>
+fputc(<span class="str">'!'</span>, f);                                <span class="cm">// a single character</span></pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      <code>fprintf</code> is <code>printf</code> aimed at a file — all the same <code>%d</code>/<code>%s</code>/<code>%f</code> specifiers. <code>fputs</code> writes a string with no formatting (slightly faster, no format parsing). <code>fputc</code> writes one character. Whichever you use, <strong>you</strong> decide where the <code>\n</code>s go; the library never inserts them. (There's also <code>fwrite</code> for raw binary blocks — that's a brief topic later in this Part.)
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> Output is buffered</div>
+    <h2>It isn't saved until you flush 🫧</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>When you call <code>fprintf</code>, the bytes usually go into an in-memory <strong>buffer</strong>, not straight to disk. They reach the disk when the buffer fills, when you call <code>fflush(f)</code>, or when you <code>fclose(f)</code>. If the program dies before that, the buffered bytes are simply gone:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
-
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+    <pre class="code">fprintf(f, <span class="str">"important data\n"</span>);   <span class="cm">// sits in a buffer — NOT on disk yet</span>
+fflush(f);                          <span class="hl">// force it to disk now</span>
+<span class="cm">// ...</span>
+fclose(f);                          <span class="hl">// flushes any remaining buffer, then closes</span></pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      This is why <code>fclose</code> matters so much: it flushes the buffer before releasing the handle. Forget it (or get killed first) and your last writes never land. <code>fflush(f)</code> forces a flush at any point — useful for a log you want on disk immediately, or right before risky work. And <code>fclose</code> itself can fail (a full disk reports the error only then), so for data that matters, <em>check its return value</em>: <code>if (fclose(f) != 0) perror("fclose");</code>.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Replacing a file safely</div>
+    <h2>Write a temp, then rename 🔁</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>Here's the danger with "just open it with <code>"w"</code> and overwrite": the file is emptied at open, so if the write fails partway (disk full, crash, bug), you're left with a truncated or half-written file and the original is gone. The fix professionals use: write to a <em>temporary</em> file, and only when it's complete, <code>rename</code> it over the original:</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code"><span class="kw">FILE</span> *f = fopen(<span class="str">"out.txt.tmp"</span>, <span class="str">"w"</span>);   <span class="cm">// write to a temp, not the real file</span>
+<span class="kw">if</span> (!f) { perror(<span class="str">"open tmp"</span>); <span class="kw">return</span> 1; }
+<span class="cm">// ... write everything, checking for errors ...</span>
+<span class="kw">if</span> (fclose(f) != 0) { perror(<span class="str">"fclose"</span>); <span class="kw">return</span> 1; }   <span class="cm">// flush + verify</span>
+rename(<span class="str">"out.txt.tmp"</span>, <span class="str">"out.txt"</span>);   <span class="hl">// atomic swap: out.txt is old OR new, never half</span></pre>
+
+    <div class="trap">
+      <h4>🚨 <code>"w"</code> destroys the original before you write a byte</h4>
+      <p>Open the real file directly with <code>"w"</code> and you've already lost the old contents — so a write that fails halfway leaves you with <em>nothing complete</em>. Writing to <code>out.txt.tmp</code> first means a failure just leaves a junk temp file you can delete; the real <code>out.txt</code> is untouched. <code>rename</code> then replaces the file in <strong>one atomic step</strong>: at every instant, <code>out.txt</code> is either the entire old version or the entire new one — never a torn mix. This is exactly how editors and databases avoid corrupting your files on a crash.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Safe Writer</div>
+    <h2>Buffer, flush, crash, rename 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Safe Writer</strong> shows the in-memory buffer and the disk file as you <code>fprintf</code>, <code>fclose</code>, or pull the plug with a crash — switch between writing the file directly and the temp+rename approach and watch which one survives. <strong>Predict the Output</strong> tests modes, buffering, and truncation.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">💾 Safe Writer</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Safe Writer</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- SAFE WRITER -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="fs-modes" id="swMode">
+          <button class="fsmode active" data-m="direct">direct fopen("data.txt","w")<small>truncates the real file now</small></button>
+          <button class="fsmode" data-m="safe">temp + rename<small>write data.tmp, then rename</small></button>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="sw-grid">
+          <div class="sw-box buffer" id="swBuf"></div>
+          <div class="sw-box disk" id="swDisk"></div>
+        </div>
+        <div class="fs-act">
+          <button class="fs-btn" id="swWrite">fprintf(f, "...")</button>
+          <button class="fs-btn" id="swClose">fclose(f)</button>
+          <button class="fs-btn danger" id="swCrash">💥 crash now</button>
+          <button class="fs-btn ghost" id="swReset">reset ↺</button>
+        </div>
+        <div class="fs-msg" id="swMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +368,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +383,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        You want to replace a file's contents without risking the original if the write fails or the program crashes. What's the safe idiom?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>Write to a <strong>temporary file</strong>, then <code>rename()</code> it over the original — an atomic swap</span></button>
+      <button class="opt" data-correct="false"><span>Open the real file with <code>"w"</code> and write directly — it's fine</span></button>
+      <button class="opt" data-correct="false"><span>Open with <code>"a"</code> so the old contents can never be lost</span></button>
+      <button class="opt" data-correct="false"><span>Call <code>fflush</code> after every <code>fprintf</code> and you're safe</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: <code>"w"</code> empties the real file at the moment you open it.</div>
     </div>
   </section>
 
@@ -391,26 +401,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">🫧</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Forgetting <code>fclose</code> (or <code>fflush</code>)</strong>
+        <small>Buffered output isn't on disk until a flush. If the program ends without <code>fclose</code>, your last writes vanish. Always close; flush early for data you can't lose.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">🗑️</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Overwriting the real file with <code>"w"</code></strong>
+        <small><code>"w"</code> empties the file at open, so a failed write leaves nothing. Write to a temp file and <code>rename</code> it into place to keep the original until the new one is complete.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">❓</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Ignoring write return values</strong>
+        <small><code>fprintf</code>, <code>fputs</code>, and even <code>fclose</code> can fail (full disk, bad handle). For data that matters, check them — a silent failure is worse than a loud one.</small>
       </div>
     </div>
 
@@ -418,39 +428,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Save and reopen.</strong> Open <code>"scores.txt"</code> with <code>"w"</code>, write three <code>name score</code> lines with <code>fprintf</code>, then <code>fclose</code>. Reopen with <code>"r"</code> (from 9.2) and print them back to prove they're really on disk.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Flush vs. no flush.</strong> Write a line, then loop or sleep <em>before</em> closing. Run once with an <code>fflush</code> after the write and once without, killing the program early each time, and observe when the line makes it to disk.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Safe replace.</strong> Write a function that rewrites a config file using the temp-file-and-<code>rename</code> pattern: open <code>name.tmp</code> with <code>"w"</code>, write everything (checking <code>fprintf</code> and <code>fclose</code>), and only <code>rename</code> on success. On any failure, delete the temp and leave the original intact.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong><code>"w"</code> truncates at open</strong> — the old contents are gone immediately; <code>"a"</code> keeps them and appends.</li>
+        <li><strong>Write with <code>fprintf</code> / <code>fputs</code> / <code>fputc</code></strong> — and add your own <code>\n</code>; the library never does.</li>
+        <li><strong>Output is buffered</strong> — it isn't on disk until <code>fflush</code> or <code>fclose</code>. Forgetting to close loses your last writes.</li>
+        <li><strong>To replace a file safely</strong>, write a temp file then <code>rename</code> it over the original — an atomic, all-or-nothing swap.</li>
+        <li><strong>Check return values</strong> of the write calls and <code>fclose</code> when the data truly matters.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_9_2.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      9.2  Reading a file line by line
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_9_4.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      9.4  Standard streams — stdin, stdout, stderr
     </a>
   </div>
 
@@ -458,14 +468,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "Writing is where data goes to die if you're careless. 💾",
+    "\"w\" truncates the file the instant you open it — before any write. ✂️",
+    "fprintf/fputs/fputc write; you add the \\n yourself. ✍️",
+    "Output is buffered — nothing's on disk until fflush or fclose. 🫧",
+    "Safe replace: write a temp file, then rename it over the original. 🔁",
+    "Trace the buffer → disk, and try crashing before fclose. 🔬",
+    "Check return values: fprintf, fwrite, and fclose can all fail. 🛡️",
+    "Truncate-on-open is why temp+rename keeps your data safe. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +507,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 9.3 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +539,147 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
-  };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
+  // ===== Safe Writer =====
+  // disk holds the COMMITTED real file. In direct mode "data.txt" is truncated at open.
+  // In safe mode, data.txt keeps OLD until rename; data.tmp receives the flush.
+  let swMode = 'direct';
+  let buffer = [];          // pending fprintf lines (in memory)
+  let realFile = 'OLD DATA';// committed content of data.txt
+  let tmpFile = null;       // committed content of data.tmp (safe mode)
+  let opened = false, closed = false, renamed = false, dead = false, swTouched = false;
+  let wcount = 1;
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  const swModeEl = document.getElementById('swMode');
+  const swBuf = document.getElementById('swBuf');
+  const swDisk = document.getElementById('swDisk');
+  const swMsg = document.getElementById('swMsg');
+  const swWrite = document.getElementById('swWrite');
+  const swClose = document.getElementById('swClose');
+  const swCrash = document.getElementById('swCrash');
+  const swReset = document.getElementById('swReset');
+
+  function lines(arr) { return arr.length ? arr.join('<br>') : '<span class="sw-empty">(empty)</span>'; }
+
+  function render() {
+    // buffer box
+    swBuf.innerHTML = `<span class="hdr">in-memory buffer (stream f)</span>` +
+      (dead ? `<span class="sw-empty">— gone (process died) —</span>` : lines(buffer));
+    // disk box
+    let diskBody = `<span class="hdr">disk</span>`;
+    diskBody += `<div>data.txt: ${realFile === null ? '<span class="sw-empty">(empty)</span>' : '"' + realFile + '"'}</div>`;
+    if (swMode === 'safe') {
+      diskBody += `<div class="sw-tmp">data.tmp: ${tmpFile === null ? '<span class="sw-empty">(none)</span>' : '"' + tmpFile + '"'}</div>`;
+    }
+    swDisk.innerHTML = diskBody;
+    // warn border if real file is empty/lost while we still intend to have data
+    const lost = (realFile === null);
+    swDisk.classList.toggle('warn', lost);
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
-  }));
-  renderPSI('valid');
+
+  function openStream() {
+    // called lazily on first write; sets up truncation for direct mode
+    if (opened) return;
+    opened = true;
+    if (swMode === 'direct') { realFile = null; } // "w" truncates the REAL file now
+    else { tmpFile = null; }                       // "w" truncates the temp; real file untouched
+  }
+
+  function setMode(m, e) {
+    swMode = m;
+    swModeEl.querySelectorAll('.fsmode').forEach(b => b.classList.toggle('active', b.dataset.m === m));
+    resetState(true);
+    swMsg.innerHTML = m === 'direct'
+      ? `<b>Direct mode.</b> The first <code>fprintf</code> opens <code>data.txt</code> with <code>"w"</code> — which <span class="red">empties the real file immediately</span>. Write, then close — or crash and see what's left.`
+      : `<b>Safe mode.</b> Writes go to <code>data.tmp</code>; <code>data.txt</code> keeps <span class="grn">"OLD DATA"</span> until <code>fclose</code> + <code>rename</code>. Try crashing before the rename.`;
+    if (!swTouched && e) { swTouched = true; addXP(5, e.clientX, e.clientY, '💾 Writer poked! +5 XP'); }
+  }
+  function resetState(keepMsg) {
+    buffer = []; realFile = 'OLD DATA'; tmpFile = null;
+    opened = false; closed = false; renamed = false; dead = false; wcount = 1;
+    render();
+    if (!keepMsg) swMsg.innerHTML = `Reset. <code>data.txt</code> holds <span class="grn">"OLD DATA"</span>. Click <code>fprintf</code> to start writing.`;
+  }
+
+  swModeEl.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => setMode(b.dataset.m, e)));
+
+  swWrite.addEventListener('click', (e) => {
+    if (dead) { swMsg.innerHTML = `(The process is dead — hit <code>reset</code>.)`; return; }
+    if (closed) { swMsg.innerHTML = `(Stream already closed — hit <code>reset</code> to write again.)`; return; }
+    openStream();
+    const t = `line ${wcount++}`;
+    buffer.push(t);
+    swMsg.innerHTML = swMode === 'direct'
+      ? `<b>fprintf</b> put <code>"${t}"</code> in the <span style="color:#a16207">buffer</span> — <span class="red">not on disk yet</span>. (And <code>data.txt</code> was already emptied at open.)`
+      : `<b>fprintf</b> put <code>"${t}"</code> in the <span style="color:#a16207">buffer</span>, destined for <code>data.tmp</code>. <code>data.txt</code> is still <span class="grn">safe</span>.`;
+    render();
+    if (!swTouched) { swTouched = true; addXP(5, e.clientX, e.clientY, '✍️ Wrote! +5 XP'); }
+  });
+
+  swClose.addEventListener('click', (e) => {
+    if (dead) { swMsg.innerHTML = `(The process is dead — hit <code>reset</code>.)`; return; }
+    if (!opened) { swMsg.innerHTML = `Nothing written yet — <code>fprintf</code> something first.`; return; }
+    if (closed) { swMsg.innerHTML = `(Already closed.)`; return; }
+    const flushed = buffer.join('\\n');
+    if (swMode === 'direct') {
+      realFile = flushed;            // buffer flushed to the real file
+      buffer = []; closed = true;
+      swMsg.innerHTML = `<b>fclose</b> flushed the buffer to <code>data.txt</code> and closed it. <span class="grn">Now safely on disk</span> — but the original "OLD DATA" was already lost at open.`;
+    } else {
+      tmpFile = flushed;             // flush to temp
+      buffer = []; closed = true;
+      // then rename
+      realFile = tmpFile; tmpFile = null; renamed = true;
+      swMsg.innerHTML = `<b>fclose</b> flushed to <code>data.tmp</code>, then <code>rename("data.tmp","data.txt")</code> swapped it in <span class="grn">atomically</span>. <code>data.txt</code> went straight from old to new — never half-written.`;
+    }
+    render();
+    if (!swTouched) { swTouched = true; addXP(5, e.clientX, e.clientY, '✅ Closed! +5 XP'); }
+  });
+
+  swCrash.addEventListener('click', (e) => {
+    if (dead) return;
+    dead = true;
+    if (closed) {
+      // already safely on disk
+      swMsg.innerHTML = `<b>💥 Crash — but too late to matter.</b> You'd already closed the stream, so the data is on disk. <span class="grn">data.txt survived.</span>`;
+    } else if (swMode === 'direct') {
+      buffer = []; // buffered writes lost; realFile already null (truncated at open)
+      swMsg.innerHTML = `<b>💥 Crash before fclose (direct).</b> Buffered writes are <span class="red">lost</span>, AND <code>data.txt</code> was emptied at open → <span class="red">original gone, new data gone.</span> Worst case.`;
+    } else {
+      buffer = []; tmpFile = null; // temp discarded; real file untouched
+      swMsg.innerHTML = `<b>💥 Crash before fclose (safe).</b> The buffer and <code>data.tmp</code> are <span class="red">lost</span> — but the rename never ran, so <code>data.txt</code> still holds <span class="grn">"OLD DATA"</span>. Nothing valuable lost. ✅`;
+    }
+    render();
+    if (!swTouched) { swTouched = true; addXP(5, e.clientX, e.clientY, '💥 Crashed! +5 XP'); }
+  });
+
+  swReset.addEventListener('click', () => resetState(false));
+  setMode('direct');
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: 'FILE *f = fopen("out.txt", "w");\nfprintf(f, "%d-%d", 7, 8);\nfclose(f);\n// out.txt now contains?',
+      opts: ['7-8', '78', '7 8', '78\\n'],
+      answer: '7-8',
+      why: 'fprintf substitutes 7 and 8 into "%d-%d", producing exactly "7-8". Nothing extra is added — no space, no trailing newline.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: '// out.txt already contains "AB"\nFILE *f = fopen("out.txt", "a");   // append\nfprintf(f, "CD");\nfclose(f);\n// out.txt now contains?',
+      opts: ['ABCD', 'CD', 'CDAB', 'AB'],
+      answer: 'ABCD',
+      why: '"a" keeps the existing "AB" and writes at the end, so "CD" is appended → "ABCD".'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: 'FILE *f = fopen("log.txt", "w");\nfprintf(f, "hello");\n// the program is killed here:\n//   no fclose, no return\n// what is in log.txt?',
+      opts: ['(likely empty — never flushed)', 'hello', 'hello\\n', 'an error code'],
+      answer: '(likely empty — never flushed)',
+      why: '"hello" went into the buffer, not the disk. Without fclose/fflush (or a normal program exit), the buffer is never written, so the file is most likely empty.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: '// data.txt contains "GOOD"\nFILE *f = fopen("data.txt", "w");   // truncates NOW\nif (write_all(f) == FAILED)         // write fails partway\n    { fclose(f); return 1; }\n// after the failed write, data.txt holds?',
+      opts: ['partial or empty — "GOOD" is already gone', 'GOOD', 'the full new data', 'nothing changed'],
+      answer: 'partial or empty — "GOOD" is already gone',
+      why: '"w" emptied data.txt at the moment of opening, before any write. A failed write leaves only whatever made it out — the original "GOOD" is gone. This is exactly why you write a temp file and rename instead.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +694,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +719,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Remember: fprintf adds nothing extra, "a" appends, the buffer isn't on disk until flush/close, and "w" truncates at open.`;
           breakStreak();
         }
       });
@@ -669,14 +738,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Writing to a temp file and then <code>rename</code>-ing it over the original is an atomic swap: at every instant <code>out.txt</code> is the whole old version or the whole new one, never half. Opening the real file with <code>"w"</code> destroys it at open; <code>"a"</code> can\'t replace contents; and <code>fflush</code> alone doesn\'t protect against a partial write.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Temp file, then <code>rename</code>.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. <code>"w"</code> empties the real file at open (so a failed write loses everything), <code>"a"</code> only appends, and <code>fflush</code> doesn\'t stop a half-written file. Write a temp and <code>rename</code> it into place.';
       firstTry = false; breakStreak();
     }
   }));

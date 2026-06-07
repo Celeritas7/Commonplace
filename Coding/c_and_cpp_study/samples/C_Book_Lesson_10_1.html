@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 10.1 — Multi-File Projects · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,37 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Build Inspector */
+  .fs-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .fsmode { flex: 1; min-width: 130px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 8px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 11.5px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .fsmode.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .fsmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .fsmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .bld-files { background: var(--terminal); border-radius: 10px; padding: 12px 14px; font-family: var(--mono); font-size: 12px; color: #e2e8f0; line-height: 1.65; margin-bottom: 10px; }
+  .bld-files .fn { color: #67e8f9; font-weight: 700; }
+  .bld-files .cm { color: #64748b; font-style: italic; }
+  .bld-files .kw { color: #fdba74; }
+  .bld-files .bad { color: #fca5a5; font-weight: 700; }
+  .bld-files .ok { color: #86efac; }
+  .bld-pipe { display: flex; gap: 8px; align-items: stretch; margin-bottom: 10px; }
+  .bld-stage { flex: 1; border-radius: 10px; padding: 10px 12px; font-family: var(--mono); font-size: 12px; text-align: center; border: 2px solid var(--bg3); background: white; }
+  .bld-stage .st { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-dim); display: block; margin-bottom: 4px; }
+  .bld-stage .res { font-weight: 700; }
+  .bld-stage.pass { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); }
+  .bld-stage.pass .res { color: #166534; }
+  .bld-stage.fail { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); }
+  .bld-stage.fail .res { color: #991b1b; }
+  .bld-stage.skip { opacity: 0.5; }
+  .bld-arrow { display: flex; align-items: center; font-weight: 700; color: var(--orange); }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +210,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Real programs span many files: <code>.h</code> declares, <code>.c</code> defines. Compile each, then link them together! 🧩
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 10.1</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 65 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">🧩 PART X &middot; PUTTING IT ALL TOGETHER</span>
+    <h1>Multi-File Projects</h1>
+    <p class="hero-sub">Every program so far has lived in a single <code>.c</code> file. Real projects don't — they split into many files, each a self-contained <strong>module</strong>. The pattern is simple and universal: a <code>.h</code> header <em>declares</em> what a module offers, a <code>.c</code> source <em>defines</em> how it works, and the compiler and linker stitch them into one program. This opens <strong>Part X</strong>.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,128 +239,134 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>One file doesn't scale 🧩</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      A 50-line program fits comfortably in one <code>.c</code> file. A 5,000-line one doesn't — it becomes impossible to navigate, every tiny change recompiles everything, and two people can't work on it at once. The answer is to split your code into <strong>modules</strong>: small, focused units that each handle one job (math helpers, the file format, the user interface). Each module is a pair — a <code>.h</code> header and a <code>.c</code> source — and other modules use it through its header without caring how it works inside. This is the organising principle of every real C codebase, and it opens <strong>Part X — Putting It All Together</strong>.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>The mechanics are just two ideas: declare vs. define, and compile vs. link.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> .h declares, .c defines</div>
+    <h2>Interface vs. implementation 📑</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>A header file is the module's <em>public face</em>: it declares what's available — function prototypes, struct and type definitions, constants. The <code>.c</code> file holds the actual code:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code"><span class="cm">// mathutil.h — the INTERFACE (what)</span>
+<span class="kw">int</span> add(<span class="kw">int</span> a, <span class="kw">int</span> b);     <span class="hl">// just a prototype — no body</span>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+<span class="cm">// mathutil.c — the IMPLEMENTATION (how)</span>
+<span class="kw">#include</span> <span class="str">"mathutil.h"</span>      <span class="cm">// include our own header</span>
+<span class="kw">int</span> add(<span class="kw">int</span> a, <span class="kw">int</span> b) { <span class="kw">return</span> a + b; }   <span class="hl">// the real body</span></pre>
+
+    <div class="new-content">
+      The header <strong>declares</strong> (promises a function exists, with this signature); the <code>.c</code> <strong>defines</strong> it (provides the body). A rule that keeps everything sane: a function may be <em>declared</em> in many places (every file that includes the header) but <em>defined</em> in exactly <strong>one</strong> <code>.c</code> file. Putting only declarations and type definitions in the header — never function bodies — is what lets many files share a module without colliding.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> Including the header</div>
+    <h2>#include pastes the interface 🔗</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>Any file that wants to <em>use</em> the module includes its header. <code>#include "mathutil.h"</code> literally pastes the header's text in, so the compiler sees the prototype before the call:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
+    <pre class="code"><span class="cm">// main.c</span>
+<span class="kw">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="kw">#include</span> <span class="str">"mathutil.h"</span>   <span class="hl">// now add() is declared here too</span>
 
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+<span class="kw">int</span> main(<span class="kw">void</span>) {
+    printf(<span class="str">"%d\n"</span>, add(2, 3));   <span class="cm">// the compiler knows add's signature</span>
+}</pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      Use <code>"quotes"</code> for your own headers (the compiler looks in your project first) and <code>&lt;angle brackets&gt;</code> for system headers like <code>&lt;stdio.h&gt;</code>. Because <code>#include</code> is a literal copy-paste done by the preprocessor (the topic of 10.2), the compiler reads <code>main.c</code> as if the prototype were typed right there — so it can check your call has the right argument types and return value, even though the body lives in another file.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> Header guards</div>
+    <h2>Include once, not twice 🛡️</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>If a header gets included twice in the same file (easy to do indirectly — A includes B, and both include C), its contents get pasted twice, and any <code>struct</code> or type definition is now defined twice — an error. <strong>Header guards</strong> prevent this:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
+    <pre class="code"><span class="cm">// mathutil.h</span>
+<span class="kw">#ifndef</span> MATHUTIL_H      <span class="hl">// if not yet defined...</span>
+<span class="kw">#define</span> MATHUTIL_H      <span class="hl">// ...define it, and include the body once</span>
 
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+<span class="kw">int</span> add(<span class="kw">int</span> a, <span class="kw">int</span> b);
+
+<span class="kw">#endif</span>                  <span class="cm">// the second include skips everything between</span></pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      The first time the header is seen, <code>MATHUTIL_H</code> isn't defined, so the body is included and the macro gets defined. Any later include finds <code>MATHUTIL_H</code> already defined and skips straight to <code>#endif</code> — so the contents appear exactly once. Every header you write should have a guard (use a unique name per file). Most compilers also accept the shorter <code>#pragma once</code> at the top of the file, which does the same thing.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Compile &amp; link</div>
+    <h2>Two steps, two kinds of error 🏗️</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>Building a multi-file program happens in two stages. Each <code>.c</code> is <strong>compiled</strong> on its own into an object file (<code>.o</code>); then the <strong>linker</strong> joins all the objects (resolving each call to its definition) into one executable:</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code">gcc -c main.c        <span class="cm"># compile → main.o</span>
+gcc -c mathutil.c    <span class="cm"># compile → mathutil.o</span>
+gcc main.o mathutil.o -o prog   <span class="cm"># link → prog</span>
+
+gcc main.c mathutil.c -o prog   <span class="hl"># or do it all in one command</span></pre>
+
+    <div class="trap">
+      <h4>🚨 "undeclared" is a compile error; "undefined reference" is a link error</h4>
+      <p>The two stages fail in two different ways, and telling them apart saves you hours. <strong>Compile errors</strong> happen per-file: forget to <code>#include</code> the header and the compiler doesn't know the function's signature → <em>implicit declaration / undeclared</em>. <strong>Link errors</strong> happen at the end: if you declared a function and called it but never <em>defined</em> it (or forgot to pass that <code>.c</code> to the compiler), the linker can't find the body → <em>undefined reference to 'add'</em>. Rule of thumb: "the compiler doesn't know the <em>shape</em>" = missing <code>#include</code>; "the linker can't find the <em>body</em>" = missing <code>.c</code> or definition.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Build Inspector</div>
+    <h2>Break the build, read the error 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Build Inspector</strong> shows a three-file project and lets you introduce a classic mistake — then watch which stage (compile or link) fails and what the error says. <strong>Predict the Output</strong> tests compile vs. link vs. runs.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">🏗️ Build Inspector</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Build Inspector</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- BUILD INSPECTOR -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="fs-modes" id="bldMode">
+          <button class="fsmode active" data-m="ok">all correct<small>declare + define + include</small></button>
+          <button class="fsmode" data-m="noinc">no #include<small>main forgets the header</small></button>
+          <button class="fsmode" data-m="nodef">no definition<small>mathutil.c not built</small></button>
+          <button class="fsmode" data-m="noguard">no guard<small>header included twice</small></button>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="bld-files" id="bldFiles"></div>
+        <div class="bld-pipe" id="bldPipe"></div>
+        <div class="fs-msg" id="bldMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
       <div class="tab-panel" id="tab-out">
         <div class="scenario">
-          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-num" id="poNum">Scenario 1 / 4</div>
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
-          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+          <button class="scen-btn" id="poNext" disabled>Next scenario →</button>
         </div>
       </div>
     </div>
@@ -373,13 +379,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        In a multi-file C project, what's the difference between a <code>.h</code> and a <code>.c</code> file?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>The <code>.h</code> <strong>declares</strong> the interface (prototypes, type definitions) that other files include; the <code>.c</code> <strong>defines</strong> the implementation (the function bodies)</span></button>
+      <button class="opt" data-correct="false"><span>Both hold function bodies — the <code>.h</code> is just a backup copy</span></button>
+      <button class="opt" data-correct="false"><span><code>.h</code> files are compiled; <code>.c</code> files are <code>#include</code>d into them</span></button>
+      <button class="opt" data-correct="false"><span>There's no real difference — the extension is cosmetic</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: declared in many places, defined in exactly one.</div>
     </div>
   </section>
 
@@ -391,26 +397,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">🛡️</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Headers without include guards</strong>
+        <small>A guardless header included twice redefines its types — a compile error. Wrap every header in <code>#ifndef</code>/<code>#define</code>/<code>#endif</code> (or <code>#pragma once</code>).</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">📦</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Forgetting to compile/link a <code>.c</code></strong>
+        <small>If you declare and call a function but never build the <code>.c</code> that defines it, you get <em>undefined reference</em> at link time. Pass every source file to the compiler.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">🧱</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Putting function bodies in a header</strong>
+        <small>A non-inline body in a header gets defined in every <code>.c</code> that includes it → duplicate-definition link errors. Keep bodies in <code>.c</code>; headers hold declarations.</small>
       </div>
     </div>
 
@@ -418,39 +424,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Split it.</strong> Take a single-file program with a helper function and split it into three files: <code>util.h</code> (prototype + guard), <code>util.c</code> (body), and <code>main.c</code> (includes <code>util.h</code>). Build with <code>gcc main.c util.c -o prog</code>.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Cause each error.</strong> Starting from a working three-file build, deliberately (a) remove the <code>#include</code> in <code>main.c</code> and (b) leave <code>util.c</code> off the compile command. Read the two different errors and note which stage each comes from.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>A shared struct.</strong> Define a <code>struct Point</code> in a guarded header used by two <code>.c</code> files. Confirm it compiles, then temporarily remove the guard and include the header twice in one file to see the redefinition error first-hand.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>Split big programs into modules</strong> — a <code>.h</code>/<code>.c</code> pair each, so files stay small and independent.</li>
+        <li><strong>The <code>.h</code> declares</strong> (prototypes, types); <strong>the <code>.c</code> defines</strong> (bodies). Declare many times, define once.</li>
+        <li><strong><code>#include "header.h"</code></strong> pastes the interface so callers see the prototypes; use <code>" "</code> for your headers, <code>&lt; &gt;</code> for system ones.</li>
+        <li><strong>Guard every header</strong> with <code>#ifndef</code>/<code>#define</code>/<code>#endif</code> (or <code>#pragma once</code>) to avoid double-inclusion.</li>
+        <li><strong>Build = compile each <code>.c</code> → link the objects.</strong> "Undeclared" = missing <code>#include</code>; "undefined reference" = missing definition/<code>.c</code>.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_9_6.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      9.6  Binary I/O — fread &amp; fwrite
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_10_2.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      10.2  The preprocessor in practice
     </a>
   </div>
 
@@ -458,14 +464,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "One giant .c file doesn't scale — split into modules. 🧩",
+    ".h declares the interface; .c defines the implementation. 📑",
+    "Include a module's .h wherever you use it — and in its own .c. 🔗",
+    "Header guards (#ifndef/#define/#endif) stop double-inclusion. 🛡️",
+    "Each .c compiles to a .o; the linker stitches them together. 🏗️",
+    "Break the build on purpose and read the error. 🔬",
+    "No prototype → compile error. No definition → link error. ⚠️",
+    "Modules: declare in .h, define once in .c, compile & link. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +503,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 10.1 complete! Part X begun! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +535,100 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
+  // ===== Build Inspector =====
+  let bldTouched = false;
+  const bldMode = document.getElementById('bldMode');
+  const bldFiles = document.getElementById('bldFiles');
+  const bldPipe = document.getElementById('bldPipe');
+  const bldMsg = document.getElementById('bldMsg');
+
+  const SCENES = {
+    ok: {
+      files: [
+        '<span class="fn">mathutil.h</span>  <span class="kw">#ifndef</span> MATHUTIL_H … <span class="ok">int add(int,int);</span> <span class="kw">#endif</span>',
+        '<span class="fn">mathutil.c</span>  #include "mathutil.h"  <span class="ok">int add(int a,int b){return a+b;}</span>',
+        '<span class="fn">main.c</span>      <span class="ok">#include "mathutil.h"</span>  printf("%d", add(2,3));'
+      ],
+      compile: true, link: true,
+      msg: '<b>All correct.</b> <code>main.c</code> includes the header (so it knows <code>add</code>), <code>mathutil.c</code> defines it, and both are built. <span class="grn">Compiles, links, runs → prints 5.</span>'
     },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
+    noinc: {
+      files: [
+        '<span class="fn">mathutil.h</span>  <span class="ok">int add(int,int);</span>',
+        '<span class="fn">mathutil.c</span>  #include "mathutil.h"  int add(int a,int b){return a+b;}',
+        '<span class="fn">main.c</span>      <span class="bad">// (no #include "mathutil.h")</span>  printf("%d", add(2,3));'
+      ],
+      compile: false, link: false,
+      msg: '<b>Compile error.</b> Without the <code>#include</code>, the compiler reads <code>main.c</code> and has never seen <code>add</code> → <span class="red">"implicit declaration of function \'add\'"</span>. The fix is one <code>#include</code> — it never even reaches the linker.'
     },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
+    nodef: {
+      files: [
+        '<span class="fn">mathutil.h</span>  <span class="ok">int add(int,int);</span>',
+        '<span class="fn">mathutil.c</span>  <span class="bad">// not passed to the compiler!</span>',
+        '<span class="fn">main.c</span>      #include "mathutil.h"  printf("%d", add(2,3));  <span class="cm">// built alone</span>'
+      ],
+      compile: true, link: false,
+      msg: '<b>Link error.</b> <code>main.c</code> compiles fine — the header promised <code>add</code> exists. But the body was never built, so the linker can\'t find it → <span class="red">"undefined reference to \'add\'"</span>. Fix: compile <code>mathutil.c</code> too.'
     },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
+    noguard: {
+      files: [
+        '<span class="fn">point.h</span>   <span class="bad">// NO guard</span>  struct Point { int x, y; };',
+        '<span class="fn">main.c</span>    #include "point.h"  #include "shape.h" <span class="cm">// shape.h also includes point.h</span>',
+        '<span class="cm">// → point.h pasted TWICE into main.c</span>'
+      ],
+      compile: false, link: false,
+      msg: '<b>Compile error.</b> With no guard, <code>struct Point</code> is defined twice in <code>main.c</code> → <span class="red">"redefinition of \'struct Point\'"</span>. Add <code>#ifndef POINT_H / #define / #endif</code> so the second include is skipped.'
     }
   };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function stage(label, state) {
+    const cls = state === 'pass' ? 'pass' : state === 'fail' ? 'fail' : 'skip';
+    const res = state === 'pass' ? '✓ pass' : state === 'fail' ? '✗ fail' : '— skipped';
+    return `<div class="bld-stage ${cls}"><span class="st">${label}</span><span class="res">${res}</span></div>`;
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
+  function renderBld(mode) {
+    const s = SCENES[mode];
+    bldFiles.innerHTML = s.files.join('<br>');
+    const compileState = s.compile ? 'pass' : 'fail';
+    const linkState = !s.compile ? 'skip' : (s.link ? 'pass' : 'fail');
+    const runState = (s.compile && s.link) ? 'pass' : 'skip';
+    bldPipe.innerHTML = stage('1 · compile', compileState)
+      + '<div class="bld-arrow">→</div>' + stage('2 · link', linkState)
+      + '<div class="bld-arrow">→</div>' + stage('3 · run', runState === 'pass' ? 'pass' : 'skip');
+    bldMsg.innerHTML = s.msg;
+  }
+  bldMode.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => {
+    bldMode.querySelectorAll('.fsmode').forEach(x => x.classList.toggle('active', x === b));
+    renderBld(b.dataset.m);
+    if (!bldTouched) { bldTouched = true; addXP(5, e.clientX, e.clientY, '🏗️ Built! +5 XP'); }
   }));
-  renderPSI('valid');
+  renderBld('ok');
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: '// main.c calls add(2,3) but has NO\n// #include "mathutil.h" (no prototype).\n// mathutil.c defines add and is built.\n// What happens?',
+      opts: ['compile error (no declaration)', 'link error', 'runs fine → 5', 'nothing'],
+      answer: 'compile error (no declaration)',
+      why: 'The compiler reads main.c and has never seen add — "implicit declaration". It fails at compile time, before linking is even attempted.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: '// add() is declared in mathutil.h,\n// included everywhere — but mathutil.c\n// is NOT passed to the compiler.\n//   gcc main.c -o prog\n// What happens?',
+      opts: ['link error (undefined reference)', 'compile error', 'runs fine', 'just a warning'],
+      answer: 'link error (undefined reference)',
+      why: 'main.c compiles (the header promised add exists), but the body was never built. The linker can\'t resolve the call → "undefined reference to \'add\'".'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: '// point.h defines  struct Point {...};\n// with NO include guard, and main.c\n// ends up including it twice.\n// What happens?',
+      opts: ['compile error (redefinition)', 'link error', 'runs fine', 'nothing'],
+      answer: 'compile error (redefinition)',
+      why: 'Without a guard the struct gets pasted twice into main.c, so it\'s defined twice — "redefinition of \'struct Point\'", a compile error. Header guards prevent this.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: '// prototype in mathutil.h (guarded),\n// definition in mathutil.c,\n// main.c includes the header, and:\n//   gcc main.c mathutil.c -o prog\n// What happens?',
+      opts: ['runs fine', 'compile error', 'link error', 'undefined reference'],
+      answer: 'runs fine',
+      why: 'Declared in the header, defined in exactly one .c, included where used, and both files built — every stage succeeds, so it compiles, links, and runs.'
     }
   ];
   let poIdx = 0;
@@ -624,10 +642,10 @@
   function loadPO() {
     const s = PO[poIdx];
     poCode.textContent = s.code;
-    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poNum.textContent = `Scenario ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
-    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next scenario →' : 'Restart ↺';
     poBtns.innerHTML = '';
     s.opts.forEach(o => {
       const b = document.createElement('button');
@@ -650,7 +668,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Remember: missing #include = compile error; missing definition/.c = link error ("undefined reference"); no guard = redefinition.`;
           breakStreak();
         }
       });
@@ -669,14 +687,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The header is the module\'s interface — prototypes and type definitions that any file can <code>#include</code> to <em>use</em> the module. The <code>.c</code> is the implementation, with the actual function bodies. A function is declared in every file that includes the header, but defined in exactly one <code>.c</code>.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> <code>.h</code> declares the interface; <code>.c</code> defines the bodies.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. The <code>.h</code> holds declarations (the interface) that others <code>#include</code>; the <code>.c</code> holds the definitions (the bodies). Only the <code>.c</code> files are compiled.';
       firstTry = false; breakStreak();
     }
   }));

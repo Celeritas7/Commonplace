@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 10.5 — Undefined Behaviour · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,34 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* UB Inspector */
+  .fs-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .fsmode { flex: 1; min-width: 120px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 8px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 11.5px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .fsmode.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .fsmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .fsmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .ub-code { background: var(--terminal); border-radius: 10px; padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; color: #e2e8f0; line-height: 1.6; margin-bottom: 10px; white-space: pre-wrap; }
+  .ub-code .bad { color: #fca5a5; font-weight: 700; } .ub-code .cm { color: #64748b; } .ub-code .kw { color: #fdba74; }
+  .ub-roll { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .ub-die { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 11px 18px; font: inherit; font-weight: 700; font-size: 14px; border-radius: 12px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .ub-die:hover { transform: translateY(-2px); }
+  .ub-rolls { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); }
+  .ub-outcome { border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 1.5; margin-bottom: 10px; border: 2px solid; min-height: 58px; display: flex; align-items: center; gap: 12px; }
+  .ub-outcome .ico { font-size: 28px; flex-shrink: 0; }
+  .ub-outcome.fine { background: #ecfdf5; border-color: var(--green); color: #166534; }
+  .ub-outcome.crash { background: #fee2e2; border-color: var(--red); color: #991b1b; }
+  .ub-outcome.garbage { background: #fffbeb; border-color: var(--yellow); color: #92400e; }
+  .ub-outcome.evil { background: #f5f3ff; border-color: var(--purple); color: #5b21b6; }
+  .ub-outcome.none { background: #f8fafc; border-color: var(--bg3); color: var(--ink-dim); }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +207,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Undefined behaviour: the C standard makes <strong>no promises at all</strong>. It might crash, corrupt, or look fine — then bite later. 🎲
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 10.5</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 69 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">🧩 PART X &middot; PUTTING IT ALL TOGETHER</span>
+    <h1>Undefined Behaviour</h1>
+    <p class="hero-sub">C's speed comes from trusting <em>you</em> to follow the rules. Break one — read past an array, use freed memory, overflow a signed int — and you've entered <strong>undefined behaviour</strong>: the standard imposes <em>no</em> requirements on what happens. It might crash, print garbage, or seem to work perfectly until the day it doesn't. Knowing UB, and how to catch it, is what separates fragile C from solid C.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,116 +236,123 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>The standard's shrug 🎲</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      C trades safety for speed: it doesn't check array bounds, doesn't track whether memory is still valid, doesn't catch integer overflow — that would cost performance. The deal is that <em>you</em> promise to play by the rules. When you break one, the program has <strong>undefined behaviour</strong>: the language standard says, in effect, "we make no guarantees about what happens." Not a crash you can rely on, not a defined error — <em>anything</em>. The truly dangerous part is that UB often <em>appears to work</em> — until a different compiler, optimization level, input, or machine makes it fail, sometimes as a security hole. This is the most important safety topic in the whole C book.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>The goal isn't fear — it's recognising the handful of rules that, if broken, void all guarantees.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> What UB actually means</div>
+    <h2>No requirements, none 🤷</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>It helps to distinguish UB from its milder cousins. Only <strong>undefined</strong> behaviour means "literally anything goes":</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <table class="op-table">
+      <thead><tr><th>Kind</th><th>What the standard guarantees</th></tr></thead>
+      <tbody>
+        <tr><td class="mono plain">implementation-defined</td><td class="mono plain">some defined choice, documented (e.g. size of <code>int</code>)</td></tr>
+        <tr><td class="mono plain">unspecified</td><td class="mono plain">one of a few allowed options, not documented which</td></tr>
+        <tr><td class="mono plain">undefined</td><td class="mono plain"><strong>nothing</strong> — any result, including none</td></tr>
+      </tbody>
+    </table>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+    <div class="new-content">
+      With UB the compiler is even <em>allowed to assume it never happens</em> and optimize on that basis — which is why UB can delete your bounds check, reorder code, or make a loop run forever. There's no required diagnostic: the program may compile cleanly with no warning and still be broken. So "it compiled and ran" tells you nothing about whether you've triggered UB. The only safe move is to not write it — and to use tools that catch it (section 5).
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> Classic #1 — out of bounds</div>
+    <h2>Reading past the edge 📏</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>Accessing an array outside its valid indices — even just <em>reading</em> — is undefined. C does no bounds checking:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
-
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+    <pre class="code"><span class="kw">int</span> a[3] = {10, 20, 30};   <span class="cm">// valid indices: 0, 1, 2</span>
+<span class="kw">int</span> x = a[5];              <span class="bad">// 🔴 out of bounds — UB</span>
+a[3] = 99;                  <span class="bad">// 🔴 writing past the end — UB (and dangerous)</span></pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      Reading <code>a[5]</code> might return whatever bytes happen to be there (garbage), crash, or — with optimizations — do something stranger. <em>Writing</em> out of bounds (a "buffer overflow") is worse: it corrupts whatever memory sits next to the array, a leading cause of crashes and security exploits. The fix is discipline: never index past <code>length - 1</code>, and carry the size alongside the array so loops can check it (<code>for (i = 0; i &lt; n; i++)</code>).
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> Classic #2 — dead memory</div>
+    <h2>Using what's gone 🗑️</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>Two relatives here: using memory after you've freed it (dangling pointer), and reading a variable you never initialised:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
+    <pre class="code"><span class="kw">int</span> *p = malloc(<span class="kw">sizeof</span> *p);
+free(p);
+*p = 5;          <span class="bad">// 🔴 use-after-free — p no longer owns that memory</span>
 
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+<span class="kw">int</span> y;            <span class="cm">// uninitialized</span>
+printf(<span class="str">"%d"</span>, y);   <span class="bad">// 🔴 reading an indeterminate value — UB</span></pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      After <code>free(p)</code>, the pointer still holds an address, but that memory may be reused for anything — so reading or writing through it is UB. The same goes for a variable that was never given a value: it doesn't quietly default to 0; its bits are indeterminate, and merely <em>using</em> the value is undefined. Defences: set pointers to <code>NULL</code> after <code>free</code> (so a stray use crashes loudly instead of silently corrupting), and always initialise variables when you declare them.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Classic #3 — signed overflow &amp; how to avoid UB</div>
+    <h2>Overflow, and your toolkit 🛡️</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>Overflowing a <strong>signed</strong> integer is UB — it is <em>not</em> guaranteed to wrap around (unsigned arithmetic does wrap, by definition):</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code"><span class="kw">int</span> x = INT_MAX;
+<span class="kw">int</span> y = x + 1;        <span class="bad">// 🔴 signed overflow — UB (NOT guaranteed INT_MIN)</span>
+
+<span class="kw">unsigned</span> u = UINT_MAX;
+u = u + 1;            <span class="cm">// ✅ defined: wraps to 0 (unsigned wraps by the rules)</span></pre>
+
+    <div class="trap">
+      <h4>🚨 "It worked when I ran it" proves nothing</h4>
+      <p>The deadliest myth about UB is that a program which runs and gives the right answer is therefore correct. UB can lie low for months: it might happen to work at <code>-O0</code> but break at <code>-O2</code>, work on your machine but fail on a user's, or work today and corrupt data after one more code change — because the compiler is permitted to assume UB never occurs and optimize accordingly. You can't test UB away; you avoid it. Your toolkit: compile with <strong><code>-Wall -Wextra</code></strong> (catches many cases), run under a <strong>sanitizer</strong> like <code>-fsanitize=address,undefined</code> (AddressSanitizer/UBSan flag out-of-bounds, use-after-free, and overflow at runtime), use <strong>valgrind</strong> for memory errors, initialise everything, and <code>NULL</code> out freed pointers. These turn silent UB into a loud, locatable error.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — UB Inspector</div>
+    <h2>Roll the dice on a broken program 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>UB Inspector</strong> lets you pick a UB scenario and "run" it repeatedly — and watch the outcome change from one run to the next, because the standard guarantees nothing. <strong>Predict the Output</strong> drives home the one right answer for UB.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">🎲 UB Inspector</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">UB Inspector</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- UB INSPECTOR -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="fs-modes" id="ubMode">
+          <button class="fsmode active" data-m="oob">out of bounds<small>a[5]</small></button>
+          <button class="fsmode" data-m="uaf">use-after-free<small>*p after free</small></button>
+          <button class="fsmode" data-m="ovf">signed overflow<small>INT_MAX + 1</small></button>
+          <button class="fsmode" data-m="uninit">uninitialized<small>read of y</small></button>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="ub-code" id="ubCode"></div>
+        <div class="ub-roll">
+          <button class="ub-die" id="ubRun">🎲 run it</button>
+          <span class="ub-rolls" id="ubRolls"></span>
+        </div>
+        <div class="ub-outcome none" id="ubOut"><span class="ico">❔</span><span>Click "run it" — then run it again, and again…</span></div>
+        <div class="fs-msg" id="ubMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +362,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +377,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        What does it mean that a program has <strong>undefined behaviour</strong>?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>The standard places <strong>no requirements</strong> on what happens — it may crash, give a wrong answer, or appear to work; you can't rely on any outcome</span></button>
+      <button class="opt" data-correct="false"><span>It always crashes immediately when you run it</span></button>
+      <button class="opt" data-correct="false"><span>It returns a random but still valid value</span></button>
+      <button class="opt" data-correct="false"><span>The compiler will always refuse to build it</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: the most dangerous outcome of UB is that it <em>seems</em> to work.</div>
     </div>
   </section>
 
@@ -391,26 +395,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">✅</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Trusting "it worked when I tested it"</strong>
+        <small>UB can pass every test and still be a bug — it may break at a higher optimization level, on another machine, or after an unrelated change. You avoid UB; you can't test it away.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">🧯</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Not turning on warnings or sanitizers</strong>
+        <small>Build with <code>-Wall -Wextra</code> and run under <code>-fsanitize=address,undefined</code> (or valgrind). They turn silent UB into a loud, located error.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">0️⃣</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Assuming uninitialized = 0, or signed overflow wraps</strong>
+        <small>Local variables aren't auto-zeroed, and signed overflow is UB (only <em>unsigned</em> wraps). Initialise everything; use unsigned or wider types when wrap/overflow is a real risk.</small>
       </div>
     </div>
 
@@ -418,39 +422,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Catch it with a sanitizer.</strong> Write a tiny program that reads <code>a[5]</code> from a 3-element array. Compile normally and run (it may "work"); then compile with <code>-fsanitize=address</code> and run again to see it reported.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Dangle on purpose.</strong> <code>malloc</code> an int, <code>free</code> it, then read through the pointer. Run under AddressSanitizer to see "heap-use-after-free." Then fix it by setting the pointer to <code>NULL</code> after <code>free</code> and checking before use.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Overflow, defined vs not.</strong> Add 1 to <code>INT_MAX</code> and to <code>UINT_MAX</code> and print both. Build with <code>-fsanitize=undefined</code> and observe that the <em>signed</em> case is flagged while the unsigned one is defined to wrap. Note how you'd detect overflow safely (check before adding).
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>Undefined behaviour = no guarantees</strong> — crash, garbage, or "works," with the compiler free to assume it never happens.</li>
+        <li><strong>It's worse than a crash</strong> because it can silently appear to work, then fail on another build, machine, or day.</li>
+        <li><strong>Classic causes:</strong> out-of-bounds access, use-after-free / uninitialized reads, and <em>signed</em> integer overflow.</li>
+        <li><strong>You avoid UB, you don't test it away</strong> — bounds-check, initialise, <code>NULL</code> freed pointers.</li>
+        <li><strong>Tools catch it:</strong> <code>-Wall -Wextra</code>, AddressSanitizer/UBSan (<code>-fsanitize=...</code>), and valgrind.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_10_4.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      10.4  Debugging with gdb
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_10_6.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      10.6  Capstone — contacts CLI
     </a>
   </div>
 
@@ -458,14 +462,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "Undefined behaviour: the standard guarantees NOTHING. 🎲",
+    "UB may crash, corrupt, or seem to work — then fail later. 😈",
+    "Out-of-bounds access is UB — even just reading. 📏",
+    "Use-after-free and uninitialized reads: classic UB. 🗑️",
+    "Signed overflow is UB (unsigned wraps; signed doesn't). ➕",
+    "Roll the dice — same UB, different outcomes. 🎰",
+    "Avoid it: -Wall, sanitizers (ASan/UBSan), bounds-check, initialize. 🛡️",
+    "'Works on my machine' is not safety — UB is a time bomb. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +501,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 10.5 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +533,107 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
+  // ===== UB Inspector =====
+  let ubMode = 'oob', ubRollCount = 0, ubTouched = false;
+  const ubModeEl = document.getElementById('ubMode');
+  const ubCode = document.getElementById('ubCode');
+  const ubRun = document.getElementById('ubRun');
+  const ubRolls = document.getElementById('ubRolls');
+  const ubOut = document.getElementById('ubOut');
+  const ubMsg = document.getElementById('ubMsg');
+
+  // each scenario: code + a weighted list of plausible outcomes {cls, ico, text}
+  const UB = {
+    oob: {
+      code: `<span class="kw">int</span> a[3] = {10, 20, 30};\n<span class="kw">int</span> x = a[5];   <span class="bad">// out of bounds</span>\nprintf("%d", x);`,
+      msg: `<b>Out-of-bounds read.</b> <code>a[5]</code> is past the array — the standard says nothing about what you get. Same code, different runs/compilers → different results.`,
+      outcomes: [
+        { cls: 'garbage', ico: '🗑️', text: 'Prints some garbage value (whatever bytes were nearby) — e.g. 32766.' },
+        { cls: 'fine', ico: '😅', text: 'Prints 0 and seems fine — the most dangerous outcome: it LOOKS correct.' },
+        { cls: 'crash', ico: '💥', text: 'Segmentation fault — the address wasn\'t readable this time.' },
+        { cls: 'garbage', ico: '🗑️', text: 'Prints a different garbage value than last run. No consistency.' }
+      ]
     },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
+    uaf: {
+      code: `<span class="kw">int</span> *p = malloc(<span class="kw">sizeof</span> *p);\n*p = 7;\nfree(p);\nprintf("%d", *p);   <span class="bad">// use-after-free</span>`,
+      msg: `<b>Use-after-free.</b> After <code>free</code>, that memory may be reused for anything. Reading <code>*p</code> is UB — sometimes the old value lingers, sometimes not.`,
+      outcomes: [
+        { cls: 'fine', ico: '😈', text: 'Prints 7 — the freed memory still holds the old value. Looks fine, but it\'s a trap.' },
+        { cls: 'garbage', ico: '🗑️', text: 'Prints garbage — the block was already reused by the allocator.' },
+        { cls: 'crash', ico: '💥', text: 'Crash — with a sanitizer this is reported as heap-use-after-free.' },
+        { cls: 'evil', ico: '🕳️', text: 'Silently corrupts other data — a classic security vulnerability.' }
+      ]
     },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
+    ovf: {
+      code: `<span class="kw">int</span> x = INT_MAX;\nprintf("%d", x + 1);   <span class="bad">// signed overflow</span>`,
+      msg: `<b>Signed overflow.</b> It is <span class="red">not</span> guaranteed to wrap to INT_MIN — that's UB. The optimizer may even assume <code>x + 1 &gt; x</code> is always true and rewrite your code.`,
+      outcomes: [
+        { cls: 'garbage', ico: '🔄', text: 'Prints INT_MIN (-2147483648) — wrapped this time, but you can\'t rely on it.' },
+        { cls: 'evil', ico: '😈', text: 'The optimizer assumed overflow can\'t happen and removed a nearby check — surprising behaviour.' },
+        { cls: 'fine', ico: '😅', text: 'Appears to "work" at -O0, then misbehaves at -O2. Same source!' },
+        { cls: 'garbage', ico: '🗑️', text: 'Some other value entirely — anything is permitted.' }
+      ]
     },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
+    uninit: {
+      code: `<span class="kw">int</span> y;            <span class="cm">// never initialized</span>\nprintf("%d", y);   <span class="bad">// read of indeterminate value</span>`,
+      msg: `<b>Uninitialized read.</b> <code>y</code> doesn't default to 0 — its bits are indeterminate, and merely <em>using</em> the value is UB.`,
+      outcomes: [
+        { cls: 'garbage', ico: '🗑️', text: 'Prints leftover stack garbage — e.g. 21931. Different each run.' },
+        { cls: 'fine', ico: '😅', text: 'Happens to print 0 — so a beginner "concludes" locals default to 0. They don\'t.' },
+        { cls: 'garbage', ico: '🗑️', text: 'A wildly different value than the last run.' },
+        { cls: 'evil', ico: '😈', text: 'Optimizer treats the value as anything convenient — behaviour shifts between builds.' }
+      ]
     }
   };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function renderUB(mode) {
+    ubMode = mode; ubRollCount = 0; ubRolls.textContent = '';
+    ubCode.innerHTML = UB[mode].code;
+    ubOut.className = 'ub-outcome none';
+    ubOut.innerHTML = `<span class="ico">❔</span><span>Click "run it" — then run it again, and again…</span>`;
+    ubMsg.innerHTML = UB[mode].msg;
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
+  ubModeEl.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => {
+    ubModeEl.querySelectorAll('.fsmode').forEach(x => x.classList.toggle('active', x === b));
+    renderUB(b.dataset.m);
+    if (!ubTouched) { ubTouched = true; addXP(5, e.clientX, e.clientY, '🎲 Inspecting UB! +5 XP'); }
   }));
-  renderPSI('valid');
+  ubRun.addEventListener('click', (e) => {
+    const outs = UB[ubMode].outcomes;
+    const pick = outs[Math.floor(Math.random() * outs.length)];
+    ubRollCount++;
+    ubOut.className = 'ub-outcome ' + pick.cls;
+    ubOut.innerHTML = `<span class="ico">${pick.ico}</span><span>${pick.text}</span>`;
+    ubRolls.textContent = `run #${ubRollCount} — same code, no guarantee it repeats`;
+    if (!ubTouched) { ubTouched = true; addXP(5, e.clientX, e.clientY, '🎲 Rolled! +5 XP'); }
+  });
+  renderUB('oob');
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: 'int a[3] = {1, 2, 3};\nprintf("%d", a[5]);   // out of bounds',
+      opts: ['Undefined behaviour — anything can happen', 'Always 0', 'Always crashes', 'The 6th value in memory'],
+      answer: 'Undefined behaviour — anything can happen',
+      why: 'a[5] is outside the array. C does no bounds checking, so this is UB — it may print garbage, crash, or appear to work. No outcome is guaranteed.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: 'int *p = malloc(sizeof(int));\n*p = 7;\nfree(p);\nprintf("%d", *p);   // after free',
+      opts: ['Undefined behaviour — must not rely on it', 'Always 7', 'Always crashes', 'Always 0'],
+      answer: 'Undefined behaviour — must not rely on it',
+      why: 'Reading through a freed pointer is use-after-free = UB. It often still shows 7, which is exactly the trap — you can\'t depend on it, and it may corrupt or crash.'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: '#include <limits.h>\nint x = INT_MAX;\nprintf("%d", x + 1);   // signed overflow',
+      opts: ['Undefined behaviour', 'Always INT_MIN (wraps)', 'Always 0', 'Compile error'],
+      answer: 'Undefined behaviour',
+      why: 'Signed integer overflow is UB — it is NOT guaranteed to wrap to INT_MIN (only unsigned arithmetic wraps). The compiler may even optimize assuming it never overflows.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: 'int x;             // never initialized\nprintf("%d", x);',
+      opts: ['Undefined behaviour — x is indeterminate', 'Always 0', 'Garbage, but the same each run', 'Compile error'],
+      answer: 'Undefined behaviour — x is indeterminate',
+      why: 'A local variable isn\'t auto-zeroed; its value is indeterminate and merely using it is UB. It is not reliably 0, nor reliably any consistent garbage.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +648,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +673,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. With UB there's no guaranteed result — not 0, not a wrap, not a reliable crash. The standard simply makes no promises.`;
           breakStreak();
         }
       });
@@ -669,14 +692,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Undefined behaviour means the standard imposes <em>no</em> requirements — the program may crash, print nonsense, corrupt data, or run perfectly, and the compiler is even allowed to assume it never happens. The scariest case is that it <em>appears</em> to work, so you can\'t test UB away — you avoid it and use sanitizers to catch it.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> No guarantees at all — including "seems to work."';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. UB doesn\'t reliably crash, doesn\'t give a "valid" value, and usually compiles fine. It means <em>no</em> guarantees — any result, including appearing to work.';
       firstTry = false; breakStreak();
     }
   }));

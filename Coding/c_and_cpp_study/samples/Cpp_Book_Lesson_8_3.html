@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 8.2 — Copy Semantics · The C++ Book</title>
+<title>Lesson 8.3 — Move Semantics · The C++ Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -101,7 +101,7 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Copy Inspector */
+  /* Move Inspector */
   .dd-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .dd-toggle .lab { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); width: 100%; }
   .ddbtn { background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
@@ -114,10 +114,12 @@
   .mem { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: #0d1033; border-radius: 12px; padding: 18px 14px; margin-bottom: 6px; }
   .mem-col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
   .mem-obj { background: #312e81; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 12px; color: #e0e7ff; text-align: center; min-width: 92px; }
+  .mem-obj.empty { background: #3f3f46; border-color: #71717a; color: #a1a1aa; }
   .mem-obj .nm { color: #c4b5fd; font-weight: 700; }
+  .mem-obj.empty .nm { color: #d4d4d8; }
   .mem-arrow { font-family: var(--mono); font-size: 18px; font-weight: 700; color: #f472b6; }
   .mem-heap { display: flex; flex-direction: column; gap: 10px; }
-  .mem-buf { background: #064e3b; border: 2px solid var(--green); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; color: #bbf7d0; text-align: center; min-width: 78px; }
+  .mem-buf { background: #064e3b; border: 2px solid var(--green); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; color: #bbf7d0; text-align: center; min-width: 88px; }
   .mem-buf.warn { background: #7f1d1d; border-color: var(--red); color: #fecaca; }
   .mem-buf .cap { display:block; font-size: 9px; color: #6ee7b7; margin-top: 2px; }
   .mem-buf.warn .cap { color: #fca5a5; }
@@ -214,22 +216,22 @@
   </div>
   <div class="pixel-bubble" id="pixelBubble">
     <span class="pixel-name">Pixel</span>
-    When an object owns a resource, copying it needs care — or two objects end up fighting over one buffer. 📋
+    Why copy a resource when the source is about to die? <strong>Move</strong> just hands it over. 🚚
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-cpp">THE C++ BOOK &middot; 8.2</span>
+    <span class="crumb-cpp">THE C++ BOOK &middot; 8.3</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 57 / 84</span>
+    <span>Lesson 58 / 84</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">♻️ PART VIII &middot; MODERN RESOURCE MANAGEMENT</span>
-    <h1>Copy Semantics</h1>
-    <p class="hero-sub">RAII said: an object owns a resource and frees it in its destructor. But what happens when you <strong>copy</strong> that object? If you don't say, C++ copies it member by member — which for a raw pointer means two objects now own the <em>same</em> resource. Both will free it. That's a crash. This lesson is about controlling how your objects copy: the <strong>copy constructor</strong> and <strong>copy assignment operator</strong>.</p>
+    <span class="hero-tag">♻️ PART VIII &middot; MODERN RESOURCE MANAGEMENT &middot; C++11</span>
+    <h1>Move Semantics</h1>
+    <p class="hero-sub">Copying an owning object duplicates its resource — and that's wasteful when the source is a <em>temporary</em> about to be destroyed anyway. C++11 added a smarter option: <strong>move</strong>. Instead of deep-copying, you transfer ownership — steal the resource and leave the source empty. It's the difference between photocopying a document and just handing it over.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
       <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
@@ -244,135 +246,121 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>Copying isn't free 🧠</h2>
+    <h2>Don't copy what you can hand over 🧠</h2>
 
     <div class="new-content">
-      In C++ you copy objects constantly — passing by value, returning from a function, assigning one variable to another, putting things in a container. For a plain struct of <code>int</code>s, copying just duplicates the numbers and all is well. But the moment a class <em>owns a resource</em> — heap memory from <code>new</code>, a file handle, a buffer — a naive copy duplicates the <em>pointer</em>, not the thing it points to. Now two objects believe they own one resource, and when each runs its destructor, the resource is freed twice. Copy semantics is how you take control: you decide what "copy" means for your type so it stays safe.
+      Last lesson, copying an owning object meant a <em>deep copy</em>: allocate a new resource and duplicate the contents. That's correct, but sometimes wasteful. Consider returning a big <code>std::vector</code> from a function, or doing <code>v.push_back(makeHugeThing())</code> — the source is a temporary that's about to be destroyed. Deep-copying it just to throw the original away is pure waste. <strong>Move semantics</strong> (added in C++11) lets the new object <em>steal</em> the temporary's resource — take its pointer, leave it empty — which is a couple of pointer assignments instead of a full allocation-and-copy. Same result, far cheaper.
     </div>
 
-    <p>This is the second pillar of Part VIII, built directly on the RAII idea from 8.1.</p>
+    <p>This is why modern C++ can return huge containers by value without fear: the compiler moves, it doesn't copy.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Two operations</div>
-    <h2>Copy constructor vs. copy assignment 👯</h2>
+    <div class="step-label"><span class="step-num">2</span> lvalues, rvalues, and T&&</div>
+    <h2>What can be safely stolen from ⏳</h2>
 
-    <p>There are two distinct moments where copying happens, and C++ gives each its own special member function:</p>
+    <p>To know when stealing is safe, C++ classifies expressions. An <strong>lvalue</strong> has a name and lives on — you can't gut it. An <strong>rvalue</strong> is a temporary or expiring value with no lasting name — stealing from it is harmless. The new type <code>T&&</code> (an <em>rvalue reference</em>) binds only to rvalues:</p>
 
-    <pre class="code"><span class="kw">class</span> Box {
-<span class="kw">public</span>:
-    Box(<span class="kw">const</span> Box&amp; other);              <span class="hl">// copy constructor — make a NEW Box from another</span>
-    Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other);   <span class="hl">// copy assignment — overwrite an EXISTING Box</span>
-};
-
-Box a;
-Box b = a;   <span class="cm">// copy CONSTRUCTOR (b is being created)</span>
-Box c;
-c = a;       <span class="cm">// copy ASSIGNMENT (c already exists, now overwritten)</span></pre>
+    <pre class="code"><span class="kw">int</span> x = 5;
+<span class="kw">int</span>&amp;  lref = x;      <span class="cm">// lvalue reference — binds to a named thing</span>
+<span class="kw">int</span>&amp;&amp; rref = 5;      <span class="hl">// rvalue reference — binds to a temporary (5)</span>
+<span class="kw">int</span>&amp;&amp; bad  = x;      <span class="bad">// ERROR: x is an lvalue, not a temporary</span></pre>
 
     <div class="new-content">
-      The distinction is "is the target being <em>born</em>, or does it <em>already exist</em>?" <code>Box b = a;</code> creates <code>b</code> for the first time, so the <strong>copy constructor</strong> runs. <code>c = a;</code> takes an already-living <code>c</code> and replaces its contents, so the <strong>copy assignment operator</strong> runs. Passing an object by value and returning one by value also invoke the copy constructor. They feel similar, but assignment has an extra job the constructor doesn't: it must deal with the resource the target was <em>already</em> holding.
+      The single <code>&amp;</code> means "reference to something with a name" (an lvalue); the double <code>&amp;&amp;</code> means "reference to a temporary" (an rvalue). The whole point of <code>&amp;&amp;</code> is that it lets a function know "this argument is a temporary — its contents are yours to take." That's the hook move operations use: by overloading on <code>const T&amp;</code> (copy) versus <code>T&amp;&amp;</code> (move), a class can do the cheap thing when given a temporary and the safe thing when given a named object.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> The default is shallow</div>
-    <h2>What the compiler writes for you ⚙️</h2>
+    <div class="step-label"><span class="step-num">3</span> The move constructor</div>
+    <h2>Steal the pointer, null the source 🫳</h2>
 
-    <p>If you don't declare them, the compiler generates both — and they do a <strong>member-wise</strong> copy: each member is copied with <em>its own</em> copy. That's perfect for value-like members and dangerous for raw pointers:</p>
+    <p>A move constructor takes a <code>T&amp;&amp;</code>. It copies the source's pointer (not the buffer!) and then sets the source's pointer to <code>nullptr</code> so the source's destructor won't free what you just took:</p>
 
     <pre class="code"><span class="kw">struct</span> Box {
-    <span class="kw">int</span>* data;          <span class="cm">// owns a heap int</span>
+    <span class="kw">int</span>* data;
     Box(<span class="kw">int</span> v) { data = <span class="kw">new</span> <span class="kw">int</span>(v); }
     ~Box() { <span class="kw">delete</span> data; }
-    <span class="cm">// no copy ctor written → compiler's default copies the POINTER value</span>
-};
-
-Box a(5);
-Box b = a;   <span class="bad">// b.data == a.data  — same address! both point at one int</span></pre>
+    Box(<span class="kw">const</span> Box&amp; o) { data = <span class="kw">new</span> <span class="kw">int</span>(*o.data); }   <span class="cm">// COPY: deep, allocates</span>
+    Box(Box&amp;&amp; o) <span class="kw">noexcept</span> {                            <span class="hl">// MOVE: steal, no allocation</span>
+        data = o.data;        <span class="cm">// take the pointer</span>
+        o.data = <span class="kw">nullptr</span>;    <span class="hl">// leave source empty so its dtor is a no-op</span>
+    }
+};</pre>
 
     <div class="new-content">
-      The generated copy sets <code>b.data = a.data</code> — it copies the pointer's <em>value</em> (an address), so both objects point at the same heap <code>int</code>. Note the contrast: a <code>std::string</code> or <code>std::vector</code> member would copy itself <em>deeply</em>, because those types define their own correct copy semantics (they're RAII types). The danger is only with <strong>raw owning pointers</strong>, where the default's shallow copy leaves two owners of one resource.
+      Compare the two: the copy constructor calls <code>new</code> and duplicates the value; the move constructor just reassigns a pointer and nulls the original. After the move, the source <code>o</code> still exists and will be destroyed normally — but its <code>data</code> is <code>nullptr</code>, so <code>delete nullptr</code> (which is safe and does nothing) runs instead of double-freeing the buffer you stole. Mark move operations <code>noexcept</code>: it tells the standard library they won't throw, which lets containers like <code>vector</code> move your objects during reallocation instead of copying.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Shallow vs. deep</div>
-    <h2>Sharing a buffer ends in tears 💥</h2>
+    <div class="step-label"><span class="step-num">4</span> Move assignment</div>
+    <h2>Release mine, take yours 🔁</h2>
 
-    <p>A <strong>shallow</strong> copy duplicates the pointer; a <strong>deep</strong> copy allocates a fresh resource and copies the contents. With the shallow default above, two problems appear:</p>
+    <p>Move <em>assignment</em> overwrites an object that already owns a resource, so it must free its own first, then steal the source's:</p>
 
-    <table class="op-table">
-      <thead><tr><th>Problem</th><th>What happens</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">Aliasing</td><td class="mono plain">writing through <code>b.data</code> also changes <code>a</code> — they share one int</td></tr>
-        <tr><td class="mono plain">Double free</td><td class="mono plain">both destructors <code>delete</code> the same address → undefined behaviour / crash</td></tr>
-      </tbody>
-    </table>
-
-    <p>The fix is a deep copy — give the new object its own resource:</p>
-
-    <pre class="code">Box(<span class="kw">const</span> Box&amp; other) {
-    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);   <span class="hl">// allocate our OWN int, copy the value</span>
+    <pre class="code">Box&amp; <span class="kw">operator</span>=(Box&amp;&amp; o) <span class="kw">noexcept</span> {
+    <span class="kw">if</span> (<span class="kw">this</span> == &amp;o) <span class="kw">return</span> *<span class="kw">this</span>;   <span class="cm">// guard self-move</span>
+    <span class="kw">delete</span> data;             <span class="cm">// 1. release what we already own</span>
+    data = o.data;           <span class="hl">// 2. steal the source's pointer</span>
+    o.data = <span class="kw">nullptr</span>;       <span class="hl">// 3. leave the source empty</span>
+    <span class="kw">return</span> *<span class="kw">this</span>;            <span class="cm">// 4. return *this for chaining</span>
 }</pre>
 
     <div class="new-content">
-      Now <code>b</code> has its own heap <code>int</code> holding the same value, completely independent of <code>a</code>. Changing one doesn't touch the other, and each destructor frees its own allocation exactly once. "Deep" means you follow the pointer and duplicate what it owns, not just the pointer itself. The interactive below lets you flip between shallow and deep and watch the arrows either collide on one buffer or split into two.
+      It mirrors copy assignment from 8.2, but step 2 is a pointer steal instead of a deep copy, and step 3 nulls the source. The structure is the same — release the old, take the new, return <code>*this</code> — which is why people group all five special members together. Once a class has correct move operations, assigning a temporary to it (<code>box = makeBox();</code>) transfers ownership for almost free instead of copying.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Assignment &amp; the Rule of Three</div>
-    <h2>Free the old, guard yourself 📐</h2>
+    <div class="step-label"><span class="step-num">5</span> std::move &amp; the Rule of Five</div>
+    <h2>Opting in to a move 🎭</h2>
 
-    <p>Copy <em>assignment</em> has the constructor's job plus one more: the target already owns a resource that must be released first — and you must survive <code>x = x;</code>:</p>
+    <p>Moves happen automatically when the source is already a temporary (a return value, an unnamed object). But if you have a <em>named</em> object you're finished with, you can opt in with <code>std::move</code>, which simply casts it to an rvalue so the move overload is chosen:</p>
 
-    <pre class="code">Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other) {
-    <span class="kw">if</span> (<span class="kw">this</span> == &amp;other) <span class="kw">return</span> *<span class="kw">this</span>;   <span class="hl">// 1. guard self-assignment</span>
-    <span class="kw">delete</span> data;                          <span class="cm">// 2. free what we already had</span>
-    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);          <span class="cm">// 3. deep-copy the new value</span>
-    <span class="kw">return</span> *<span class="kw">this</span>;                          <span class="cm">// 4. return *this for chaining</span>
-}</pre>
+    <pre class="code">Box a(5);
+Box b = a;              <span class="cm">// a is an lvalue → COPY</span>
+Box c = std::move(a);   <span class="hl">// std::move(a) is an rvalue → MOVE (a is now empty)</span></pre>
 
     <div class="trap">
-      <h4>🚨 The Rule of Three</h4>
-      <p>If your class needs a custom <strong>destructor</strong>, a custom <strong>copy constructor</strong>, or a custom <strong>copy assignment</strong>, it almost certainly needs <em>all three</em> — they're a set. Writing a destructor that <code>delete</code>s a pointer but leaving the copies as the shallow default is the classic recipe for a double free. (Skip the self-assignment guard and <code>x = x</code> deletes <code>data</code> and then reads the freed pointer.) The modern shortcut: don't manage raw pointers at all — store a <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> and the Rule of Three collapses to the <strong>Rule of Zero</strong>, because those members already copy and clean up correctly.</p>
+      <h4>🚨 <code>std::move</code> doesn't move — and the source isn't gone</h4>
+      <p>Two surprises. First, <code>std::move(a)</code> does <strong>nothing</strong> at runtime — it's just a cast to <code>T&amp;&amp;</code> that <em>permits</em> a move to be selected; the actual stealing happens inside the move constructor/assignment. Second, after you move from <code>a</code>, it isn't destroyed — it's left in a <strong>valid but unspecified</strong> (usually empty) state. You may safely destroy it or assign it a new value, but don't rely on its old contents. The full set of special members is the <strong>Rule of Five</strong>: destructor, copy constructor, copy assignment, move constructor, move assignment — and the easiest way to get all five right is still the <strong>Rule of Zero</strong>: hold <code>std::vector</code>/<code>std::string</code>/<code>std::unique_ptr</code> members and let them move for you.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Copy Inspector</div>
-    <h2>Watch the buffers share or split 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Move Inspector</div>
+    <h2>Copy duplicates, move hands over 🔬</h2>
 
-    <p>Two tools. The <strong>Copy Inspector</strong> runs <code>Box b = a;</code> with either the shallow default or a deep copy ctor — change <code>b</code> and destruct both objects to see aliasing and double-frees appear or vanish. <strong>Predict the Output</strong> tests which operation runs and what the values become.</p>
+    <p>Two tools. The <strong>Move Inspector</strong> runs <code>Box b = a;</code> (copy) versus <code>Box b = std::move(a);</code> (move) over a memory diagram — inspect <code>a</code> afterward and destruct both to see the buffer duplicated or transferred. <strong>Predict the Output</strong> tests which operation is chosen and the moved-from state.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">📋 Copy Inspector</div>
+        <div class="play-title">🚚 Move Inspector</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="dd">Copy Inspector</button>
+        <button class="tab-btn active" data-tab="dd">Move Inspector</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
       <!-- INSPECTOR -->
       <div class="tab-panel active" id="tab-dd">
         <div class="dd-toggle">
-          <span class="lab">Copy behaviour for <code>Box b = a;</code> :</span>
-          <button class="ddbtn" id="cpShallow">shallow (default)</button>
-          <button class="ddbtn active" id="cpDeep">deep (custom copy ctor)</button>
+          <span class="lab">Build <code>b</code> from <code>a</code> by:</span>
+          <button class="ddbtn active" id="cpCopy">copy &nbsp;Box b = a;</button>
+          <button class="ddbtn" id="cpMove">move &nbsp;Box b = std::move(a);</button>
         </div>
         <div class="dd-decl" id="cpDecl"></div>
         <div class="mem" id="cpMem"></div>
         <div class="cp-act">
-          <button class="cp-btn" id="cpChange">*b.data = 9;</button>
+          <button class="cp-btn" id="cpInspect">inspect a.data</button>
           <button class="cp-btn" id="cpDestruct">end scope → destruct a &amp; b</button>
           <button class="cp-btn ghost" id="cpReset">reset ↺</button>
         </div>
@@ -401,13 +389,13 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
     <div class="quiz">
       <div class="quiz-q">
-        Your class has a destructor that does <code>delete data;</code> on a raw pointer it owns. By the <strong>Rule of Three</strong>, what else must you provide?
+        What does <code>std::move(x)</code> actually do?
       </div>
-      <button class="opt" data-correct="true"><span>A <strong>copy constructor</strong> and a <strong>copy assignment operator</strong> that deep-copy — or the default shallow copies will double-free</span></button>
-      <button class="opt" data-correct="false"><span>Nothing — a correct destructor is enough on its own</span></button>
-      <button class="opt" data-correct="false"><span>Only a copy constructor; assignment is handled automatically</span></button>
-      <button class="opt" data-correct="false"><span>Just mark the class <code>const</code> so it can't be copied</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: destructor, copy constructor, copy assignment — they travel as a set.</div>
+      <button class="opt" data-correct="true"><span>Nothing at runtime — it <strong>casts</strong> <code>x</code> to an rvalue reference so the <em>move</em> constructor/assignment is selected instead of the copy</span></button>
+      <button class="opt" data-correct="false"><span>Immediately moves <code>x</code>'s data and frees <code>x</code></span></button>
+      <button class="opt" data-correct="false"><span>Destroys <code>x</code> right away</span></button>
+      <button class="opt" data-correct="false"><span>Makes a fast deep copy of <code>x</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: the actual stealing happens inside the move constructor — not in <code>std::move</code> itself.</div>
     </div>
   </section>
 
@@ -419,26 +407,26 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">💥</div>
+      <div class="mistake-icon">🫙</div>
       <div class="mistake-body">
-        <strong>Destructor without matching copies</strong>
-        <small>A custom destructor with the default shallow copy means two objects free one resource — a double free. Provide the copy ctor and copy assignment too (Rule of Three).</small>
+        <strong>Using a moved-from object's value</strong>
+        <small>After <code>std::move(a)</code>, <code>a</code> is valid but unspecified (usually empty). You may reassign or destroy it, but don't read its old contents.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🔁</div>
+      <div class="mistake-icon">🧨</div>
       <div class="mistake-body">
-        <strong>Forgetting the self-assignment guard</strong>
-        <small>In <code>operator=</code>, <code>x = x;</code> without <code>if (this == &amp;other) return *this;</code> deletes <code>data</code> and then copies from the freed pointer. Guard it first.</small>
+        <strong>Forgetting to null the source</strong>
+        <small>A move constructor that steals the pointer but doesn't set the source's to <code>nullptr</code> leads to a double free — both destructors free the same buffer. Always empty the source.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🧱</div>
+      <div class="mistake-icon">🎭</div>
       <div class="mistake-body">
-        <strong>Managing raw pointers by hand at all</strong>
-        <small>Most of the time you don't need the Rule of Three — use <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> members and copying just works (Rule of Zero).</small>
+        <strong>Thinking <code>std::move</code> moves something</strong>
+        <small>It's just a cast to an rvalue. The move only happens if a move constructor/assignment exists and gets selected — otherwise it silently falls back to a copy.</small>
       </div>
     </div>
 
@@ -446,39 +434,39 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Spot the operation.</strong> Give a class a copy constructor that prints <code>"ctor"</code> and a copy assignment that prints <code>"assign"</code>. Then write <code>X b = a;</code> and <code>c = a;</code> and predict, then confirm, which message each line prints.
+      <strong>Copy vs. move.</strong> Give a class a copy constructor that prints <code>"copy"</code> and a move constructor that prints <code>"move"</code>. Then write <code>T b = a;</code> and <code>T c = std::move(a);</code> and confirm which message each prints.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Make it deep.</strong> Write a <code>Box</code> that owns an <code>int*</code>. Add a deep copy constructor and copy assignment (with the self-assignment guard). Copy a box, change one, and confirm the other is unaffected and nothing double-frees.
+      <strong>Steal and null.</strong> Write a <code>Box</code> owning an <code>int*</code> with a move constructor that takes the pointer and nulls the source. Move-construct a new box, then print whether the source's pointer is <code>nullptr</code> and confirm nothing double-frees.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>Rule of Zero.</strong> Rewrite that <code>Box</code> to hold a <code>std::vector&lt;int&gt;</code> instead of a raw pointer, and delete the destructor, copy ctor, and copy assignment entirely. Show it still copies correctly — the compiler's defaults are now safe.
+      <strong>Rule of Five → Zero.</strong> Implement all five special members for a raw-pointer class with print statements, then rewrite it to hold a <code>std::vector&lt;int&gt;</code> and delete all five. Show that returning it from a function still moves (no deep copy) for free.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Two operations:</strong> the <em>copy constructor</em> builds a new object from another; <em>copy assignment</em> overwrites an existing one.</li>
-        <li><strong>The compiler's default copy is shallow</strong> (member-wise) — it copies a raw pointer's address, not what it points to.</li>
-        <li><strong>Shallow copy of an owning pointer</strong> causes aliasing and a double free; a <em>deep</em> copy allocates its own resource.</li>
-        <li><strong>Copy assignment also</strong> frees the old resource and guards against <code>x = x;</code> — then deep-copies.</li>
-        <li><strong>Rule of Three:</strong> need one of dtor / copy ctor / copy assignment, need all three — or sidestep it entirely with the <em>Rule of Zero</em>.</li>
+        <li><strong>Move = transfer ownership</strong>, not duplicate: steal the resource, leave the source empty. Cheap where copy is expensive.</li>
+        <li><strong><code>T&amp;&amp;</code> is an rvalue reference</strong> — it binds to temporaries (rvalues), the things safe to steal from.</li>
+        <li><strong>Move constructor / assignment</strong> copy the pointer and null the source (assignment also frees its own first); mark them <code>noexcept</code>.</li>
+        <li><strong><code>std::move</code> is just a cast</strong> to an rvalue — it selects the move; it doesn't move anything by itself.</li>
+        <li><strong>A moved-from object is valid but unspecified</strong>; the full set is the <em>Rule of Five</em> — or sidestep it with the <em>Rule of Zero</em>.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="Cpp_Book_Lesson_8_1.html" class="nav-btn prev">
+    <a href="Cpp_Book_Lesson_8_2.html" class="nav-btn prev">
       <small>← Previous</small>
-      8.1  RAII — the central idea
+      8.2  Copy semantics
     </a>
-    <a href="Cpp_Book_Lesson_8_3.html" class="nav-btn next">
+    <a href="Cpp_Book_Lesson_8_4.html" class="nav-btn next">
       <small>Next lesson →</small>
-      8.3  Move semantics
+      8.4  Rule of 0 / 3 / 5
     </a>
   </div>
 
@@ -486,14 +474,14 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
 <script>
   const BIT_LINES = [
-    "When an object owns a resource, copying it needs care. 📋",
-    "Two operations: copy constructor (birth) and copy assignment (already alive). 👯",
-    "The compiler's default copy is member-wise — shallow. ⚙️",
-    "Shallow copy shares the pointer → aliasing and double-free. 💥",
-    "Deep copy allocates its own buffer and copies the contents. 🧬",
-    "Toggle shallow vs deep — watch the buffers share or split. 🔬",
-    "Rule of Three: write one of dtor/copy-ctor/copy-= , write all three. 📐",
-    "Own a resource? Define how it copies — or sidestep with Rule of Zero. 📚"
+    "Copying duplicates a resource; moving transfers it. 🚚",
+    "An rvalue is a temporary about to die — T&& binds to it. ⏳",
+    "Move ctor steals the pointer and nulls the source. 🫳",
+    "Move assignment: release mine, steal yours, null you. 🔁",
+    "std::move just casts to rvalue — it picks the move, moves nothing itself. 🎭",
+    "Toggle copy vs move — watch the buffer get duplicated or handed over. 🔬",
+    "After a move the source is valid but empty — don't use its value. 🫙",
+    "Rule of Five: dtor + copy ctor/= + move ctor/= . 📐"
   ];
 
   let xp = 0, streak = 0;
@@ -525,7 +513,7 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 8.2 complete! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 8.3 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -557,108 +545,106 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Copy Inspector =====
-  let mode = 'deep';          // 'shallow' | 'deep'
-  let valA = 5, valB = 5;     // values shown for a and b
+  // ===== Move Inspector =====
+  let mode = 'copy';          // 'copy' | 'move'
+  let aVal = 5, bVal = 5;     // values held
+  let aEmpty = false;         // a moved-from (data == nullptr)
   let destructed = false, cpTouched = false;
   const cpDecl = document.getElementById('cpDecl');
   const cpMem = document.getElementById('cpMem');
   const cpMsg = document.getElementById('cpMsg');
-  const cpShallow = document.getElementById('cpShallow');
-  const cpDeep = document.getElementById('cpDeep');
-  const cpChange = document.getElementById('cpChange');
+  const cpCopy = document.getElementById('cpCopy');
+  const cpMove = document.getElementById('cpMove');
+  const cpInspect = document.getElementById('cpInspect');
   const cpDestruct = document.getElementById('cpDestruct');
   const cpReset = document.getElementById('cpReset');
 
-  function shared() { return mode === 'shallow'; }
-
   function renderDecl() {
-    if (mode === 'shallow') {
-      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;<span class="cm">// no copy ctor → default copies the pointer</span><br>};<br>Box b = a;  <span class="bad">// b.data == a.data</span>`;
+    if (mode === 'copy') {
+      cpDecl.innerHTML = `Box a(5);<br>Box b = a;            <span class="cm">// a is an lvalue → COPY</span><br><br>Box(<span class="kw">const</span> Box&amp; o) { data = <span class="kw">new int</span>(*o.data); }  <span class="cm">// deep copy</span>`;
     } else {
-      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;Box(<span class="kw">const</span> Box&amp; o) { data = <span class="kw">new</span> <span class="kw">int</span>(*o.data); }<br>};<br>Box b = a;  <span class="v">// b gets its own int</span>`;
+      cpDecl.innerHTML = `Box a(5);<br>Box b = std::move(a);  <span class="v">// rvalue → MOVE</span><br><br>Box(Box&amp;&amp; o) <span class="kw">noexcept</span> { data = o.data; o.data = <span class="kw">nullptr</span>; }`;
     }
   }
   function renderMem() {
+    const aBox = aEmpty
+      ? `<div class="mem-obj empty"><span class="nm">a</span><br>data = nullptr</div>`
+      : `<div class="mem-obj"><span class="nm">a</span><br>data ●</div>`;
+    const bBox = `<div class="mem-obj"><span class="nm">b</span><br>data ●</div>`;
     if (destructed) {
-      if (shared()) {
-        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
-          <div class="mem-arrow">⇒⇒</div>
-          <div class="mem-heap"><div class="mem-buf warn">freed 2× 💀<span class="cap">double free!</span></div></div>`;
-      } else {
-        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
-          <div class="mem-arrow">⇒</div>
-          <div class="mem-heap"><div class="mem-buf">freed ✓<span class="cap">int(${valA})</span></div><div class="mem-buf">freed ✓<span class="cap">int(${valB})</span></div></div>`;
-      }
+      const aBufFreed = aEmpty ? `delete nullptr (no-op) ✓` : `freed ✓<span class="cap">int(${aVal})</span>`;
+      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj${aEmpty ? ' empty' : ''}"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
+        <div class="mem-arrow">⇒</div>
+        <div class="mem-heap">${aEmpty ? `<div class="mem-buf">freed ✓<span class="cap">int(${bVal}) (b)</span></div><div class="mem-buf" style="background:#3f3f46;border-color:#71717a;color:#d4d4d8">delete nullptr<span class="cap" style="color:#a1a1aa">no-op (a)</span></div>` : `<div class="mem-buf">freed ✓<span class="cap">int(${aVal}) (a)</span></div><div class="mem-buf">freed ✓<span class="cap">int(${bVal}) (b)</span></div>`}</div>`;
       return;
     }
-    if (shared()) {
-      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
-        <div class="mem-arrow">⇒⇒</div>
-        <div class="mem-heap"><div class="mem-buf warn">int(${valA})<span class="cap">one shared buffer</span></div></div>`;
-    } else {
-      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
+    if (mode === 'copy') {
+      cpMem.innerHTML = `<div class="mem-col">${aBox}${bBox}</div>
         <div class="mem-arrow">⇒</div>
-        <div class="mem-heap"><div class="mem-buf">int(${valA})<span class="cap">a's own</span></div><div class="mem-buf">int(${valB})<span class="cap">b's own</span></div></div>`;
+        <div class="mem-heap"><div class="mem-buf">int(${aVal})<span class="cap">a's own</span></div><div class="mem-buf">int(${bVal})<span class="cap">b's own (new)</span></div></div>`;
+    } else {
+      // move: b took a's buffer; a is empty
+      cpMem.innerHTML = `<div class="mem-col">${aBox}${bBox}</div>
+        <div class="mem-arrow">⇒</div>
+        <div class="mem-heap"><div class="mem-buf">int(${bVal})<span class="cap">transferred a → b</span></div></div>`;
     }
   }
   function setMode(m, e) {
-    mode = m; destructed = false; valA = 5; valB = 5;
-    cpShallow.classList.toggle('active', m === 'shallow');
-    cpDeep.classList.toggle('active', m === 'deep');
+    mode = m; destructed = false; aVal = 5; bVal = 5;
+    aEmpty = (m === 'move');
+    cpCopy.classList.toggle('active', m === 'copy');
+    cpMove.classList.toggle('active', m === 'move');
     renderDecl(); renderMem();
-    cpMsg.innerHTML = m === 'shallow'
-      ? `<b>Shallow (default).</b> <code>b.data</code> holds the same address as <code>a.data</code> — <span class="red">one buffer, two owners.</span> Try changing <code>b</code> or ending the scope.`
-      : `<b>Deep copy.</b> The copy constructor gave <code>b</code> its own <code>int</code>. <span class="grn">Two independent buffers.</span> Try changing <code>b</code> or ending the scope.`;
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '📋 Copy traced! +5 XP'); }
+    cpMsg.innerHTML = m === 'copy'
+      ? `<b>Copy.</b> <code>a</code> is a named lvalue, so the copy constructor runs: <code>b</code> gets a <span class="grn">brand-new buffer</span> (an allocation). <code>a</code> is untouched and still holds 5.`
+      : `<b>Move.</b> <code>std::move(a)</code> makes <code>a</code> an rvalue, so the move constructor runs: <code>b</code> <span class="grn">steals a's buffer</span> (just a pointer copy) and <code>a.data</code> is set to <code>nullptr</code>. No allocation.`;
+    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '🚚 Traced! +5 XP'); }
   }
-  function changeB(e) {
-    if (destructed) { cpMsg.innerHTML = `(Objects already destructed — hit <code>reset</code> first.)`; return; }
-    valB = 9;
-    if (shared()) { valA = 9; cpMsg.innerHTML = `<b>Aliasing!</b> <code>*b.data = 9;</code> changed the shared buffer, so <code>a</code> now reads <span class="red">9</span> too. They were never independent.`; }
-    else { cpMsg.innerHTML = `<b>Independent.</b> <code>*b.data = 9;</code> touched only <code>b</code>'s buffer — <code>a</code> still reads <span class="grn">5</span>.`; }
-    renderMem();
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '✏️ Mutated! +5 XP'); }
+  function inspectA(e) {
+    if (destructed) { cpMsg.innerHTML = `(Already destructed — hit <code>reset</code>.)`; return; }
+    if (aEmpty) { cpMsg.innerHTML = `<b>Inspecting a after a move.</b> <code>a.data == nullptr</code> — <code>a</code> is in a <span class="red">valid but empty</span> state. You may reassign or destroy it, but <span class="red">don't read its old value.</span>`; }
+    else { cpMsg.innerHTML = `<b>Inspecting a after a copy.</b> <code>a</code> is <span class="grn">untouched</span> — it still owns its own buffer holding <span class="grn">5</span>. Both objects are fully independent.`; }
+    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '🔍 Inspected! +5 XP'); }
   }
   function destruct(e) {
     if (destructed) return;
     destructed = true; renderMem();
-    if (shared()) { cpMsg.innerHTML = `<b>End of scope.</b> Both destructors run <code>delete data;</code> on the <span class="red">same address</span> → <span class="red">double free</span> → undefined behaviour / crash. 💀`; }
-    else { cpMsg.innerHTML = `<b>End of scope.</b> Each destructor frees <span class="grn">its own</span> buffer exactly once. <span class="grn">Clean.</span> ✅`; }
+    if (mode === 'move') { cpMsg.innerHTML = `<b>End of scope.</b> <code>b</code> frees the stolen buffer once; <code>a.data</code> is <code>nullptr</code>, so <code>~Box()</code> runs <code>delete nullptr</code> — <span class="grn">safe no-op</span>. No double free. ✅`; }
+    else { cpMsg.innerHTML = `<b>End of scope.</b> Each object frees <span class="grn">its own</span> buffer exactly once. Clean — but it took two allocations to get here. ✅`; }
     if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '🗑️ Destructed! +5 XP'); }
   }
-  cpShallow.addEventListener('click', (e) => setMode('shallow', e));
-  cpDeep.addEventListener('click', (e) => setMode('deep', e));
-  cpChange.addEventListener('click', changeB);
+  cpCopy.addEventListener('click', (e) => setMode('copy', e));
+  cpMove.addEventListener('click', (e) => setMode('move', e));
+  cpInspect.addEventListener('click', inspectA);
   cpDestruct.addEventListener('click', destruct);
   cpReset.addEventListener('click', () => setMode(mode));
-  setMode('deep');
+  setMode('copy');
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'struct Box {\n  Box() {}\n  Box(const Box&) { std::cout << "copy "; }\n};\nvoid take(Box b) {}\nint main() { Box a; take(a); std::cout << "done"; }',
-      opts: ['copy done', 'done', 'copy copy done', 'done copy'],
-      answer: 'copy done',
-      why: 'Passing a by value into take() copies it → the copy constructor runs, printing "copy ". Then "done". (No copy is made returning void.)'
+      code: 'struct S {\n  S() {}\n  S(const S&) { std::cout << "C"; }\n  S(S&&) noexcept { std::cout << "M"; }\n};\nint main() {\n  S a;\n  S b = std::move(a);\n  std::cout << "done";\n}',
+      opts: ['Mdone', 'Cdone', 'done', 'CMdone'],
+      answer: 'Mdone',
+      why: 'std::move(a) casts a to an rvalue, so the move constructor is selected → prints "M". Then "done".'
     },
     {
-      code: 'struct T {\n  T() {}\n  T(const T&) { std::cout << "C"; }\n  T& operator=(const T&) { std::cout << "A"; return *this; }\n};\nint main() {\n  T x;\n  T y = x;   // creating y\n  y = x;     // y already exists\n}',
-      opts: ['CA', 'AC', 'CC', 'AA'],
-      answer: 'CA',
-      why: '"T y = x;" creates y → copy constructor → "C". "y = x;" overwrites an existing y → copy assignment → "A". So "CA".'
+      code: 'struct S {\n  S() {}\n  S(const S&) { std::cout << "C"; }\n  S(S&&) noexcept { std::cout << "M"; }\n};\nint main() {\n  S a;\n  S b = a;             // named lvalue\n  S c = std::move(a);  // cast to rvalue\n}',
+      opts: ['CM', 'MC', 'CC', 'MM'],
+      answer: 'CM',
+      why: '"S b = a;" copies a named lvalue → copy ctor "C". "S c = std::move(a);" gives an rvalue → move ctor "M". So "CM".'
     },
     {
-      code: 'struct Buf {\n  int* p;\n  Buf(int v) { p = new int(v); }\n  // no custom copy ctor (shallow)\n};\nint main() {\n  Buf a(5);\n  Buf b = a;     // b.p == a.p\n  *b.p = 9;\n  std::cout << *a.p;\n}',
-      opts: ['9', '5', '0', 'crash'],
-      answer: '9',
-      why: 'The default shallow copy makes b.p the same address as a.p. Writing *b.p = 9 changes the one shared int, so *a.p is now 9 (aliasing).'
+      code: 'struct V {\n  int* p;\n  V(int x) { p = new int(x); }\n  V(V&& o) noexcept { p = o.p; o.p = nullptr; }\n};\nint main() {\n  V a(5);\n  V b = std::move(a);\n  std::cout << (a.p == nullptr);\n}',
+      opts: ['1', '0', '5', 'crash'],
+      answer: '1',
+      why: 'The move constructor set a.p = nullptr after stealing the pointer. So a.p == nullptr is true, which prints as 1.'
     },
     {
-      code: 'struct S {\n  int* p;\n  S(int v) { p = new int(v); }\n  S(const S& o) { p = new int(*o.p); }  // deep\n};\nint main() {\n  S a(5);\n  S b = a;\n  *b.p = 9;\n  std::cout << *a.p << *b.p;\n}',
-      opts: ['59', '99', '55', '95'],
-      answer: '59',
-      why: 'The deep copy ctor gives b its own int. Changing *b.p to 9 leaves a untouched, so *a.p is 5 and *b.p is 9 → "59".'
+      code: 'struct T {\n  T() {}\n  T& operator=(const T&) { std::cout << "c"; return *this; }\n  T& operator=(T&&) noexcept { std::cout << "m"; return *this; }\n};\nint main() {\n  T x, y;\n  x = y;             // lvalue\n  x = std::move(y);  // rvalue\n}',
+      opts: ['cm', 'mc', 'cc', 'mm'],
+      answer: 'cm',
+      why: 'x = y assigns from a named lvalue → copy assignment "c". x = std::move(y) assigns from an rvalue → move assignment "m". So "cm".'
     }
   ];
   let poIdx = 0;
@@ -698,7 +684,7 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. Remember: creating from another = copy ctor; overwriting an existing one = copy assignment; shallow shares the pointer, deep duplicates it.`;
+          poFb.innerHTML = `❌ Not quite. Remember: a named object is an lvalue (→ copy); std::move casts it to an rvalue (→ move); and a move nulls the source's pointer.`;
           breakStreak();
         }
       });
@@ -717,14 +703,14 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The Rule of Three: a custom destructor almost always means you also need a copy constructor and copy assignment operator. Leave them as the shallow defaults and the two copies will both <code>delete</code> the same pointer — a double free. (Or skip raw pointers entirely for the Rule of Zero.)'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Destructor, copy ctor, copy assignment — all three.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>std::move</code> is just a cast to an rvalue reference — it generates no code at runtime. It only <em>permits</em> the move constructor or move assignment to be chosen over the copy; the real transfer happens inside those functions. If no move operation exists, it silently copies instead.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> It only casts to an rvalue so the move overload is picked.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. A destructor alone isn\'t enough — the default shallow copies still share the pointer and double-free. You need <em>both</em> the copy constructor and copy assignment (Rule of Three).';
+      fb.innerHTML = '❌ Not quite. <code>std::move</code> doesn\'t move, free, or copy anything itself — it just casts its argument to an rvalue so the <em>move</em> constructor/assignment is selected. The stealing happens in there.';
       firstTry = false; breakStreak();
     }
   }));

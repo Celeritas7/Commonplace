@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 9.6 — Binary I/O: fread &amp; fwrite · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,30 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Binary Inspector */
+  .fs-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .fsmode { flex: 1; min-width: 110px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .fsmode.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
+  .fsmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .fsmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .bi-val { background: var(--terminal); border-radius: 10px; padding: 10px 14px; font-family: var(--mono); font-size: 12.5px; color: #e2e8f0; margin-bottom: 10px; }
+  .bi-val .lbl { color: #94a3b8; }
+  .bi-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .bi-box { flex: 1; min-width: 150px; border-radius: 12px; padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+  .bi-box.text { background: #fff7ed; border: 2px solid var(--orange-light); color: var(--orange-deep); }
+  .bi-box.bin { background: #0f172a; border: 2px solid var(--cyan); color: #67e8f9; }
+  .bi-box .hdr { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; display: block; margin-bottom: 6px; text-transform: uppercase; }
+  .bi-box .big { font-size: 22px; font-weight: 700; }
+  .bi-box .rep { display: block; margin-top: 6px; word-break: break-all; opacity: 0.85; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +203,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Binary I/O writes a value's <em>raw bytes</em> straight to disk — fast and exact. The last stop in Part IX! 💾
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 9.6</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 64 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">📁 PART IX &middot; FILES &middot; A BRIEF OVERVIEW</span>
+    <h1>Binary I/O: fread &amp; fwrite</h1>
+    <p class="hero-sub">Everything so far stored data as <strong>text</strong> — human-readable characters. <code>fwrite</code> and <code>fread</code> do the opposite: they copy a value's <strong>raw bytes</strong> straight to and from disk. It's fast, compact, and exact — but not human-readable and not portable. This is a brief tour of when (and when not) to reach for it, closing out <strong>Part IX</strong>.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,116 +232,122 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>Bytes, not characters 💾</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      With <code>fprintf</code>, the number <code>1000000</code> is stored as the seven <em>characters</em> <code>"1000000"</code> — readable, but the program has to convert the int into text on the way out and parse it back on the way in. <strong>Binary I/O</strong> skips all that: <code>fwrite</code> copies the int's raw 4 bytes to disk exactly as they sit in memory, and <code>fread</code> copies them back. That's faster and lossless (no rounding of <code>double</code>s into decimal text), and it makes saving whole structs and arrays in one call trivial. The cost is that the file is unreadable in a text editor and <em>not portable</em> across different machines — so this is a brief, use-with-care overview.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>Think of it as a memory snapshot on disk, rather than a typed-out description.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> Text vs binary</div>
+    <h2>Same value, two encodings 🔢</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>The data is the same; only the encoding differs. And to do binary I/O you open the file in <strong>binary mode</strong> — the <code>b</code> in the mode string:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code"><span class="kw">FILE</span> *f = fopen(<span class="str">"data.bin"</span>, <span class="str">"wb"</span>);   <span class="hl">// "wb" / "rb" — note the b</span>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+<span class="cm">// text:    fprintf writes "1000000"  → 7 bytes of characters</span>
+<span class="cm">// binary:  fwrite(&n, sizeof n, 1, f) → 4 bytes (the raw int)</span></pre>
+
+    <div class="new-content">
+      The <code>b</code> tells the library "don't translate anything" — it matters on Windows, where text mode rewrites newlines (<code>\n</code> ⇄ <code>\r\n</code>); for binary data that translation would corrupt your bytes. On Linux/macOS <code>"wb"</code> and <code>"w"</code> behave the same, but always write the <code>b</code> for binary so the code is correct everywhere. Everything else about opening, checking for <code>NULL</code>, and <code>fclose</code> is exactly as in 9.1.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> fwrite</div>
+    <h2>Dump bytes to disk ⬇️</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p><code>fwrite(ptr, size, count, f)</code> writes <code>count</code> items, each <code>size</code> bytes, taken from <code>ptr</code>. It returns how many items it actually wrote:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
+    <pre class="code"><span class="kw">int</span> n = 1000000;
+fwrite(&amp;n, <span class="kw">sizeof</span> n, 1, f);          <span class="cm">// one int (4 bytes)</span>
 
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+<span class="kw">int</span> scores[5] = {10, 20, 30, 40, 50};
+fwrite(scores, <span class="kw">sizeof</span> scores[0], 5, f); <span class="hl">// a whole array in ONE call</span></pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      The pattern is "address of the data, size of one element, how many elements." For a single value you pass <code>&amp;n</code> and a count of <code>1</code>; for an array you pass the array (already a pointer) and the element count. Saving an entire array or struct is a single call — no loop, no formatting. <code>sizeof</code> does the byte-counting for you, so you never hard-code <code>4</code> or <code>8</code>.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> fread</div>
+    <h2>Read them back ⬆️</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p><code>fread</code> is the mirror image — same arguments, reading instead of writing. It returns the number of items actually read, which you should check (it's how you detect a short or empty file):</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
-
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+    <pre class="code"><span class="kw">int</span> scores[5];
+size_t got = fread(scores, <span class="kw">sizeof</span> scores[0], 5, f);
+<span class="kw">if</span> (got != 5) {                          <span class="hl">// fewer than asked = short file / EOF</span>
+    fprintf(stderr, <span class="str">"expected 5, got %zu\n"</span>, got);
+}</pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      You read into a variable of the <em>same type and size</em> you wrote — the bytes only mean the right thing if they're interpreted as the original type. The return value is items, not bytes: ask for 5 and get 5 means success; getting fewer means the file ran out. A clean round-trip (<code>fwrite</code> then later <code>fread</code> with matching types) gives you back the <em>exact</em> value, bit for bit — which is the whole appeal.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> The cautions</div>
+    <h2>Exact, but not portable ⚠️</h2>
+
+    <p>Binary's exactness comes with strings attached. The raw bytes depend on the <em>machine</em> that wrote them:</p>
 
     <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
+      <thead><tr><th>Issue</th><th>Why it bites</th></tr></thead>
       <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
+        <tr><td class="mono plain">Endianness</td><td class="mono plain">byte order of an int differs across CPUs</td></tr>
+        <tr><td class="mono plain">Type sizes</td><td class="mono plain"><code>int</code>/<code>long</code> width can vary by platform</td></tr>
+        <tr><td class="mono plain">Struct padding</td><td class="mono plain">compilers insert invisible gaps between fields</td></tr>
       </tbody>
     </table>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <div class="trap">
+      <h4>🚨 A binary file is a memory snapshot — don't trust it across machines (or pointers)</h4>
+      <p>Because <code>fwrite</code> copies bytes exactly as they sit in memory, a file written on one machine may not read back correctly on another with different <strong>endianness</strong>, <strong>type sizes</strong>, or <strong>struct padding</strong>. So binary is great for a program saving and loading <em>its own</em> data on the <em>same</em> kind of system, but risky as an interchange format — for sharing data, prefer text (or a defined format like JSON). And never <code>fwrite</code> a <strong>pointer</strong>: you'd save a memory address that's meaningless the next time the program runs. Save the data it points to, not the pointer.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Binary Inspector</div>
+    <h2>Text bytes vs binary bytes 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Binary Inspector</strong> shows the same value encoded as text (what <code>fprintf</code> writes) and as binary (what <code>fwrite</code> writes), with the byte count of each — so you can see when binary wins and when it doesn't. <strong>Predict the Output</strong> tests <code>fwrite</code>/<code>fread</code> counts and round-tripping.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">💾 Binary Inspector</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Binary Inspector</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- BINARY INSPECTOR -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="fs-modes" id="biMode">
+          <button class="fsmode active" data-m="int">int<small>1000000</small></button>
+          <button class="fsmode" data-m="dbl">double<small>3.14159265</small></button>
+          <button class="fsmode" data-m="arr">int[5]<small>array</small></button>
+          <button class="fsmode" data-m="pt">struct Point<small>{3, 7}</small></button>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="bi-val" id="biVal"></div>
+        <div class="bi-grid">
+          <div class="bi-box text" id="biText"></div>
+          <div class="bi-box bin" id="biBin"></div>
+        </div>
+        <div class="fs-msg" id="biMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +357,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +372,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        You <code>fwrite</code> a struct to a file on your laptop and send it to a friend on a different OS and compiler. Why might it not read back correctly?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>Binary layout isn't portable — <strong>endianness, type sizes, and struct padding</strong> can differ across machines and compilers</span></button>
+      <button class="opt" data-correct="false"><span>Binary files can't be sent over email or the network</span></button>
+      <button class="opt" data-correct="false"><span><code>fread</code> only works on the same machine that still has the original variable in memory</span></button>
+      <button class="opt" data-correct="false"><span>You simply forgot to open the file with <code>"wb"</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: <code>fwrite</code> copies the raw bytes <em>as they sit in this machine's memory</em>.</div>
     </div>
   </section>
 
@@ -391,26 +390,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">📏</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Reading into a different type than you wrote</strong>
+        <small>The bytes only mean the original value if interpreted as the same type and size. Write an <code>int</code>, read an <code>int</code> — don't mix.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">🌍</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Treating binary as an interchange format</strong>
+        <small>Endianness, type sizes, and padding differ across systems. For sharing data, use text or a defined format; keep binary for same-program save/load.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">🔗</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Writing a pointer with <code>fwrite</code></strong>
+        <small>Saving a pointer stores an address that's meaningless on the next run. Save the data the pointer points to, never the pointer itself.</small>
       </div>
     </div>
 
@@ -418,39 +417,40 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Round-trip one value.</strong> Open <code>"v.bin"</code> with <code>"wb"</code>, <code>fwrite</code> a single <code>double</code>, close it. Reopen with <code>"rb"</code>, <code>fread</code> it back into another <code>double</code>, and confirm it's bit-for-bit identical.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Save an array.</strong> Fill an <code>int</code> array, write it in one <code>fwrite</code>, then read it back in one <code>fread</code> into a fresh array and compare element by element. Check the return count both times.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Text vs binary size.</strong> Write the same array of 1000 ints two ways — once with <code>fprintf</code> (text) and once with <code>fwrite</code> (binary) — and compare the two file sizes on disk. Note which is smaller and think about why.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>Binary I/O writes raw bytes</strong> — <code>fwrite</code>/<code>fread</code> copy a value's memory directly, no text conversion.</li>
+        <li><strong>Open with <code>"wb"</code> / <code>"rb"</code></strong> (the <code>b</code>) so newlines aren't translated on Windows.</li>
+        <li><strong><code>fwrite(ptr, size, count, f)</code></strong> and <strong><code>fread(...)</code></strong> move <code>count</code> items; both return the item count — check <code>fread</code>'s.</li>
+        <li><strong>Read into the same type you wrote</strong>; a matching round-trip is exact and lossless.</li>
+        <li><strong>Not portable</strong> — endianness, type sizes, padding differ; never <code>fwrite</code> a pointer. Use it for same-program save/load.</li>
       </ul>
+      <p style="margin-top:14px;font-size:15px;opacity:0.95"><strong>🎉 That's Part IX!</strong> You can open, read, write, redirect, and pipe — files and the outside world. Next up: <strong>Part X — Putting It All Together</strong> (multi-file projects, the preprocessor, Makefiles, <code>gdb</code>, undefined behaviour, and two capstone projects).</p>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_9_5.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      9.5  Command-line arguments
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
-      <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+    <a href="C_Book_Lesson_10_1.html" class="nav-btn next">
+      <small>Part X →</small>
+      10.1  Multi-file projects
     </a>
   </div>
 
@@ -458,14 +458,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "Binary I/O writes your data's raw bytes — no converting to text. 💾",
+    "Text: \"1000000\" is 7 chars. Binary: 4 bytes. Open with \"wb\"/\"rb\". 🔢",
+    "fwrite(ptr, size, count, f) dumps count items straight to disk. ⬇️",
+    "fread(ptr, size, count, f) reads them back — check its return! ⬆️",
+    "Binary isn't portable: endianness, padding, type sizes differ. ⚠️",
+    "Compare text vs binary size and watch a roundtrip. 🔬",
+    "Never fwrite a pointer — the address is meaningless later. 🚫",
+    "Great for same-program save/load; risky as an interchange format. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +497,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 9.6 done — Part IX complete! +60 XP'); addXP(60); }, 400);
     }
   }
 
@@ -529,88 +529,80 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
+  // ===== Binary Inspector =====
+  let biTouched = false;
+  const biMode = document.getElementById('biMode');
+  const biVal = document.getElementById('biVal');
+  const biText = document.getElementById('biText');
+  const biBin = document.getElementById('biBin');
+  const biMsg = document.getElementById('biMsg');
+
+  const DATA = {
+    int: {
+      val: 'int n = 1000000;',
+      text: '"1000000"', textBytes: 7,
+      binHex: '40 42 0F 00', binBytes: 4,
+      msg: '<b>Binary wins here.</b> The text form is 7 characters; the raw <code>int</code> is a fixed <span class="grn">4 bytes</span> no matter how many digits. And it\'s exact — no parsing needed to read it back.'
     },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
+    dbl: {
+      val: 'double d = 3.14159265;',
+      text: '"3.14159265"', textBytes: 10,
+      binHex: '11 2D 44 54 FB 21 09 40', binBytes: 8,
+      msg: '<b>Binary is exact.</b> Text would print a rounded decimal (10 chars here, and you choose how many digits); the raw <code>double</code> is a fixed <span class="grn">8 bytes</span> that round-trips bit-for-bit — no precision lost.'
     },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
+    arr: {
+      val: 'int a[5] = {1, 22, 333, 4444, 55555};',
+      text: '"1 22 333 4444 55555"', textBytes: 19,
+      binHex: '01 00 00 00 · 16 00 00 00 · …', binBytes: 20,
+      msg: '<b>About the same size — but fixed.</b> Text is 19 bytes, binary is 5×4 = <span class="grn">20 bytes</span>. Binary doesn\'t shrink with small numbers, but every element is the same width, so reading it back is a single <code>fread</code> with no parsing.'
     },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
+    pt: {
+      val: 'struct Point { int x, y; } p = {3, 7};',
+      text: '"3 7"', textBytes: 3,
+      binHex: '03 00 00 00 · 07 00 00 00', binBytes: 8,
+      msg: '<b>Here text is smaller!</b> "3 7" is just 3 bytes; the struct is <span class="red">8 bytes</span> (two ints — and structs can carry invisible <em>padding</em> too). Binary trades size and readability for exact, fixed layout and speed — pick it for the right reasons, not to save space.'
     }
   };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function renderBI(mode) {
+    const d = DATA[mode];
+    biVal.innerHTML = `<span class="lbl">value:</span> ${d.val}`;
+    biText.innerHTML = `<span class="hdr">📝 text (fprintf)</span><span class="big">${d.textBytes} bytes</span><span class="rep">${d.text}</span>`;
+    biBin.innerHTML = `<span class="hdr">💾 binary (fwrite)</span><span class="big">${d.binBytes} bytes</span><span class="rep">${d.binHex}</span>`;
+    biMsg.innerHTML = d.msg;
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
+  biMode.querySelectorAll('.fsmode').forEach(b => b.addEventListener('click', (e) => {
+    biMode.querySelectorAll('.fsmode').forEach(x => x.classList.toggle('active', x === b));
+    renderBI(b.dataset.m);
+    if (!biTouched) { biTouched = true; addXP(5, e.clientX, e.clientY, '💾 Compared! +5 XP'); }
   }));
-  renderPSI('valid');
+  renderBI('int');
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: 'int arr[3] = {1, 2, 3};\nsize_t n = fwrite(arr, sizeof(int), 3, f);\nprintf("%zu", n);',
+      opts: ['3', '12', '1', '0'],
+      answer: '3',
+      why: 'fwrite returns the number of ITEMS written, not bytes. It wrote 3 ints, so it returns 3. (It moved 3 × sizeof(int) = 12 bytes, but the return value counts items.)'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: 'int x = 1000000;\n// how many BYTES does this write? (32-bit int)\nfwrite(&x, sizeof x, 1, f);',
+      opts: ['4', '7', '1', '1000000'],
+      answer: '4',
+      why: 'fwrite copies sizeof x = 4 raw bytes (one 32-bit int) — regardless of how many digits the number has. As text it would have been 7 characters.'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: '// the file contains exactly 2 ints\nint buf[5];\nsize_t got = fread(buf, sizeof(int), 5, f);\nprintf("%zu", got);   // we asked for 5',
+      opts: ['2', '5', '0', 'error'],
+      answer: '2',
+      why: 'fread returns how many complete items it actually read. The file only had 2 ints, so even though we asked for 5, it returns 2 — that\'s how you detect a short file.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: 'double d = 3.5;\nfwrite(&d, sizeof d, 1, fw);   // write to file\ndouble e;\nfread(&e, sizeof e, 1, fr);    // read it back\nprintf("%g", e);',
+      opts: ['3.5', '3', '0', 'garbage'],
+      answer: '3.5',
+      why: 'Writing then reading the same type copies the exact 8 bytes of the double both ways, so e is bit-for-bit equal to d → 3.5. Binary round-trips are lossless.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +617,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +642,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Remember: fwrite/fread return the ITEM count, sizeof gives the byte size, and a matching round-trip is exact.`;
           breakStreak();
         }
       });
@@ -669,14 +661,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>fwrite</code> copies the raw bytes exactly as they sit in <em>this</em> machine\'s memory. Another machine may store ints in a different byte order (endianness), use different type sizes, or pad structs differently — so the same bytes mean something else. That\'s why binary is for same-program save/load, and text (or a defined format) is for sharing.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Endianness, type sizes, and padding make binary non-portable.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. Binary files can be sent anywhere — the problem is how they\'re <em>interpreted</em>: endianness, type sizes, and struct padding differ across machines and compilers.';
       firstTry = false; breakStreak();
     }
   }));

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 10.6 — Capstone: Contacts CLI · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,8 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  pre.code .ty { color: #67e8f9; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +103,35 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Contacts CLI */
+  .cc-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cc-in { flex: 1; min-width: 110px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 12px; font: inherit; font-family: var(--mono); font-size: 13px; color: var(--ink); outline: none; }
+  .cc-in:focus { border-color: var(--orange); }
+  .cc-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cc-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 9px 13px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12px; border-radius: 9px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .cc-btn:hover { transform: translateY(-2px); }
+  .cc-btn.ghost { background: white; color: var(--orange-deep); border: 2px solid var(--orange-light); }
+  .cc-btn.danger { background: linear-gradient(135deg, var(--red), #b91c1c); }
+  .cc-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cc-box { flex: 1; min-width: 180px; background: var(--terminal); border-radius: 12px; padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; color: #e2e8f0; line-height: 1.7; min-height: 110px; border: 2px solid #334155; }
+  .cc-box.mem { border-color: var(--orange-light); }
+  .cc-box.file { border-color: var(--green); }
+  .cc-box .hdr { color: #94a3b8; font-size: 11px; display: block; margin-bottom: 6px; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+  .cc-box.mem .hdr { color: #fdba74; } .cc-box.file .hdr { color: #86efac; }
+  .cc-row { display: flex; gap: 8px; }
+  .cc-row .nm { color: #e2e8f0; min-width: 80px; }
+  .cc-row .ph { color: #fde047; }
+  .cc-row.hit { background: rgba(250,204,21,0.18); border-radius: 4px; }
+  .cc-empty { color: #475569; font-style: italic; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +209,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Capstone time! We'll build a real <strong>contacts manager</strong> — structs, a menu loop, and saving to a file. Everything you've learned, together. 📇
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 10.6</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 70 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">🏆 PART X &middot; CAPSTONE PROJECT</span>
+    <h1>Capstone: A Contacts CLI</h1>
+    <p class="hero-sub">Time to put it all together. We'll build a complete little program — a <strong>contacts manager</strong> you run in the terminal: add people, list them, search, delete, and save everything to a file so it's there next time. Structs, arrays, a menu loop, string handling, and file I/O — the whole C book in one project you can actually compile and use.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -238,117 +237,168 @@
 
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
-    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <div class="step-label"><span class="step-num">1</span> What we're building</div>
+    <h2>The whole book in one program 📇</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      A <strong>contacts CLI</strong>: a text-menu program that stores a list of people (name + phone), lets you <em>add</em>, <em>list</em>, <em>find</em>, and <em>delete</em> them, and <em>saves</em> to a file so your contacts survive between runs. It's small — a couple hundred lines — but it exercises nearly everything: a <code>struct</code> for each contact (Part VIII), an array to hold them, a <code>while</code> menu loop with <code>switch</code> (Part III), string compare/copy (Part V), and reading &amp; writing a file (Part IX). This lesson walks the design piece by piece; the interactive runs a working version so you can see it behave before you build your own.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>The aim isn't new syntax — it's seeing how the parts you know snap together into something real.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> The data model</div>
+    <h2>A struct and an array 🗂️</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>One <code>struct</code> describes a contact; a fixed-size array (plus a count) holds them all:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code"><span class="cm">// contacts.h</span>
+<span class="kw">#define</span> MAX_CONTACTS 100
+<span class="kw">#define</span> NAME_LEN 50
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+<span class="kw">typedef</span> <span class="kw">struct</span> {
+    <span class="kw">char</span> name[NAME_LEN];
+    <span class="kw">char</span> phone[NAME_LEN];
+} <span class="ty">Contact</span>;
+
+<span class="kw">typedef</span> <span class="kw">struct</span> {
+    <span class="ty">Contact</span> items[MAX_CONTACTS];
+    <span class="kw">int</span> count;            <span class="hl">// how many are actually used</span>
+} <span class="ty">Book</span>;</pre>
+
+    <div class="new-content">
+      A <code>Contact</code> bundles a name and phone (fixed-length <code>char</code> arrays — simple and safe to <code>fwrite</code> later). The <code>Book</code> wraps the whole collection: a fixed array <code>items</code> and a <code>count</code> of how many slots are in use. Keeping the count <em>with</em> the array is the classic C idiom — every operation works on the first <code>count</code> entries and ignores the rest. Using a fixed cap (<code>MAX_CONTACTS</code>) keeps this capstone simple; a real one might grow with <code>malloc</code>/<code>realloc</code> (Part VII), which is a great stretch goal.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> The menu loop</div>
+    <h2>Read a choice, dispatch, repeat 🔁</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>The heart of any CLI tool: loop forever, show options, read the user's pick, and act on it:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
+    <pre class="code"><span class="kw">int</span> main(<span class="kw">void</span>) {
+    <span class="ty">Book</span> book = { .count = 0 };
+    load(&amp;book, <span class="str">"contacts.dat"</span>);   <span class="cm">// restore saved contacts</span>
 
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+    <span class="kw">int</span> choice;
+    <span class="kw">do</span> {
+        printf(<span class="str">"\n1 Add  2 List  3 Find  4 Delete  5 Save  0 Quit\n&gt; "</span>);
+        <span class="kw">if</span> (scanf(<span class="str">"%d"</span>, &amp;choice) != 1) <span class="kw">break</span>;   <span class="hl">// bad input → stop</span>
+        <span class="kw">switch</span> (choice) {
+            <span class="kw">case</span> 1: add_contact(&amp;book);    <span class="kw">break</span>;
+            <span class="kw">case</span> 2: list_contacts(&amp;book);  <span class="kw">break</span>;
+            <span class="kw">case</span> 3: find_contact(&amp;book);   <span class="kw">break</span>;
+            <span class="kw">case</span> 4: delete_contact(&amp;book); <span class="kw">break</span>;
+            <span class="kw">case</span> 5: save(&amp;book, <span class="str">"contacts.dat"</span>); <span class="kw">break</span>;
+        }
+    } <span class="kw">while</span> (choice != 0);
+}</pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      A <code>do…while</code> loop is natural here — show the menu at least once, keep going until the user picks <code>0</code>. Each menu number maps through a <code>switch</code> to a function that does one job, passing <code>&amp;book</code> so the functions can read and modify the shared collection (pointers to a struct, Part VIII). Checking <code>scanf</code>'s return (<code>!= 1</code>) guards against non-numeric input — a small but important robustness habit.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> The operations</div>
+    <h2>Add, find, delete 🛠️</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>Each operation is a short function over <code>book-&gt;items</code> and <code>book-&gt;count</code>. Here are the three that carry the logic:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
+    <pre class="code"><span class="kw">void</span> add_contact(<span class="ty">Book</span> *b) {
+    <span class="kw">if</span> (b-&gt;count &gt;= MAX_CONTACTS) { puts(<span class="str">"Full!"</span>); <span class="kw">return</span>; }  <span class="hl">// bounds!</span>
+    <span class="ty">Contact</span> *c = &amp;b-&gt;items[b-&gt;count];
+    printf(<span class="str">"Name: "</span>);  scanf(<span class="str">"%49s"</span>, c-&gt;name);    <span class="hl">// %49s = no overflow</span>
+    printf(<span class="str">"Phone: "</span>); scanf(<span class="str">"%49s"</span>, c-&gt;phone);
+    b-&gt;count++;
 }
 
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+<span class="kw">int</span> find_index(<span class="ty">Book</span> *b, <span class="kw">const</span> <span class="kw">char</span> *name) {
+    <span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; b-&gt;count; i++)
+        <span class="kw">if</span> (strcmp(b-&gt;items[i].name, name) == 0) <span class="kw">return</span> i;
+    <span class="kw">return</span> -1;                       <span class="hl">// not found</span>
+}
+
+<span class="kw">void</span> delete_at(<span class="ty">Book</span> *b, <span class="kw">int</span> i) {
+    b-&gt;items[i] = b-&gt;items[b-&gt;count - 1];   <span class="hl">// move last into the gap</span>
+    b-&gt;count--;                            <span class="cm">// shrink</span>
+}</pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      Three small, focused functions. <code>add</code> checks the array isn't full <em>before</em> writing (avoiding the out-of-bounds UB from 10.5) and uses <code>%49s</code> so <code>scanf</code> can't overflow the 50-char buffer. <code>find_index</code> walks the used entries with <code>strcmp</code> and returns the index or <code>-1</code> — the universal "not found" convention. <code>delete_at</code> uses a neat trick: copy the <em>last</em> contact into the deleted slot and drop the count by one (order doesn't matter for a contact list, and it avoids shifting everything down). Each does one thing well — easy to test, easy to read.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Persistence &amp; building</div>
+    <h2>Save, load, and compile 💾</h2>
 
-    <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
-      </tbody>
-    </table>
+    <p>To survive between runs, write the whole <code>Book</code> to a file and read it back — binary I/O (9.6) makes this two calls. And a tiny Makefile (10.3) builds it:</p>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <pre class="code"><span class="kw">void</span> save(<span class="ty">Book</span> *b, <span class="kw">const</span> <span class="kw">char</span> *path) {
+    <span class="kw">FILE</span> *f = fopen(path, <span class="str">"wb"</span>);          <span class="cm">// binary write</span>
+    <span class="kw">if</span> (!f) { perror(<span class="str">"save"</span>); <span class="kw">return</span>; }
+    fwrite(&amp;b-&gt;count, <span class="kw">sizeof</span> b-&gt;count, 1, f);          <span class="hl">// how many</span>
+    fwrite(b-&gt;items, <span class="kw">sizeof</span> b-&gt;items[0], b-&gt;count, f);  <span class="hl">// the contacts</span>
+    fclose(f);
+}
+<span class="kw">void</span> load(<span class="ty">Book</span> *b, <span class="kw">const</span> <span class="kw">char</span> *path) {
+    <span class="kw">FILE</span> *f = fopen(path, <span class="str">"rb"</span>);
+    <span class="kw">if</span> (!f) <span class="kw">return</span>;                          <span class="cm">// no file yet = empty book, fine</span>
+    fread(&amp;b-&gt;count, <span class="kw">sizeof</span> b-&gt;count, 1, f);
+    fread(b-&gt;items, <span class="kw">sizeof</span> b-&gt;items[0], b-&gt;count, f);
+    fclose(f);
+}</pre>
+
+    <div class="trap">
+      <h4>🚨 Save the count first, and read back the same way you wrote</h4>
+      <p>The save/load pair must agree exactly. Write the <code>count</code> first, then that many <code>Contact</code>s; on load, read the <code>count</code> first so you know how many to read back. Mismatch the order or the types and you'll read garbage (the binary-I/O caution from 9.6). A missing file on first run isn't an error — <code>load</code> just returns and you start with an empty book. Build it all with a Makefile: <code>contacts: main.o contacts.o</code> linking the two objects, exactly as in 10.3. (Binary save is simplest here; a real app might use a text format so the file is portable and human-readable — a good stretch.)</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Contacts CLI</div>
+    <h2>Run the finished program 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Contacts CLI</strong> is a working version of the program above — add people, list, find, delete, and save/load to a simulated file. <strong>Predict the Output</strong> tests the logic of the functions you just read.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">📇 Contacts CLI</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Contacts CLI</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- CONTACTS CLI -->
+      <div class="tab-panel active" id="tab-fs">
+        <div class="cc-form">
+          <input class="cc-in" id="ccName" type="text" placeholder="name" spellcheck="false">
+          <input class="cc-in" id="ccPhone" type="text" placeholder="phone" spellcheck="false">
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="cc-acts">
+          <button class="cc-btn" id="ccAdd">1 · add</button>
+          <button class="cc-btn ghost" id="ccFind">3 · find (by name)</button>
+          <button class="cc-btn danger" id="ccDel">4 · delete (by name)</button>
+          <button class="cc-btn" id="ccSave">5 · save</button>
+          <button class="cc-btn ghost" id="ccLoad">load</button>
+          <button class="cc-btn ghost" id="ccReset">reset ↺</button>
+        </div>
+        <div class="cc-grid">
+          <div class="cc-box mem" id="ccMem"></div>
+          <div class="cc-box file" id="ccFile"></div>
+        </div>
+        <div class="fs-msg" id="ccMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +408,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +423,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        Why does the <code>Book</code> struct keep a <code>count</code> alongside the <code>items</code> array?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>So the program knows <strong>how many slots are actually in use</strong> — every operation works on the first <code>count</code> entries and ignores the unused rest</span></button>
+      <button class="opt" data-correct="false"><span>C automatically tracks array length, so <code>count</code> is just a backup</span></button>
+      <button class="opt" data-correct="false"><span>To make the struct bigger so it saves faster</span></button>
+      <button class="opt" data-correct="false"><span>Because <code>strcmp</code> needs it</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: a C array doesn't remember how many elements you've filled.</div>
     </div>
   </section>
 
@@ -391,66 +441,66 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">📏</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Adding without checking <code>count &lt; MAX</code></strong>
+        <small>Writing <code>items[count]</code> when the array is full is out-of-bounds UB (10.5). Always bounds-check before adding, and use <code>%49s</code> so <code>scanf</code> can't overflow a 50-char name.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">💾</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Save/load that don't match</strong>
+        <small>Read back exactly what you wrote, in the same order and types — count first, then that many contacts. Mismatch and you load garbage. And don't treat a missing file on first run as an error.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">🔁</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Forgetting to handle "not found"</strong>
+        <small><code>find_index</code> returns <code>-1</code> when there's no match. Check for it before using the index — otherwise find/delete on a missing name reads a bogus slot.</small>
       </div>
     </div>
 
-    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+    <h3 style="margin-top:22px;font-size:18px">Build it yourself 💪</h3>
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Type it in and run it.</strong> Put the code above into <code>contacts.h</code>, <code>contacts.c</code>, and <code>main.c</code>, write the Makefile, and <code>make</code> it. Add a few contacts, list them, save, quit, re-run — confirm they're still there.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Add an "edit" option.</strong> Add menu item <code>6 Edit</code> that finds a contact by name and lets you change the phone number. Reuse <code>find_index</code>, and handle the not-found case cleanly.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Grow it &amp; harden it.</strong> Switch from a fixed array to a <code>malloc</code>/<code>realloc</code>-grown one (Part VII) so there's no <code>MAX_CONTACTS</code>; switch the file format to text (one <code>name,phone</code> per line) so it's portable; and run the whole thing under AddressSanitizer to confirm it's clean.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>A real program is your toolkit combined</strong> — struct + array + count, a menu loop, string ops, and file I/O.</li>
+        <li><strong>Model the data first:</strong> a <code>Contact</code> struct and a <code>Book</code> that pairs an array with its <code>count</code>.</li>
+        <li><strong>One function per operation</strong> (add/list/find/delete), each taking <code>&amp;book</code> — small, focused, testable.</li>
+        <li><strong>Persist with save/load</strong> — write the count then the contacts, read them back the same way; a missing file just means "empty."</li>
+        <li><strong>Be defensive:</strong> bounds-check before adding, limit <code>scanf</code> widths, and handle "not found" (<code>-1</code>).</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_10_5.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      10.5  Undefined behaviour
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
-      <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+    <a href="C_Book_Lesson_10_7.html" class="nav-btn next">
+      <small>Final lesson →</small>
+      10.7  Capstone — word counter
     </a>
   </div>
 
@@ -458,14 +508,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "Capstone: a contacts manager — the whole C book in one program. 📇",
+    "Model the data: a Contact struct, and a Book = array + count. 🗂️",
+    "The CLI heart: loop, show a menu, read a choice, dispatch. 🔁",
+    "One small function per operation: add, find, delete. 🛠️",
+    "Save the count then the contacts; load reads them back. 💾",
+    "Run the finished program — add, find, delete, save. 🔬",
+    "Bounds-check, limit scanf widths, handle 'not found'. 🛡️",
+    "struct + array + loop + files = a real, useful tool. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +547,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Capstone 10.6 complete! +60 XP'); addXP(60); }, 400);
     }
   }
 
@@ -529,88 +579,118 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
-  };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
+  // ===== Contacts CLI =====
+  const MAXC = 5;   // small cap so "Full!" is reachable in the demo
+  let items = [];   // {name, phone}
+  let file = null;  // simulated contacts.dat: array or null
+  let lastHit = -1, ccTouched = false;
+  const ccName = document.getElementById('ccName');
+  const ccPhone = document.getElementById('ccPhone');
+  const ccMem = document.getElementById('ccMem');
+  const ccFile = document.getElementById('ccFile');
+  const ccMsg = document.getElementById('ccMsg');
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function renderList(box, arr, hdr, hitIdx) {
+    let body = `<span class="hdr">${hdr}</span>`;
+    if (!arr || arr.length === 0) { body += `<span class="cc-empty">(empty)</span>`; }
+    else arr.forEach((c, i) => {
+      body += `<div class="cc-row${i === hitIdx ? ' hit' : ''}"><span class="nm">${esc(c.name)}</span><span class="ph">${esc(c.phone)}</span></div>`;
+    });
+    box.innerHTML = body;
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
-  }));
-  renderPSI('valid');
+  function render() {
+    renderList(ccMem, items, `Book (in memory) · count = ${items.length}`, lastHit);
+    renderList(ccFile, file, file === null ? 'contacts.dat (no file yet)' : `contacts.dat · count = ${file.length}`, -1);
+  }
+  function findIndex(name) {
+    for (let i = 0; i < items.length; i++) if (items[i].name === name) return i;
+    return -1;
+  }
+
+  document.getElementById('ccAdd').addEventListener('click', (e) => {
+    const n = ccName.value.trim(), p = ccPhone.value.trim();
+    lastHit = -1;
+    if (!n || !p) { ccMsg.innerHTML = `Enter both a <b>name</b> and a <b>phone</b> first.`; render(); return; }
+    if (items.length >= MAXC) { ccMsg.innerHTML = `<b class="red">Full!</b> The array holds at most ${MAXC} (this demo's MAX_CONTACTS). <code>add_contact</code> bounds-checks and refuses — no out-of-bounds write.`; render(); return; }
+    items.push({ name: n, phone: p });
+    ccName.value = ''; ccPhone.value = '';
+    ccMsg.innerHTML = `<b>Added</b> "${esc(n)}". <code>count</code> is now <span class="grn">${items.length}</span>. (Not saved to the file until you hit <code>save</code>.)`;
+    render();
+    if (!ccTouched) { ccTouched = true; addXP(5, e.clientX, e.clientY, '📇 Added! +5 XP'); }
+  });
+  document.getElementById('ccFind').addEventListener('click', (e) => {
+    const n = ccName.value.trim();
+    const i = findIndex(n);
+    lastHit = i;
+    ccMsg.innerHTML = i >= 0
+      ? `<b>Found</b> "${esc(n)}" at index <span class="grn">${i}</span> — phone ${esc(items[i].phone)}. (<code>find_index</code> returned ${i}.)`
+      : `<b>Not found.</b> No contact named "${esc(n)}" — <code>find_index</code> returned <span class="red">-1</span>. Type a name above and try again.`;
+    render();
+    if (!ccTouched) { ccTouched = true; addXP(5, e.clientX, e.clientY, '🔍 Searched! +5 XP'); }
+  });
+  document.getElementById('ccDel').addEventListener('click', (e) => {
+    const n = ccName.value.trim();
+    const i = findIndex(n);
+    lastHit = -1;
+    if (i < 0) { ccMsg.innerHTML = `<b>Can't delete</b> "${esc(n)}" — not found (index -1). Always check for -1 before deleting.`; render(); return; }
+    const lastName = items[items.length - 1].name;
+    items[i] = items[items.length - 1];   // move last into the gap
+    items.pop();                          // shrink count
+    ccMsg.innerHTML = `<b>Deleted</b> "${esc(n)}". <code>delete_at</code> moved the last contact${lastName !== n ? ' ("' + esc(lastName) + '")' : ''} into slot ${i} and dropped <code>count</code> to <span class="grn">${items.length}</span>.`;
+    render();
+    if (!ccTouched) { ccTouched = true; addXP(5, e.clientX, e.clientY, '🗑️ Deleted! +5 XP'); }
+  });
+  document.getElementById('ccSave').addEventListener('click', (e) => {
+    file = items.map(c => ({ name: c.name, phone: c.phone }));
+    lastHit = -1;
+    ccMsg.innerHTML = `<b>Saved</b> ${file.length} contact(s) to <code>contacts.dat</code> (count + the contacts, via <code>fwrite</code>). They'll survive a "reload".`;
+    render();
+    if (!ccTouched) { ccTouched = true; addXP(5, e.clientX, e.clientY, '💾 Saved! +5 XP'); }
+  });
+  document.getElementById('ccLoad').addEventListener('click', (e) => {
+    lastHit = -1;
+    if (file === null) { ccMsg.innerHTML = `<b>No file yet.</b> <code>load</code> opens <code>contacts.dat</code> for "rb" — it doesn't exist, so it just returns and the book stays as-is. (Not an error.)`; render(); return; }
+    items = file.map(c => ({ name: c.name, phone: c.phone }));
+    ccMsg.innerHTML = `<b>Loaded</b> ${items.length} contact(s) from <code>contacts.dat</code> — like quitting and re-running the program. <code>count</code> = <span class="grn">${items.length}</span>.`;
+    render();
+    if (!ccTouched) { ccTouched = true; addXP(5, e.clientX, e.clientY, '📂 Loaded! +5 XP'); }
+  });
+  document.getElementById('ccReset').addEventListener('click', () => {
+    items = []; file = null; lastHit = -1; ccName.value=''; ccPhone.value='';
+    ccMsg.innerHTML = `Reset — empty book, no file. Add a few contacts, then save / load to see persistence.`;
+    render();
+  });
+  // seed with one example
+  items = [{ name: 'Ada', phone: '555-0100' }];
+  render();
+  ccMsg.innerHTML = `Try it: add contacts (cap ${MAXC}), <code>find</code>/<code>delete</code> by the name in the box, then <code>save</code> and <code>load</code> to see it persist.`;
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: '// find_index returns the index, or -1\nint find_index(Book *b, const char *name) {\n  for (int i = 0; i < b->count; i++)\n    if (strcmp(b->items[i].name, name) == 0)\n      return i;\n  return -1;\n}\n// book has: Ada, Bel, Cy.  find_index(b, "Zoe") returns?',
+      opts: ['-1', '0', '3', 'crash'],
+      answer: '-1',
+      why: 'No entry matches "Zoe", so the loop finishes without returning and the function returns -1 — the "not found" signal you must check for.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: '// delete_at moves the last item into the gap\nvoid delete_at(Book *b, int i) {\n  b->items[i] = b->items[b->count - 1];\n  b->count--;\n}\n// book: [Ada, Bel, Cy], count 3. delete_at(b, 0).\n// What is items[0] and count now?',
+      opts: ['Cy, count 2', 'Bel, count 2', 'Ada, count 3', 'empty, count 0'],
+      answer: 'Cy, count 2',
+      why: 'The last item (Cy) is copied into slot 0, overwriting Ada, then count drops to 2. Order isn\'t preserved, but it\'s O(1) — no shifting.'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: '// add_contact guards the array\nvoid add_contact(Book *b) {\n  if (b->count >= MAX_CONTACTS) { puts("Full!"); return; }\n  ...\n}\n// MAX_CONTACTS is 100 and count is already 100. add_contact does?',
+      opts: ['Prints "Full!" and returns — no write', 'Overwrites items[100]', 'Crashes', 'Grows the array'],
+      answer: 'Prints "Full!" and returns — no write',
+      why: 'count >= MAX_CONTACTS is true, so it prints "Full!" and returns before writing. That bounds check prevents the out-of-bounds UB of items[100].'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: '// save writes count, then the contacts:\nfwrite(&b->count, sizeof b->count, 1, f);\nfwrite(b->items, sizeof b->items[0], b->count, f);\n// On load you must read back, in order:',
+      opts: ['count first, then count contacts', 'all 100 items, then count', 'just the items', 'count twice'],
+      answer: 'count first, then count contacts',
+      why: 'Read back exactly what you wrote, same order: the count first (so you know how many), then that many Contact records. Mismatched order/size = garbage.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +705,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +730,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Trace the code over the given book: find returns -1 when absent, delete swaps in the last item, add bounds-checks, save/load must mirror each other.`;
           breakStreak();
         }
       });
@@ -669,14 +749,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> A C array has a fixed capacity but doesn\'t track how many slots you\'ve actually filled. Pairing the array with a <code>count</code> lets every operation work on exactly the used entries — add appends at <code>items[count]</code> then bumps <code>count</code>, loops run <code>i &lt; count</code>, and save writes <code>count</code> records. The array + count idiom is everywhere in C.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> <code>count</code> tracks how many slots are in use.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. C arrays don\'t remember how many elements you\'ve used — you track that yourself with <code>count</code>, so operations touch only the filled entries.';
       firstTry = false; breakStreak();
     }
   }));

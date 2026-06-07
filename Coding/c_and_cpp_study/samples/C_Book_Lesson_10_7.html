@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 10.7 — Capstone: Word Counter (wc) · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +102,23 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* wc live */
+  .wc-ta { width: 100%; min-height: 120px; background: var(--terminal); color: #e2e8f0; border: 2px solid var(--orange-light); border-radius: 12px; padding: 12px 14px; font-family: var(--mono); font-size: 13px; line-height: 1.6; outline: none; resize: vertical; }
+  .wc-ta:focus { border-color: var(--orange); }
+  .wc-counts { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+  .wc-card { flex: 1; min-width: 90px; background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 10px 12px; text-align: center; }
+  .wc-card .n { font-family: var(--mono); font-size: 26px; font-weight: 800; color: var(--orange-deep); }
+  .wc-card .l { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-dim); }
+  .wc-out { background: #0b1220; border-radius: 10px; padding: 8px 14px; font-family: var(--mono); font-size: 13px; color: #86efac; margin-bottom: 8px; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +196,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    The final lesson! We'll build <code>wc</code> — count lines, words &amp; characters with a tiny state machine. Then... you've finished the C book! 🏁
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 10.7</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 72 / 72 · FINALE</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">🏆 PART X &middot; CAPSTONE &middot; THE FINALE</span>
+    <h1>Capstone: A Word Counter (wc)</h1>
+    <p class="hero-sub">The last build, and a fitting one: a clone of the Unix classic <code>wc</code>, which counts <strong>lines, words, and characters</strong>. It reads from a file or straight from <code>stdin</code>, and the word count uses a neat little <strong>state machine</strong> — a few lines that capture a surprising amount of cleverness. Finish this and you've finished the C book.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -238,117 +224,141 @@
 
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
-    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <div class="step-label"><span class="step-num">1</span> What we're building</div>
+    <h2>Lines, words, characters 🏁</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      <code>wc</code> ("word count") is one of the oldest, most-used Unix tools: give it text and it reports how many <strong>lines</strong>, <strong>words</strong>, and <strong>characters</strong> it contains. Ours will do the same, reading either from a filename on the command line or from <code>stdin</code> (so it works in a pipe). It's a perfect finale because it's tiny but touches the whole back half of the book: reading a stream character by character (Part IX), a <code>while</code> loop with a small <strong>state machine</strong> for words (Part III), <code>argc</code>/<code>argv</code> to pick the input (10), and <code>stdin</code> for pipes (10). Master this loop and you understand how a huge family of text tools works.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>The clever bit is the word count — and it's only a few lines once you see the trick.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> The counting idea</div>
+    <h2>One pass, three counters 🔢</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>Read the input one character at a time. Characters and lines are easy; words take a tiny bit of state:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <ul>
+      <li><strong>Characters:</strong> add 1 for <em>every</em> character read.</li>
+      <li><strong>Lines:</strong> add 1 each time you see a <code>'\n'</code>.</li>
+      <li><strong>Words:</strong> add 1 each time you cross from whitespace <em>into</em> a non-whitespace character.</li>
+    </ul>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+    <div class="new-content">
+      The word rule is the insight. A "word" is a run of non-blank characters, so instead of trying to find where words <em>end</em>, you count where they <em>begin</em> — the moment you step from a space (or newline/tab) onto a real character. To detect that moment you remember whether you were already "inside a word" with a flag, <code>in_word</code>. That single boolean turns word-counting into a two-state machine: <em>outside a word</em> or <em>inside one</em>, with a count bumped on each outside→inside transition.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> The state machine</div>
+    <h2>in_word: the whole trick ⚙️</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>Here's the core loop. <code>getchar</code> returns each character (or <code>EOF</code> at the end); <code>isspace</code> (from <code>&lt;ctype.h&gt;</code>) tests for blanks:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
+    <pre class="code"><span class="kw">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;ctype.h&gt;</span>
 
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
-
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+<span class="kw">void</span> count(<span class="kw">FILE</span> *f, <span class="kw">long</span> *lines, <span class="kw">long</span> *words, <span class="kw">long</span> *chars) {
+    <span class="kw">int</span> c, in_word = 0;
+    <span class="kw">while</span> ((c = fgetc(f)) != EOF) {
+        (*chars)++;                       <span class="hl">// every char counts</span>
+        <span class="kw">if</span> (c == <span class="str">'\n'</span>) (*lines)++;        <span class="hl">// newline ends a line</span>
+        <span class="kw">if</span> (isspace(c)) {
+            in_word = 0;                  <span class="cm">// we're between words now</span>
+        } <span class="kw">else if</span> (!in_word) {
+            in_word = 1;                  <span class="hl">// whitespace → word: a NEW word</span>
+            (*words)++;
+        }
+    }
+}</pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      Walk the logic: every character bumps <code>chars</code>; a <code>'\n'</code> bumps <code>lines</code>. For words, if the character is whitespace we set <code>in_word = 0</code> (we're outside a word); otherwise, if we were <em>not</em> already in a word, we've just started one — set <code>in_word = 1</code> and bump <code>words</code>. Crucially, once <code>in_word</code> is 1, more letters don't re-count — only the <em>first</em> letter of each run does. That's why multiple spaces between words, or leading spaces, never inflate the total. The counters are passed by pointer (Part VI) so <code>count</code> can update the caller's variables.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> File or stdin</div>
+    <h2>Pick the input 🔀</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>The same <code>count</code> function works on any <code>FILE *</code> — so <code>main</code> just chooses what to hand it: a file named on the command line, or <code>stdin</code> if none was given:</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
+    <pre class="code"><span class="kw">int</span> main(<span class="kw">int</span> argc, <span class="kw">char</span> *argv[]) {
+    <span class="kw">long</span> l = 0, w = 0, ch = 0;
 
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+    <span class="kw">if</span> (argc &lt; 2) {
+        count(stdin, &amp;l, &amp;w, &amp;ch);          <span class="hl">// no filename → read stdin (pipes!)</span>
+    } <span class="kw">else</span> {
+        <span class="kw">FILE</span> *f = fopen(argv[1], <span class="str">"r"</span>);     <span class="cm">// filename given → open it</span>
+        <span class="kw">if</span> (!f) { perror(argv[1]); <span class="kw">return</span> 1; }
+        count(f, &amp;l, &amp;w, &amp;ch);
+        fclose(f);
+    }
+    printf(<span class="str">"%ld %ld %ld\n"</span>, l, w, ch);     <span class="cm">// lines words chars (like real wc)</span>
+}</pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      This is the Unix-tool shape from 10.x: with no arguments, read <code>stdin</code> so the program slots into a pipe (<code>cat big.txt | ./wc</code>); with a filename, open that file. Because <code>count</code> takes a <code>FILE *</code>, both cases reuse the exact same logic — <code>stdin</code> is just another <code>FILE *</code>. Real <code>wc</code> loops over <em>multiple</em> filenames and prints a totals line; that's a natural extension once this works.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Edge cases &amp; building</div>
+    <h2>The fiddly bits 🧪</h2>
+
+    <p>A few details decide whether your counts match real <code>wc</code> exactly:</p>
 
     <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
+      <thead><tr><th>Input</th><th>lines · words · chars</th></tr></thead>
       <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
+        <tr><td class="mono plain">"hello world\n"</td><td class="mono plain">1 · 2 · 12</td></tr>
+        <tr><td class="mono plain">"a  b " (two spaces, trailing)</td><td class="mono plain">0 · 2 · 5</td></tr>
+        <tr><td class="mono plain">"" (empty)</td><td class="mono plain">0 · 0 · 0</td></tr>
       </tbody>
     </table>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <div class="trap">
+      <h4>🚨 Lines = newlines counted, so a last line with no <code>'\n'</code> isn't counted</h4>
+      <p>The classic surprise: <code>wc</code> counts <em>newline characters</em>, not "lines of text." So <code>"a\nb"</code> reports <strong>1</strong> line (one <code>'\n'</code>), even though you'd say there are two lines — the final <code>b</code> has no newline after it. That matches real <code>wc</code>. Two more details: use <code>int c</code> (not <code>char</code>) to hold <code>fgetc</code>'s result, because <code>EOF</code> doesn't fit in a <code>char</code> and you'd never detect end-of-file; and multiple/leading/trailing spaces never over-count words thanks to the <code>in_word</code> flag (whitespace just resets it). Build it with the Makefile habit from 10.3: <code>cc -Wall -g wc.c -o wc</code>, then test against the real <code>wc</code> to confirm your numbers agree.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Live wc</div>
+    <h2>Type and watch it count 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. <strong>Live wc</strong> runs the exact algorithm above on whatever you type — lines, words, and characters update live, computed with the same <code>in_word</code> state machine. <strong>Predict the Output</strong> tests the counting rules.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">🏁 Live wc</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Live wc</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- LIVE WC -->
+      <div class="tab-panel active" id="tab-fs">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-bottom:6px">type some text (newlines count as lines):</div>
+        <textarea class="wc-ta" id="wcText" spellcheck="false">the quick brown fox
+jumps over the lazy dog</textarea>
+        <div class="wc-counts">
+          <div class="wc-card"><div class="n" id="wcL">0</div><div class="l">lines</div></div>
+          <div class="wc-card"><div class="n" id="wcW">0</div><div class="l">words</div></div>
+          <div class="wc-card"><div class="n" id="wcC">0</div><div class="l">chars</div></div>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="wc-out" id="wcOut"></div>
+        <div class="fs-msg" id="wcMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -358,7 +368,7 @@
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What does wc report?</div>
         <div class="scenario-nav">
           <button class="scen-btn" id="poNext" disabled>Next program →</button>
         </div>
@@ -373,13 +383,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        How does the word counter avoid counting <code>"a&nbsp;&nbsp;&nbsp;b"</code> (three spaces) as more than 2 words?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>It counts only the transition from whitespace <strong>into</strong> a non-space (an <code>in_word</code> flag) — extra spaces just keep <code>in_word</code> at 0, so they don't add words</span></button>
+      <button class="opt" data-correct="false"><span>It deletes duplicate spaces from the input first</span></button>
+      <button class="opt" data-correct="false"><span>It counts spaces and divides by the average word length</span></button>
+      <button class="opt" data-correct="false"><span>It can't — that input really does count as 4 words</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: count where words <em>begin</em>, not the spaces between them.</div>
     </div>
   </section>
 
@@ -391,66 +401,67 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">🔡</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
+        <strong>Using <code>char c</code> instead of <code>int c</code></strong>
+        <small><code>fgetc</code>/<code>getchar</code> return an <code>int</code> so they can return <code>EOF</code>. Store it in a <code>char</code> and the <code>EOF</code> test can fail — the loop may never end (or end early).</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🚫</div>
+      <div class="mistake-icon">🔁</div>
       <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Counting every non-space as a word</strong>
+        <small>Without the <code>in_word</code> flag you'd count each letter, not each word. Bump <code>words</code> only on the whitespace→non-whitespace transition.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">👻</div>
+      <div class="mistake-icon">↩️</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Expecting the last line without <code>\n</code> to count</strong>
+        <small><code>wc</code> counts newline characters, so a final line with no trailing <code>'\n'</code> isn't counted as a line. That's correct behaviour — match it.</small>
       </div>
     </div>
 
-    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+    <h3 style="margin-top:22px;font-size:18px">Build it &amp; extend 💪</h3>
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>Make it real.</strong> Put the code into <code>wc.c</code>, build with <code>cc -Wall -g wc.c -o wc</code>, and run <code>./wc &lt; somefile.txt</code> and <code>echo "hi there" | ./wc</code>. Compare your output to the system <code>wc</code>.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Filename + flags.</strong> Accept a filename argument (open it, with a clean error if it won't open), and add <code>-l</code>/<code>-w</code>/<code>-c</code> flags that print only the requested count — parsing <code>argv</code> as in 10.5… er, 9.5.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Multiple files + totals.</strong> Loop over several filenames, printing each file's counts and a final <code>total</code> line, exactly like real <code>wc</code>. Run it under AddressSanitizer to confirm it's clean.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>Read once, char by char</strong> with <code>fgetc</code> in a <code>while (… != EOF)</code> loop — store the result in an <code>int</code>.</li>
+        <li><strong>chars</strong> = every character; <strong>lines</strong> = each <code>'\n'</code>; <strong>words</strong> = each whitespace→non-whitespace transition.</li>
+        <li><strong>The <code>in_word</code> flag</strong> is the whole word-counting trick — count where words begin, so extra spaces never over-count.</li>
+        <li><strong>One <code>count(FILE *, …)</code></strong> works for both a file and <code>stdin</code> — pick the source in <code>main</code> via <code>argc</code>/<code>argv</code>.</li>
+        <li><strong>Match real <code>wc</code>'s edge cases</strong> — lines are newline counts; a final line without <code>'\n'</code> isn't counted.</li>
       </ul>
+      <p style="margin-top:14px;font-size:15.5px;opacity:0.97"><strong>🏆🎉 You finished the C Book!</strong> From "what is a program?" through pointers, structs, memory, files, and two capstones — that's all 72 lessons. You can read, write, debug, and build real C programs. Take a victory lap, Bit's proud of you. 🤖💛 (The C++ book continues — and there's always more to build.)</p>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_10_6.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      10.6  Capstone — contacts CLI
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
-      <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+    <a href="#" class="nav-btn next disabled">
+      <small>🏆 The end</small>
+      C Book complete!
     </a>
   </div>
 
@@ -458,14 +469,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "The finale: build wc — count lines, words & characters. 🏁",
+    "One pass, three counters: chars, lines, words. 🔢",
+    "The whole trick is an in_word flag: count where words BEGIN. ⚙️",
+    "One count(FILE*) works for a file OR stdin — pick it in main. 🔀",
+    "Lines = newlines counted; use int c (not char) for EOF. 🧪",
+    "Type some text and watch the live counts. 🔬",
+    "in_word means extra spaces never over-count words. 🎯",
+    "🏆 That's the C book — 72 lessons. You did it! 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +508,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); setTimeout(burst, 300); setTimeout(burst, 600); showToast('🏆 C Book complete — all 72 lessons! +100 XP'); addXP(100); }, 400);
     }
   }
 
@@ -529,88 +540,58 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
-  };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
+  // ===== Live wc =====
+  let wcTouched = false;
+  const wcText = document.getElementById('wcText');
+  const wcL = document.getElementById('wcL'), wcW = document.getElementById('wcW'), wcC = document.getElementById('wcC');
+  const wcOut = document.getElementById('wcOut'), wcMsg = document.getElementById('wcMsg');
 
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  function wc(s) {
+    let lines = 0, words = 0, chars = 0, inWord = 0;
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      chars++;
+      if (c === '\n') lines++;
+      if (c === ' ' || c === '\n' || c === '\t' || c === '\r' || c === '\f' || c === '\v') inWord = 0;
+      else if (!inWord) { inWord = 1; words++; }
+    }
+    return { lines, words, chars };
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
-  }));
-  renderPSI('valid');
+  function renderWC() {
+    const r = wc(wcText.value);
+    wcL.textContent = r.lines; wcW.textContent = r.words; wcC.textContent = r.chars;
+    wcOut.textContent = `$ ./wc → ${r.lines} ${r.words} ${r.chars}`;
+    const noNL = wcText.value.length > 0 && !wcText.value.endsWith('\n');
+    wcMsg.innerHTML = `<b>Live counts.</b> Words = whitespace→letter transitions (extra spaces don't add words). ${noNL ? 'Your text\'s last line has <span class="red">no trailing newline</span>, so it isn\'t counted as a line — exactly like real <code>wc</code>.' : 'Each <code>\\n</code> adds a line.'}`;
+  }
+  wcText.addEventListener('input', () => { renderWC(); if (!wcTouched) { wcTouched = true; addXP(5, undefined, undefined, '🏁 Counting! +5 XP'); } });
+  renderWC();
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: '// wc reports:  lines words chars\n// Input (exactly):  hello world\\n\n// (one newline at the end)',
+      opts: ['1 2 12', '1 2 11', '2 2 12', '1 3 12'],
+      answer: '1 2 12',
+      why: '1 newline → 1 line. "hello" and "world" → 2 words. Characters: h-e-l-l-o (5) + space + w-o-r-l-d (5) + \\n = 12.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: '// Input (note the spaces, no newline):\n//  "a  b "   (a, two spaces, b, one space)\n// wc reports?',
+      opts: ['0 2 5', '0 4 5', '1 2 5', '0 2 4'],
+      answer: '0 2 5',
+      why: 'No \\n → 0 lines. Words: "a" then "b" — the double space and trailing space just reset in_word, so 2 words. Chars: a + 2 spaces + b + space = 5.'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: '// Input:  "a\\nb"   (a, newline, b — no final newline)\n// wc reports?',
+      opts: ['1 2 3', '2 2 3', '1 2 2', '2 2 4'],
+      answer: '1 2 3',
+      why: 'Only ONE \\n → 1 line (the final b has no newline after it). Two words a and b. Three characters: a, \\n, b. This is real wc behaviour.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: 'int c;\nwhile ((c = fgetc(f)) != EOF) { ... }\n// Why must c be int, not char?',
+      opts: ["EOF doesn't fit in a char, so the loop could never end", 'char is slower than int', 'fgetc only works with int', 'so it can hold negative words'],
+      answer: "EOF doesn't fit in a char, so the loop could never end",
+      why: 'fgetc returns an int so it can return EOF (a value outside the char range). Stored in a char, EOF may be indistinguishable from a real byte, breaking the loop.'
     }
   ];
   let poIdx = 0;
@@ -625,7 +606,7 @@
     const s = PO[poIdx];
     poCode.textContent = s.code;
     poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poFb.innerHTML = 'What does wc report?';
     poNext.disabled = true;
     poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
     poBtns.innerHTML = '';
@@ -650,7 +631,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Count chars=every char, lines=each \\n, words=whitespace→letter transitions; and fgetc needs an int for EOF.`;
           breakStreak();
         }
       });
@@ -669,14 +650,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The counter bumps <code>words</code> only when it steps from whitespace onto a non-space character (the <code>in_word</code> 0→1 transition). Each extra space just keeps setting <code>in_word = 0</code> without adding a word, so any run of spaces — between, before, or after words — is harmless. You count where words <em>begin</em>, not the gaps.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Count the whitespace→non-space transition with <code>in_word</code>.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. It doesn\'t edit the input or estimate — the <code>in_word</code> flag means only the first non-space after whitespace counts, so extra spaces never add words.';
       firstTry = false; breakStreak();
     }
   }));

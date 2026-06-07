@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interactive SQL Book</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif; color: #1f2937; background: #fafafa; line-height: 1.65; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 60px 28px 80px; }
+  .hero { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; border-radius: 16px; padding: 48px 44px; margin-bottom: 36px; box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden; }
+  .hero::after { content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%); }
+  .hero .kicker { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 12px; }
+  .hero h1 { margin: 0; font-size: 42px; font-weight: 800; letter-spacing: -0.5px; }
+  .hero p { font-size: 16px; color: rgba(255,255,255,0.94); max-width: 600px; margin-top: 14px; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #6b7280; margin: 0 0 16px; }
+  .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .module-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px 22px 20px; text-decoration: none; color: inherit; transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s; display: block; }
+  .module-card:hover { border-color: #4f46e5; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,70,229,0.12); }
+  .module-card .num { font-size: 11px; font-weight: 700; color: #4f46e5; letter-spacing: 1.5px; text-transform: uppercase; }
+  .module-card .title { font-size: 18px; font-weight: 700; margin: 6px 0 8px; }
+  .module-card .summary { font-size: 13.5px; color: #6b7280; line-height: 1.55; }
+  .module-card .ex-progress { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
+  .module-card .ex-bar { flex: 1; height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+  .module-card .ex-fill { height: 100%; width: 0; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 3px; transition: width 0.5s ease; }
+  .module-card .ex-text { font-size: 11.5px; font-weight: 700; color: #6b7280; white-space: nowrap; }
+  .module-card.has-done .ex-text { color: #4f46e5; }
+
+  /* SQLZoo tracker */
+  .zoo-head { margin: 44px 0 4px; }
+  .zoo-sub { font-size: 13.5px; color: #6b7280; margin: 0 0 18px; max-width: 660px; line-height: 1.55; }
+  .zoo-sub a { color: #4f46e5; }
+  .zoo-meter { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .zoo-bar { flex: 1; height: 8px; background: #e5e7eb; border-radius: 5px; overflow: hidden; }
+  .zoo-fill { height: 100%; width: 0; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 5px; transition: width 0.5s ease; }
+  .zoo-count { font-size: 12.5px; font-weight: 700; color: #4f46e5; white-space: nowrap; }
+  .zoo-sync { font-size: 11.5px; color: #9ca3af; margin-bottom: 16px; }
+  .zoo-list { display: flex; flex-direction: column; gap: 8px; }
+  .zoo-row { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e5e7eb; border-radius: 11px; padding: 12px 16px; transition: border-color 0.15s, background 0.15s; }
+  .zoo-row:hover { border-color: #c7d2fe; }
+  .zoo-row.done { background: #f5f3ff; border-color: #ddd6fe; }
+  .zoo-idx { font-size: 12px; font-weight: 700; color: #9ca3af; width: 18px; flex-shrink: 0; }
+  .zoo-name { flex: 1; font-size: 15px; font-weight: 600; color: #1f2937; }
+  .zoo-row.done .zoo-name { color: #6d28d9; }
+  .zoo-pill { font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 20px; cursor: pointer; border: none; font-family: inherit; transition: background 0.15s; white-space: nowrap; }
+  .pill-not { background: #f3f4f6; color: #9ca3af; }
+  .pill-prog { background: #fef3c7; color: #b45309; }
+  .pill-done { background: #dcfce7; color: #15803d; }
+  .zoo-open { font-size: 12.5px; font-weight: 700; color: #4f46e5; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+  .zoo-open:hover { text-decoration: underline; }
+  @media (max-width: 540px) { .zoo-name { font-size: 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav" style="display:flex;gap:6px;font-size:13px;margin-bottom:20px;">
+    <a href="index.html" class="current" style="background:#4f46e5;color:#fff;text-decoration:none;padding:6px 12px;border-radius:8px;">Book</a>
+    <a href="exercises.html" style="color:#6b7280;text-decoration:none;padding:6px 12px;border-radius:8px;">Exercises</a>
+  </nav>
+  <div class="hero">
+    <div class="kicker">Code Sensei · SQL</div>
+    <h1>Interactive SQL Book</h1>
+    <p>Ten hands-on modules, real queries running in your browser. No installation needed — open any module to begin.</p>
+  </div>
+  <h2>Modules</h2>
+  <div class="module-grid">
+    <a class="module-card" href="module-01.html">
+      <div class="num">Module 1</div>
+      <div class="title">Retrieving Data</div>
+<div class="summary">Three foundational ways to pull data out of a SQL database. Every query you will ever write builds on these three skills.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-02.html">
+      <div class="num">Module 2</div>
+      <div class="title">Filtering &amp; Sorting</div>
+<div class="summary">Narrow the rows you retrieve, decide what order they come back in, and cap how many you see. The three knobs that turn &#34;fetch some data&#34; into &#34;answer a question&#34;.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-03.html">
+      <div class="num">Module 3</div>
+      <div class="title">Aggregating Data</div>
+<div class="summary">Stop thinking row-by-row. Start asking questions that collapse many rows into one — totals, averages, counts per group, filtered by what those totals look like.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-04.html">
+      <div class="num">Module 4</div>
+      <div class="title">JOINs</div>
+<div class="summary">Pull data from two or more tables in one query. JOINs are where SQL stops being a query language and starts feeling like working with a network of related ideas.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-05.html">
+      <div class="num">Module 5</div>
+      <div class="title">Advanced SQL</div>
+<div class="summary">The next layer of tools. Functions for the values inside cells, and the ability to nest queries inside queries. After this module you can write almost any real-world query.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-06.html">
+      <div class="num">Module 6</div>
+      <div class="title">Creating &amp; Modifying Tables</div>
+<div class="summary">So far we have only read data. Now you become the one who builds the database — designing tables, putting data in, changing it, and evolving the schema as needs change.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-07.html">
+      <div class="num">Module 7</div>
+      <div class="title">Conditional Expressions &amp; Views</div>
+<div class="summary">The polish. Tools that make queries clearer, safer with NULLs, and reusable. After this module your SQL stops being a sequence of queries and starts being a small library.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-08.html">
+      <div class="num">Module 8</div>
+      <div class="title">Importing &amp; Exporting Data</div>
+<div class="summary">Getting data into and out of a database. CSVs you receive from elsewhere, exports for analysts who don&#39;t speak SQL, the routine data hygiene that comes with both.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-09.html">
+      <div class="num">Module 9</div>
+      <div class="title">PostgreSQL with Python</div>
+<div class="summary">SQL lives inside applications most of the time. This module wires PostgreSQL into Python — connecting, reading, writing, and the safety rails (parameters, transactions) that separate scripts that work from scripts that survive contact with real data.</div>      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+    <a class="module-card" href="module-10.html">
+      <div class="num">Module 10</div>
+      <div class="title">Capstone — Tiffinly</div>
+<div class="summary">One extended exercise that ties everything together. Design a schema for a small tiffin delivery startup, load it with data, answer business questions across modules 1–8, wrap it with views and a Python operationalization layer. No new syntax — just integration.</div>
+      <div class="ex-progress"><div class="ex-bar"><div class="ex-fill"></div></div><span class="ex-text">— / —</span></div>
+    </a>
+  </div>
+
+  <script>
+  // Show per-module exercise progress on the cards (reads localStorage shared with exercises.html)
+  (function () {
+    var COUNTS = {1:11,2:15,3:14,4:13,5:16,6:14,7:11,8:8,9:9,10:9}; // total challenges per module
+    try {
+      var progress = JSON.parse(localStorage.getItem("commonplace_module_exercises_progress") || "{}");
+      var done = {};
+      Object.keys(progress).forEach(function (k) {
+        if (progress[k] !== "done") return;
+        var m = k.match(/^ex_(\d+)_/);
+        if (m) { var mi = +m[1]; done[mi] = (done[mi] || 0) + 1; }
+      });
+      var cards = document.querySelectorAll(".module-card");
+      cards.forEach(function (card, i) {
+        var mi = i + 1;
+        var total = COUNTS[mi] || 0;
+        var d = done[mi] || 0;
+        var fill = card.querySelector(".ex-fill");
+        var text = card.querySelector(".ex-text");
+        if (fill && text && total > 0) {
+          fill.style.width = (d / total * 100) + "%";
+          text.textContent = d + " / " + total + " exercises";
+          if (d > 0) card.classList.add("has-done");
+        }
+      });
+    } catch (e) {}
+  })();
+  </script>
+
+  <div class="zoo-head"><h2>External Practice · SQLZoo</h2></div>
+  <p class="zoo-sub">Nine classic <a href="https://sqlzoo.net" target="_blank" rel="noopener">SQLZoo</a> tutorials, in order. Open each one, solve it on their site, then tap the status to track where you are. Progress is saved on this device — and synced to your account automatically if you're signed in via the Practice Lab.</p>
+  <div class="zoo-meter">
+    <div class="zoo-bar"><div class="zoo-fill" id="zoo-fill"></div></div>
+    <span class="zoo-count" id="zoo-count">0 / 9 done</span>
+  </div>
+  <div class="zoo-sync" id="zoo-sync"></div>
+  <div class="zoo-list" id="zoo-list"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
+  var KEY = "commonplace_sqlzoo_progress";
+  var TUTORIALS = [
+    { k: "select_basics", n: "SELECT basics",          u: "https://sqlzoo.net/wiki/SELECT_basics" },
+    { k: "select_world",  n: "SELECT from WORLD",       u: "https://sqlzoo.net/wiki/SELECT_from_WORLD_Tutorial" },
+    { k: "select_nobel",  n: "SELECT from Nobel",       u: "https://sqlzoo.net/wiki/SELECT_from_Nobel_Tutorial" },
+    { k: "select_within", n: "SELECT within SELECT",    u: "https://sqlzoo.net/wiki/SELECT_within_SELECT_Tutorial" },
+    { k: "sum_count",     n: "SUM and COUNT",           u: "https://sqlzoo.net/wiki/SUM_and_COUNT" },
+    { k: "join",          n: "The JOIN operation",      u: "https://sqlzoo.net/wiki/The_JOIN_operation" },
+    { k: "more_join",     n: "More JOIN operations",    u: "https://sqlzoo.net/wiki/More_JOIN_operations" },
+    { k: "using_null",    n: "Using NULL",              u: "https://sqlzoo.net/wiki/Using_Null" },
+    { k: "self_join",     n: "Self JOIN",               u: "https://sqlzoo.net/wiki/Self_join" }
+  ];
+  var STATES = ["not_started", "in_progress", "done"];
+  var LABEL  = { not_started: "Not started", in_progress: "In progress", done: "Done ✓" };
+  var PILL   = { not_started: "pill-not", in_progress: "pill-prog", done: "pill-done" };
+
+  var progress = load();
+  var sb = null, session = null;
+  try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }); } catch (e) {}
+
+  function load() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(progress)); } catch (e) {} }
+  function statusOf(k) { return progress[k] || "not_started"; }
+  function byId(id) { return document.getElementById(id); }
+
+  function render() {
+    var list = byId("zoo-list");
+    list.innerHTML = TUTORIALS.map(function (t, i) {
+      var s = statusOf(t.k);
+      return '<div class="zoo-row ' + (s === "done" ? "done" : "") + '">' +
+        '<span class="zoo-idx">' + (i + 1) + '</span>' +
+        '<span class="zoo-name">' + t.n + '</span>' +
+        '<button class="zoo-pill ' + PILL[s] + '" data-k="' + t.k + '">' + LABEL[s] + '</button>' +
+        '<a class="zoo-open" href="' + t.u + '" target="_blank" rel="noopener" data-k="' + t.k + '">Open ↗</a>' +
+      '</div>';
+    }).join("");
+    Array.prototype.forEach.call(list.querySelectorAll(".zoo-pill"), function (b) {
+      b.onclick = function () { cycle(b.getAttribute("data-k")); };
+    });
+    Array.prototype.forEach.call(list.querySelectorAll(".zoo-open"), function (a) {
+      a.onclick = function () { var k = a.getAttribute("data-k"); if (statusOf(k) === "not_started") setStatus(k, "in_progress"); };
+    });
+    var done = TUTORIALS.filter(function (t) { return statusOf(t.k) === "done"; }).length;
+    byId("zoo-count").textContent = done + " / " + TUTORIALS.length + " done";
+    byId("zoo-fill").style.width = (done / TUTORIALS.length * 100) + "%";
+  }
+  function cycle(k) { var c = statusOf(k); setStatus(k, STATES[(STATES.indexOf(c) + 1) % STATES.length]); }
+  function setStatus(k, s) { progress[k] = s; save(); render(); syncOne(k, s); }
+
+  function syncOne(k, s) {
+    if (!sb || !session) return;
+    var t = TUTORIALS.filter(function (x) { return x.k === k; })[0]; if (!t) return;
+    var now = new Date().toISOString();
+    sb.from("commonplace_external_resources").upsert({
+      user_id: session.user.id, resource_set: "sqlzoo", item_key: k, name: t.n, url: t.u,
+      order_index: TUTORIALS.indexOf(t), status: s, last_attempted: now, updated_at: now
+    }, { onConflict: "user_id,resource_set,item_key" }).then(function () {}, function () {});
+  }
+  function syncNote() {
+    byId("zoo-sync").textContent = session
+      ? "✓ Synced to your account"
+      : "Saved on this device · sign in via the Practice Lab to sync across devices";
+  }
+  function syncOnSignIn() {
+    if (!sb || !session) return;
+    sb.from("commonplace_external_resources").select("item_key,status").eq("resource_set", "sqlzoo")
+      .then(function (res) {
+        var remote = {};
+        if (!res.error && res.data) { res.data.forEach(function (r) { remote[r.item_key] = r.status; progress[r.item_key] = r.status; }); }
+        save(); render();
+        Object.keys(progress).forEach(function (k) {
+          if (progress[k] && progress[k] !== "not_started" && !(k in remote)) syncOne(k, progress[k]);
+        });
+      });
+  }
+
+  render();
+  if (sb) {
+    sb.auth.getSession().then(function (res) { session = res.data.session || null; syncNote(); syncOnSignIn(); });
+    sb.auth.onAuthStateChange(function (_e, s) { session = s; syncNote(); syncOnSignIn(); });
+  } else { syncNote(); }
+})();
+</script>
+</body>
+</html>

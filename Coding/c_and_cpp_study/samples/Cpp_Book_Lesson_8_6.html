@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 8.2 — Copy Semantics · The C++ Book</title>
+<title>Lesson 8.6 — shared_ptr &amp; weak_ptr · The C++ Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -101,32 +101,35 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Copy Inspector */
-  .dd-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .dd-toggle .lab { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); width: 100%; }
-  .ddbtn { background: white; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .ddbtn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
-  .ddbtn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  /* Ref Count Tracker */
   .dd-decl { background: var(--terminal); border-radius: 12px; padding: 12px 16px; font-family: var(--mono); font-size: 12.5px; color: #e0e7ff; line-height: 1.7; margin: 4px 0 12px; }
-  .dd-decl .kw { color: #c4b5fd; } .dd-decl .v { color: #fde047; font-weight: 700; } .dd-decl .cm { color: #818cf8; font-style: italic; } .dd-decl .bad { color: #fca5a5; font-weight: 700; }
+  .dd-decl .kw { color: #c4b5fd; } .dd-decl .v { color: #fde047; font-weight: 700; } .dd-decl .cm { color: #818cf8; font-style: italic; }
 
-  /* memory diagram */
   .mem { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: #0d1033; border-radius: 12px; padding: 18px 14px; margin-bottom: 6px; }
-  .mem-col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-  .mem-obj { background: #312e81; border: 2px solid var(--purple-light); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 12px; color: #e0e7ff; text-align: center; min-width: 92px; }
+  .mem-col { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .mem-obj { background: #312e81; border: 2px solid var(--purple-light); border-radius: 10px; padding: 7px 12px; font-family: var(--mono); font-size: 12px; color: #e0e7ff; text-align: center; min-width: 104px; }
+  .mem-obj.empty { background: #3f3f46; border-color: #71717a; color: #a1a1aa; }
+  .mem-obj.weak { background: #1e1b4b; border-style: dashed; border-color: var(--cyan); color: #a5f3fc; }
   .mem-obj .nm { color: #c4b5fd; font-weight: 700; }
-  .mem-arrow { font-family: var(--mono); font-size: 18px; font-weight: 700; color: #f472b6; }
-  .mem-heap { display: flex; flex-direction: column; gap: 10px; }
-  .mem-buf { background: #064e3b; border: 2px solid var(--green); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; color: #bbf7d0; text-align: center; min-width: 78px; }
-  .mem-buf.warn { background: #7f1d1d; border-color: var(--red); color: #fecaca; }
+  .mem-obj.empty .nm { color: #d4d4d8; }
+  .mem-obj.weak .nm { color: #67e8f9; }
+  .mem-arrow { font-family: var(--mono); font-size: 16px; font-weight: 700; color: #f472b6; }
+  .mem-arrow.weak { color: #67e8f9; }
+  .mem-arrow.dead { color: #52525b; }
+  .mem-buf { background: #064e3b; border: 2px solid var(--green); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 13px; color: #bbf7d0; text-align: center; min-width: 110px; }
+  .mem-buf.warn { background: #3f3f46; border-color: #71717a; color: #a1a1aa; }
+  .mem-buf .count { display: block; font-size: 15px; font-weight: 700; color: #fde047; margin-top: 2px; }
+  .mem-buf.warn .count { color: #a1a1aa; }
   .mem-buf .cap { display:block; font-size: 9px; color: #6ee7b7; margin-top: 2px; }
-  .mem-buf.warn .cap { color: #fca5a5; }
+  .mem-buf.warn .cap { color: #a1a1aa; }
   .iw-msg { margin-top: 12px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
   .iw-msg b { color: var(--purple-deep); }
   .iw-msg .grn { color: #166534; font-weight: 700; } .iw-msg .red { color: var(--red); font-weight: 700; }
   .cp-act { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
-  .cp-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12.5px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .cp-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 14px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 12px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
   .cp-btn:hover { transform: translateY(-2px); }
+  .cp-btn.danger { background: linear-gradient(135deg, var(--red), #b91c1c); }
+  .cp-btn.obs { background: linear-gradient(135deg, var(--cyan), #0891b2); }
   .cp-btn.ghost { background: white; color: var(--purple-deep); border: 2px solid var(--purple-light); }
 
   /* Predict the output */
@@ -134,7 +137,7 @@
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
   .scenario-code { font-family: var(--mono); font-size: 12px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.55; white-space: pre-wrap; }
   .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -214,22 +217,22 @@
   </div>
   <div class="pixel-bubble" id="pixelBubble">
     <span class="pixel-name">Pixel</span>
-    When an object owns a resource, copying it needs care — or two objects end up fighting over one buffer. 📋
+    Need several owners for one object? <code>shared_ptr</code> counts them and frees it when the last one leaves. 👥
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-cpp">THE C++ BOOK &middot; 8.2</span>
+    <span class="crumb-cpp">THE C++ BOOK &middot; 8.6</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 57 / 84</span>
+    <span>Lesson 61 / 84</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">♻️ PART VIII &middot; MODERN RESOURCE MANAGEMENT</span>
-    <h1>Copy Semantics</h1>
-    <p class="hero-sub">RAII said: an object owns a resource and frees it in its destructor. But what happens when you <strong>copy</strong> that object? If you don't say, C++ copies it member by member — which for a raw pointer means two objects now own the <em>same</em> resource. Both will free it. That's a crash. This lesson is about controlling how your objects copy: the <strong>copy constructor</strong> and <strong>copy assignment operator</strong>.</p>
+    <span class="hero-tag">♻️ PART VIII &middot; MODERN RESOURCE MANAGEMENT &middot; C++11</span>
+    <h1>shared_ptr &amp; weak_ptr</h1>
+    <p class="hero-sub"><code>unique_ptr</code> gives one object exactly one owner. But sometimes several parts of a program need to share an object, and it should live until the <em>last</em> of them is done. <strong><code>std::shared_ptr</code></strong> handles that with a reference count; <strong><code>std::weak_ptr</code></strong> is its non-owning companion that observes without keeping the object alive — and breaks the cycles shared ownership can create.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
       <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
@@ -244,139 +247,113 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>Copying isn't free 🧠</h2>
+    <h2>When one owner isn't enough 🧠</h2>
 
     <div class="new-content">
-      In C++ you copy objects constantly — passing by value, returning from a function, assigning one variable to another, putting things in a container. For a plain struct of <code>int</code>s, copying just duplicates the numbers and all is well. But the moment a class <em>owns a resource</em> — heap memory from <code>new</code>, a file handle, a buffer — a naive copy duplicates the <em>pointer</em>, not the thing it points to. Now two objects believe they own one resource, and when each runs its destructor, the resource is freed twice. Copy semantics is how you take control: you decide what "copy" means for your type so it stays safe.
+      <code>unique_ptr</code> (8.5) is perfect when a single owner controls an object's lifetime. But some designs genuinely need <strong>shared ownership</strong>: several objects hold the same node of a graph, or a cache and a worker both reference the same resource, and it must stay alive as long as <em>any</em> of them needs it — then be freed exactly once when the last one lets go. <code>std::shared_ptr</code> does this by keeping a <strong>reference count</strong>: each owner adds one, each releases one, and the object is deleted when the count reaches zero. It's the last smart pointer you need to know.
     </div>
 
-    <p>This is the second pillar of Part VIII, built directly on the RAII idea from 8.1.</p>
+    <p>Powerful — but shared ownership is heavier than unique, so it's a tool for when you truly need it, not a default.</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Two operations</div>
-    <h2>Copy constructor vs. copy assignment 👯</h2>
+    <div class="step-label"><span class="step-num">2</span> shared_ptr &amp; the count</div>
+    <h2>Many owners, one count 🔢</h2>
 
-    <p>There are two distinct moments where copying happens, and C++ gives each its own special member function:</p>
+    <p>Create one with <code>std::make_shared&lt;T&gt;(args)</code>. Unlike <code>unique_ptr</code>, you <em>can</em> copy it — each copy is another owner, and <code>use_count()</code> tells you how many there are:</p>
 
-    <pre class="code"><span class="kw">class</span> Box {
-<span class="kw">public</span>:
-    Box(<span class="kw">const</span> Box&amp; other);              <span class="hl">// copy constructor — make a NEW Box from another</span>
-    Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other);   <span class="hl">// copy assignment — overwrite an EXISTING Box</span>
-};
-
-Box a;
-Box b = a;   <span class="cm">// copy CONSTRUCTOR (b is being created)</span>
-Box c;
-c = a;       <span class="cm">// copy ASSIGNMENT (c already exists, now overwritten)</span></pre>
+    <pre class="code"><span class="kw">auto</span> p = std::make_shared&lt;Widget&gt;();   <span class="cm">// count = 1</span>
+<span class="kw">auto</span> q = p;                            <span class="hl">// copy → both own it, count = 2</span>
+std::cout &lt;&lt; p.use_count();             <span class="cm">// prints 2</span>
+<span class="cm">// use p-&gt;, *p just like any pointer</span></pre>
 
     <div class="new-content">
-      The distinction is "is the target being <em>born</em>, or does it <em>already exist</em>?" <code>Box b = a;</code> creates <code>b</code> for the first time, so the <strong>copy constructor</strong> runs. <code>c = a;</code> takes an already-living <code>c</code> and replaces its contents, so the <strong>copy assignment operator</strong> runs. Passing an object by value and returning one by value also invoke the copy constructor. They feel similar, but assignment has an extra job the constructor doesn't: it must deal with the resource the target was <em>already</em> holding.
+      A <code>shared_ptr</code> holds two things: the pointer to your object, and a pointer to a small <em>control block</em> that stores the reference count. Copying the <code>shared_ptr</code> copies both and bumps the count; you still use it with <code>-&gt;</code> and <code>*</code> like any pointer. Prefer <code>make_shared</code> — it allocates the object and the control block together in one step, which is faster and exception-safe.
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> The default is shallow</div>
-    <h2>What the compiler writes for you ⚙️</h2>
+    <div class="step-label"><span class="step-num">3</span> How the count moves</div>
+    <h2>Zero means goodbye ➕➖</h2>
 
-    <p>If you don't declare them, the compiler generates both — and they do a <strong>member-wise</strong> copy: each member is copied with <em>its own</em> copy. That's perfect for value-like members and dangerous for raw pointers:</p>
+    <p>Every new owner increments the count; every owner that's destroyed or <code>reset</code> decrements it. When it hits <strong>zero</strong>, the object is deleted — automatically, exactly once:</p>
 
-    <pre class="code"><span class="kw">struct</span> Box {
-    <span class="kw">int</span>* data;          <span class="cm">// owns a heap int</span>
-    Box(<span class="kw">int</span> v) { data = <span class="kw">new</span> <span class="kw">int</span>(v); }
-    ~Box() { <span class="kw">delete</span> data; }
-    <span class="cm">// no copy ctor written → compiler's default copies the POINTER value</span>
-};
-
-Box a(5);
-Box b = a;   <span class="bad">// b.data == a.data  — same address! both point at one int</span></pre>
+    <pre class="code"><span class="kw">auto</span> p = std::make_shared&lt;Widget&gt;();   <span class="cm">// count = 1</span>
+{
+    <span class="kw">auto</span> q = p;     <span class="cm">// count = 2</span>
+}                  <span class="hl">// q destroyed → count = 1 (Widget still alive)</span>
+<span class="cm">// ... when p is destroyed too → count = 0 → Widget deleted</span></pre>
 
     <div class="new-content">
-      The generated copy sets <code>b.data = a.data</code> — it copies the pointer's <em>value</em> (an address), so both objects point at the same heap <code>int</code>. Note the contrast: a <code>std::string</code> or <code>std::vector</code> member would copy itself <em>deeply</em>, because those types define their own correct copy semantics (they're RAII types). The danger is only with <strong>raw owning pointers</strong>, where the default's shallow copy leaves two owners of one resource.
+      This is the key mental model: the object lives exactly as long as the count is above zero, and dies the instant the <em>last</em> owner goes away — wherever in the program that happens to be. You never call <code>delete</code>; the control block does it when the final <code>shared_ptr</code> is gone. That's what "the object lives until the last owner is done" means in practice.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Shallow vs. deep</div>
-    <h2>Sharing a buffer ends in tears 💥</h2>
+    <div class="step-label"><span class="step-num">4</span> weak_ptr</div>
+    <h2>Look without owning 👀</h2>
 
-    <p>A <strong>shallow</strong> copy duplicates the pointer; a <strong>deep</strong> copy allocates a fresh resource and copies the contents. With the shallow default above, two problems appear:</p>
+    <p>A <code>std::weak_ptr</code> points at an object managed by a <code>shared_ptr</code> but <strong>doesn't own it</strong> — it doesn't change the count, so it never keeps the object alive. To use it, ask for a temporary <code>shared_ptr</code> with <code>.lock()</code>, which gives you one if the object is still alive, or <code>nullptr</code> if it's gone:</p>
 
-    <table class="op-table">
-      <thead><tr><th>Problem</th><th>What happens</th></tr></thead>
-      <tbody>
-        <tr><td class="mono plain">Aliasing</td><td class="mono plain">writing through <code>b.data</code> also changes <code>a</code> — they share one int</td></tr>
-        <tr><td class="mono plain">Double free</td><td class="mono plain">both destructors <code>delete</code> the same address → undefined behaviour / crash</td></tr>
-      </tbody>
-    </table>
+    <pre class="code">std::weak_ptr&lt;Widget&gt; w = p;   <span class="hl">// observes — count is unchanged</span>
 
-    <p>The fix is a deep copy — give the new object its own resource:</p>
-
-    <pre class="code">Box(<span class="kw">const</span> Box&amp; other) {
-    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);   <span class="hl">// allocate our OWN int, copy the value</span>
+<span class="kw">if</span> (<span class="kw">auto</span> sp = w.lock()) {       <span class="cm">// got a shared_ptr → still alive</span>
+    sp-&gt;use();
+} <span class="kw">else</span> {
+    <span class="cm">// expired — the object was already deleted</span>
 }</pre>
 
     <div class="new-content">
-      Now <code>b</code> has its own heap <code>int</code> holding the same value, completely independent of <code>a</code>. Changing one doesn't touch the other, and each destructor frees its own allocation exactly once. "Deep" means you follow the pointer and duplicate what it owns, not just the pointer itself. The interactive below lets you flip between shallow and deep and watch the arrows either collide on one buffer or split into two.
+      Think of <code>weak_ptr</code> as a safe "I'd like to use this <em>if</em> it still exists" reference. It's perfect for caches, observers, or back-references where you must not extend the object's lifetime. Because it doesn't own anything, you can't dereference it directly — you <code>lock()</code> it to atomically check "alive?" and get a real owning <code>shared_ptr</code> in the same step, avoiding a dangling-pointer race.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Assignment &amp; the Rule of Three</div>
-    <h2>Free the old, guard yourself 📐</h2>
+    <div class="step-label"><span class="step-num">5</span> Cycles &amp; cost</div>
+    <h2>When sharing leaks 🔗</h2>
 
-    <p>Copy <em>assignment</em> has the constructor's job plus one more: the target already owns a resource that must be released first — and you must survive <code>x = x;</code>:</p>
-
-    <pre class="code">Box&amp; <span class="kw">operator</span>=(<span class="kw">const</span> Box&amp; other) {
-    <span class="kw">if</span> (<span class="kw">this</span> == &amp;other) <span class="kw">return</span> *<span class="kw">this</span>;   <span class="hl">// 1. guard self-assignment</span>
-    <span class="kw">delete</span> data;                          <span class="cm">// 2. free what we already had</span>
-    data = <span class="kw">new</span> <span class="kw">int</span>(*other.data);          <span class="cm">// 3. deep-copy the new value</span>
-    <span class="kw">return</span> *<span class="kw">this</span>;                          <span class="cm">// 4. return *this for chaining</span>
-}</pre>
+    <p>Shared ownership has one famous failure mode and one ongoing cost:</p>
 
     <div class="trap">
-      <h4>🚨 The Rule of Three</h4>
-      <p>If your class needs a custom <strong>destructor</strong>, a custom <strong>copy constructor</strong>, or a custom <strong>copy assignment</strong>, it almost certainly needs <em>all three</em> — they're a set. Writing a destructor that <code>delete</code>s a pointer but leaving the copies as the shallow default is the classic recipe for a double free. (Skip the self-assignment guard and <code>x = x</code> deletes <code>data</code> and then reads the freed pointer.) The modern shortcut: don't manage raw pointers at all — store a <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> and the Rule of Three collapses to the <strong>Rule of Zero</strong>, because those members already copy and clean up correctly.</p>
+      <h4>🚨 Two shared_ptrs pointing at each other never reach zero</h4>
+      <p>If object A holds a <code>shared_ptr</code> to B and B holds a <code>shared_ptr</code> back to A, each keeps the other's count at 1 forever — even after every <em>external</em> owner is gone. The count never reaches zero, so neither is deleted: a <strong>reference cycle leak</strong>. The fix is to make one direction a <code>weak_ptr</code> (e.g. a parent owns its child with <code>shared_ptr</code>, the child refers back to the parent with <code>weak_ptr</code>) — the weak side doesn't count, so the cycle can unwind. Also note the cost: a <code>shared_ptr</code> carries a control block and updates the count <em>atomically</em> (thread-safe), which is real overhead. So <strong>prefer <code>unique_ptr</code> by default</strong> and reach for <code>shared_ptr</code> only when ownership is genuinely shared.</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Copy Inspector</div>
-    <h2>Watch the buffers share or split 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Ref Count Tracker</div>
+    <h2>Watch the count rise and fall 🔬</h2>
 
-    <p>Two tools. The <strong>Copy Inspector</strong> runs <code>Box b = a;</code> with either the shallow default or a deep copy ctor — change <code>b</code> and destruct both objects to see aliasing and double-frees appear or vanish. <strong>Predict the Output</strong> tests which operation runs and what the values become.</p>
+    <p>Two tools. The <strong>Ref Count Tracker</strong> follows a <code>shared_ptr p</code> (and a <code>weak_ptr w</code>) — copy to <code>q</code>, reset owners, and <code>lock()</code> the weak observer, watching the count and when the Widget is finally deleted. <strong>Predict the Output</strong> tests <code>use_count</code>, last-owner deletion, and <code>weak_ptr</code>.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">📋 Copy Inspector</div>
+        <div class="play-title">👥 Ref Count Tracker</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="dd">Copy Inspector</button>
+        <button class="tab-btn active" data-tab="dd">Ref Count Tracker</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- INSPECTOR -->
+      <!-- TRACKER -->
       <div class="tab-panel active" id="tab-dd">
-        <div class="dd-toggle">
-          <span class="lab">Copy behaviour for <code>Box b = a;</code> :</span>
-          <button class="ddbtn" id="cpShallow">shallow (default)</button>
-          <button class="ddbtn active" id="cpDeep">deep (custom copy ctor)</button>
-        </div>
-        <div class="dd-decl" id="cpDecl"></div>
-        <div class="mem" id="cpMem"></div>
+        <div class="dd-decl">auto p = std::make_shared&lt;Widget&gt;();  <span class="cm">// count = 1</span><br>shared_ptr&lt;Widget&gt; q;                  <span class="cm">// empty</span><br>weak_ptr&lt;Widget&gt; w = p;                <span class="cm">// observes (no count)</span></div>
+        <div class="mem" id="rcMem"></div>
         <div class="cp-act">
-          <button class="cp-btn" id="cpChange">*b.data = 9;</button>
-          <button class="cp-btn" id="cpDestruct">end scope → destruct a &amp; b</button>
-          <button class="cp-btn ghost" id="cpReset">reset ↺</button>
+          <button class="cp-btn" id="rcCopy">auto q = p;</button>
+          <button class="cp-btn danger" id="rcResetP">p.reset();</button>
+          <button class="cp-btn danger" id="rcResetQ">q.reset();</button>
+          <button class="cp-btn obs" id="rcLock">w.lock();</button>
+          <button class="cp-btn ghost" id="rcReset">reset ↺</button>
         </div>
-        <div class="iw-msg" id="cpMsg"></div>
+        <div class="iw-msg" id="rcMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
@@ -401,13 +378,13 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
     <div class="quiz">
       <div class="quiz-q">
-        Your class has a destructor that does <code>delete data;</code> on a raw pointer it owns. By the <strong>Rule of Three</strong>, what else must you provide?
+        When should you reach for <code>std::shared_ptr</code> instead of <code>std::unique_ptr</code>?
       </div>
-      <button class="opt" data-correct="true"><span>A <strong>copy constructor</strong> and a <strong>copy assignment operator</strong> that deep-copy — or the default shallow copies will double-free</span></button>
-      <button class="opt" data-correct="false"><span>Nothing — a correct destructor is enough on its own</span></button>
-      <button class="opt" data-correct="false"><span>Only a copy constructor; assignment is handled automatically</span></button>
-      <button class="opt" data-correct="false"><span>Just mark the class <code>const</code> so it can't be copied</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: destructor, copy constructor, copy assignment — they travel as a set.</div>
+      <button class="opt" data-correct="true"><span>When the object <strong>genuinely needs multiple owners</strong> and must live until the last one is done — shared ownership via reference counting</span></button>
+      <button class="opt" data-correct="false"><span>Always — <code>shared_ptr</code> is the safer default for everything</span></button>
+      <button class="opt" data-correct="false"><span>When you want it to run faster than <code>unique_ptr</code></span></button>
+      <button class="opt" data-correct="false"><span>Whenever the object is allocated on the heap</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: shared ownership has real overhead — it's a tool for a specific need.</div>
     </div>
   </section>
 
@@ -419,26 +396,26 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">💥</div>
+      <div class="mistake-icon">🔗</div>
       <div class="mistake-body">
-        <strong>Destructor without matching copies</strong>
-        <small>A custom destructor with the default shallow copy means two objects free one resource — a double free. Provide the copy ctor and copy assignment too (Rule of Three).</small>
+        <strong>Creating a reference cycle</strong>
+        <small>Two <code>shared_ptr</code>s pointing at each other keep both counts above zero forever — a leak. Make one direction a <code>weak_ptr</code> to break it.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🔁</div>
+      <div class="mistake-icon">👥</div>
       <div class="mistake-body">
-        <strong>Forgetting the self-assignment guard</strong>
-        <small>In <code>operator=</code>, <code>x = x;</code> without <code>if (this == &amp;other) return *this;</code> deletes <code>data</code> and then copies from the freed pointer. Guard it first.</small>
+        <strong>Reaching for <code>shared_ptr</code> by default</strong>
+        <small>Shared ownership has overhead (control block, atomic count) and muddies who owns what. Default to <code>unique_ptr</code>; use <code>shared_ptr</code> only when ownership is truly shared.</small>
       </div>
     </div>
 
     <div class="mistake">
-      <div class="mistake-icon">🧱</div>
+      <div class="mistake-icon">💀</div>
       <div class="mistake-body">
-        <strong>Managing raw pointers by hand at all</strong>
-        <small>Most of the time you don't need the Rule of Three — use <code>std::vector</code>, <code>std::string</code>, or <code>std::unique_ptr</code> members and copying just works (Rule of Zero).</small>
+        <strong>Dereferencing a <code>weak_ptr</code> without locking</strong>
+        <small>A <code>weak_ptr</code> may point at a deleted object. Always <code>.lock()</code> and check the result before using it — don't assume it's still alive.</small>
       </div>
     </div>
 
@@ -446,39 +423,39 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Spot the operation.</strong> Give a class a copy constructor that prints <code>"ctor"</code> and a copy assignment that prints <code>"assign"</code>. Then write <code>X b = a;</code> and <code>c = a;</code> and predict, then confirm, which message each line prints.
+      <strong>Watch the count.</strong> Make a <code>shared_ptr</code> and print <code>use_count()</code>. Copy it inside a block, print the count again (2), let the block end, and print once more (back to 1).
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Make it deep.</strong> Write a <code>Box</code> that owns an <code>int*</code>. Add a deep copy constructor and copy assignment (with the self-assignment guard). Copy a box, change one, and confirm the other is unaffected and nothing double-frees.
+      <strong>Last one out.</strong> Give a class a destructor that prints <code>"freed"</code>. Hold it in two <code>shared_ptr</code>s, reset one (no "freed" yet), then reset the other and confirm "freed" prints exactly when the count hits zero.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>Rule of Zero.</strong> Rewrite that <code>Box</code> to hold a <code>std::vector&lt;int&gt;</code> instead of a raw pointer, and delete the destructor, copy ctor, and copy assignment entirely. Show it still copies correctly — the compiler's defaults are now safe.
+      <strong>Break a cycle.</strong> Build two nodes that point at each other with <code>shared_ptr</code> and observe (via destructor prints) that neither is freed — a leak. Then change one link to a <code>weak_ptr</code> and confirm both are now destroyed.
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Two operations:</strong> the <em>copy constructor</em> builds a new object from another; <em>copy assignment</em> overwrites an existing one.</li>
-        <li><strong>The compiler's default copy is shallow</strong> (member-wise) — it copies a raw pointer's address, not what it points to.</li>
-        <li><strong>Shallow copy of an owning pointer</strong> causes aliasing and a double free; a <em>deep</em> copy allocates its own resource.</li>
-        <li><strong>Copy assignment also</strong> frees the old resource and guards against <code>x = x;</code> — then deep-copies.</li>
-        <li><strong>Rule of Three:</strong> need one of dtor / copy ctor / copy assignment, need all three — or sidestep it entirely with the <em>Rule of Zero</em>.</li>
+        <li><strong><code>std::shared_ptr</code></strong> allows multiple owners via a <em>reference count</em>; the object is deleted when the count hits zero.</li>
+        <li><strong>Copy = +1 owner, destroy/<code>reset</code> = −1</strong>; <code>use_count()</code> reports how many own it. Make with <code>make_shared</code>.</li>
+        <li><strong><code>std::weak_ptr</code> observes without owning</strong> — it doesn't change the count; <code>.lock()</code> gives a <code>shared_ptr</code> if still alive.</li>
+        <li><strong>Reference cycles leak</strong> — two <code>shared_ptr</code>s pointing at each other never reach zero; break one with a <code>weak_ptr</code>.</li>
+        <li><strong>Prefer <code>unique_ptr</code></strong>; <code>shared_ptr</code> has real overhead — use it only for genuine shared ownership.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="Cpp_Book_Lesson_8_1.html" class="nav-btn prev">
+    <a href="Cpp_Book_Lesson_8_5.html" class="nav-btn prev">
       <small>← Previous</small>
-      8.1  RAII — the central idea
+      8.5  std::unique_ptr
     </a>
-    <a href="Cpp_Book_Lesson_8_3.html" class="nav-btn next">
+    <a href="Cpp_Book_Lesson_8_7.html" class="nav-btn next">
       <small>Next lesson →</small>
-      8.3  Move semantics
+      8.7  Why new &amp; delete are rare
     </a>
   </div>
 
@@ -486,14 +463,14 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
 <script>
   const BIT_LINES = [
-    "When an object owns a resource, copying it needs care. 📋",
-    "Two operations: copy constructor (birth) and copy assignment (already alive). 👯",
-    "The compiler's default copy is member-wise — shallow. ⚙️",
-    "Shallow copy shares the pointer → aliasing and double-free. 💥",
-    "Deep copy allocates its own buffer and copies the contents. 🧬",
-    "Toggle shallow vs deep — watch the buffers share or split. 🔬",
-    "Rule of Three: write one of dtor/copy-ctor/copy-= , write all three. 📐",
-    "Own a resource? Define how it copies — or sidestep with Rule of Zero. 📚"
+    "unique_ptr is one owner; shared_ptr lets several share — refcounted. 👥",
+    "make_shared<T>(args); copy it freely — the count tracks owners. 🔢",
+    "Each copy ++ the count; each destroy -- it; hits 0 → deleted. ➕➖",
+    "weak_ptr observes without owning — .lock() if still alive. 👀",
+    "Two shared_ptrs pointing at each other = a leak. weak_ptr breaks it. 🔗",
+    "Copy, reset, observe — watch the reference count move. 🔬",
+    "shared_ptr has overhead — prefer unique_ptr unless you need sharing. 🛡️",
+    "Shared ownership + weak observers: the last of the smart pointers. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -525,7 +502,7 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 8.2 complete! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 8.6 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -557,108 +534,100 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Copy Inspector =====
-  let mode = 'deep';          // 'shallow' | 'deep'
-  let valA = 5, valB = 5;     // values shown for a and b
-  let destructed = false, cpTouched = false;
-  const cpDecl = document.getElementById('cpDecl');
-  const cpMem = document.getElementById('cpMem');
-  const cpMsg = document.getElementById('cpMsg');
-  const cpShallow = document.getElementById('cpShallow');
-  const cpDeep = document.getElementById('cpDeep');
-  const cpChange = document.getElementById('cpChange');
-  const cpDestruct = document.getElementById('cpDestruct');
-  const cpReset = document.getElementById('cpReset');
+  // ===== Ref Count Tracker =====
+  let pOwns = true, qOwns = false, deleted = false, rcTouched = false;
+  const rcMem = document.getElementById('rcMem');
+  const rcMsg = document.getElementById('rcMsg');
+  const rcCopy = document.getElementById('rcCopy');
+  const rcResetP = document.getElementById('rcResetP');
+  const rcResetQ = document.getElementById('rcResetQ');
+  const rcLock = document.getElementById('rcLock');
+  const rcReset = document.getElementById('rcReset');
 
-  function shared() { return mode === 'shallow'; }
+  function count() { return (pOwns ? 1 : 0) + (qOwns ? 1 : 0); }
+  function ownBox(name, owns) {
+    return owns ? `<div class="mem-obj"><span class="nm">${name}</span><br>owns ●</div>`
+                : `<div class="mem-obj empty"><span class="nm">${name}</span><br>nullptr</div>`;
+  }
+  function renderRC() {
+    const c = count();
+    const heap = deleted
+      ? `<div class="mem-buf warn">Widget<span class="count">use_count 0</span><span class="cap">deleted ✓</span></div>`
+      : `<div class="mem-buf">Widget<span class="count">use_count ${c}</span><span class="cap">alive on heap</span></div>`;
+    rcMem.innerHTML = `<div class="mem-col">${ownBox('p', pOwns)}${ownBox('q', qOwns)}<div class="mem-obj weak"><span class="nm">w</span><br>weak (observes)</div></div>
+      <div class="mem-arrow${deleted ? ' dead' : ''}">${c > 0 ? '⇒' : '⇢'}</div>
+      <div class="mem-heap">${heap}</div>`;
+  }
 
-  function renderDecl() {
-    if (mode === 'shallow') {
-      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;<span class="cm">// no copy ctor → default copies the pointer</span><br>};<br>Box b = a;  <span class="bad">// b.data == a.data</span>`;
+  rcCopy.addEventListener('click', (e) => {
+    if (deleted) { rcMsg.innerHTML = `(The Widget is gone — hit <code>reset</code>.)`; return; }
+    if (qOwns) { rcMsg.innerHTML = `<code>q</code> already owns it — count stays at 2.`; return; }
+    if (!pOwns) { rcMsg.innerHTML = `<code>p</code> is empty, so <code>q = p</code> would just make q empty too. (Hit <code>reset</code> to start over.)`; return; }
+    qOwns = true; renderRC();
+    rcMsg.innerHTML = `<b>auto q = p.</b> Copying the <code>shared_ptr</code> adds an owner — <code>use_count</code> is now <span class="grn">2</span>. Both <code>p</code> and <code>q</code> point at the same Widget and the same control block.`;
+    if (!rcTouched && e) { rcTouched = true; addXP(5, e.clientX, e.clientY, '🔢 Counted! +5 XP'); }
+  });
+
+  function doReset(which, e) {
+    if (deleted) { rcMsg.innerHTML = `(Already deleted — hit <code>reset</code>.)`; return; }
+    const owns = which === 'p' ? pOwns : qOwns;
+    if (!owns) { rcMsg.innerHTML = `<code>${which}</code> doesn't own anything right now.`; return; }
+    if (which === 'p') pOwns = false; else qOwns = false;
+    const c = count();
+    if (c === 0) {
+      deleted = true; renderRC();
+      rcMsg.innerHTML = `<b>${which}.reset().</b> Count dropped to <span class="red">0</span> — the <em>last</em> owner let go, so the Widget is <span class="red">deleted now</span>. No manual <code>delete</code>. ✅`;
     } else {
-      cpDecl.innerHTML = `<span class="kw">struct</span> Box {<br>&nbsp;&nbsp;<span class="kw">int</span>* data;<br>&nbsp;&nbsp;~Box() { <span class="kw">delete</span> data; }<br>&nbsp;&nbsp;Box(<span class="kw">const</span> Box&amp; o) { data = <span class="kw">new</span> <span class="kw">int</span>(*o.data); }<br>};<br>Box b = a;  <span class="v">// b gets its own int</span>`;
+      renderRC();
+      rcMsg.innerHTML = `<b>${which}.reset().</b> Count is now <span class="grn">${c}</span> — still above zero, so the Widget <span class="grn">stays alive</span>. The other owner is still using it.`;
     }
+    if (!rcTouched && e) { rcTouched = true; addXP(5, e.clientX, e.clientY, '➖ Released! +5 XP'); }
   }
-  function renderMem() {
-    if (destructed) {
-      if (shared()) {
-        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
-          <div class="mem-arrow">⇒⇒</div>
-          <div class="mem-heap"><div class="mem-buf warn">freed 2× 💀<span class="cap">double free!</span></div></div>`;
-      } else {
-        cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ✖</div><div class="mem-obj"><span class="nm">b</span><br>data ✖</div></div>
-          <div class="mem-arrow">⇒</div>
-          <div class="mem-heap"><div class="mem-buf">freed ✓<span class="cap">int(${valA})</span></div><div class="mem-buf">freed ✓<span class="cap">int(${valB})</span></div></div>`;
-      }
-      return;
-    }
-    if (shared()) {
-      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
-        <div class="mem-arrow">⇒⇒</div>
-        <div class="mem-heap"><div class="mem-buf warn">int(${valA})<span class="cap">one shared buffer</span></div></div>`;
+  rcResetP.addEventListener('click', (e) => doReset('p', e));
+  rcResetQ.addEventListener('click', (e) => doReset('q', e));
+
+  rcLock.addEventListener('click', (e) => {
+    if (!deleted) {
+      rcMsg.innerHTML = `<b>w.lock().</b> The Widget is alive, so <code>lock()</code> returns a valid <code>shared_ptr</code> — for as long as you hold it, the count goes up by one (the object can't vanish under you). <span class="grn">Safe to use.</span>`;
     } else {
-      cpMem.innerHTML = `<div class="mem-col"><div class="mem-obj"><span class="nm">a</span><br>data ●</div><div class="mem-obj"><span class="nm">b</span><br>data ●</div></div>
-        <div class="mem-arrow">⇒</div>
-        <div class="mem-heap"><div class="mem-buf">int(${valA})<span class="cap">a's own</span></div><div class="mem-buf">int(${valB})<span class="cap">b's own</span></div></div>`;
+      rcMsg.innerHTML = `<b>w.lock().</b> The Widget was already deleted, so the <code>weak_ptr</code> has <span class="red">expired</span> — <code>lock()</code> returns <code>nullptr</code>. This is how you safely check before using it.`;
     }
-  }
-  function setMode(m, e) {
-    mode = m; destructed = false; valA = 5; valB = 5;
-    cpShallow.classList.toggle('active', m === 'shallow');
-    cpDeep.classList.toggle('active', m === 'deep');
-    renderDecl(); renderMem();
-    cpMsg.innerHTML = m === 'shallow'
-      ? `<b>Shallow (default).</b> <code>b.data</code> holds the same address as <code>a.data</code> — <span class="red">one buffer, two owners.</span> Try changing <code>b</code> or ending the scope.`
-      : `<b>Deep copy.</b> The copy constructor gave <code>b</code> its own <code>int</code>. <span class="grn">Two independent buffers.</span> Try changing <code>b</code> or ending the scope.`;
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '📋 Copy traced! +5 XP'); }
-  }
-  function changeB(e) {
-    if (destructed) { cpMsg.innerHTML = `(Objects already destructed — hit <code>reset</code> first.)`; return; }
-    valB = 9;
-    if (shared()) { valA = 9; cpMsg.innerHTML = `<b>Aliasing!</b> <code>*b.data = 9;</code> changed the shared buffer, so <code>a</code> now reads <span class="red">9</span> too. They were never independent.`; }
-    else { cpMsg.innerHTML = `<b>Independent.</b> <code>*b.data = 9;</code> touched only <code>b</code>'s buffer — <code>a</code> still reads <span class="grn">5</span>.`; }
-    renderMem();
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '✏️ Mutated! +5 XP'); }
-  }
-  function destruct(e) {
-    if (destructed) return;
-    destructed = true; renderMem();
-    if (shared()) { cpMsg.innerHTML = `<b>End of scope.</b> Both destructors run <code>delete data;</code> on the <span class="red">same address</span> → <span class="red">double free</span> → undefined behaviour / crash. 💀`; }
-    else { cpMsg.innerHTML = `<b>End of scope.</b> Each destructor frees <span class="grn">its own</span> buffer exactly once. <span class="grn">Clean.</span> ✅`; }
-    if (!cpTouched && e) { cpTouched = true; addXP(5, e.clientX, e.clientY, '🗑️ Destructed! +5 XP'); }
-  }
-  cpShallow.addEventListener('click', (e) => setMode('shallow', e));
-  cpDeep.addEventListener('click', (e) => setMode('deep', e));
-  cpChange.addEventListener('click', changeB);
-  cpDestruct.addEventListener('click', destruct);
-  cpReset.addEventListener('click', () => setMode(mode));
-  setMode('deep');
+    if (!rcTouched && e) { rcTouched = true; addXP(5, e.clientX, e.clientY, '👀 Observed! +5 XP'); }
+  });
+
+  rcReset.addEventListener('click', () => {
+    pOwns = true; qOwns = false; deleted = false; renderRC();
+    rcMsg.innerHTML = `Reset. <code>p</code> owns the Widget (count 1), <code>q</code> is empty, <code>w</code> observes. Copy, reset, or lock to see the count move.`;
+  });
+
+  renderRC();
+  rcMsg.innerHTML = `<code>p</code> owns the Widget — <code>use_count</code> 1. <code>q</code> is empty and <code>w</code> only observes (it doesn't count). Try the buttons.`;
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'struct Box {\n  Box() {}\n  Box(const Box&) { std::cout << "copy "; }\n};\nvoid take(Box b) {}\nint main() { Box a; take(a); std::cout << "done"; }',
-      opts: ['copy done', 'done', 'copy copy done', 'done copy'],
-      answer: 'copy done',
-      why: 'Passing a by value into take() copies it → the copy constructor runs, printing "copy ". Then "done". (No copy is made returning void.)'
+      code: 'auto p = std::make_shared<int>(5);\nauto q = p;\nstd::cout << p.use_count();',
+      opts: ['2', '1', '0', '5'],
+      answer: '2',
+      why: 'Copying the shared_ptr makes q a second owner, so the reference count is 2. use_count() reports 2.'
     },
     {
-      code: 'struct T {\n  T() {}\n  T(const T&) { std::cout << "C"; }\n  T& operator=(const T&) { std::cout << "A"; return *this; }\n};\nint main() {\n  T x;\n  T y = x;   // creating y\n  y = x;     // y already exists\n}',
-      opts: ['CA', 'AC', 'CC', 'AA'],
-      answer: 'CA',
-      why: '"T y = x;" creates y → copy constructor → "C". "y = x;" overwrites an existing y → copy assignment → "A". So "CA".'
+      code: 'struct W { ~W() { std::cout << "bye"; } };\nint main() {\n  auto p = std::make_shared<W>();\n  { auto q = p; std::cout << "in "; }  // q dies here\n  std::cout << "out";\n}',
+      opts: ['in outbye', 'in byeout', 'byein out', 'in out'],
+      answer: 'in outbye',
+      why: '"in " prints, then q is destroyed (count 2→1, W still alive). "out" prints. At the end of main, p is destroyed (count→0) so ~W() prints "bye". → "in outbye".'
     },
     {
-      code: 'struct Buf {\n  int* p;\n  Buf(int v) { p = new int(v); }\n  // no custom copy ctor (shallow)\n};\nint main() {\n  Buf a(5);\n  Buf b = a;     // b.p == a.p\n  *b.p = 9;\n  std::cout << *a.p;\n}',
-      opts: ['9', '5', '0', 'crash'],
-      answer: '9',
-      why: 'The default shallow copy makes b.p the same address as a.p. Writing *b.p = 9 changes the one shared int, so *a.p is now 9 (aliasing).'
+      code: 'auto p = std::make_shared<int>(1);\nstd::weak_ptr<int> w = p;\nstd::cout << p.use_count();',
+      opts: ['1', '2', '0', 'expired'],
+      answer: '1',
+      why: 'A weak_ptr observes without owning, so it does NOT increase the reference count. Only p owns the int → use_count() is 1.'
     },
     {
-      code: 'struct S {\n  int* p;\n  S(int v) { p = new int(v); }\n  S(const S& o) { p = new int(*o.p); }  // deep\n};\nint main() {\n  S a(5);\n  S b = a;\n  *b.p = 9;\n  std::cout << *a.p << *b.p;\n}',
-      opts: ['59', '99', '55', '95'],
-      answer: '59',
-      why: 'The deep copy ctor gives b its own int. Changing *b.p to 9 leaves a untouched, so *a.p is 5 and *b.p is 9 → "59".'
+      code: 'std::weak_ptr<int> w;\n{\n  auto p = std::make_shared<int>(7);\n  w = p;\n}   // p destroyed here → count 0\nstd::cout << (w.lock() == nullptr);',
+      opts: ['1', '0', '7', 'crash'],
+      answer: '1',
+      why: 'When the block ends, p is gone and the count hits 0, so the int is deleted and w is expired. w.lock() returns nullptr, so the comparison is true → prints 1.'
     }
   ];
   let poIdx = 0;
@@ -698,7 +667,7 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. Remember: creating from another = copy ctor; overwriting an existing one = copy assignment; shallow shares the pointer, deep duplicates it.`;
+          poFb.innerHTML = `❌ Not quite. Remember: a copy bumps the count, the object dies when count hits 0, and a weak_ptr never changes the count.`;
           breakStreak();
         }
       });
@@ -717,14 +686,14 @@ Box b = a;   <span class="bad">// b.data == a.data  — same address! both point
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The Rule of Three: a custom destructor almost always means you also need a copy constructor and copy assignment operator. Leave them as the shallow defaults and the two copies will both <code>delete</code> the same pointer — a double free. (Or skip raw pointers entirely for the Rule of Zero.)'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Destructor, copy ctor, copy assignment — all three.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Use <code>shared_ptr</code> when ownership is truly shared — several owners, and the object should live until the last lets go. It isn\'t a "safer default": the reference count is updated atomically and carries a control block, so it has real overhead. Default to <code>unique_ptr</code> and upgrade to <code>shared_ptr</code> only when you need shared ownership.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Only when ownership is genuinely shared.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. A destructor alone isn\'t enough — the default shallow copies still share the pointer and double-free. You need <em>both</em> the copy constructor and copy assignment (Rule of Three).';
+      fb.innerHTML = '❌ Not quite. <code>shared_ptr</code> isn\'t a universal default and isn\'t faster than <code>unique_ptr</code> — it costs an atomic-counted control block. Reach for it only when an object genuinely has multiple owners.';
       firstTry = false; breakStreak();
     }
   }));

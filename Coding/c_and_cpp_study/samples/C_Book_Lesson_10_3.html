@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lesson 6.8 — Null, Dangling &amp; Wild Pointers · The C Book</title>
+<title>Lesson 10.3 — A First Makefile · The C Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -73,7 +73,8 @@
   pre.code .cm { color: #64748b; font-style: italic; }
   pre.code .str { color: #86efac; }
   pre.code .hl { color: #fde047; font-weight: 700; }
-  pre.code .out { color: #67e8f9; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  pre.code .tgt { color: #67e8f9; font-weight: 700; }
   .new-content { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
   .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
 
@@ -102,37 +103,32 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* Pointer State Inspector */
-  .psi-card { border: 2px solid var(--orange-light); border-radius: 14px; padding: 0; overflow: hidden; margin-bottom: 6px; }
-  .psi-head { padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 16px; color: white; }
-  .psi-head.good { background: linear-gradient(135deg, var(--green), #4ade80); }
-  .psi-head.bad { background: linear-gradient(135deg, var(--red), #fb7185); }
-  .psi-head .ic { font-size: 24px; }
-  .psi-rows { background: white; }
-  .psi-row { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--bg3); font-size: 14px; }
-  .psi-row:last-child { border-bottom: none; }
-  .psi-row .k { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-dim); min-width: 78px; flex-shrink: 0; text-transform: uppercase; }
-  .psi-row .v { color: var(--ink); }
-  .psi-row .v .ok { color: #166534; font-weight: 700; }
-  .psi-row .v .bad { color: var(--red); font-weight: 700; }
-  .psi-row .v code { font-size: 0.92em; }
+  /* Make Runner */
+  .mk-files { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .mk-file { flex: 1; min-width: 96px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 8px 6px; text-align: center; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all 0.2s var(--bouncy); color: var(--ink-soft); }
+  .mk-file:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--orange-light); }
+  .mk-file .fn { font-weight: 700; color: var(--orange-deep); display: block; }
+  .mk-file .ts { font-size: 9px; color: var(--ink-dim); }
+  .mk-file.touched { border-color: var(--orange); background: #fff7ed; animation: pulse 0.4s; }
+  @keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.06);} 100%{transform:scale(1);} }
+  .mk-act { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .mk-btn { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border: none; padding: 10px 16px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .mk-btn:hover { transform: translateY(-2px); }
+  .mk-btn.ghost { background: white; color: var(--orange-deep); border: 2px solid var(--orange-light); }
+  .mk-term { background: var(--terminal); border-radius: 12px; padding: 12px 14px; font-family: var(--mono); font-size: 12.5px; color: #e2e8f0; line-height: 1.7; min-height: 96px; margin-bottom: 10px; }
+  .mk-term .cmd { color: #67e8f9; }
+  .mk-term .run { color: #fdba74; }
+  .mk-term .skip { color: #64748b; }
+  .mk-term .done { color: #86efac; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--orange-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
 
-  .sc-group { margin-bottom: 12px; }
-  .sc-glabel { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; font-family: var(--mono); }
-  .sc-words { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sc-word { background: white; border: 2px solid var(--orange-light); border-radius: 10px; padding: 8px 15px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
-  .sc-word:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-  .sc-word.active { background: linear-gradient(135deg, var(--orange), var(--pink)); color: white; border-color: var(--orange); }
-  .sc-word.good.active { background: linear-gradient(135deg, var(--green), #4ade80); border-color: var(--green); }
-  .sc-msg { margin-top: 10px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
-  .sc-msg b { color: var(--orange-deep); }
-
-  /* Predict the output */
+  /* Predict the Output */
   .scenario { background: white; border: 2px solid var(--orange-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
   .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .scenario-code { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.65; white-space: pre-wrap; }
+  .scenario-code { font-family: var(--mono); font-size: 12.5px; background: var(--terminal); color: #e2e8f0; padding: 12px 14px; border-radius: 8px; line-height: 1.6; white-space: pre-wrap; }
   .count-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 18px; font: inherit; font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .cbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--orange-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
   .cbtn:hover:not(:disabled) { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   .cbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
   .cbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
@@ -210,22 +206,22 @@
   </div>
   <div class="bit-bubble" id="bitBubble">
     <span class="bit-name">Bit</span>
-    Three pointer states bite: <em>wild</em>, <em>NULL-deref</em>, and <em>dangling</em>. Let's tame them. 🛡️
+    Tired of retyping <code>gcc main.c util.c -o prog</code>? A <strong>Makefile</strong> remembers it — and only rebuilds what changed. 🛠️
   </div>
 </div>
 
 <div class="page">
 
   <div class="topbar">
-    <span class="crumb-c">THE C BOOK &middot; 6.8</span>
+    <span class="crumb-c">THE C BOOK &middot; 10.3</span>
     <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
-    <span>Lesson 46 / 55</span>
+    <span>Lesson 67 / 72</span>
   </div>
 
   <div class="hero">
-    <span class="hero-tag">🎯 PART VI &middot; POINTERS</span>
-    <h1>Null, Dangling &amp; Wild Pointers</h1>
-    <p class="hero-sub">Pointers are powerful, but three states cause most C crashes: a <strong>wild</strong> pointer (never aimed), a <strong>NULL</strong> pointer you dereference anyway, and a <strong>dangling</strong> pointer whose target is gone. Learn to spot and prevent all three and you'll write pointer code that doesn't bite.</p>
+    <span class="hero-tag">🧩 PART X &middot; PUTTING IT ALL TOGETHER</span>
+    <h1>A First Makefile</h1>
+    <p class="hero-sub">Once a project has more than a file or two, typing the full <code>gcc</code> command every time gets old fast. A <strong>Makefile</strong> records how to build your project, and the <code>make</code> tool runs it — rebuilding only the parts that actually changed. You don't need the whole arcane language; about ten lines covers everyday use, and that's what we'll learn.</p>
     <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <rect x="20" y="20" width="60" height="60" rx="12" fill="#fff" stroke="#1a202c" stroke-width="3"/>
       <g stroke="#1a202c" stroke-width="3"><line x1="14" y1="32" x2="20" y2="32"/><line x1="14" y1="50" x2="20" y2="50"/><line x1="14" y1="68" x2="20" y2="68"/><line x1="80" y1="32" x2="86" y2="32"/><line x1="80" y1="50" x2="86" y2="50"/><line x1="80" y1="68" x2="86" y2="68"/><line x1="32" y1="14" x2="32" y2="20"/><line x1="50" y1="14" x2="50" y2="20"/><line x1="68" y1="14" x2="68" y2="20"/><line x1="32" y1="80" x2="32" y2="86"/><line x1="50" y1="80" x2="50" y2="86"/><line x1="68" y1="80" x2="68" y2="86"/></g>
@@ -239,128 +235,144 @@
   <!-- 1 -->
   <section class="lesson-section" data-section="0" data-bit="0">
     <div class="step-label"><span class="step-num">1</span> Why this matters</div>
-    <h2>The pointers that bite 🧠</h2>
+    <h2>Stop retyping the build 🛠️</h2>
 
     <div class="new-content">
-      Everything you've learned in Part VI gives pointers real power — and real danger. The crashes C is infamous for (segmentation faults) almost always come from following a pointer that doesn't point at valid memory. There are three classic ways that happens: the pointer was <strong>never aimed</strong> (wild), it points at <strong>nothing</strong> and you read it anyway (NULL dereference), or it points at memory that's <strong>no longer there</strong> (dangling). This lesson names all three and gives you the habits to avoid them.
+      In 10.1 you built a multi-file program with <code>gcc main.c util.c -o prog</code>. That's fine for two files, but real projects have dozens, with flags and link options you'd never remember to type the same way twice. A <strong>Makefile</strong> is a small text file that records the build steps once; then you just type <code>make</code>. Better still, <code>make</code> is <em>incremental</em>: it checks file timestamps and recompiles only the files that changed since last time, which turns a minute-long full rebuild into a one-second one. It's the standard build tool across the C/C++ world, and a tiny subset gets you everything you need day to day.
     </div>
 
-    <p>This is the capstone of pointers: not new mechanics, but the safety rules that turn "powerful but scary" into "powerful and reliable." Learn the three failure modes and their fixes, and pointers stop being frightening.</p>
+    <p>The whole idea is one repeated shape: a <strong>rule</strong> that says "to make X, which needs Y, run this command."</p>
   </section>
 
   <!-- 2 -->
   <section class="lesson-section" data-section="1" data-bit="1">
-    <div class="step-label"><span class="step-num">2</span> Wild pointers</div>
-    <h2>Never aimed = garbage 🌵</h2>
+    <div class="step-label"><span class="step-num">2</span> The anatomy of a rule</div>
+    <h2>Target, prerequisites, recipe 📋</h2>
 
-    <p>A pointer that's declared but never given a value is <strong>wild</strong> (or uninitialized). It holds whatever random bits were already in memory — a garbage address. Dereferencing it reads or writes somewhere unpredictable:</p>
+    <p>Every Makefile is built from <strong>rules</strong>, and every rule has the same three parts:</p>
 
-    <pre class="code"><span class="kw">int</span> *p;     <span class="cm">// 🌵 wild — points at some garbage address</span>
-*p = 5;     <span class="cm">// 💥 writes to who-knows-where — crash or corruption</span></pre>
+    <pre class="code"><span class="tgt">prog</span>: main.o util.o          <span class="cm"># target : prerequisites</span>
+<span class="hl">→</span>gcc main.o util.o -o prog   <span class="cm"># recipe (MUST start with a TAB)</span></pre>
 
-    <div class="trap">
-      <h4>🚨 Always initialize your pointers</h4>
-      <p>An uninitialized pointer is a loaded gun. The fix is simple: <strong>always give a pointer a value when you declare it</strong> — either a real address (<code>int *p = &amp;x;</code>) or <code>NULL</code> if you don't have a target yet (<code>int *p = NULL;</code>). A <code>NULL</code> pointer is safe to hold and easy to test; a wild one is neither.</p>
+    <ul>
+      <li><strong>Target</strong> — the file to build (here <code>prog</code>), before the colon.</li>
+      <li><strong>Prerequisites</strong> — what it depends on (<code>main.o util.o</code>), after the colon.</li>
+      <li><strong>Recipe</strong> — the shell command(s) to build it, on the next line(s).</li>
+    </ul>
+
+    <div class="new-content">
+      Read it as a sentence: "to build <code>prog</code>, which depends on <code>main.o</code> and <code>util.o</code>, run this <code>gcc</code> command." <code>make</code> uses the dependency list to decide <em>whether</em> the recipe needs to run, and to figure out what to build first. The one piece of syntax people trip on: the recipe line must begin with a real <strong>Tab</strong> character, not spaces (more on that in the trap).
     </div>
   </section>
 
   <!-- 3 -->
   <section class="lesson-section" data-section="2" data-bit="2">
-    <div class="step-label"><span class="step-num">3</span> NULL pointers</div>
-    <h2>Points nowhere — don't follow it 🚫</h2>
+    <div class="step-label"><span class="step-num">3</span> A whole small Makefile</div>
+    <h2>The ten lines you'll use 📄</h2>
 
-    <p>You met <code>NULL</code> in 6.3: it's the "points at nothing" value. Holding and testing a <code>NULL</code> pointer is perfectly safe — that's the whole point of it. The crash comes only if you <strong>dereference</strong> it:</p>
+    <p>Here's a complete, realistic Makefile for a small project — chained rules plus a couple of conveniences:</p>
 
-    <pre class="code"><span class="kw">int</span> *p = NULL;   <span class="cm">// ✅ safe to hold</span>
+    <pre class="code">CC = gcc
+CFLAGS = -Wall -g            <span class="cm"># warnings on, debug info</span>
 
-*p = 5;          <span class="cm">// 💥 dereferencing NULL → segmentation fault</span>
+<span class="tgt">prog</span>: main.o util.o          <span class="cm"># final program</span>
+<span class="hl">→</span>$(CC) main.o util.o -o prog
 
-<span class="kw">if</span> (p != NULL)   <span class="cm">// ✅ check first, then it's safe</span>
-    *p = 5;</pre>
+<span class="tgt">main.o</span>: main.c util.h        <span class="cm"># recompiles if main.c OR util.h changes</span>
+<span class="hl">→</span>$(CC) $(CFLAGS) -c main.c
+
+<span class="tgt">util.o</span>: util.c util.h
+<span class="hl">→</span>$(CC) $(CFLAGS) -c util.c
+
+<span class="tgt">clean</span>:                       <span class="cm"># a "phony" task, not a file</span>
+<span class="hl">→</span>rm -f prog *.o</pre>
 
     <div class="new-content">
-      The rule: <strong>check before you dereference</strong>. <code>NULL</code> is useful precisely <em>because</em> you can test for it — a function that might not find a result can return <code>NULL</code>, and the caller checks <code>if (p != NULL)</code> before reading. Use <code>NULL</code> as a deliberate "nothing here yet" flag; just never read through it.
+      A few everyday features are in here. <strong>Variables</strong> like <code>CC</code> and <code>CFLAGS</code> are defined once and used as <code>$(CC)</code> — change a flag in one place. The rules <strong>chain</strong>: building <code>prog</code> needs <code>main.o</code>, which has its own rule, so <code>make</code> builds the <code>.o</code> files first, then links. The <code>util.h</code> in each <code>.o</code>'s prerequisites means editing the header rebuilds the files that include it. And <code>clean</code> is a handy task target you run with <code>make clean</code>.
     </div>
   </section>
 
   <!-- 4 -->
   <section class="lesson-section" data-section="3" data-bit="3">
-    <div class="step-label"><span class="step-num">4</span> Dangling pointers</div>
-    <h2>The target is gone 👻</h2>
+    <div class="step-label"><span class="step-num">4</span> Incremental builds</div>
+    <h2>Only rebuild what changed ⏱️</h2>
 
-    <p>The sneakiest one. A <strong>dangling</strong> pointer holds a real-looking address — but the thing it pointed to no longer exists. The classic mistake is returning the address of a <em>local</em> variable, which dies the moment the function returns:</p>
+    <p>The magic is timestamps. <code>make</code> rebuilds a target only if it's <em>older</em> than one of its prerequisites — so editing one file recompiles just that file (and whatever depends on it):</p>
 
-    <pre class="code"><span class="kw">int</span> *makeBad(<span class="kw">void</span>) {
-    <span class="kw">int</span> local = 42;
-    <span class="kw">return</span> &amp;local;   <span class="cm">// 👻 local dies when the function ends!</span>
-}
+    <pre class="code">$ make            <span class="cm"># first time: compiles everything, links prog</span>
+$ make            <span class="cm"># nothing changed → "make: 'prog' is up to date."</span>
 
-<span class="kw">int</span> *p = makeBad();
-*p;                  <span class="cm">// 💥 reads memory that's no longer valid</span></pre>
+<span class="cm"># edit util.c, then:</span>
+$ make            <span class="hl"># recompiles ONLY util.o, then relinks prog (skips main.o)</span></pre>
 
     <div class="new-content">
-      The pointer looks fine — it holds an address — but it points at a "ghost." The same thing happens with memory you've freed (you'll meet <code>free</code> in Part VII): after freeing, the pointer still holds the old address, but using it is undefined. The fix for the local case is to never return <code>&amp;local</code> — instead, let the caller pass in storage (the out-parameter idiom from 6.6).
+      For each target, <code>make</code> compares modification times: if every prerequisite is older than the target, the target is up to date and its recipe is <em>skipped</em>. Touch <code>util.c</code> and only <code>util.o</code> is now out of date, so just that compile runs — then <code>prog</code>, now older than the fresh <code>util.o</code>, is relinked. On a big project this is the difference between waiting and not. Running <code>make</code> with nothing changed does nothing at all, which is exactly what you want.
     </div>
   </section>
 
   <!-- 5 -->
   <section class="lesson-section" data-section="4" data-bit="4">
-    <div class="step-label"><span class="step-num">5</span> Defensive habits</div>
-    <h2>The five-second checklist 🛡️</h2>
+    <div class="step-label"><span class="step-num">5</span> Running it &amp; targets</div>
+    <h2>make, make clean, and friends 🎯</h2>
+
+    <p>By default <code>make</code> builds the <strong>first</strong> target in the file; you can also name a target explicitly:</p>
 
     <table class="op-table">
-      <thead><tr><th>Danger</th><th>Habit that prevents it</th></tr></thead>
+      <thead><tr><th>Command</th><th>What it does</th></tr></thead>
       <tbody>
-        <tr><td class="mono plain">wild pointer</td><td class="mono plain">initialize every pointer (to <code>NULL</code> if no target yet)</td></tr>
-        <tr><td class="mono plain">NULL dereference</td><td class="mono plain">check <code>if (p != NULL)</code> before <code>*p</code></td></tr>
-        <tr><td class="mono plain">dangling (local)</td><td class="mono plain">never <code>return &amp;local;</code> — pass storage in</td></tr>
-        <tr><td class="mono plain">dangling (freed)</td><td class="mono plain">set the pointer to <code>NULL</code> right after <code>free</code></td></tr>
+        <tr><td class="mono">make</td><td class="mono plain">build the first target (here, <code>prog</code>)</td></tr>
+        <tr><td class="mono">make util.o</td><td class="mono plain">build just that target</td></tr>
+        <tr><td class="mono">make clean</td><td class="mono plain">run the <code>clean</code> recipe (delete build files)</td></tr>
       </tbody>
     </table>
 
-    <div class="new-content">
-      None of these are hard — they're just discipline. Initialize, check, don't hand back a local's address, and null out freed pointers. Adopt them as reflexes and the whole category of pointer crashes mostly disappears. These habits, plus everything from 6.1–6.7, are the working pointer toolkit you'll carry into the rest of C.
+    <div class="trap">
+      <h4>🚨 Recipes must start with a real Tab, and "phony" targets need declaring</h4>
+      <p>The number-one Makefile error: indenting a recipe with <strong>spaces instead of a Tab</strong>. Make is strict — recipe lines must begin with an actual Tab character, or you get the cryptic <code>*** missing separator. Stop.</code> Configure your editor to keep the Tab in Makefiles. Second gotcha: a target like <code>clean</code> isn't a real file. If a file named <code>clean</code> ever exists in the folder, <code>make</code> sees the target as "up to date" and skips it. Declare such task-targets phony so <code>make</code> always runs them: add a line <code>.PHONY: clean</code>. (Common phony targets: <code>all</code>, <code>clean</code>, <code>test</code>, <code>install</code>.)</p>
     </div>
   </section>
 
   <!-- 6 — INTERACTIVE -->
   <section class="lesson-section" data-section="5" data-bit="5">
-    <div class="step-label"><span class="step-num">6</span> Try it — Pointer State Inspector</div>
-    <h2>Is <code>*p</code> safe? 🔬</h2>
+    <div class="step-label"><span class="step-num">6</span> Try it — Make Runner</div>
+    <h2>Edit a file, run make 🔬</h2>
 
-    <p>Two tools. The <strong>Inspector</strong> lets you pick a pointer state — valid, wild, NULL, or dangling — and see what it holds, whether <code>*p</code> is safe, and the fix. <strong>Predict the Output</strong> tests NULL checks and safe dereferencing.</p>
+    <p>Two tools. The <strong>Make Runner</strong> lets you "edit" a source file and then run <code>make</code> — watch it recompile only what's out of date and skip the rest. <strong>Predict the Output</strong> tests rules, incremental builds, and targets.</p>
 
     <div class="play-area">
       <div class="play-header">
-        <div class="play-title">🛡️ Pointer State Inspector</div>
+        <div class="play-title">🛠️ Make Runner</div>
         <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
       </div>
 
       <div class="tab-row">
-        <button class="tab-btn active" data-tab="psi">State Inspector</button>
+        <button class="tab-btn active" data-tab="fs">Make Runner</button>
         <button class="tab-btn" data-tab="out">Predict the Output</button>
       </div>
 
-      <!-- STATE INSPECTOR -->
-      <div class="tab-panel active" id="tab-psi">
-        <div class="sc-group">
-          <div class="sc-glabel">pick a pointer's state</div>
-          <div class="sc-words" id="psiBtns"></div>
+      <!-- MAKE RUNNER -->
+      <div class="tab-panel active" id="tab-fs">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-bottom:6px">click a source to "edit" it (updates its timestamp), then run make:</div>
+        <div class="mk-files" id="mkFiles"></div>
+        <div class="mk-act">
+          <button class="mk-btn" id="mkRun">$ make</button>
+          <button class="mk-btn ghost" id="mkClean">$ make clean</button>
+          <button class="mk-btn ghost" id="mkReset">reset ↺</button>
         </div>
-        <div class="psi-card" id="psiCard"></div>
-        <div class="sc-msg" id="scMsg">Choose a state to inspect. Only a <b>valid</b> pointer is safe to dereference — the other three bite.</div>
+        <div class="mk-term" id="mkTerm"></div>
+        <div class="fs-msg" id="mkMsg"></div>
       </div>
 
       <!-- PREDICT THE OUTPUT -->
       <div class="tab-panel" id="tab-out">
         <div class="scenario">
-          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-num" id="poNum">Scenario 1 / 4</div>
           <div class="scenario-code" id="poCode"></div>
         </div>
         <div class="count-btns" id="poBtns"></div>
-        <div class="pc-fb" id="poFb">What does this program print?</div>
+        <div class="pc-fb" id="poFb">What is the result?</div>
         <div class="scenario-nav">
-          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+          <button class="scen-btn" id="poNext" disabled>Next scenario →</button>
         </div>
       </div>
     </div>
@@ -373,13 +385,13 @@
 
     <div class="quiz">
       <div class="quiz-q">
-        What's the safe way to use a pointer before you have a real target for it?
+        You run <code>make</code>, change nothing, and run <code>make</code> again. What happens the second time?
       </div>
-      <button class="opt" data-correct="true"><span>Initialize it to <code>NULL</code>, and check <code>p != NULL</code> before dereferencing</span></button>
-      <button class="opt" data-correct="false"><span>Leave it uninitialized and just dereference it</span></button>
-      <button class="opt" data-correct="false"><span>Dereference it once to "wake it up"</span></button>
-      <button class="opt" data-correct="false"><span>Point it at a local variable and return that address</span></button>
-      <div class="quiz-feedback" id="quizFb">Hint: NULL is safe to hold and test — that's exactly why we use it as a placeholder.</div>
+      <button class="opt" data-correct="true"><span>Nothing is rebuilt — every target is newer than its prerequisites, so <code>make</code> reports it's <strong>up to date</strong></span></button>
+      <button class="opt" data-correct="false"><span>It recompiles and relinks everything from scratch again</span></button>
+      <button class="opt" data-correct="false"><span>It errors, because <code>prog</code> already exists</span></button>
+      <button class="opt" data-correct="false"><span>It deletes the old build and starts over</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: <code>make</code> compares modification timestamps to decide what to run.</div>
     </div>
   </section>
 
@@ -391,26 +403,26 @@
     <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
 
     <div class="mistake">
-      <div class="mistake-icon">🌵</div>
+      <div class="mistake-icon">↹</div>
       <div class="mistake-body">
-        <strong>Dereferencing a wild (uninitialized) pointer</strong>
-        <small><code>int *p; *p = 5;</code> writes to a garbage address. Always initialize a pointer — to a real address, or to <code>NULL</code> if you don't have one yet.</small>
-      </div>
-    </div>
-
-    <div class="mistake">
-      <div class="mistake-icon">🚫</div>
-      <div class="mistake-body">
-        <strong>Dereferencing <code>NULL</code></strong>
-        <small><code>*p</code> when <code>p</code> is <code>NULL</code> is a segfault. Holding and testing <code>NULL</code> is fine; reading through it isn't. Check <code>if (p != NULL)</code> first.</small>
+        <strong>Spaces instead of a Tab</strong>
+        <small>Recipe lines must start with a real Tab character. Spaces give <code>*** missing separator. Stop.</code> Set your editor to preserve tabs in Makefiles.</small>
       </div>
     </div>
 
     <div class="mistake">
       <div class="mistake-icon">👻</div>
       <div class="mistake-body">
-        <strong>Returning the address of a local variable</strong>
-        <small>The local dies when the function returns, leaving a dangling pointer. Don't <code>return &amp;local;</code> — have the caller pass in storage (an out-parameter).</small>
+        <strong>Forgetting <code>.PHONY</code></strong>
+        <small>Task targets like <code>clean</code> aren't files. If a file named <code>clean</code> exists, <code>make</code> thinks it's up to date and skips it. Declare <code>.PHONY: clean all test</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔗</div>
+      <div class="mistake-body">
+        <strong>Missing prerequisites</strong>
+        <small>If you don't list <code>util.h</code> as a prerequisite of the <code>.o</code> files that include it, editing the header won't trigger a rebuild — and you'll debug stale code. List every real dependency.</small>
       </div>
     </div>
 
@@ -418,39 +430,39 @@
 
     <div class="exercise">
       <span class="ex-tag ex-easy">Easy</span>
-      <strong>Guard the deref.</strong> Declare <code>int *p = NULL;</code>. Write <code>if (p != NULL) printf("%d", *p); else printf("empty");</code> — see it print "empty" safely. Then aim <code>p</code> at a real variable and run again.
+      <strong>One-rule Makefile.</strong> For a single-file program, write a Makefile with one rule: <code>prog: main.c</code> and a recipe that compiles it. Run <code>make</code>, then run it again and see "up to date."
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Feel the dangling warning.</strong> Write a function that does <code>return &amp;local;</code> and read the compiler warning ("address of local variable returned"). Rewrite it to take an <code>int *out</code> parameter instead.
+      <strong>Multi-file + clean.</strong> Take your 10.1 three-file project and write the full Makefile from section 3 (with <code>CC</code>/<code>CFLAGS</code> variables and a <code>clean</code> target). Edit one <code>.c</code> and confirm only that file recompiles.
     </div>
 
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>A safe-deref helper.</strong> Write <code>int safeGet(const int *p, int fallback)</code> that returns <code>*p</code> if <code>p != NULL</code>, otherwise <code>fallback</code>. Call it with a real pointer and with <code>NULL</code> — defensive programming in one tidy function.
+      <strong>Prove the header dependency.</strong> With <code>util.h</code> listed as a prerequisite, edit only <code>util.h</code> and run <code>make</code> — confirm every <code>.o</code> that includes it rebuilds. Then remove it from the prerequisites and show that editing the header no longer triggers a rebuild (the bug).
     </div>
 
     <div class="recap">
       <h3>🎓 What to remember</h3>
       <ul>
-        <li><strong>Three pointer states bite:</strong> wild (uninitialized), NULL-dereferenced, and dangling (target gone).</li>
-        <li><strong>A wild pointer holds garbage</strong> — always initialize a pointer (to <code>NULL</code> if no target yet).</li>
-        <li><strong><code>NULL</code> is safe to hold and test, never to dereference</strong> — check <code>p != NULL</code> first.</li>
-        <li><strong>A dangling pointer's target is gone</strong> (a returned local, or freed memory) — don't <code>return &amp;local;</code>.</li>
-        <li><strong>Habits:</strong> initialize to <code>NULL</code>, check before deref, set to <code>NULL</code> after freeing, never return a local's address.</li>
+        <li><strong>A Makefile records your build</strong> so you type <code>make</code> instead of long <code>gcc</code> commands.</li>
+        <li><strong>Every rule is target : prerequisites + a recipe</strong> — "to build X (which needs Y), run this." Recipes start with a <strong>Tab</strong>.</li>
+        <li><strong><code>make</code> is incremental</strong> — it compares timestamps and rebuilds only what's out of date; unchanged builds do nothing.</li>
+        <li><strong>Variables (<code>$(CC)</code>, <code>$(CFLAGS)</code>) and chained rules</strong> keep it DRY; <code>make</code> builds the first target by default.</li>
+        <li><strong>Declare task targets <code>.PHONY</code></strong> (<code>clean</code>, <code>all</code>) so they always run regardless of same-named files.</li>
       </ul>
     </div>
   </section>
 
   <div class="nav-foot">
-    <a href="C_Book_Lesson_6_7.html" class="nav-btn prev">
+    <a href="C_Book_Lesson_10_2.html" class="nav-btn prev">
       <small>← Previous</small>
-      6.7  const and pointers
+      10.2  The preprocessor
     </a>
-    <a href="C_Book_Lesson_6_9.html" class="nav-btn next">
+    <a href="C_Book_Lesson_10_4.html" class="nav-btn next">
       <small>Next lesson →</small>
-      6.9  Pointers to pointers &amp; function pointers
+      10.4  Debugging with gdb
     </a>
   </div>
 
@@ -458,14 +470,14 @@
 
 <script>
   const BIT_LINES = [
-    "Three pointer states bite: wild, NULL-deref, and dangling. Most C crashes. 🧠",
-    "Wild pointer = uninitialized = garbage address. Deref = 💥. Initialize it! 🌵",
-    "NULL: safe to hold &amp; test, crash if you deref. Check p != NULL first. 🚫",
-    "Dangling: the pointer's fine but its target is GONE. Don't return &amp;local. 👻",
-    "Habits: init to NULL, check before deref, NULL after free, no &amp;local return. 🛡️",
-    "Pick a pointer state — see if *p is safe and what the fix is! 🔬",
-    "Initialize to NULL, check before deref. That's the safety rule. 🎯",
-    "Wild / NULL-deref / dangling — initialize, check, and never return &amp;local. 📚"
+    "A Makefile records your build so you just type 'make'. 🛠️",
+    "Every rule: target : prerequisites, then a recipe (TAB-indented). 📋",
+    "Variables ($(CC), $(CFLAGS)) and chained rules keep it DRY. 📄",
+    "make is incremental — it rebuilds only what's out of date. ⏱️",
+    "make builds the first target; make clean runs the clean recipe. 🎯",
+    "Edit a file and run make — watch only that file recompile. 🔬",
+    "Recipes need a real TAB; declare task targets .PHONY. ⚠️",
+    "target : prerequisites + recipe, rebuilt by timestamp. 📚"
   ];
 
   let xp = 0, streak = 0;
@@ -497,7 +509,7 @@
     visited.add(idx);
     progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
     if (visited.size === TOTAL_SECTIONS) {
-      setTimeout(() => { burst(); showToast('🎉 Lesson 6.8 complete! Part VI done! +50 XP'); addXP(50); }, 400);
+      setTimeout(() => { burst(); showToast('🎉 Lesson 10.3 complete! +50 XP'); addXP(50); }, 400);
     }
   }
 
@@ -529,88 +541,124 @@
 
   const playCount = document.getElementById('playCount');
 
-  // ===== Pointer State Inspector =====
-  const STATES = {
-    valid: {
-      good: true, ic: '✅', title: 'Valid', decl: 'int x = 5;  int *p = &x;',
-      holds: 'the address of <code>x</code> — a live <code>int</code>',
-      deref: '<span class="ok">safe</span> — <code>*p</code> reads <b>5</b>',
-      fix: 'nothing to fix — this is the good case',
-      msg: 'A <b>valid</b> pointer aims at a live variable. <code>*p</code> is safe to read and write. This is the only one of the four you can dereference freely.'
-    },
-    wild: {
-      good: false, ic: '🌵', title: 'Wild (uninitialized)', decl: 'int *p;   // never set',
-      holds: 'a <b>garbage</b> address (never aimed)',
-      deref: '<span class="bad">💥 crash / undefined</span>',
-      fix: 'initialize it: <code>int *p = NULL;</code> (or aim at a real variable)',
-      msg: 'A <b>wild</b> pointer was declared but never given a value, so it holds whatever junk was in memory. Dereferencing it is undefined — a crash waiting to happen. <b>Always initialize.</b>'
-    },
-    null: {
-      good: false, ic: '🚫', title: 'NULL', decl: 'int *p = NULL;',
-      holds: '<code>NULL</code> (points at nothing)',
-      deref: '<span class="bad">💥 crash</span> if dereferenced — but safe to hold/test',
-      fix: 'check first: <code>if (p != NULL) *p;</code>',
-      msg: 'A <b>NULL</b> pointer deliberately points nowhere. Holding and testing it is perfectly safe — that\'s the point. Just never dereference it without a <code>if (p != NULL)</code> check.'
-    },
-    dangling: {
-      good: false, ic: '👻', title: 'Dangling', decl: 'int *p = &local;  // after local died',
-      holds: 'the address of a variable that <b>no longer exists</b>',
-      deref: '<span class="bad">💥 undefined</span> — reads dead memory',
-      fix: 'never <code>return &local;</code>; null out pointers after <code>free</code>',
-      msg: 'A <b>dangling</b> pointer holds a real-looking address, but its target is gone — a returned local, or freed memory. The pointer looks fine; the destination is a ghost. Don\'t return <code>&local</code>.'
-    }
-  };
-  let psiTouched = false;
-  const psiBtns = document.getElementById('psiBtns');
-  const psiCard = document.getElementById('psiCard');
-  const scMsg = document.getElementById('scMsg');
-  const ORDER = [['valid', 'valid'], ['wild', 'wild'], ['null', 'NULL'], ['dangling', 'dangling']];
-  psiBtns.innerHTML = ORDER.map(([k, lbl], i) => `<button class="sc-word${STATES[k].good ? ' good' : ''}${i === 0 ? ' active' : ''}" data-k="${k}">${lbl}</button>`).join('');
-
-  function renderPSI(k) {
-    const s = STATES[k];
-    psiCard.innerHTML = `
-      <div class="psi-head ${s.good ? 'good' : 'bad'}"><span class="ic">${s.ic}</span> ${s.title}</div>
-      <div class="psi-rows">
-        <div class="psi-row"><span class="k">decl</span><span class="v"><code>${s.decl}</code></span></div>
-        <div class="psi-row"><span class="k">p holds</span><span class="v">${s.holds}</span></div>
-        <div class="psi-row"><span class="k">*p is</span><span class="v">${s.deref}</span></div>
-        <div class="psi-row"><span class="k">fix</span><span class="v">${s.fix}</span></div>
-      </div>`;
-    scMsg.innerHTML = s.msg;
+  // ===== Make Runner =====
+  // model timestamps as integers; bigger = newer. Sources start older than built artifacts after a build.
+  let clock = 100, mkTouched = false;
+  // mtime for each file; built==false means the .o/prog doesn't exist yet
+  let mt = {};
+  function freshState() {
+    clock = 100;
+    mt = { 'main.c': 1, 'util.c': 2, 'util.h': 3, 'main.o': null, 'util.o': null, 'prog': null };
   }
-  psiBtns.querySelectorAll('.sc-word').forEach(b => b.addEventListener('click', (e) => {
-    psiBtns.querySelectorAll('.sc-word').forEach(x => x.classList.toggle('active', x === b));
-    renderPSI(b.dataset.k);
-    if (!psiTouched) { psiTouched = true; addXP(5, e.clientX, e.clientY, '🛡️ Inspecting pointers! +5 XP'); }
-  }));
-  renderPSI('valid');
+  freshState();
+
+  const SRC = ['main.c', 'util.c', 'util.h'];
+  const mkFiles = document.getElementById('mkFiles');
+  const mkTerm = document.getElementById('mkTerm');
+  const mkMsg = document.getElementById('mkMsg');
+  const mkRun = document.getElementById('mkRun');
+  const mkClean = document.getElementById('mkClean');
+  const mkReset = document.getElementById('mkReset');
+
+  function tlabel(v) { return v === null ? '—' : 't' + v; }
+  function renderFiles(touchedName) {
+    const order = ['main.c', 'util.c', 'util.h', 'main.o', 'util.o', 'prog'];
+    mkFiles.innerHTML = order.map(f => {
+      const editable = SRC.includes(f);
+      const cls = 'mk-file' + (f === touchedName ? ' touched' : '');
+      return `<div class="${cls}" data-f="${editable ? f : ''}" title="${editable ? 'click to edit' : 'built artifact'}"><span class="fn">${f}</span><span class="ts">${mt[f] === null ? '(absent)' : 'mtime ' + tlabel(mt[f])}</span></div>`;
+    }).join('');
+    mkFiles.querySelectorAll('.mk-file').forEach(el => {
+      const f = el.dataset.f;
+      if (!f) return;
+      el.addEventListener('click', (e) => {
+        mt[f] = ++clock;
+        renderFiles(f);
+        mkMsg.innerHTML = `✏️ Edited <code>${f}</code> — its timestamp is now the newest. Run <code>make</code> to see what rebuilds.`;
+        if (!mkTouched) { mkTouched = true; addXP(5, e.clientX, e.clientY, '✏️ Edited! +5 XP'); }
+      });
+    });
+  }
+
+  function runMake() {
+    const log = [];
+    let did = false;
+    // rule: main.o : main.c util.h
+    if (mt['main.o'] === null || mt['main.o'] < mt['main.c'] || mt['main.o'] < mt['util.h']) {
+      mt['main.o'] = ++clock; log.push(['run', 'gcc -Wall -g -c main.c']); did = true;
+    } else log.push(['skip', "  'main.o' up to date"]);
+    // rule: util.o : util.c util.h
+    if (mt['util.o'] === null || mt['util.o'] < mt['util.c'] || mt['util.o'] < mt['util.h']) {
+      mt['util.o'] = ++clock; log.push(['run', 'gcc -Wall -g -c util.c']); did = true;
+    } else log.push(['skip', "  'util.o' up to date"]);
+    // rule: prog : main.o util.o
+    if (mt['prog'] === null || mt['prog'] < mt['main.o'] || mt['prog'] < mt['util.o']) {
+      mt['prog'] = ++clock; log.push(['run', 'gcc main.o util.o -o prog']); did = true;
+    } else log.push(['skip', "  'prog' up to date"]);
+
+    let html = `<span class="cmd">$ make</span><br>`;
+    log.forEach(([k, t]) => {
+      if (k === 'run') html += `<span class="run">${t}</span><br>`;
+      else html += `<span class="skip">${t}</span><br>`;
+    });
+    if (!did) html += `<span class="done">make: 'prog' is up to date.</span>`;
+    mkTerm.innerHTML = html;
+    renderFiles(null);
+    return did;
+  }
+
+  mkRun.addEventListener('click', (e) => {
+    const ranAny = mt['prog'] === null;
+    const did = runMake();
+    const runs = mkTerm.querySelectorAll('.run').length;
+    if (!did) mkMsg.innerHTML = `<b>Up to date.</b> Every target is newer than its prerequisites, so <span class="grn">nothing rebuilds</span> — that's incremental builds working.`;
+    else if (runs === 3) mkMsg.innerHTML = `<b>Full build.</b> All three recipes ran — compile <code>main.o</code> &amp; <code>util.o</code>, then link <code>prog</code>.`;
+    else mkMsg.innerHTML = `<b>Partial rebuild.</b> Only the <span class="grn">${runs}</span> out-of-date target(s) recompiled; the rest were skipped. Editing one file didn't rebuild everything.`;
+    if (!mkTouched) { mkTouched = true; addXP(5, e.clientX, e.clientY, '🛠️ make! +5 XP'); }
+  });
+
+  mkClean.addEventListener('click', () => {
+    mt['main.o'] = null; mt['util.o'] = null; mt['prog'] = null;
+    mkTerm.innerHTML = `<span class="cmd">$ make clean</span><br><span class="run">rm -f prog *.o</span>`;
+    renderFiles(null);
+    mkMsg.innerHTML = `<b>make clean.</b> Deleted the built artifacts (<code>*.o</code>, <code>prog</code>). The next <code>make</code> will build everything from scratch. (<code>clean</code> is a <code>.PHONY</code> task target.)`;
+  });
+
+  mkReset.addEventListener('click', () => {
+    freshState(); renderFiles(null);
+    mkTerm.innerHTML = `<span class="skip">(nothing built yet — click "$ make")</span>`;
+    mkMsg.innerHTML = `Fresh checkout: only the sources exist. Run <code>make</code> for the first full build, then edit a file and run <code>make</code> again.`;
+  });
+
+  renderFiles(null);
+  mkTerm.innerHTML = `<span class="skip">(nothing built yet — click "$ make")</span>`;
+  mkMsg.innerHTML = `Only the sources exist so far. Click <code>$ make</code> for the first build, then "edit" a file and run <code>make</code> again to see the incremental rebuild.`;
 
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'int *p = NULL;\nif (p != NULL) printf("%d", *p);\nelse printf("safe");',
-      opts: ['safe', '0', 'crash', 'NULL'],
-      answer: 'safe',
-      why: 'The check sees p is NULL and skips the dereference, printing "safe". The guard works.'
+      code: 'A fresh project (only sources exist).\nYou run:  $ make\n# How many recipes run?\n# (main.o, util.o, then link prog)',
+      opts: ['3 — compile both .o, then link', '1 — just link', '0 — nothing to do', '2 — the two .o only'],
+      answer: '3 — compile both .o, then link',
+      why: 'Nothing is built yet, so every target is out of date: main.o and util.o compile, then prog links. Three recipes run.'
     },
     {
-      code: 'int *p = NULL;\nprintf("%d", p == NULL);',
-      opts: ['1', '0', 'crash', 'NULL'],
-      answer: '1',
-      why: 'Comparing a NULL pointer to NULL is true → 1. Holding and testing NULL is always safe.'
+      code: 'Everything is already built and up to date.\nYou change nothing and run:  $ make',
+      opts: ["nothing — 'prog' is up to date", 'rebuilds everything', 'only relinks prog', 'error'],
+      answer: "nothing — 'prog' is up to date",
+      why: 'Each target is newer than its prerequisites, so make skips every recipe and prints "up to date". That is the point of incremental builds.'
     },
     {
-      code: 'int x = 5;\nint *p = &x;\nprintf("%d", p == NULL);',
-      opts: ['0', '1', '5', 'crash'],
-      answer: '0',
-      why: 'p points at a real variable, so it is NOT NULL → the comparison is 0.'
+      code: 'Built project. You edit ONLY util.c, then:\n  $ make\n# (rules: main.o:main.c util.h ;\n#  util.o:util.c util.h ; prog:main.o util.o)',
+      opts: ['recompile util.o, then relink prog', 'recompile everything', 'only recompile util.o', 'nothing'],
+      answer: 'recompile util.o, then relink prog',
+      why: 'util.c changed, so util.o is out of date and recompiles. main.o is untouched (skipped). prog is now older than the new util.o, so it relinks. Two recipes, not three.'
     },
     {
-      code: 'int *p = NULL;\nint x = 7;\np = &x;          // aim before dereferencing\nprintf("%d", *p);',
-      opts: ['7', '0', 'crash', 'NULL'],
-      answer: '7',
-      why: 'We aimed p at x before dereferencing, so *p safely reads 7. Init to NULL, then aim, then deref.'
+      code: 'Built project. You edit ONLY util.h\n(a prerequisite of BOTH main.o and util.o).\n  $ make',
+      opts: ['recompile main.o AND util.o, then relink', 'only util.o rebuilds', 'nothing — headers do not count', 'only relink prog'],
+      answer: 'recompile main.o AND util.o, then relink',
+      why: 'util.h is a prerequisite of both .o files, so editing it makes both out of date — both recompile, then prog relinks. This is why you list headers as prerequisites.'
     }
   ];
   let poIdx = 0;
@@ -624,10 +672,10 @@
   function loadPO() {
     const s = PO[poIdx];
     poCode.textContent = s.code;
-    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
-    poFb.innerHTML = 'What does this program print?';
+    poNum.textContent = `Scenario ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What is the result?';
     poNext.disabled = true;
-    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next scenario →' : 'Restart ↺';
     poBtns.innerHTML = '';
     s.opts.forEach(o => {
       const b = document.createElement('button');
@@ -650,7 +698,7 @@
           }
         } else {
           b.classList.add('wrong'); b.disabled = true;
-          poFb.innerHTML = `❌ Not quite. NULL is safe to hold/test; check before deref; aim before you read through a pointer.`;
+          poFb.innerHTML = `❌ Not quite. Remember: make rebuilds a target only if it's older than a prerequisite — and a changed header rebuilds every file that lists it.`;
           breakStreak();
         }
       });
@@ -669,14 +717,14 @@
     if (o.dataset.correct === 'true') {
       o.classList.add('right');
       fb.innerHTML = firstTry
-        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Initialize the pointer to <code>NULL</code> (safe to hold), and guard every dereference with <code>if (p != NULL)</code>. That avoids both the wild-pointer and NULL-dereference traps in one habit.'
-        : '✓ <strong style="color: var(--green)">Right.</strong> Init to NULL, check before deref.';
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> <code>make</code> compares each target\'s modification time against its prerequisites. If nothing changed, every target is already newer than what it depends on, so no recipe runs and you get "<code>prog</code> is up to date." Only an edit (a newer prerequisite) triggers a rebuild — and just of the affected files.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Up to date — nothing rebuilds.';
       opts.forEach(x => x.disabled = true);
       addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
       if (firstTry) burst();
     } else {
       o.classList.add('wrong'); o.disabled = true;
-      fb.innerHTML = '❌ Not quite. Leaving it wild, "waking it up" by dereferencing, or returning a local\'s address are exactly the crashes we\'re avoiding — initialize to <code>NULL</code> and check first.';
+      fb.innerHTML = '❌ Not quite. <code>make</code> doesn\'t blindly rebuild — it checks timestamps. With nothing changed, every target is up to date, so it does nothing at all.';
       firstTry = false; breakStreak();
     }
   }));
