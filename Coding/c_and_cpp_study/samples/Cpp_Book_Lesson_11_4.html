@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 11.4 — Binary Files &amp; Random Access · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Binary lab picker */
+  .ft-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .ftmode { flex: 1; min-width: 100px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 11.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ftmode.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ftmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .ftmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .ft-code { background: #0d1033; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: #e0e7ff; white-space: pre-wrap; overflow-x: auto; }
+  .ft-code .kw { color: #c4b5fd; font-weight: 700; }
+  .ft-code .cm { color: #818cf8; font-style: italic; }
+  .ft-code .str { color: #86efac; }
+  .ft-code .hl { color: #fde047; font-weight: 700; }
+  .ft-code .bad { color: #fca5a5; font-weight: 700; }
+  .ft-info { background: #fff; border: 2px solid var(--purple-light); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 6px; }
+  .ft-info .row { display: flex; gap: 8px; padding: 2px 0; }
+  .ft-info .k { color: var(--purple-deep); font-weight: 700; min-width: 96px; }
+  .ft-info .v { color: var(--ink-soft); font-family: var(--mono); font-size: 12.5px; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--purple-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 12px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.55; white-space: pre-wrap; }
+  .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .po-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Binary I/O writes an object's <em>exact bytes</em> — fast and lossless — and <code>seekg</code>/<code>seekp</code> let you jump anywhere in the file. 💾
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 11.4</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 77 / 84</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">📂 PART XI &middot; I/O AND FILES</span>
+    <h1>Binary Files &amp; Random Access</h1>
+    <p class="hero-sub">Text I/O is readable but bulky and lossy for raw data. <strong>Binary I/O</strong> writes an object's exact bytes with <code>.write()</code> and reads them back with <code>.read()</code> — fast and exact. And with <code>seekg</code>/<code>seekp</code> you can jump straight to any position, turning a file into a random-access store of fixed-size records.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>Bytes, not text 💾</h2>
+
+    <div class="new-content">
+      Everything so far has been <em>text</em> I/O: <code>&lt;&lt;</code> turns a number into its decimal digits, <code>&gt;&gt;</code> parses them back. That's readable, but for raw data it's wasteful (the <code>int</code> <code>1000000</code> takes 7 characters as text, 4 bytes as binary) and can lose precision when round-tripping floating-point. <strong>Binary I/O</strong> skips the translation: it copies an object's <em>exact bytes</em> to disk and back. The tools are the stream member functions <code>.write()</code> and <code>.read()</code>, used on a stream opened with <code>std::ios::binary</code>. Pair that with <strong>random access</strong> — <code>seekg</code>/<code>seekp</code> to move the read/write position anywhere in the file — and a file becomes an array of fixed-size records you can index into directly.
+    </div>
+
+    <p>This closes Part XI: you'll have the full I/O toolkit — console, files, string streams, formatting, and now raw bytes with positioning.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> Writing bytes</div>
+    <h2>.write() with ios::binary ✍️</h2>
+
+    <p><code>ostream::write</code> takes a <code>const char*</code> and a byte count. To write any object, hand it the object's address (cast to <code>const char*</code>) and its <code>sizeof</code>:</p>
+
+    <pre class="code"><span class="kw">#include</span> <span class="str">&lt;fstream&gt;</span>
+
+<span class="kw">struct</span> Rec { <span class="kw">int</span> id; <span class="kw">double</span> score; };   <span class="cm">// plain data — safe to copy as bytes</span>
+Rec r{ 7, 9.5 };
+
+std::ofstream out(<span class="str">"data.bin"</span>, std::ios::binary);     <span class="hl">// binary mode!</span>
+out.write(<span class="kw">reinterpret_cast</span>&lt;<span class="kw">const char</span>*&gt;(&amp;r), <span class="kw">sizeof</span> r);</pre>
+
+    <div class="new-content">
+      Three pieces matter. <code>std::ios::binary</code> turns off any text translation (on Windows, text mode would rewrite newline bytes — disastrous for binary data). <code>reinterpret_cast&lt;const char*&gt;(&amp;r)</code> reinterprets the object as a raw byte buffer — <code>write</code> deals in bytes, so it needs a <code>char*</code>. And <code>sizeof r</code> is exactly how many bytes that object occupies. The result is a chunk of <code>sizeof(Rec)</code> bytes appended to the file — an exact image of the object in memory. Writing an array or a <code>std::vector</code>'s buffer works the same way: point at the data, pass the total byte size.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> Reading bytes</div>
+    <h2>.read() back into an object 📖</h2>
+
+    <p><code>istream::read</code> is the mirror image: give it the destination address (as <code>char*</code>) and the byte count, and it fills the object:</p>
+
+    <pre class="code">std::ifstream in(<span class="str">"data.bin"</span>, std::ios::binary);
+
+Rec r;
+in.read(<span class="kw">reinterpret_cast</span>&lt;<span class="kw">char</span>*&gt;(&amp;r), <span class="kw">sizeof</span> r);   <span class="cm">// fill r from the bytes</span>
+
+<span class="kw">if</span> (in)                       <span class="hl">// did we get all sizeof(r) bytes?</span>
+    use(r.id, r.score);
+<span class="cm">// in.gcount() tells how many bytes were actually read</span></pre>
+
+    <div class="new-content">
+      Because the bytes are an exact copy, <code>read</code> reconstructs the object perfectly — <code>r.id == 7</code>, <code>r.score == 9.5</code>, no parsing, no rounding. Always check the stream afterward: if the file ended early, <code>read</code> sets the fail state (and <code>in.gcount()</code> reports how many bytes it actually managed to read). The cast here drops the <code>const</code> — you're writing <em>into</em> <code>r</code> — but it's the same idea: treat the object as a byte buffer just long enough to copy into it. Read in the same struct layout you wrote, and you get your data back intact.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Random access</div>
+    <h2>seekg, seekp, tellg/tellp 🎯</h2>
+
+    <p>Streams keep a <em>position</em> — where the next read or write happens. You can move it directly, so you don't have to read a file front-to-back:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Call</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">seekg(pos)</td><td class="mono plain">move the <strong>g</strong>et (read) position to byte <code>pos</code></td></tr>
+        <tr><td class="mono">seekp(pos)</td><td class="mono plain">move the <strong>p</strong>ut (write) position to byte <code>pos</code></td></tr>
+        <tr><td class="mono">seekg(off, dir)</td><td class="mono plain">relative: <code>dir</code> = <code>ios::beg</code> / <code>ios::cur</code> / <code>ios::end</code></td></tr>
+        <tr><td class="mono">tellg() / tellp()</td><td class="mono plain">report the current read / write position</td></tr>
+      </tbody>
+    </table>
+
+    <pre class="code"><span class="cm">// jump straight to record number n (0-based) and read it:</span>
+in.seekg(n * <span class="kw">sizeof</span>(Rec));            <span class="hl">// byte offset of record n</span>
+Rec r;
+in.read(<span class="kw">reinterpret_cast</span>&lt;<span class="kw">char</span>*&gt;(&amp;r), <span class="kw">sizeof</span> r);</pre>
+
+    <div class="new-content">
+      This is what makes a binary file of fixed-size records a <strong>random-access store</strong>: record <code>n</code> always lives at byte offset <code>n * sizeof(Rec)</code>, so you can read or overwrite any record in one jump — no scanning. <code>seekg</code> moves the read head, <code>seekp</code> the write head; the two-argument form seeks relative to the beginning (<code>ios::beg</code>), the current spot (<code>ios::cur</code>), or the end (<code>ios::end</code>) — e.g. <code>seekg(-sizeof(Rec), std::ios::end)</code> lands on the last record. <code>tellg()</code>/<code>tellp()</code> hand back the current position (as a byte count from the start), handy for measuring sizes or remembering a spot.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> What's safe to dump</div>
+    <h2>Only plain data — and mind portability ⚠️</h2>
+
+    <p>Byte-dumping works only for types whose bytes <em>are</em> the data. That's <strong>trivially-copyable</strong> types: numbers, fixed arrays, and structs built from those:</p>
+
+    <div class="trap">
+      <h4>🚨 Never byte-dump a <code>std::string</code> or <code>std::vector</code></h4>
+      <p>A <code>std::string</code> or <code>std::vector</code> object is small — it holds a <em>pointer</em> to heap memory plus a size, not the characters/elements themselves. So <code>write(reinterpret_cast&lt;char*&gt;(&amp;myString), sizeof myString)</code> saves the <strong>pointer and bookkeeping</strong>, not the text — and when you read it back into another run, that pointer is meaningless (it points into the old, gone process), giving garbage or a crash. To persist such data, write the <em>contents</em>: e.g. write the length, then the characters/elements. Second caution: a raw byte dump is <strong>not portable</strong>. Endianness (byte order), struct padding, and type sizes can differ between machines and compilers, so a <code>.bin</code> written on one system may not read correctly on another. For data you'll share or keep long-term, prefer a defined format (text, or an explicit binary layout you control field-by-field).</p>
+    </div>
+
+    <p>For self-contained, same-program scratch data (a cache, a save file you also load), byte-dumping POD records is simple and fast. For interchange, reach for a real format.</p>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — the Binary I/O Lab</div>
+    <h2>Write, read, seek — and a pitfall 🔬</h2>
+
+    <p>Two tools. The <strong>Lab</strong> walks through each binary operation — write an object, read it back, seek to a record, and the <code>std::string</code> pitfall — with the code, what happens, and the key idea. <strong>Predict the Output</strong> tests offsets, round-trips, and positioning.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">💾 Binary I/O Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="ft">The Lab</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <!-- LAB -->
+      <div class="tab-panel active" id="tab-ft">
+        <div class="ft-modes" id="ftMode">
+          <button class="ftmode active" data-m="write">write<small>.write()</small></button>
+          <button class="ftmode" data-m="read">read<small>.read()</small></button>
+          <button class="ftmode" data-m="seek">seek<small>random access</small></button>
+          <button class="ftmode" data-m="bad">string dump<small>the pitfall 🚨</small></button>
+        </div>
+        <div class="ft-code" id="ftChain"></div>
+        <div class="ft-info" id="ftInfo"></div>
+        <div class="fs-msg" id="ftMsg"></div>
+      </div>
+
+      <!-- PREDICT THE OUTPUT -->
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Program 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="out-btns" id="poBtns"></div>
+        <div class="po-fb" id="poFb">What does this program print?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next program →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        Which kinds of objects are safe to persist with <code>out.write(reinterpret_cast&lt;const char*&gt;(&amp;obj), sizeof obj)</code>?
+      </div>
+      <button class="opt" data-correct="true"><span><strong>Trivially-copyable (POD) types</strong> — ints, doubles, fixed arrays, and structs built from those — where the object's bytes <em>are</em> its data</span></button>
+      <button class="opt" data-correct="false"><span>Any type at all, including <code>std::string</code> and <code>std::vector</code></span></button>
+      <button class="opt" data-correct="false"><span>Only a single <code>int</code> at a time</span></button>
+      <button class="opt" data-correct="false"><span>Only types that define an <code>operator&lt;&lt;</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: what does a <code>std::string</code> object actually contain in its own <code>sizeof</code> bytes?</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up — and Part XI complete! 🏆</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🧵</div>
+      <div class="mistake-body">
+        <strong>Byte-dumping a <code>std::string</code>/<code>std::vector</code></strong>
+        <small>Their <code>sizeof</code> bytes hold a pointer + size, not the contents. Writing them saves a pointer that's garbage on reload. Persist the length then the actual characters/elements.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">📄</div>
+      <div class="mistake-body">
+        <strong>Forgetting <code>std::ios::binary</code></strong>
+        <small>In text mode, some platforms translate newline bytes (<code>0x0A</code> ↔ <code>0x0D 0x0A</code>), corrupting binary data. Always open binary files with <code>std::ios::binary</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🌍</div>
+      <div class="mistake-body">
+        <strong>Assuming a <code>.bin</code> is portable</strong>
+        <small>Endianness, struct padding, and type sizes vary across machines/compilers. A raw dump is fine for the same program, but use a defined format for data you'll share or keep.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Round-trip an int.</strong> Write an <code>int</code> to a file with <code>out.write(...)</code> in binary mode, then read it back with <code>in.read(...)</code> into a new variable and confirm they match.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>A record file.</strong> Define <code>struct Rec { int id; double v; };</code>, write five of them to <code>data.bin</code>, then use <code>seekg(n * sizeof(Rec))</code> to read back record #3 without reading the others.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Update in place.</strong> Open the record file with an <code>fstream</code> (<code>in | out | binary</code>), <code>seekp</code> to record #2, overwrite just that record with <code>write</code>, then <code>seekg</code> back and read it to confirm only that record changed.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>Binary I/O</strong> copies exact bytes: <code>out.write(reinterpret_cast&lt;const char*&gt;(&amp;obj), sizeof obj)</code> and <code>in.read(reinterpret_cast&lt;char*&gt;(&amp;obj), sizeof obj)</code>.</li>
+        <li><strong>Open with <code>std::ios::binary</code></strong> to avoid newline translation; check the stream / <code>gcount()</code> after reading.</li>
+        <li><strong>Random access:</strong> <code>seekg</code>/<code>seekp</code> move the read/write position; record <code>n</code> sits at <code>n * sizeof(Rec)</code>; <code>tellg</code>/<code>tellp</code> report position.</li>
+        <li><strong>Only byte-dump trivially-copyable types</strong> — never <code>std::string</code>/<code>std::vector</code> (they store pointers, not data).</li>
+        <li><strong>Raw dumps aren't portable</strong> (endianness, padding, sizes) — use a defined format for interchange. <strong>Part XI complete!</strong> 🏆</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_11_3.html" class="nav-btn prev">
+      <small>← Previous</small>
+      11.3  Stream formatting &amp; manipulators
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next: Part XII →</small>
+      12.1  Capstone — a to-do app
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "Binary I/O copies an object's exact bytes — fast and lossless. 💾",
+    "out.write(reinterpret_cast<const char*>(&obj), sizeof obj) — in binary mode. ✍️",
+    "in.read(...) fills the object back from its bytes; check the stream after. 📖",
+    "seekg/seekp move the position; record n lives at n * sizeof(Rec). 🎯",
+    "Only byte-dump POD types — never std::string/std::vector (pointers!). ⚠️",
+    "Write, read, seek, and see the string pitfall. 🔬",
+    "Always open with std::ios::binary to avoid newline translation. 📄",
+    "Raw dumps aren't portable — use a defined format to share. 🌍"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 11.4 — Part XI complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Binary I/O Lab =====
+  let ftTouched = false;
+  const ftModeEl = document.getElementById('ftMode');
+  const ftChain = document.getElementById('ftChain');
+  const ftInfo = document.getElementById('ftInfo');
+  const ftMsg = document.getElementById('ftMsg');
+
+  const FT = {
+    write: {
+      code: '<span class="kw">struct</span> Rec { <span class="kw">int</span> id; <span class="kw">double</span> score; };\nRec r{ 7, 9.5 };\n\nstd::ofstream out(<span class="str">"data.bin"</span>, std::ios::binary);\nout.write(<span class="kw">reinterpret_cast</span>&lt;<span class="kw">const char</span>*&gt;(&amp;r),\n          <span class="kw">sizeof</span> r);',
+      writes: 'sizeof(Rec) exact bytes',
+      need: 'ios::binary + char* cast',
+      verdict: '✅ exact image',
+      msg: `<b>Write bytes.</b> Hand <code>write</code> the object's address as a <code>const char*</code> and its <code>sizeof</code>. It copies that many raw bytes to the file — an exact memory image of <code>r</code>. <span class="grn">No text conversion, no precision loss.</span> Open with <code>std::ios::binary</code> so newline bytes aren't mangled.`
+    },
+    read: {
+      code: 'Rec r;\nstd::ifstream in(<span class="str">"data.bin"</span>, std::ios::binary);\nin.read(<span class="kw">reinterpret_cast</span>&lt;<span class="kw">char</span>*&gt;(&amp;r),\n        <span class="kw">sizeof</span> r);\n<span class="kw">if</span> (in) use(r);   <span class="cm">// got all the bytes?</span>',
+      writes: 'fills r from the bytes',
+      need: 'check stream / gcount()',
+      verdict: '✅ r == {7, 9.5}',
+      msg: `<b>Read bytes.</b> <code>read</code> copies <code>sizeof r</code> bytes from the file straight into <code>r</code> — reconstructing it exactly (<code>id == 7</code>, <code>score == 9.5</code>). Always check <code>if (in)</code> afterward; <code>in.gcount()</code> tells you how many bytes were actually read if the file ended early.`
+    },
+    seek: {
+      code: '<span class="cm">// jump to record n (0-based) and read it</span>\nin.seekg(n * <span class="kw">sizeof</span>(Rec));\nRec r;\nin.read(<span class="kw">reinterpret_cast</span>&lt;<span class="kw">char</span>*&gt;(&amp;r), <span class="kw">sizeof</span> r);\n<span class="cm">// tellg() now == (n+1) * sizeof(Rec)</span>',
+      writes: 'reads ONE record directly',
+      need: 'fixed-size records',
+      verdict: '🎯 O(1) access',
+      msg: `<b>Random access.</b> Record <code>n</code> always sits at byte offset <code>n * sizeof(Rec)</code>, so <code>seekg</code> jumps straight there — no scanning the earlier records. <code>seekp</code> does the same for writing (overwrite a record in place). The 2-arg form seeks from <code>ios::beg</code>/<code>cur</code>/<code>end</code>.`
+    },
+    bad: {
+      code: '<span class="kw">struct</span> Bad { std::string name; };\nBad b{ <span class="str">"hello"</span> };\nout.write(<span class="bad">reinterpret_cast</span>&lt;<span class="kw">const char</span>*&gt;(&amp;b),\n          <span class="kw">sizeof</span> b);   <span class="cm">// 💥</span>',
+      writes: 'a pointer, NOT "hello"',
+      need: 'persist contents instead',
+      verdict: '🚨 garbage on reload',
+      msg: `<span class="red">The pitfall.</span> A <code>std::string</code> object holds a <em>pointer</em> to its characters on the heap, not the characters themselves. So this writes the pointer + size — and on reload that pointer is meaningless (it points into a process that's gone), giving garbage or a crash. <b>Fix:</b> write the length, then the actual characters.`
+    }
+  };
+  function renderFT(mode) {
+    const f = FT[mode];
+    ftChain.innerHTML = f.code;
+    ftInfo.innerHTML = `<div class="row"><span class="k">effect</span><span class="v">${f.writes}</span></div>` +
+      `<div class="row"><span class="k">needs</span><span class="v">${f.need}</span></div>` +
+      `<div class="row"><span class="k">verdict</span><span class="v">${f.verdict}</span></div>`;
+    ftMsg.innerHTML = f.msg;
+  }
+  ftModeEl.querySelectorAll('.ftmode').forEach(b => b.addEventListener('click', (e) => {
+    ftModeEl.querySelectorAll('.ftmode').forEach(x => x.classList.toggle('active', x === b));
+    renderFT(b.dataset.m);
+    if (!ftTouched) { ftTouched = true; addXP(5, e.clientX, e.clientY, '💾 Explored! +5 XP'); }
+  }));
+  renderFT('write');
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: 'struct Rec { int id; double v; };\n// suppose sizeof(Rec) == 16\n// to read the 3rd record (index 2):\nin.seekg(2 * sizeof(Rec));\n// what byte offset is that?',
+      opts: ['32', '16', '48', '3'],
+      answer: '32',
+      why: 'Record n lives at byte offset n * sizeof(Rec). For index 2 with sizeof(Rec) == 16, that\'s 2 * 16 = 32.'
+    },
+    {
+      code: 'int x = 1000;\nout.write(reinterpret_cast<const char*>(&x), sizeof x);\n// ... later, reopened for reading ...\nint y;\nin.read(reinterpret_cast<char*>(&y), sizeof y);\nstd::cout << y;',
+      opts: ['1000', '0', 'garbage', '4'],
+      answer: '1000',
+      why: 'The exact bytes of x are written and read straight back into y, so y == 1000. Binary round-trips are lossless.'
+    },
+    {
+      code: '// file holds 3 ints (4 bytes each), position at start\nint a;\nin.read(reinterpret_cast<char*>(&a), sizeof a);\nstd::cout << in.tellg();',
+      opts: ['4', '0', '1', '12'],
+      answer: '4',
+      why: 'Reading one int advances the get position by sizeof(int) == 4 bytes, so tellg() reports 4.'
+    },
+    {
+      code: 'struct Bad { std::string name; };\nBad b{"hello"};\nout.write(reinterpret_cast<const char*>(&b), sizeof b);\n// what actually gets saved?',
+      opts: ['a pointer, not "hello"', '"hello"', 'the length 5', 'nothing'],
+      answer: 'a pointer, not "hello"',
+      why: 'A std::string stores a pointer to heap characters, not the text inside the object. sizeof b copies that pointer + bookkeeping — useless on reload. Persist the characters explicitly instead.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Program ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What does this program print?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next program →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'obtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.obtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. Remember: record n is at n * sizeof(Rec); binary round-trips are exact; a read advances the position by the bytes read; a std::string object holds a pointer, not its text.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Byte-dumping is safe only for <em>trivially-copyable</em> types — numbers, fixed arrays, and structs of those — because their <code>sizeof</code> bytes <em>are</em> the data. A <code>std::string</code>/<code>std::vector</code> stores a pointer to heap memory, so dumping its bytes saves the pointer, not the contents.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> POD types only — never <code>std::string</code>/<code>std::vector</code>.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Not <em>any</em> type — <code>std::string</code>/<code>std::vector</code> store pointers, not data. It works for whole structs (not just one int), and has nothing to do with <code>operator&lt;&lt;</code>. The rule is: trivially-copyable (POD) types.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+
+<!-- Commonplace cloud reading-progress sync -->
+<script>window.READING_SYNC={resourceSet:"cpp_11_4",mode:"page",items:"section.lesson-section",pageName:"C++ Lesson 11.4"};</script>
+<script src="../../../reading-sync.js"></script>
+</body>
+</html>
