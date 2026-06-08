@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Matplotlib · Interactive Practice</title>
+
+<!-- Markdown renderer -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<!-- CodeMirror editor (degrades to a plain textarea if unavailable) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<!-- Pyodide (real Python in the browser) -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+<style>
+  /* Minimal, neutral styling — meant to be restyled later in Claude design.
+     Everything is namespaced under .nbx so it is easy to replace wholesale. */
+  :root{ --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb; --accent:#4f46e5; --bg:#fafafa;
+         --code-bg:#0f172a; --ok:#16a34a; --bad:#dc2626; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.65;}
+  .nbx-wrap{max-width:900px;margin:0 auto;padding:24px 20px 100px;}
+  .nbx-head{position:sticky;top:0;z-index:30;background:rgba(250,250,250,.92);backdrop-filter:blur(6px);
+            border-bottom:1px solid var(--line);margin:0 -20px 20px;padding:12px 20px;
+            display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .nbx-head h1{font-size:17px;margin:0;font-weight:700;flex:1;min-width:160px;}
+  .nbx-btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);
+           border-radius:8px;padding:6px 12px;cursor:pointer;}
+  .nbx-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .nbx-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .nbx-status{font-size:12px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;white-space:nowrap;}
+  .nbx-status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-right:6px;vertical-align:middle;}
+  .nbx-status.ready .dot{background:var(--ok);}
+  .nbx-status.loading .dot{background:#f59e0b;animation:nbx-pulse 1s infinite;}
+  @keyframes nbx-pulse{50%{opacity:.35}}
+
+  .nbx-md{margin:6px 0 14px;}
+  .nbx-md h1,.nbx-md h2,.nbx-md h3{line-height:1.25;}
+  .nbx-md h2{font-size:22px;margin:26px 0 10px;}
+  .nbx-md h3{font-size:18px;margin:20px 0 8px;}
+  .nbx-md code{background:#eef2ff;color:var(--accent);padding:1px 6px;border-radius:4px;
+               font-family:ui-monospace,Consolas,monospace;font-size:.9em;}
+  .nbx-md pre{background:var(--code-bg);color:#e0e7ff;padding:12px 14px;border-radius:10px;overflow:auto;}
+  .nbx-md pre code{background:none;color:inherit;padding:0;}
+  .nbx-md details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:10px 0;}
+  .nbx-md summary{cursor:pointer;font-weight:600;color:var(--accent);}
+  .nbx-md table{border-collapse:collapse;}
+  .nbx-md th,.nbx-md td{border:1px solid var(--line);padding:6px 10px;}
+
+  .nbx-cell{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;background:#fff;}
+  .nbx-cell .bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border-bottom:1px solid var(--line);}
+  .nbx-cell .bar .lbl{font-size:11px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;flex:1;}
+  .nbx-run{font:inherit;font-size:12px;font-weight:600;border:none;border-radius:7px;padding:5px 14px;cursor:pointer;
+           background:var(--accent);color:#fff;}
+  .nbx-run:hover{filter:brightness(1.07);}
+  .nbx-run:disabled{opacity:.55;cursor:default;}
+  .nbx-reset{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--mut);
+             border-radius:7px;padding:5px 10px;cursor:pointer;}
+  .nbx-reset:hover{color:var(--bad);border-color:#fecaca;}
+  .CodeMirror{height:auto;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
+  textarea.nbx-ta{width:100%;border:none;outline:none;resize:vertical;min-height:70px;padding:10px 12px;
+                  font-family:ui-monospace,Consolas,monospace;font-size:13.5px;line-height:1.5;}
+  .nbx-out{margin:0;padding:0 12px;max-height:0;overflow:auto;transition:max-height .15s, padding .15s;
+           font-family:ui-monospace,Consolas,monospace;font-size:12.5px;white-space:pre-wrap;
+           background:#0b1020;color:#cde3ff;border-top:1px solid transparent;}
+  .nbx-out.show{max-height:520px;padding:10px 12px;border-top:1px solid var(--line);}
+  .nbx-out.err{color:#fca5a5;}
+  .nbx-out img{max-width:100%;background:#fff;border-radius:6px;margin:8px 0;display:block;}
+  .nbx-note{font-size:12.5px;color:var(--mut);background:#fff;border:1px dashed var(--line);
+            border-radius:10px;padding:10px 14px;margin:0 0 16px;}
+</style>
+</head>
+<body>
+<div class="nbx-wrap">
+  <div class="nbx-head">
+    <h1>Matplotlib</h1>
+    <button class="nbx-btn" id="nbx-runall">▶ Run all</button>
+    <button class="nbx-btn" id="nbx-reset">↺ Reset all</button>
+    <span class="nbx-status" id="nbx-status"><span class="dot"></span>Python not loaded</span>
+  </div>
+
+  <div class="nbx-note">
+    Interactive practice generated from <code>Matplotlib.ipynb</code>. Edit any code cell and press
+    <b>Run</b> (or <b>Shift+Enter</b>). Cells share one Python session, so run them top-to-bottom.
+    The first run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection.
+  </div>
+
+  <div id="nbx-cells"></div>
+</div>
+
+<script type="application/json" id="nbdata">[{"t": "md", "s": "## 1️⃣ 📥 Import libraries & plotting backend"}, {"t": "code", "s": "import matplotlib.pyplot as plt\n%matplotlib inline"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This sets up Matplotlib under the name plt, which is the main plotting interface used throughout the notebook.\n- The inline backend setting ensures figures render inside the notebook environment instead of opening external windows.\n- Doing this early prevents confusion later when plots do not appear, especially in notebook/Colab workflows.\n- A common mistake is running plotting cells before configuring the backend, which leads to missing or inconsistent figure rendering.\n\n<\/details>"}, {"t": "code", "s": "import pandas as pd"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This imports pandas as pd so you can create and manipulate DataFrames that will be plotted later.\n- Many plotting calls in this notebook use DataFrame methods (like df.plot), which depend on pandas being available.\n- Keeping the import separate makes it clear that DataFrame construction and plotting are distinct concerns.\n- A common misconception is assuming Matplotlib alone provides DataFrames; pandas is providing the tabular structure here.\n\n<\/details>"}, {"t": "md", "s": "## 2️⃣ 📊 Build a simple DataFrame and line plots"}, {"t": "code", "s": "df = pd.DataFrame({'A':range(10),'B':range(5,15)})"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This constructs a pandas DataFrame with two numeric columns, creating the tabular structure that later plots will consume.\n- The DataFrame index becomes the default x-axis for many pandas plotting methods unless you supply x explicitly.\n- Creating data in a structured form makes it easy to plot multiple series in one call and keep labels consistent.\n- A common mistake is mixing list lengths or misaligning index assumptions, which changes what gets plotted against what.\n\n<\/details>"}, {"t": "code", "s": "df.plot.line(title='Info')"}, {"t": "code", "s": "plt.plot(df.A, label='A')\nplt.plot(df.B, label='B')\nplt.xlabel('index')\nplt.ylabel('values')\nplt.title('Info')\nplt.legend()"}, {"t": "md", "s": "## 3️⃣ 🎯 Scatter plot basics"}, {"t": "code", "s": "plt.scatter(x=df.A,y=df.B, s=10)"}, {"t": "md", "s": "## 4️⃣ 🧮 Create polynomial features and compare trends"}, {"t": "code", "s": "import numpy as np\ndf = pd.DataFrame({'X1': np.arange(10)})"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This introduces NumPy and then creates a new DataFrame df containing a single base feature X1.\n- The name df is reused here, meaning the earlier DataFrame is overwritten in the notebook state from this point onward.\n- This is a common workflow pattern when switching examples, but it requires you to track which df you are currently using.\n- A common mistake is assuming df still refers to the earlier A/B table, which leads to plotting or transforming the wrong data.\n\n<\/details>"}, {"t": "code", "s": "df['X2'] = df.X1 * df.X1"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This creates a derived column X2 as the square of X1, which is a classic polynomial feature expansion.\n- The operation mutates df in place by adding a new column, so later plotting will automatically include X2 unless filtered.\n- Feature expansion like this is used to represent non-linear patterns using linear models or to compare growth rates visually.\n- A common misconception is thinking this changes X1; it does not—X1 stays the same and X2 is a new feature.\n\n<\/details>"}, {"t": "code", "s": "df['X3'] = df.X1 * df.X1 * df.X1"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This adds another derived feature X3 (the cube of X1), extending the polynomial feature set.\n- Like X2, this is an in-place mutation of the DataFrame that increases the dimensionality of your feature space.\n- In modeling, higher-degree terms can capture stronger curvature but can also increase sensitivity to scale and outliers.\n- A common mistake is adding many powers without later scaling/regularization, which can destabilize learning algorithms.\n\n<\/details>"}, {"t": "code", "s": "df"}, {"t": "code", "s": "df.plot(linewidth=5,colormap='Set3', title='degree info')"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This uses the pandas plotting API to draw all numeric columns in df together, which now includes X1, X2, and X3.\n- linewidth and colormap are non-default styling choices that improve readability when multiple series overlap.\n- This is useful for quickly comparing how polynomial terms grow relative to the original feature across the same index.\n- A common mistake is interpreting this as a function plot of X versus X^2; here the x-axis is the index unless you set x explicitly.\n\n<\/details>"}, {"t": "md", "s": "## 5️⃣ 🌸 Load the Iris dataset and visualize relationships"}, {"t": "code", "s": "from sklearn.datasets import load_iris"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This imports the Iris dataset loader, which provides a clean built-in dataset for plotting and ML examples.\n- Using a built-in dataset avoids file handling and lets you focus on visualization patterns and data structure conventions.\n- This is commonly used to demonstrate how feature arrays and target labels work together in supervised learning.\n- A common mistake is assuming the loader returns a DataFrame; it typically returns a structured object with arrays and metadata.\n\n<\/details>"}, {"t": "code", "s": "iris = load_iris()"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This loads the Iris dataset into the iris object, which contains feature data, labels, and descriptive metadata.\n- From here on, many plots use iris.data (features) and iris.target (class labels) in parallel.\n- This split mirrors real ML datasets where X and y are stored separately but must stay aligned by row index.\n- A common mistake is shuffling or slicing X without applying the same operation to y, breaking label alignment.\n\n<\/details>"}, {"t": "code", "s": "iris.feature_names"}, {"t": "code", "s": "iris.target_names"}, {"t": "code", "s": "plt.scatter(x=iris.data[:,0],y=iris.data[:,1],c=iris.target, s=iris.data[:,2]*10)\nplt.xlabel('sepel length')\nplt.ylabel('sepel width')\nplt.title('IRIS')"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This scatter plot maps two iris features to x and y, colors points by class label (iris.target), and scales marker size by another feature.\n- Color-encoding with c links each point to a category, which is essential when visually separating classes.\n- Size-encoding with s can reveal a third variable but can also mislead if scaling is not chosen carefully.\n- A common mistake is mixing up the feature indices, which changes the meaning of axes and can invalidate visual conclusions.\n\n<\/details>"}, {"t": "code", "s": "X = iris.data[:,0]"}, {"t": "code", "s": "Y = iris.data[:,1]"}, {"t": "code", "s": "plt.scatter(X,Y,s=10)"}, {"t": "code", "s": "pd.DataFrame(data = iris.data, columns=iris.feature_names)"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This converts the raw iris feature array into a pandas DataFrame with named columns, making later analysis and plotting clearer.\n- Named columns reduce indexing mistakes and make it easier to select specific features for plots or models.\n- This is a typical bridge step between scikit-learn datasets (NumPy arrays) and pandas-based workflows.\n- A common misconception is that this creates labels too; targets remain separate unless you explicitly add them as a column.\n\n<\/details>"}, {"t": "md", "s": "## 6️⃣ 🧱 Bar plotting from a DataFrame"}, {"t": "code", "s": "df.plot.bar()"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This creates a bar chart from the current DataFrame df, plotting each column as a separate series over the index.\n- Bar plots are useful when you want to compare discrete positions rather than emphasize continuity as in line plots.\n- Because df was previously mutated to include multiple polynomial features, the bar chart will compare those features side-by-side per index.\n- A common mistake is using bar plots for large continuous ranges, which can become unreadable; line plots are often better for trends.\n\n<\/details>"}, {"t": "md", "s": "## 7️⃣ 🌐 Load external CSV data and explore a relationship"}, {"t": "code", "s": "income_data = pd.read_csv('https://raw.githubusercontent.com/zekelabs/machine-learning-for-beginners/master/data/adult.data.txt', header=None)"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This reads a remote CSV into a pandas DataFrame, introducing real-world data ingestion from an external source.\n- Loading from a URL is convenient but adds dependency on network availability and the stability of the dataset location.\n- This step establishes a new dataset context; later plots reference income_data rather than df or iris.\n- A common mistake is assuming the file always loads the same way; schema changes upstream can break downstream assumptions.\n\n<\/details>"}, {"t": "code", "s": "income_data.columns = ['age','workclass','fnlwgt','education','education-num','marital-status','occupation','relationship'\n        ,'race','sex','capital-gain','capital-loss','hours-per-week','native-country','Salary']"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This renames the columns to more readable names, which improves downstream code clarity and reduces indexing errors.\n- Column naming consistency matters because subsequent selection uses string keys like 'education-num' and 'hours-per-week'.\n- Renaming is a controlled transformation that changes how you address the data, not the underlying values.\n- A common mistake is renaming incorrectly and then selecting old names later, causing silent logic errors in analysis workflows.\n\n<\/details>"}, {"t": "code", "s": "plt.scatter(income_data['education-num'],income_data['hours-per-week'], s=1,alpha=.1)"}, {"t": "md", "s": "<details>\n<summary><b>🔍 Detail<\/b><\/summary>\n\n- This scatter plot explores the relationship between two specific columns using small markers and transparency (alpha) to handle dense overlap.\n- alpha is a non-default parameter that helps reveal point density when many observations sit on top of each other.\n- This is a common exploratory step to assess whether two variables show a trend worth modeling later.\n- A common mistake is interpreting overplotted points as absence of data; transparency is used to mitigate that issue.\n\n<\/details>"}, {"t": "md", "s": "## 8️⃣ 🧾 Scratch / end cells"}]</script>
+<script>
+(function(){
+  "use strict";
+  var CELLS = JSON.parse(document.getElementById("nbdata").textContent);
+  var mount = document.getElementById("nbx-cells");
+  var statusEl = document.getElementById("nbx-status");
+  var pyodide = null, pyReady = false, pyLoading = null;
+  var editors = [];           // {get, set, reset, original}
+
+  function setStatus(txt, cls){ statusEl.className = "nbx-status " + (cls||""); statusEl.innerHTML = '<span class="dot"></span>' + txt; }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function renderMd(src){
+    if (window.marked) { try { return marked.parse(src); } catch(e){} }
+    return "<pre>" + esc(src) + "</pre>";
+  }
+
+  // ---- build the page ----
+  CELLS.forEach(function(c, idx){
+    if (c.t === "md"){
+      var d = document.createElement("div");
+      d.className = "nbx-md";
+      d.innerHTML = renderMd(c.s);
+      mount.appendChild(d);
+      return;
+    }
+    // code cell
+    var cell = document.createElement("div"); cell.className = "nbx-cell";
+    var bar = document.createElement("div"); bar.className = "bar";
+    var lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = "In [" + (idx) + "]";
+    var run = document.createElement("button"); run.className = "nbx-run"; run.textContent = "▶ Run";
+    var reset = document.createElement("button"); reset.className = "nbx-reset"; reset.textContent = "Reset";
+    bar.appendChild(lbl); bar.appendChild(run); bar.appendChild(reset);
+    var host = document.createElement("div");
+    var ta = document.createElement("textarea"); ta.className = "nbx-ta"; ta.value = c.s;
+    host.appendChild(ta);
+    var out = document.createElement("pre"); out.className = "nbx-out";
+    cell.appendChild(bar); cell.appendChild(host); cell.appendChild(out);
+    mount.appendChild(cell);
+
+    // editor (CodeMirror if available, else textarea)
+    var ed;
+    if (window.CodeMirror){
+      var cm = CodeMirror.fromTextArea(ta, { mode:"python", lineNumbers:true, indentUnit:4, viewportMargin:Infinity });
+      ed = { get:function(){return cm.getValue();}, set:function(v){cm.setValue(v);},
+             onRun:function(fn){ cm.setOption("extraKeys", {"Shift-Enter":function(){fn();}}); } };
+    } else {
+      ed = { get:function(){return ta.value;}, set:function(v){ta.value=v;},
+             onRun:function(fn){ ta.addEventListener("keydown",function(e){ if(e.shiftKey&&e.key==="Enter"){e.preventDefault();fn();}}); } };
+    }
+    var rec = { get:ed.get, set:ed.set, original:c.s, out:out, run:run };
+    editors.push(rec);
+    function doRun(){ runCell(rec); }
+    run.onclick = doRun;
+    ed.onRun(doRun);
+    reset.onclick = function(){ ed.set(c.s); out.className = "nbx-out"; out.textContent=""; };
+  });
+
+  // ---- Pyodide ----
+  async function ensurePyodide(){
+    if (pyReady) return pyodide;
+    if (pyLoading) return pyLoading;
+    setStatus("Loading Python…", "loading");
+    pyLoading = (async function(){
+      pyodide = await loadPyodide();
+      pyodide.globals.set("__js_input", function(p){ var r = window.prompt(p || ""); return r === null ? "" : r; });
+      await pyodide.runPythonAsync(
+        "import builtins, os\n" +
+        "os.environ['MPLBACKEND'] = 'AGG'\n" +
+        "def __input(prompt=''):\n" +
+        "    r = __js_input(str(prompt))\n" +
+        "    print(str(prompt) + str(r))\n" +
+        "    return str(r)\n" +
+        "builtins.input = __input\n"
+      );
+      pyReady = true; setStatus("Python ready", "ready");
+      return pyodide;
+    })();
+    return pyLoading;
+  }
+
+  var FIGCODE =
+    "def __nbx_capture_figs():\n" +
+    "    import sys\n" +
+    "    if 'matplotlib' not in sys.modules: return []\n" +
+    "    import matplotlib.pyplot as plt, io, base64\n" +
+    "    out = []\n" +
+    "    for n in plt.get_fignums():\n" +
+    "        f = plt.figure(n); b = io.BytesIO(); f.savefig(b, format='png', bbox_inches='tight')\n" +
+    "        out.append(base64.b64encode(b.getvalue()).decode())\n" +
+    "    plt.close('all'); return out\n" +
+    "__nbx_capture_figs()\n";
+
+  async function runCell(rec){
+    var code = rec.get();
+    var out = rec.out;
+    out.className = "nbx-out show"; out.textContent = "";
+    rec.run.disabled = true;
+    var buf = "";
+    function append(s){ buf += s; out.textContent = buf; }
+    try{
+      var py = await ensurePyodide();
+      py.setStdout({ batched: append });
+      py.setStderr({ batched: append });
+      await py.loadPackagesFromImports(code);
+      var res = await py.runPythonAsync(code);
+      if (res !== undefined && res !== null){
+        var rep;
+        try { var b = py.pyimport("builtins"); rep = b.repr(res); b.destroy(); } catch(e){ rep = String(res); }
+        append((buf && !buf.endsWith("\n") ? "\n" : "") + rep);
+        if (res && typeof res.destroy === "function"){ try{ res.destroy(); }catch(e){} }
+      }
+      // matplotlib figures, if any
+      var figsProxy = await py.runPythonAsync(FIGCODE);
+      var figs = figsProxy.toJs(); figsProxy.destroy();
+      figs.forEach(function(b64){ var img = new Image(); img.src = "data:image/png;base64," + b64; out.appendChild(img); });
+      if (!buf && !figs.length) append("(ran — no output)");
+    }catch(e){
+      out.classList.add("err");
+      append((buf ? buf + "\n" : "") + (e && e.message ? e.message : String(e)));
+    }finally{
+      rec.run.disabled = false;
+    }
+  }
+
+  document.getElementById("nbx-runall").onclick = async function(){
+    for (var i=0;i<editors.length;i++){ await runCell(editors[i]); }
+  };
+  document.getElementById("nbx-reset").onclick = function(){
+    editors.forEach(function(r){ r.set(r.original); r.out.className="nbx-out"; r.out.textContent=""; });
+  };
+
+  // warm up Python in the background so the first Run is snappy
+  setTimeout(function(){ ensurePyodide().catch(function(){ setStatus("Python failed to load (offline?)", ""); }); }, 400);
+})();
+</script>
+</body>
+</html>

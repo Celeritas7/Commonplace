@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Functions · Interactive Practice</title>
+
+<!-- Markdown renderer -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<!-- CodeMirror editor (degrades to a plain textarea if unavailable) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<!-- Pyodide (real Python in the browser) -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+<style>
+  /* Minimal, neutral styling — meant to be restyled later in Claude design.
+     Everything is namespaced under .nbx so it is easy to replace wholesale. */
+  :root{ --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb; --accent:#4f46e5; --bg:#fafafa;
+         --code-bg:#0f172a; --ok:#16a34a; --bad:#dc2626; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.65;}
+  .nbx-wrap{max-width:900px;margin:0 auto;padding:24px 20px 100px;}
+  .nbx-head{position:sticky;top:0;z-index:30;background:rgba(250,250,250,.92);backdrop-filter:blur(6px);
+            border-bottom:1px solid var(--line);margin:0 -20px 20px;padding:12px 20px;
+            display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .nbx-head h1{font-size:17px;margin:0;font-weight:700;flex:1;min-width:160px;}
+  .nbx-btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);
+           border-radius:8px;padding:6px 12px;cursor:pointer;}
+  .nbx-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .nbx-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .nbx-status{font-size:12px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;white-space:nowrap;}
+  .nbx-status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-right:6px;vertical-align:middle;}
+  .nbx-status.ready .dot{background:var(--ok);}
+  .nbx-status.loading .dot{background:#f59e0b;animation:nbx-pulse 1s infinite;}
+  @keyframes nbx-pulse{50%{opacity:.35}}
+
+  .nbx-md{margin:6px 0 14px;}
+  .nbx-md h1,.nbx-md h2,.nbx-md h3{line-height:1.25;}
+  .nbx-md h2{font-size:22px;margin:26px 0 10px;}
+  .nbx-md h3{font-size:18px;margin:20px 0 8px;}
+  .nbx-md code{background:#eef2ff;color:var(--accent);padding:1px 6px;border-radius:4px;
+               font-family:ui-monospace,Consolas,monospace;font-size:.9em;}
+  .nbx-md pre{background:var(--code-bg);color:#e0e7ff;padding:12px 14px;border-radius:10px;overflow:auto;}
+  .nbx-md pre code{background:none;color:inherit;padding:0;}
+  .nbx-md details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:10px 0;}
+  .nbx-md summary{cursor:pointer;font-weight:600;color:var(--accent);}
+  .nbx-md table{border-collapse:collapse;}
+  .nbx-md th,.nbx-md td{border:1px solid var(--line);padding:6px 10px;}
+
+  .nbx-cell{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;background:#fff;}
+  .nbx-cell .bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border-bottom:1px solid var(--line);}
+  .nbx-cell .bar .lbl{font-size:11px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;flex:1;}
+  .nbx-run{font:inherit;font-size:12px;font-weight:600;border:none;border-radius:7px;padding:5px 14px;cursor:pointer;
+           background:var(--accent);color:#fff;}
+  .nbx-run:hover{filter:brightness(1.07);}
+  .nbx-run:disabled{opacity:.55;cursor:default;}
+  .nbx-reset{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--mut);
+             border-radius:7px;padding:5px 10px;cursor:pointer;}
+  .nbx-reset:hover{color:var(--bad);border-color:#fecaca;}
+  .CodeMirror{height:auto;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
+  textarea.nbx-ta{width:100%;border:none;outline:none;resize:vertical;min-height:70px;padding:10px 12px;
+                  font-family:ui-monospace,Consolas,monospace;font-size:13.5px;line-height:1.5;}
+  .nbx-out{margin:0;padding:0 12px;max-height:0;overflow:auto;transition:max-height .15s, padding .15s;
+           font-family:ui-monospace,Consolas,monospace;font-size:12.5px;white-space:pre-wrap;
+           background:#0b1020;color:#cde3ff;border-top:1px solid transparent;}
+  .nbx-out.show{max-height:520px;padding:10px 12px;border-top:1px solid var(--line);}
+  .nbx-out.err{color:#fca5a5;}
+  .nbx-out img{max-width:100%;background:#fff;border-radius:6px;margin:8px 0;display:block;}
+  .nbx-note{font-size:12.5px;color:var(--mut);background:#fff;border:1px dashed var(--line);
+            border-radius:10px;padding:10px 14px;margin:0 0 16px;}
+</style>
+</head>
+<body>
+<div class="nbx-wrap">
+  <div class="nbx-head">
+    <h1>Functions</h1>
+    <button class="nbx-btn" id="nbx-runall">▶ Run all</button>
+    <button class="nbx-btn" id="nbx-reset">↺ Reset all</button>
+    <span class="nbx-status" id="nbx-status"><span class="dot"></span>Python not loaded</span>
+  </div>
+
+  <div class="nbx-note">
+    Interactive practice generated from <code>08_Functions.ipynb</code>. Edit any code cell and press
+    <b>Run</b> (or <b>Shift+Enter</b>). Cells share one Python session, so run them top-to-bottom.
+    The first run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection.
+  </div>
+
+  <div id="nbx-cells"></div>
+</div>
+
+<script type="application/json" id="nbdata">[{"t": "md", "s": "🧩 **Python Functions — Complete Study Notebook**\n\nThis notebook explains **functions** using:\n- 📘 Concept\n- 🧠 Real-world use cases\n- 💻 Executable code\n- 📤 Example output\n\nFunctions help you **reuse logic**, **organize code**, and **avoid repetition**."}, {"t": "md", "s": "## 1️⃣ Defining a simple function\n\n📘 **Concept**\nA function is defined using `def` and executed when called.\n\n🧠 **Use cases**\n- Code reuse\n- Logical grouping"}, {"t": "code", "s": "def greet():\n    print(\"Hello\")\n\ngreet()"}, {"t": "md", "s": "📤 **Output (example)**\n```\nHello\n```"}, {"t": "md", "s": "## 2️⃣ Function with parameters\n\n📘 **Concept**\nParameters allow functions to accept inputs.\n\n🧠 **Use cases**\n- Flexible logic\n- Data processing"}, {"t": "code", "s": "def greet(name):\n    print(\"Hello\", name)\n\ngreet(\"Aniket\")"}, {"t": "md", "s": "📤 **Output (example)**\n```\nHello Aniket\n```"}, {"t": "md", "s": "## 3️⃣ Function with return value\n\n📘 **Concept**\n`return` sends data back to the caller.\n\n🧠 **Use cases**\n- Calculations\n- Decision logic"}, {"t": "code", "s": "def add(a, b):\n    return a + b\n\nresult = add(3, 5)\nprint(result)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n8\n```"}, {"t": "md", "s": "## 4️⃣ Default arguments\n\n📘 **Concept**\nDefault values are used if arguments are not provided.\n\n🧠 **Use cases**\n- Optional parameters"}, {"t": "code", "s": "def greet(name=\"Guest\"):\n    print(\"Hello\", name)\n\ngreet()\ngreet(\"Aniket\")"}, {"t": "md", "s": "📤 **Output (example)**\n```\nHello Guest\nHello Aniket\n```"}, {"t": "md", "s": "## 5️⃣ Keyword arguments\n\n📘 **Concept**\nArguments can be passed using parameter names.\n\n🧠 **Use cases**\n- Readable function calls"}, {"t": "code", "s": "def profile(name, age):\n    print(name, age)\n\nprofile(age=25, name=\"Aniket\")"}, {"t": "md", "s": "📤 **Output (example)**\n```\nAniket 25\n```"}, {"t": "md", "s": "## 6️⃣ Arbitrary positional arguments (*args)\n\n📘 **Concept**\nAccepts variable number of positional arguments.\n\n🧠 **Use cases**\n- Flexible APIs"}, {"t": "code", "s": "def total(*numbers):\n    print(sum(numbers))\n\ntotal(1, 2, 3, 4)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n10\n```"}, {"t": "md", "s": "## 7️⃣ Arbitrary keyword arguments (**kwargs)\n\n📘 **Concept**\nAccepts variable number of keyword arguments.\n\n🧠 **Use cases**\n- Configuration handling"}, {"t": "code", "s": "def show_info(**info):\n    for k, v in info.items():\n        print(k, v)\n\nshow_info(name=\"Aniket\", role=\"Engineer\")"}, {"t": "md", "s": "📤 **Output (example)**\n```\nname Aniket\nrole Engineer\n```"}, {"t": "md", "s": "## 8️⃣ Lambda (anonymous) functions\n\n📘 **Concept**\nSmall one-line functions.\n\n🧠 **Use cases**\n- Short transformations"}, {"t": "code", "s": "square = lambda x: x * x\nprint(square(5))"}, {"t": "md", "s": "📤 **Output (example)**\n```\n25\n```"}, {"t": "md", "s": "## 9️⃣ Function inside function\n\n📘 **Concept**\nFunctions can be nested.\n\n🧠 **Use cases**\n- Encapsulation"}, {"t": "code", "s": "def outer():\n    def inner():\n        print(\"Inside inner\")\n    inner()\n\nouter()"}, {"t": "md", "s": "📤 **Output (example)**\n```\nInside inner\n```"}, {"t": "md", "s": "## 🔟 Real-world example: Area calculator\n\n📘 **Concept**\nFunctions model real-world operations.\n\n🧠 **Use cases**\n- Engineering calculations"}, {"t": "code", "s": "def area_circle(radius):\n    pi = 3.14159\n    return pi * radius * radius\n\nprint(area_circle(5))"}, {"t": "md", "s": "📤 **Output (example)**\n```\n78.53975\n```"}, {"t": "md", "s": "## ✅ Final Notes\n\n- Functions reduce repetition\n- Use meaningful names\n- Prefer return over print for reusable logic\n- Functions are the foundation of modular programming"}]</script>
+<script>
+(function(){
+  "use strict";
+  var CELLS = JSON.parse(document.getElementById("nbdata").textContent);
+  var mount = document.getElementById("nbx-cells");
+  var statusEl = document.getElementById("nbx-status");
+  var pyodide = null, pyReady = false, pyLoading = null;
+  var editors = [];           // {get, set, reset, original}
+
+  function setStatus(txt, cls){ statusEl.className = "nbx-status " + (cls||""); statusEl.innerHTML = '<span class="dot"></span>' + txt; }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function renderMd(src){
+    if (window.marked) { try { return marked.parse(src); } catch(e){} }
+    return "<pre>" + esc(src) + "</pre>";
+  }
+
+  // ---- build the page ----
+  CELLS.forEach(function(c, idx){
+    if (c.t === "md"){
+      var d = document.createElement("div");
+      d.className = "nbx-md";
+      d.innerHTML = renderMd(c.s);
+      mount.appendChild(d);
+      return;
+    }
+    // code cell
+    var cell = document.createElement("div"); cell.className = "nbx-cell";
+    var bar = document.createElement("div"); bar.className = "bar";
+    var lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = "In [" + (idx) + "]";
+    var run = document.createElement("button"); run.className = "nbx-run"; run.textContent = "▶ Run";
+    var reset = document.createElement("button"); reset.className = "nbx-reset"; reset.textContent = "Reset";
+    bar.appendChild(lbl); bar.appendChild(run); bar.appendChild(reset);
+    var host = document.createElement("div");
+    var ta = document.createElement("textarea"); ta.className = "nbx-ta"; ta.value = c.s;
+    host.appendChild(ta);
+    var out = document.createElement("pre"); out.className = "nbx-out";
+    cell.appendChild(bar); cell.appendChild(host); cell.appendChild(out);
+    mount.appendChild(cell);
+
+    // editor (CodeMirror if available, else textarea)
+    var ed;
+    if (window.CodeMirror){
+      var cm = CodeMirror.fromTextArea(ta, { mode:"python", lineNumbers:true, indentUnit:4, viewportMargin:Infinity });
+      ed = { get:function(){return cm.getValue();}, set:function(v){cm.setValue(v);},
+             onRun:function(fn){ cm.setOption("extraKeys", {"Shift-Enter":function(){fn();}}); } };
+    } else {
+      ed = { get:function(){return ta.value;}, set:function(v){ta.value=v;},
+             onRun:function(fn){ ta.addEventListener("keydown",function(e){ if(e.shiftKey&&e.key==="Enter"){e.preventDefault();fn();}}); } };
+    }
+    var rec = { get:ed.get, set:ed.set, original:c.s, out:out, run:run };
+    editors.push(rec);
+    function doRun(){ runCell(rec); }
+    run.onclick = doRun;
+    ed.onRun(doRun);
+    reset.onclick = function(){ ed.set(c.s); out.className = "nbx-out"; out.textContent=""; };
+  });
+
+  // ---- Pyodide ----
+  async function ensurePyodide(){
+    if (pyReady) return pyodide;
+    if (pyLoading) return pyLoading;
+    setStatus("Loading Python…", "loading");
+    pyLoading = (async function(){
+      pyodide = await loadPyodide();
+      pyodide.globals.set("__js_input", function(p){ var r = window.prompt(p || ""); return r === null ? "" : r; });
+      await pyodide.runPythonAsync(
+        "import builtins, os\n" +
+        "os.environ['MPLBACKEND'] = 'AGG'\n" +
+        "def __input(prompt=''):\n" +
+        "    r = __js_input(str(prompt))\n" +
+        "    print(str(prompt) + str(r))\n" +
+        "    return str(r)\n" +
+        "builtins.input = __input\n"
+      );
+      pyReady = true; setStatus("Python ready", "ready");
+      return pyodide;
+    })();
+    return pyLoading;
+  }
+
+  var FIGCODE =
+    "def __nbx_capture_figs():\n" +
+    "    import sys\n" +
+    "    if 'matplotlib' not in sys.modules: return []\n" +
+    "    import matplotlib.pyplot as plt, io, base64\n" +
+    "    out = []\n" +
+    "    for n in plt.get_fignums():\n" +
+    "        f = plt.figure(n); b = io.BytesIO(); f.savefig(b, format='png', bbox_inches='tight')\n" +
+    "        out.append(base64.b64encode(b.getvalue()).decode())\n" +
+    "    plt.close('all'); return out\n" +
+    "__nbx_capture_figs()\n";
+
+  async function runCell(rec){
+    var code = rec.get();
+    var out = rec.out;
+    out.className = "nbx-out show"; out.textContent = "";
+    rec.run.disabled = true;
+    var buf = "";
+    function append(s){ buf += s; out.textContent = buf; }
+    try{
+      var py = await ensurePyodide();
+      py.setStdout({ batched: append });
+      py.setStderr({ batched: append });
+      await py.loadPackagesFromImports(code);
+      var res = await py.runPythonAsync(code);
+      if (res !== undefined && res !== null){
+        var rep;
+        try { var b = py.pyimport("builtins"); rep = b.repr(res); b.destroy(); } catch(e){ rep = String(res); }
+        append((buf && !buf.endsWith("\n") ? "\n" : "") + rep);
+        if (res && typeof res.destroy === "function"){ try{ res.destroy(); }catch(e){} }
+      }
+      // matplotlib figures, if any
+      var figsProxy = await py.runPythonAsync(FIGCODE);
+      var figs = figsProxy.toJs(); figsProxy.destroy();
+      figs.forEach(function(b64){ var img = new Image(); img.src = "data:image/png;base64," + b64; out.appendChild(img); });
+      if (!buf && !figs.length) append("(ran — no output)");
+    }catch(e){
+      out.classList.add("err");
+      append((buf ? buf + "\n" : "") + (e && e.message ? e.message : String(e)));
+    }finally{
+      rec.run.disabled = false;
+    }
+  }
+
+  document.getElementById("nbx-runall").onclick = async function(){
+    for (var i=0;i<editors.length;i++){ await runCell(editors[i]); }
+  };
+  document.getElementById("nbx-reset").onclick = function(){
+    editors.forEach(function(r){ r.set(r.original); r.out.className="nbx-out"; r.out.textContent=""; });
+  };
+
+  // warm up Python in the background so the first Run is snappy
+  setTimeout(function(){ ensurePyodide().catch(function(){ setStatus("Python failed to load (offline?)", ""); }); }, 400);
+})();
+</script>
+</body>
+</html>
