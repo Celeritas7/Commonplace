@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 12.3 — Capstone: An Expression Evaluator · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Calculator demo */
+  .calc-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .calc-input { flex: 1; font-family: var(--mono); font-size: 18px; padding: 13px 16px; border: 2px solid var(--purple-light); border-radius: 12px; background: #0d1033; color: #e0e7ff; }
+  .calc-input:focus { outline: none; border-color: var(--purple); }
+  .calc-eq { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 0 22px; font: inherit; font-weight: 700; font-size: 18px; border-radius: 12px; cursor: pointer; transition: transform 0.2s var(--bouncy); }
+  .calc-eq:hover { transform: translateY(-2px); }
+  .calc-exs { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .calc-ex { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 8px 12px; font: inherit; font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--purple-deep); cursor: pointer; }
+  .calc-ex:hover { border-color: var(--purple); transform: translateY(-2px); }
+  .calc-out { background: #0d1033; border-radius: 12px; padding: 18px 20px; margin-top: 6px; font-family: var(--mono); font-size: 26px; font-weight: 700; color: #5eead4; text-align: center; overflow-x: auto; }
+  .calc-out .lbl { display: block; font-size: 10px; color: #64748b; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+  .calc-out.err { color: #fca5a5; font-size: 15px; font-weight: 600; }
+  .calc-expr { font-size: 13px; color: #94a3b8; margin-bottom: 2px; }
+
+  /* Code walkthrough */
+  .ft-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .ftmode { flex: 1; min-width: 90px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 11.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ftmode.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ftmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .ftmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .ft-code { background: #0d1033; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: #e0e7ff; white-space: pre-wrap; overflow-x: auto; }
+  .ft-code .kw { color: #c4b5fd; font-weight: 700; }
+  .ft-code .cm { color: #818cf8; font-style: italic; }
+  .ft-code .str { color: #86efac; }
+  .ft-code .hl { color: #fde047; font-weight: 700; }
+  .ft-code .bad { color: #fca5a5; font-weight: 700; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--purple-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Same recursive-descent idea as the JSON parser — but now the <em>grammar layers</em> give us operator precedence for free. ✖️➕
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 12.3</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 80 / 84</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🏗️ PART XII &middot; CAPSTONES</span>
+    <h1>Capstone: An Expression Evaluator</h1>
+    <p class="hero-sub">A calculator that reads text like <code>2 + 3 * 4</code> and gets <code>14</code>, not <code>20</code> — because <code>*</code> binds tighter than <code>+</code>. The beautiful part: we don't write a precedence table. We <em>layer the grammar</em> into expression → term → factor, and recursion does the rest.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> What we're building</div>
+    <h2>Order of operations, from scratch ✖️➕</h2>
+
+    <div class="new-content">
+      We'll build an <strong>arithmetic evaluator</strong>: give it a string like <code>2 + 3 * 4</code> or <code>(10 - 4) / 2</code> and it returns the numeric answer, respecting <strong>operator precedence</strong> (<code>*</code> and <code>/</code> before <code>+</code> and <code>-</code>) and parentheses. It's a close cousin of the JSON parser (12.2) — same recursive-descent technique — but it adds the one thing JSON didn't have: <em>precedence</em>. The elegant trick is that we never compare operator priorities by hand. Instead we split the grammar into <strong>three levels</strong> — an <em>expression</em> is terms added and subtracted; a <em>term</em> is factors multiplied and divided; a <em>factor</em> is a number or a parenthesised expression. Because multiplication is resolved one level <em>below</em> addition, it naturally binds tighter.
+    </div>
+
+    <p>Try it below, then read the five pieces. By the end you'll see why "precedence" is really just "which rule calls which."</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The grammar</div>
+    <h2>Three levels = precedence 🪜</h2>
+
+    <p>The whole design is captured in three rules. Read each as "a ___ is a ___ followed by zero or more operators and more ___s":</p>
+
+    <table class="op-table">
+      <thead><tr><th>Rule</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">expression</td><td class="mono plain">term (( <code>+</code> | <code>-</code> ) term)*</td></tr>
+        <tr><td class="mono">term</td><td class="mono plain">factor (( <code>*</code> | <code>/</code> ) factor)*</td></tr>
+        <tr><td class="mono">factor</td><td class="mono plain">number | <code>(</code> expression <code>)</code> | <code>-</code> factor</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      Precedence is baked into this layering. <code>expression</code> only knows about <code>+</code>/<code>-</code>, and for each operand it asks <code>term</code>; <code>term</code> only knows about <code>*</code>/<code>-</code>… <code>/</code>, and asks <code>factor</code> for <em>its</em> operands. So in <code>2 + 3 * 4</code>, the expression level sees <code>2</code>, then <code>+</code>, then asks <code>term</code> for the next operand — and <code>term</code> greedily consumes <code>3 * 4 = 12</code> before handing it back. The <code>*</code> got evaluated "deeper," so it bound tighter. <code>factor</code> is the bottom: a literal number, or a whole <code>(</code>expression<code>)</code> that loops back to the top (giving parentheses their override power), or a leading <code>-</code> for negatives.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> The skeleton</div>
+    <h2>One cursor, three functions 🚶</h2>
+
+    <p>As in the JSON parser, a small class scans the string with an index. Each grammar rule becomes a function returning a <code>double</code>:</p>
+
+    <pre class="code"><span class="kw">class</span> Evaluator {
+    <span class="kw">const</span> std::string&amp; s_;
+    size_t i_ = 0;
+<span class="kw">public</span>:
+    Evaluator(<span class="kw">const</span> std::string&amp; s) : s_(s) {}
+    <span class="kw">double</span> eval() { <span class="kw">double</span> v = expression(); skipWs();
+                   <span class="kw">if</span> (i_ != s_.size()) <span class="kw">throw</span> std::runtime_error(<span class="str">"trailing input"</span>);
+                   <span class="kw">return</span> v; }
+<span class="kw">private</span>:
+    <span class="kw">void</span> skipWs() { <span class="kw">while</span> (i_ &lt; s_.size() &amp;&amp; std::isspace(s_[i_])) ++i_; }
+    <span class="kw">char</span> peek() { skipWs(); <span class="kw">return</span> i_ &lt; s_.size() ? s_[i_] : <span class="str">'\0'</span>; }
+
+    <span class="kw">double</span> expression();
+    <span class="kw">double</span> term();
+    <span class="kw">double</span> factor();
+    <span class="kw">double</span> number();
+};</pre>
+
+    <div class="new-content">
+      Nothing here is new after 12.2 — it's the same recursive-descent skeleton, just returning <code>double</code> instead of a tree. <code>skipWs</code> and <code>peek</code> are the same helpers. <code>eval()</code> is the public entry: parse a full expression, skip trailing spaces, and complain if anything is left over (so <code>"2 + 3 x"</code> is rejected rather than silently giving <code>5</code>). The three private functions <code>expression</code>/<code>term</code>/<code>factor</code> mirror the three grammar rules exactly.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The two operator levels</div>
+    <h2>expression and term 🔁</h2>
+
+    <p>Each level grabs one operand, then loops while it sees one of <em>its</em> operators — accumulating left to right (so subtraction and division associate correctly):</p>
+
+    <pre class="code"><span class="kw">double</span> Evaluator::expression() {
+    <span class="kw">double</span> v = term();                       <span class="cm">// first operand</span>
+    <span class="kw">while</span> (<span class="kw">true</span>) {
+        <span class="kw">char</span> c = peek();
+        <span class="kw">if</span>      (c == <span class="str">'+'</span>) { ++i_; v += term(); }   <span class="hl">// + and - live here</span>
+        <span class="kw">else if</span> (c == <span class="str">'-'</span>) { ++i_; v -= term(); }
+        <span class="kw">else</span> <span class="kw">break</span>;
+    }
+    <span class="kw">return</span> v;
+}
+
+<span class="kw">double</span> Evaluator::term() {
+    <span class="kw">double</span> v = factor();                     <span class="cm">// first operand</span>
+    <span class="kw">while</span> (<span class="kw">true</span>) {
+        <span class="kw">char</span> c = peek();
+        <span class="kw">if</span>      (c == <span class="str">'*'</span>) { ++i_; v *= factor(); } <span class="hl">// * and / live one level down</span>
+        <span class="kw">else if</span> (c == <span class="str">'/'</span>) {
+            ++i_; <span class="kw">double</span> d = factor();
+            <span class="kw">if</span> (d == 0) <span class="kw">throw</span> std::runtime_error(<span class="str">"division by zero"</span>);
+            v /= d;
+        } <span class="kw">else</span> <span class="kw">break</span>;
+    }
+    <span class="kw">return</span> v;
+}</pre>
+
+    <div class="new-content">
+      These two functions are nearly identical — they differ only in <em>which operators</em> they handle and that <code>term</code> calls <code>factor</code> while <code>expression</code> calls <code>term</code>. That difference is the entire precedence mechanism. The <code>while</code> loop makes each operator <strong>left-associative</strong>: <code>10 - 4 - 3</code> becomes <code>(10 - 4) - 3 = 3</code>, not <code>10 - (4 - 3)</code>. And division checks its divisor first, throwing the kind of runtime error you'd catch with the machinery from Part X.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> The bottom &amp; the entry</div>
+    <h2>factor, numbers, and going public 🌳</h2>
+
+    <p><code>factor</code> is where recursion bottoms out — or loops back to the top for parentheses:</p>
+
+    <pre class="code"><span class="kw">double</span> Evaluator::factor() {
+    <span class="kw">char</span> c = peek();
+    <span class="kw">if</span> (c == <span class="str">'('</span>) {
+        ++i_;
+        <span class="kw">double</span> v = expression();              <span class="hl">// back to the top!</span>
+        <span class="kw">if</span> (peek() != <span class="str">')'</span>) <span class="kw">throw</span> std::runtime_error(<span class="str">"expected ')'"</span>);
+        ++i_;
+        <span class="kw">return</span> v;
+    }
+    <span class="kw">if</span> (c == <span class="str">'-'</span>) { ++i_; <span class="kw">return</span> -factor(); }    <span class="cm">// unary minus</span>
+    <span class="kw">return</span> number();                          <span class="cm">// a plain number</span>
+}
+
+<span class="kw">double</span> evaluate(<span class="kw">const</span> std::string&amp; s) {       <span class="cm">// the public entry point</span>
+    <span class="kw">return</span> Evaluator(s).eval();
+}</pre>
+
+    <div class="trap">
+      <h4>🚨 Parentheses loop back to the top — that's the recursion</h4>
+      <p>When <code>factor</code> meets a <code>(</code>, it calls <code>expression()</code> again — the highest-level rule — to evaluate whatever is inside, then expects the matching <code>)</code>. That single call is what makes parentheses override precedence: <code>(2 + 3) * 4</code> works because the inner <code>2 + 3</code> is a complete sub-expression evaluated before the <code>*</code> ever sees it. It's the same mutual recursion as the JSON parser, just with arithmetic. Two things to get right: always <em>consume</em> the closing <code>)</code> (and error if it's missing), and remember <code>factor</code> handles unary minus (<code>-5</code>, or <code>-(3 + 1)</code>) by negating whatever factor follows. Miss the trailing-input check in <code>eval()</code> and a typo like <code>2 ** 3</code> would quietly evaluate as <code>2</code>.</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — the Evaluator</div>
+    <h2>Compute an expression, then read the code 🔬</h2>
+
+    <p>Two tabs. <strong>Try the Evaluator</strong> runs a working version — type an expression (or load an example) and see the result, with precedence and parentheses respected and clear errors on bad input or divide-by-zero. <strong>Code Walkthrough</strong> steps through the five pieces of the C++.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🧮 Expression Evaluator</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 5 walkthrough steps</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="ft">Try the Evaluator</button>
+        <button class="tab-btn" data-tab="out">Code Walkthrough</button>
+      </div>
+
+      <!-- WORKING CALCULATOR -->
+      <div class="tab-panel active" id="tab-ft">
+        <div class="calc-row">
+          <input class="calc-input" id="calcInput" type="text" value="2 + 3 * 4" spellcheck="false" maxlength="80">
+          <button class="calc-eq" id="calcBtn">=</button>
+        </div>
+        <div class="calc-exs">
+          <button class="calc-ex" data-ex="2 + 3 * 4">2 + 3 * 4</button>
+          <button class="calc-ex" data-ex="(2 + 3) * 4">(2 + 3) * 4</button>
+          <button class="calc-ex" data-ex="10 - 4 - 3">10 - 4 - 3</button>
+          <button class="calc-ex" data-ex="-2 * (3 + 1.5)">-2 * (3 + 1.5)</button>
+          <button class="calc-ex" data-ex="5 / (2 - 2)">5 / (2 - 2)</button>
+        </div>
+        <div class="calc-out" id="calcOut"></div>
+      </div>
+
+      <!-- CODE WALKTHROUGH -->
+      <div class="tab-panel" id="tab-out">
+        <div class="ft-modes" id="ftMode">
+          <button class="ftmode active" data-m="grammar">1 · grammar<small>3 levels</small></button>
+          <button class="ftmode" data-m="skel">2 · skeleton<small>cursor</small></button>
+          <button class="ftmode" data-m="expr">3 · expression<small>+ and -</small></button>
+          <button class="ftmode" data-m="term">4 · term<small>* and /</small></button>
+          <button class="ftmode" data-m="factor">5 · factor<small>() and numbers</small></button>
+        </div>
+        <div class="ft-code" id="ftChain"></div>
+        <div class="fs-msg" id="ftMsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        How does this evaluator make <code>*</code> bind tighter than <code>+</code> — with no precedence table anywhere?
+      </div>
+      <button class="opt" data-correct="true"><span>The <strong>grammar is layered</strong>: <code>expression</code> handles <code>+</code>/<code>-</code> and calls <code>term</code> for each operand; <code>term</code> handles <code>*</code>/<code>/</code> and calls <code>factor</code>. Because <code>*</code> is resolved one level deeper, it binds tighter automatically</span></button>
+      <button class="opt" data-correct="false"><span>It looks up each operator's priority number in a table and sorts by it</span></button>
+      <button class="opt" data-correct="false"><span>It evaluates strictly left to right, ignoring precedence entirely</span></button>
+      <button class="opt" data-correct="false"><span>It scans the whole string for <code>*</code> and <code>/</code> first, then does the rest</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: "precedence" here is really just "which rule calls which."</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, extensions, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🪜</div>
+      <div class="mistake-body">
+        <strong>Handling all operators in one function</strong>
+        <small>If <code>expression</code> handled <code>+ - * /</code> together, you'd lose precedence (left-to-right only). The layering into expression/term/factor <em>is</em> the precedence — keep the levels separate.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">➗</div>
+      <div class="mistake-body">
+        <strong>Not guarding division by zero</strong>
+        <small>Dividing by zero is undefined for integers and gives <code>inf</code>/<code>nan</code> for doubles. Check the divisor and throw a clear error (Part X) before dividing.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔚</div>
+      <div class="mistake-body">
+        <strong>Not rejecting leftover input</strong>
+        <small>After parsing one expression, make sure nothing's left (<code>eval()</code>'s trailing-input check). Otherwise <code>"2 + 3 )"</code> or <code>"4 5"</code> would parse the first bit and ignore the junk.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Extend it 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Add modulo.</strong> Support the <code>%</code> operator at the same level as <code>*</code> and <code>/</code> (in <code>term</code>). Decide how it should behave for doubles, or restrict the evaluator to integers.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Exponentiation.</strong> Add a <code>^</code> operator that binds <em>tighter</em> than <code>*</code> and is <em>right</em>-associative (<code>2 ^ 3 ^ 2 = 512</code>). That needs a new level between <code>term</code> and <code>factor</code> — and a right-associative shape (recursion, not a loop).
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Variables &amp; functions.</strong> Let <code>factor</code> also recognise names: a variable (<code>x</code>) looked up in a <code>std::map&lt;std::string,double&gt;</code>, and calls like <code>sqrt(2)</code> or <code>max(3, 7)</code> that parse an argument list (each argument a full <code>expression</code>).
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What you built</h3>
+      <ul>
+        <li><strong>An arithmetic evaluator</strong> that respects precedence and parentheses — text in, number out.</li>
+        <li><strong>Precedence без a table:</strong> the grammar layers into <code>expression</code> (+/-) → <code>term</code> (*//) → <code>factor</code>, so deeper rules bind tighter.</li>
+        <li><strong>Left-associativity</strong> from the <code>while</code> loop at each level; <strong>parentheses</strong> from <code>factor</code> calling <code>expression</code> again.</li>
+        <li><strong>Recursion</strong> is the engine — the same recursive-descent shape as the JSON parser, now producing a value.</li>
+        <li><strong>Robustness:</strong> guard divide-by-zero and reject leftover input, reporting errors clearly.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_12_2.html" class="nav-btn prev">
+      <small>← Previous</small>
+      12.2  A JSON-like parser
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next →</small>
+      12.4  Where to go next
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "An evaluator: text like 2 + 3 * 4 in, the number 14 out. ✖️➕",
+    "Three grammar levels — expression, term, factor — encode precedence. 🪜",
+    "Same recursive-descent skeleton as the JSON parser, returning a double. 🚶",
+    "expression does + and -; term does * and / one level down. 🔁",
+    "factor: a number, a (sub-expression), or a unary minus. 🌳",
+    "Compute an expression, then read the five pieces of code. 🔬",
+    "Precedence = which rule calls which. No table needed. 🪜",
+    "You built three real programs. The book's nearly done! 🎉"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 12.3 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Working evaluator (recursive descent, mirrors the C++) =====
+  function evaluate(src) {
+    let i = 0;
+    function ws() { while (i < src.length && /\s/.test(src[i])) i++; }
+    function peek() { ws(); return i < src.length ? src[i] : '\0'; }
+    function err(m) { throw { msg: m, pos: i }; }
+
+    function expression() {
+      let v = term();
+      while (true) {
+        const c = peek();
+        if (c === '+') { i++; v += term(); }
+        else if (c === '-') { i++; v -= term(); }
+        else break;
+      }
+      return v;
+    }
+    function term() {
+      let v = factor();
+      while (true) {
+        const c = peek();
+        if (c === '*') { i++; v *= factor(); }
+        else if (c === '/') { i++; const d = factor(); if (d === 0) err('division by zero'); v /= d; }
+        else break;
+      }
+      return v;
+    }
+    function factor() {
+      const c = peek();
+      if (c === '(') {
+        i++;
+        const v = expression();
+        if (peek() !== ')') err("expected ')'");
+        i++;
+        return v;
+      }
+      if (c === '-') { i++; return -factor(); }
+      if (c === '+') { i++; return factor(); }
+      return number();
+    }
+    function number() {
+      ws();
+      const start = i;
+      while (i < src.length && /[0-9.]/.test(src[i])) i++;
+      if (start === i) err('expected a number');
+      const n = Number(src.slice(start, i));
+      if (Number.isNaN(n)) err('invalid number');
+      return n;
+    }
+
+    ws();
+    if (peek() === '\0') err('empty expression');
+    const v = expression();
+    ws();
+    if (i < src.length) err('unexpected "' + src[i] + '"');
+    return v;
+  }
+
+  const calcInput = document.getElementById('calcInput');
+  const calcBtn = document.getElementById('calcBtn');
+  const calcOut = document.getElementById('calcOut');
+  let computedOnce = false;
+
+  function fmt(n) {
+    if (!isFinite(n)) return String(n);
+    const r = Math.round(n * 1e10) / 1e10;   // tidy floating-point noise
+    return String(r);
+  }
+  function compute() {
+    const src = calcInput.value;
+    try {
+      const v = evaluate(src);
+      calcOut.classList.remove('err');
+      calcOut.innerHTML = `<span class="lbl">result</span><span class="calc-expr">${src.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} =</span>${fmt(v)}`;
+      if (!computedOnce) {
+        computedOnce = true;
+        const r = calcBtn.getBoundingClientRect();
+        addXP(10, r.left, r.top, '🧮 Evaluated! +10 XP');
+        bumpStreak(); burst();
+      }
+    } catch (e) {
+      calcOut.classList.add('err');
+      const where = (e && typeof e.pos === 'number') ? ' at position ' + e.pos : '';
+      calcOut.textContent = '✗ Error' + where + ': ' + (e && e.msg ? e.msg : e);
+      breakStreak();
+    }
+  }
+  calcBtn.addEventListener('click', compute);
+  calcInput.addEventListener('keydown', e => { if (e.key === 'Enter') compute(); });
+  document.querySelectorAll('.calc-ex').forEach(b => b.addEventListener('click', () => {
+    calcInput.value = b.dataset.ex;
+    compute();
+  }));
+  compute();           // evaluate the prefilled expression on load
+  computedOnce = false;   // don't count the auto-eval as the user's first
+
+  // ===== Code Walkthrough =====
+  const ftModeEl = document.getElementById('ftMode');
+  const ftChain = document.getElementById('ftChain');
+  const ftMsg = document.getElementById('ftMsg');
+  const seen = new Set();
+
+  const WT = {
+    grammar: {
+      code: '<span class="cm">// the whole design, as a grammar:</span>\nexpression  =  term  (( <span class="str">\'+\'</span> | <span class="str">\'-\'</span> ) term)*\nterm        =  factor (( <span class="str">\'*\'</span> | <span class="str">\'/\'</span> ) factor)*\nfactor      =  number\n            |  <span class="str">\'(\'</span> expression <span class="str">\')\'</span>\n            |  <span class="str">\'-\'</span> factor',
+      msg: `<b>1 · The grammar.</b> Three layered rules. Because <code>expression</code> only handles <code>+</code>/<code>-</code> and defers to <code>term</code> (which handles <code>*</code>/<code>/</code>), multiplication is resolved deeper and so <span class="grn">binds tighter — that's precedence, for free.</span>`
+    },
+    skel: {
+      code: '<span class="kw">class</span> Evaluator {\n    <span class="kw">const</span> std::string&amp; s_;\n    size_t i_ = 0;\n<span class="kw">public</span>:\n    Evaluator(<span class="kw">const</span> std::string&amp; s) : s_(s) {}\n    <span class="kw">double</span> eval() { <span class="kw">double</span> v = expression();\n        skipWs();\n        <span class="kw">if</span> (i_ != s_.size()) <span class="kw">throw</span> std::runtime_error(<span class="str">"trailing input"</span>);\n        <span class="kw">return</span> v; }\n<span class="kw">private</span>:\n    <span class="kw">void</span> skipWs();  <span class="kw">char</span> peek();\n    <span class="kw">double</span> expression(), term(), factor(), number();\n};',
+      msg: `<b>2 · The skeleton.</b> Same recursive-descent shape as the JSON parser, but each rule returns a <code>double</code>. <code>eval()</code> parses one expression and rejects leftover junk so typos aren't silently ignored.`
+    },
+    expr: {
+      code: '<span class="kw">double</span> Evaluator::expression() {\n    <span class="kw">double</span> v = term();\n    <span class="kw">while</span> (<span class="kw">true</span>) {\n        <span class="kw">char</span> c = peek();\n        <span class="kw">if</span>      (c == <span class="str">\'+\'</span>) { ++i_; v += term(); }\n        <span class="kw">else if</span> (c == <span class="str">\'-\'</span>) { ++i_; v -= term(); }\n        <span class="kw">else</span> <span class="kw">break</span>;\n    }\n    <span class="kw">return</span> v;\n}',
+      msg: `<b>3 · expression.</b> Grab one <code>term</code>, then loop while the next char is <code>+</code> or <code>-</code>, combining left-to-right. The loop is what makes <code>-</code> <span class="grn">left-associative</span>: <code>10 - 4 - 3</code> = <code>(10-4)-3</code>.`
+    },
+    term: {
+      code: '<span class="kw">double</span> Evaluator::term() {\n    <span class="kw">double</span> v = factor();\n    <span class="kw">while</span> (<span class="kw">true</span>) {\n        <span class="kw">char</span> c = peek();\n        <span class="kw">if</span>      (c == <span class="str">\'*\'</span>) { ++i_; v *= factor(); }\n        <span class="kw">else if</span> (c == <span class="str">\'/\'</span>) {\n            ++i_; <span class="kw">double</span> d = factor();\n            <span class="kw">if</span> (d == 0) <span class="kw">throw</span> std::runtime_error(<span class="str">"divide by zero"</span>);\n            v /= d;\n        } <span class="kw">else</span> <span class="kw">break</span>;\n    }\n    <span class="kw">return</span> v;\n}',
+      msg: `<b>4 · term.</b> Identical shape to <code>expression</code>, but for <code>*</code>/<code>/</code> and calling <code>factor</code>. Sitting one level <em>below</em> expression is exactly why <code>*</code> binds tighter. Note the divide-by-zero guard (Part X).`
+    },
+    factor: {
+      code: '<span class="kw">double</span> Evaluator::factor() {\n    <span class="kw">char</span> c = peek();\n    <span class="kw">if</span> (c == <span class="str">\'(\'</span>) {\n        ++i_;\n        <span class="kw">double</span> v = expression();   <span class="hl">// back to the top!</span>\n        <span class="kw">if</span> (peek() != <span class="str">\')\'</span>) <span class="kw">throw</span> std::runtime_error(<span class="str">"expected )"</span>);\n        ++i_;\n        <span class="kw">return</span> v;\n    }\n    <span class="kw">if</span> (c == <span class="str">\'-\'</span>) { ++i_; <span class="kw">return</span> -factor(); }\n    <span class="kw">return</span> number();\n}',
+      msg: `<b>5 · factor.</b> The base case — a number — or a <code>(</code>sub-expression<code>)</code> that calls <code>expression()</code> again (parentheses overriding precedence), or a unary minus. <span class="grn">That call back to the top is the recursion that ties it all together.</span>`
+    }
+  };
+  function renderWT(mode) { ftChain.innerHTML = WT[mode].code; ftMsg.innerHTML = WT[mode].msg; }
+  ftModeEl.querySelectorAll('.ftmode').forEach(b => b.addEventListener('click', (e) => {
+    ftModeEl.querySelectorAll('.ftmode').forEach(x => x.classList.toggle('active', x === b));
+    renderWT(b.dataset.m);
+    if (!seen.has(b.dataset.m)) {
+      seen.add(b.dataset.m);
+      playCount.textContent = seen.size;
+      playCount.style.transform = 'scale(1.3)';
+      setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+      addXP(5, e.clientX, e.clientY);
+      bumpStreak();
+      if (seen.size === 5) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 Whole evaluator walked! +20 XP'); }
+    }
+  }));
+  renderWT('grammar');
+  seen.add('grammar'); playCount.textContent = 1;
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> Precedence lives in the structure: <code>expression</code> (+/-) calls <code>term</code> (*//), which calls <code>factor</code>. Operators handled at a deeper level are evaluated before those above them, so <code>*</code> binds tighter than <code>+</code> with no priority numbers anywhere.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> The layered grammar <em>is</em> the precedence.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. There\'s no priority table, it doesn\'t go purely left-to-right, and it doesn\'t pre-scan for operators. Precedence comes from the <em>layering</em>: expression → term → factor, deeper = tighter.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

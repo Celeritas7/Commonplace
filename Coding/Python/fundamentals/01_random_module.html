@@ -3,228 +3,484 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Python `random` Module — Complete Study Notebook · Interactive Practice</title>
-
+<title>Python random Module · Study · Commonplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <!-- Markdown renderer -->
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
-<!-- CodeMirror editor (degrades to a plain textarea if unavailable) -->
+<!-- CodeMirror editor -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
-<!-- Pyodide (real Python in the browser) -->
+<!-- Pyodide -->
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-
+<!-- Supabase (optional sync) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* Minimal, neutral styling — meant to be restyled later in Claude design.
-     Everything is namespaced under .nbx so it is easy to replace wholesale. */
-  :root{ --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb; --accent:#4f46e5; --bg:#fafafa;
-         --code-bg:#0f172a; --ok:#16a34a; --bad:#dc2626; }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
-       color:var(--ink);background:var(--bg);line-height:1.65;}
-  .nbx-wrap{max-width:900px;margin:0 auto;padding:24px 20px 100px;}
-  .nbx-head{position:sticky;top:0;z-index:30;background:rgba(250,250,250,.92);backdrop-filter:blur(6px);
-            border-bottom:1px solid var(--line);margin:0 -20px 20px;padding:12px 20px;
-            display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
-  .nbx-head h1{font-size:17px;margin:0;font-weight:700;flex:1;min-width:160px;}
-  .nbx-btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);
-           border-radius:8px;padding:6px 12px;cursor:pointer;}
-  .nbx-btn:hover{border-color:var(--accent);color:var(--accent);}
-  .nbx-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .nbx-status{font-size:12px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;white-space:nowrap;}
-  .nbx-status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-right:6px;vertical-align:middle;}
-  .nbx-status.ready .dot{background:var(--ok);}
-  .nbx-status.loading .dot{background:#f59e0b;animation:nbx-pulse 1s infinite;}
-  @keyframes nbx-pulse{50%{opacity:.35}}
+  :root {
+    --paper:#eceee4; --paper-2:#f4f5ec; --card:#fbfcf6;
+    --ink:#1a2820; --ink-soft:#41564a; --ink-mute:#7a8c80;
+    --line:#d2dacb; --line-soft:#e0e6d8;
+    --green:#2f6b4f; --green-2:#3c8362; --green-dk:#234f3b; --green-deep:#16352a;
+    --sage:#7fa68b; --sage-soft:#dde7dd; --brass:#a98a4b;
+    --code-bg:#152620; --w:#dceadf; --dim:#6f8378; --err:#e79088; --ret:#cdbd84;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; font-family:"EB Garamond",Georgia,serif; color:var(--ink); background:var(--paper);
+    background-image: radial-gradient(circle at 14% 4%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 36%),
+      radial-gradient(circle at 90% 90%, rgba(47,107,79,0.06) 0%, rgba(47,107,79,0) 42%);
+    line-height:1.62; font-size:17px; -webkit-font-smoothing:antialiased; }
 
-  .nbx-md{margin:6px 0 14px;}
-  .nbx-md h1,.nbx-md h2,.nbx-md h3{line-height:1.25;}
-  .nbx-md h2{font-size:22px;margin:26px 0 10px;}
-  .nbx-md h3{font-size:18px;margin:20px 0 8px;}
-  .nbx-md code{background:#eef2ff;color:var(--accent);padding:1px 6px;border-radius:4px;
-               font-family:ui-monospace,Consolas,monospace;font-size:.9em;}
-  .nbx-md pre{background:var(--code-bg);color:#e0e7ff;padding:12px 14px;border-radius:10px;overflow:auto;}
-  .nbx-md pre code{background:none;color:inherit;padding:0;}
-  .nbx-md details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:10px 0;}
-  .nbx-md summary{cursor:pointer;font-weight:600;color:var(--accent);}
-  .nbx-md table{border-collapse:collapse;}
-  .nbx-md th,.nbx-md td{border:1px solid var(--line);padding:6px 10px;}
+  /* ===== sticky header ===== */
+  .bar { position:sticky; top:0; z-index:40; background:rgba(236,238,228,0.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line); }
+  .bar-in { max-width:1000px; margin:0 auto; padding:11px 26px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .bar .tag { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--green); }
+  .bar .ttl { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:22px; line-height:1; color:var(--ink); }
+  .bar .prog { display:flex; align-items:center; gap:9px; margin-left:auto; }
+  .bar .prog .track { width:130px; height:6px; background:var(--sage-soft); border-radius:999px; overflow:hidden; }
+  .bar .prog .fill { height:100%; width:0; background:linear-gradient(90deg,var(--green-2),var(--brass)); transition:width .4s; }
+  .bar .prog .pc { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-mute); white-space:nowrap; }
+  .bar .acts { display:flex; align-items:center; gap:7px; }
+  .hbtn { font-family:"JetBrains Mono",monospace; font-size:11.5px; border:1px solid var(--line); background:#fff; color:var(--ink-soft);
+    border-radius:7px; padding:6px 11px; cursor:pointer; }
+  .hbtn:hover { border-color:var(--sage); color:var(--green); }
+  .pyled { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--ink-mute); display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .pyled .dot { width:8px; height:8px; border-radius:50%; background:var(--brass); box-shadow:0 0 6px rgba(169,138,75,.7); }
+  .pyled.ready .dot { background:#6fce9a; box-shadow:0 0 6px rgba(111,206,154,.8); }
+  .pyled.err .dot { background:var(--err); }
 
-  .nbx-cell{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;background:#fff;}
-  .nbx-cell .bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border-bottom:1px solid var(--line);}
-  .nbx-cell .bar .lbl{font-size:11px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;flex:1;}
-  .nbx-run{font:inherit;font-size:12px;font-weight:600;border:none;border-radius:7px;padding:5px 14px;cursor:pointer;
-           background:var(--accent);color:#fff;}
-  .nbx-run:hover{filter:brightness(1.07);}
-  .nbx-run:disabled{opacity:.55;cursor:default;}
-  .nbx-reset{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--mut);
-             border-radius:7px;padding:5px 10px;cursor:pointer;}
-  .nbx-reset:hover{color:var(--bad);border-color:#fecaca;}
-  .CodeMirror{height:auto;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
-  textarea.nbx-ta{width:100%;border:none;outline:none;resize:vertical;min-height:70px;padding:10px 12px;
-                  font-family:ui-monospace,Consolas,monospace;font-size:13.5px;line-height:1.5;}
-  .nbx-out{margin:0;padding:0 12px;max-height:0;overflow:auto;transition:max-height .15s, padding .15s;
-           font-family:ui-monospace,Consolas,monospace;font-size:12.5px;white-space:pre-wrap;
-           background:#0b1020;color:#cde3ff;border-top:1px solid transparent;}
-  .nbx-out.show{max-height:520px;padding:10px 12px;border-top:1px solid var(--line);}
-  .nbx-out.err{color:#fca5a5;}
-  .nbx-out img{max-width:100%;background:#fff;border-radius:6px;margin:8px 0;display:block;}
-  .nbx-note{font-size:12.5px;color:var(--mut);background:#fff;border:1px dashed var(--line);
-            border-radius:10px;padding:10px 14px;margin:0 0 16px;}
+  .wrap { max-width:1000px; margin:0 auto; padding:8px 26px 96px; }
+  a { color:var(--green); }
+
+  .crumb { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-family:"JetBrains Mono",monospace;
+    font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-mute); margin:18px 0 22px; }
+  .crumb a { color:var(--ink-mute); text-decoration:none; } .crumb a:hover { color:var(--green); }
+  .crumb .sep { color:var(--line); } .crumb .here { color:var(--ink); }
+
+  /* ===== masthead ===== */
+  .mast { padding-bottom:22px; border-bottom:1px solid var(--line); margin-bottom:10px; }
+  .mast .k { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--green); margin-bottom:10px; }
+  .mast h1 { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(38px,6.5vw,58px); line-height:1; letter-spacing:-0.6px; margin:0; }
+  .mast h1 code { font-family:"JetBrains Mono",monospace; font-size:0.62em; font-weight:600; background:var(--green-deep); color:#cfe7d6; padding:3px 12px; border-radius:8px; vertical-align:middle; }
+  .mast .sub { font-style:italic; font-size:17px; color:var(--ink-soft); margin:14px 0 0; max-width:64ch; text-wrap:pretty; }
+  .mast .sync { margin-top:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--ink-mute); }
+  .mast .sync .ok { color:var(--green); font-weight:600; } .mast .sync .who { color:var(--ink); }
+  .mast .sync input { font-family:inherit; font-size:11px; border:1px solid var(--line); border-radius:6px; padding:5px 9px; width:152px; background:#fff; color:var(--ink); }
+  .mast .sync .b { font-family:inherit; font-size:11px; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:6px; padding:5px 10px; cursor:pointer; }
+  .mast .sync .b:hover { border-color:var(--sage); color:var(--green); }
+
+  /* ===== study section ===== */
+  .sec { margin:30px 0; }
+  .sec-head { display:flex; align-items:flex-start; gap:14px; margin-bottom:14px; }
+  .sec-head .node { width:38px; height:38px; flex:none; border-radius:50%; background:var(--paper-2); border:2px solid var(--green-2);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.7); display:grid; place-items:center; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:13px; color:var(--green-dk); position:relative; }
+  .sec.done .sec-head .node { background:var(--green); color:#eef6ef; border-color:var(--green); }
+  .sec-head .htext { flex:1; min-width:0; }
+  .sec-head h2 { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:30px; line-height:1.04; letter-spacing:-0.3px; margin:2px 0 0; }
+  .sec-head .st { font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-mute); margin-top:6px; display:flex; align-items:center; gap:7px; }
+  .sec.done .sec-head .st .lab { color:var(--green); }
+  .sec-head .st .pip { width:7px; height:7px; border-radius:50%; border:1.5px solid var(--ink-mute); }
+  .sec.done .sec-head .st .pip { background:var(--green); border-color:var(--green); }
+
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:13px; overflow:hidden; box-shadow:0 12px 30px -24px rgba(20,40,30,0.5); }
+  .panel .concept { padding:18px 22px 6px; }
+  .eyebrow { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--green); margin-bottom:5px; }
+  .concept .body { font-size:16.5px; color:var(--ink-soft); }
+  .concept .body p { margin:0 0 8px; }
+  .concept .body code { font-family:"JetBrains Mono",monospace; font-size:0.86em; background:var(--sage-soft); border:1px solid var(--line-soft); border-radius:5px; padding:1px 6px; color:var(--green-dk); }
+  .concept .body strong { color:var(--ink); }
+
+  .uses { padding:12px 22px 18px; }
+  .uses .chips { display:flex; flex-wrap:wrap; gap:7px; }
+  .uses .chip { font-size:14px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:999px; padding:4px 13px; }
+
+  .task { display:flex; align-items:center; gap:9px; padding:11px 22px; background:var(--paper-2); border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    font-style:italic; font-size:15.5px; color:var(--ink-soft); }
+  .task .ic { font-style:normal; color:var(--brass); }
+
+  /* editor */
+  .ed-top { display:flex; align-items:center; gap:9px; padding:9px 14px; background:var(--green-deep); color:#bccdc0; font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:0.5px; }
+  .ed-top .lbl { flex:1; }
+  .runbtn { font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; border:none; border-radius:7px; padding:6px 15px; cursor:pointer; background:#6fce9a; color:#0e2117; }
+  .runbtn:hover { background:#84e0ac; } .runbtn:disabled { opacity:0.5; cursor:default; }
+  .minibtn { font-family:"JetBrains Mono",monospace; font-size:11px; border:1px solid rgba(255,255,255,0.18); background:transparent; color:#bccdc0; border-radius:6px; padding:5px 10px; cursor:pointer; }
+  .minibtn:hover { border-color:#6fce9a; color:#bff0cf; }
+  .CodeMirror { height:auto; min-height:52px; font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--code-bg); color:var(--w); padding:4px 0; }
+  .CodeMirror-gutters { background:#11201a; border-right:1px solid rgba(255,255,255,0.06); }
+  .CodeMirror-linenumber { color:#46604f; }
+  .CodeMirror-cursor { border-left:1.5px solid #6fce9a; }
+  .CodeMirror-selected { background:rgba(111,206,154,0.16) !important; }
+  .cm-keyword { color:#e2a3cb; } .cm-builtin { color:#8fcabc; } .cm-number { color:#cdbd84; }
+  .cm-string { color:#a9d6b6; } .cm-comment { color:#6f8378; font-style:italic; }
+  .cm-def { color:#bfe6cd; } .cm-variable,.cm-property { color:var(--w); } .cm-operator { color:#c9d8cd; } .cm-meta { color:#8fcabc; }
+  textarea.fallback-ta { width:100%; border:none; outline:none; resize:vertical; min-height:90px; padding:12px 14px; background:var(--code-bg); color:var(--w);
+    font-family:"JetBrains Mono",monospace; font-size:13.5px; line-height:1.6; tab-size:4; }
+
+  .out { margin:0; max-height:0; overflow:auto; transition:max-height .15s, padding .15s; background:#0f1d17; color:var(--w);
+    font-family:"JetBrains Mono",monospace; font-size:12.5px; line-height:1.6; white-space:pre-wrap; border-top:1px solid transparent; }
+  .out.show { max-height:420px; padding:13px 16px; border-top:1px solid rgba(255,255,255,0.08); }
+  .out.err { color:var(--err); }
+  .out img { max-width:100%; background:#fff; border-radius:6px; margin:8px 0; display:block; }
+
+  .ed-actions { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--paper-2); flex-wrap:wrap; }
+  .ed-actions .savebtn { font-family:"JetBrains Mono",monospace; font-size:11.5px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); border-radius:7px; padding:6px 12px; cursor:pointer; }
+  .ed-actions .savebtn:hover { border-color:var(--sage); color:var(--green); }
+  .ed-actions .grow { flex:1; }
+  .ed-actions .savednote { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--ink-mute); }
+
+  /* reveal expected */
+  .reveal { padding:12px 16px; background:var(--paper-2); border-top:1px solid var(--line); }
+  .reveal-btn { font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--green); background:none; border:1px dashed var(--sage); border-radius:8px; padding:9px 14px; cursor:pointer; width:100%; text-align:left; }
+  .reveal-btn:hover { background:var(--sage-soft); }
+  .expected { display:none; margin-top:10px; }
+  .expected.open { display:block; }
+  .expected .eyebrow { color:var(--brass); }
+  .expected pre { margin:4px 0 0; background:var(--code-bg); color:var(--ret); border-radius:8px; padding:11px 14px; font-family:"JetBrains Mono",monospace; font-size:13px; overflow:auto; }
+  .expected .cav { font-size:13px; color:var(--ink-mute); font-style:italic; margin-top:8px; }
+
+  .note { margin:26px 0 0; font-family:"JetBrains Mono",monospace; font-size:12px; line-height:1.6; color:var(--ink-mute);
+    background:rgba(251,252,246,0.7); border:1px dashed var(--sage); border-radius:10px; padding:13px 17px; }
+  .colophon { margin-top:40px; padding-top:22px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-mute); }
+  .colophon a { color:var(--green); text-decoration:none; }
+
+  @media (max-width:720px){ .wrap,.bar-in{ padding-left:16px; padding-right:16px; } .bar .ttl{ display:none; } }
 </style>
 </head>
 <body>
-<div class="nbx-wrap">
-  <div class="nbx-head">
-    <h1>Python `random` Module — Complete Study Notebook</h1>
-    <button class="nbx-btn" id="nbx-runall">▶ Run all</button>
-    <button class="nbx-btn" id="nbx-reset">↺ Reset all</button>
-    <span class="nbx-status" id="nbx-status"><span class="dot"></span>Python not loaded</span>
-  </div>
 
-  <div class="nbx-note">
-    Interactive practice generated from <code>01_Random_Module.ipynb</code>. Edit any code cell and press
-    <b>Run</b> (or <b>Shift+Enter</b>). Cells share one Python session, so run them top-to-bottom.
-    The first run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection.
+<div class="bar">
+  <div class="bar-in">
+    <span class="tag">Python · Study</span>
+    <span class="ttl" id="bar-title">random module</span>
+    <span class="pyled" id="pyled"><span class="dot"></span><span id="pyled-t">loading Python…</span></span>
+    <div class="acts">
+      <button class="hbtn" id="runall">▶ Run all</button>
+      <button class="hbtn" id="resetall">↺ Reset</button>
+    </div>
+    <div class="prog">
+      <span class="track"><span class="fill" id="pfill"></span></span>
+      <span class="pc" id="ppc">0 / 0 explored</span>
+    </div>
   </div>
-
-  <div id="nbx-cells"></div>
 </div>
 
-<script type="application/json" id="nbdata">[{"t": "md", "s": "# 🎲 Python `random` Module — Complete Study Notebook\n\n📘 **Style:** Theory + Use cases + Executable code  \n⚠️ Outputs shown are examples; actual values vary on each run (unless seeded)."}, {"t": "md", "s": "## 1️⃣ Random float between 0 and 1\n\n📘 **Concept**\nGenerates a floating‑point number in the interval **[0.0, 1.0)**.\n\n🧠 **Use cases**\n- Probability simulation\n- Coin‑toss logic\n- Random branching\n- Monte‑Carlo methods"}, {"t": "code", "s": "import random\nrandom.random()"}, {"t": "md", "s": "📤 **Output (example)**\n```\n0.3724185968471239\n```"}, {"t": "md", "s": "## 2️⃣ Random float in a given range\n\n📘 **Concept**\nGenerates a random floating‑point number between two values.\n\n🧠 **Use cases**\n- Temperature simulation\n- Sensor noise modeling\n- Random delays"}, {"t": "code", "s": "import random\nrandom.uniform(10, 20)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n14.873492185\n```"}, {"t": "md", "s": "## 3️⃣ Random integer (inclusive)\n\n📘 **Concept**\nReturns a random integer including both endpoints.\n\n🧠 **Use cases**\n- Dice simulation\n- Game logic\n- Lottery systems"}, {"t": "code", "s": "import random\nrandom.randint(1, 10)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n7\n```"}, {"t": "md", "s": "## 4️⃣ Random integer using range logic\n\n📘 **Concept**\nWorks like Python’s `range(start, stop)` (stop excluded).\n\n🧠 **Use cases**\n- Index selection\n- Loop‑based random logic"}, {"t": "code", "s": "import random\nrandom.randrange(1, 10)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n4\n```"}, {"t": "md", "s": "## 5️⃣ Random element from a list\n\n📘 **Concept**\nSelects one random element from a sequence.\n\n🧠 **Use cases**\n- Random question selection\n- Card games\n- Sampling"}, {"t": "code", "s": "import random\ncolors = ['red','blue','green','yellow']\nrandom.choice(colors)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n'green'\n```"}]</script>
+<div class="wrap">
+  <nav class="crumb">
+    <a href="../../../index.html">Commonplace</a><span class="sep">/</span>
+    <a href="../../index.html">Coding</a><span class="sep">/</span>
+    <a href="../index.html">Python</a><span class="sep">/</span>
+    <span class="here">random</span>
+  </nav>
+
+  <header class="mast">
+    <div class="k">Fundamentals · 01</div>
+    <h1 id="mast-title">Python <code>random</code></h1>
+    <p class="sub" id="mast-sub"></p>
+    <div class="sync" id="sync"></div>
+  </header>
+
+  <div id="sections"></div>
+
+  <div class="note">First run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection. All sections share one Python session — run them top-to-bottom. Your code and progress save automatically on this device; sign in above to sync across devices.</div>
+
+  <footer class="colophon">
+    <span><a href="../index.html">← Python hub</a></span>
+    <span>CPython via Pyodide</span>
+  </footer>
+</div>
+
+<!-- ===== CONTENT (unchanged notebook data) ===== -->
+<script type="application/json" id="nbdata">[{"t": "md", "s": "# 🎲 Python `random` Module — Complete Study Notebook\n\n📘 **Style:** Theory + Use cases + Executable code  \n⚠️ Outputs shown are examples; actual values vary on each run (unless seeded)."}, {"t": "md", "s": "## 1️⃣ Random float between 0 and 1\n\n📘 **Concept**\nGenerates a floating‑point number in the interval **[0.0, 1.0)**.\n\n🧠 **Use cases**\n- Probability simulation\n- Coin‑toss logic\n- Random branching\n- Monte‑Carlo methods"}, {"t": "code", "s": "import random\nrandom.random()"}, {"t": "md", "s": "📤 **Output (example)**\n```\n0.3724185968471239\n```"}, {"t": "md", "s": "## 2️⃣ Random float in a given range\n\n📘 **Concept**\nGenerates a random floating‑point number between two values.\n\n🧠 **Use cases**\n- Temperature simulation\n- Sensor noise modeling\n- Random delays"}, {"t": "code", "s": "import random\nrandom.uniform(10, 20)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n14.873492185\n```"}, {"t": "md", "s": "## 3️⃣ Random integer (inclusive)\n\n📘 **Concept**\nReturns a random integer including both endpoints.\n\n🧠 **Use cases**\n- Dice simulation\n- Game logic\n- Lottery systems"}, {"t": "code", "s": "import random\nrandom.randint(1, 10)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n7\n```"}, {"t": "md", "s": "## 4️⃣ Random integer using range logic\n\n📘 **Concept**\nWorks like Python's `range(start, stop)` (stop excluded).\n\n🧠 **Use cases**\n- Index selection\n- Loop‑based random logic"}, {"t": "code", "s": "import random\nrandom.randrange(1, 10)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n4\n```"}, {"t": "md", "s": "## 5️⃣ Random element from a list\n\n📘 **Concept**\nSelects one random element from a sequence.\n\n🧠 **Use cases**\n- Random question selection\n- Card games\n- Sampling"}, {"t": "code", "s": "import random\ncolors = ['red','blue','green','yellow']\nrandom.choice(colors)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n'green'\n```"}]</script>
+
 <script>
 (function(){
   "use strict";
   var CELLS = JSON.parse(document.getElementById("nbdata").textContent);
-  var mount = document.getElementById("nbx-cells");
-  var statusEl = document.getElementById("nbx-status");
-  var pyodide = null, pyReady = false, pyLoading = null;
-  var editors = [];           // {get, set, reset, original}
+  var PAGE_ID = (location.pathname.split("/").pop() || "module").replace(/\.html?$/,"");
+  var LS = function(k){ return "pystudy_" + PAGE_ID + "_" + k; };
 
-  function setStatus(txt, cls){ statusEl.className = "nbx-status " + (cls||""); statusEl.innerHTML = '<span class="dot"></span>' + txt; }
+  // ---------- helpers ----------
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-  function renderMd(src){
-    if (window.marked) { try { return marked.parse(src); } catch(e){} }
-    return "<pre>" + esc(src) + "</pre>";
+  function md(src){ if(window.marked){ try{ return marked.parse(src);}catch(e){} } return "<pre>"+esc(src)+"</pre>"; }
+  function mdInline(src){ if(window.marked){ try{ return marked.parseInline(src);}catch(e){} } return esc(src); }
+  function stripEmoji(t){
+    return t.replace(/^\s*[0-9]\uFE0F?\u20E3\s*/,"")               // keycap number
+            .replace(/^\s*[\u2190-\u2BFF\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]\uFE0F?\s*/,"") // one leading emoji
+            .replace(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu,""); // strip remaining decorative
   }
+  function isOutput(s){ return /Output\s*\(example\)/i.test(s) || /^\s*📤/.test(s); }
+  function fenced(s){ var m=s.match(/```[\w]*\n?([\s\S]*?)```/); return m ? m[1].replace(/\n+$/,"") : null; }
 
-  // ---- build the page ----
-  CELLS.forEach(function(c, idx){
-    if (c.t === "md"){
-      var d = document.createElement("div");
-      d.className = "nbx-md";
-      d.innerHTML = renderMd(c.s);
-      mount.appendChild(d);
+  // ---------- parse cells into sections ----------
+  var intro = "", sections = [], cur = null;
+  CELLS.forEach(function(c){
+    if(c.t === "code"){
+      if(!cur){ cur = { title:"Try it", num:sections.length+1, codes:[], expected:[], body:"" }; sections.push(cur); }
+      cur.codes.push(c.s);
       return;
     }
-    // code cell
-    var cell = document.createElement("div"); cell.className = "nbx-cell";
-    var bar = document.createElement("div"); bar.className = "bar";
-    var lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = "In [" + (idx) + "]";
-    var run = document.createElement("button"); run.className = "nbx-run"; run.textContent = "▶ Run";
-    var reset = document.createElement("button"); reset.className = "nbx-reset"; reset.textContent = "Reset";
-    bar.appendChild(lbl); bar.appendChild(run); bar.appendChild(reset);
-    var host = document.createElement("div");
-    var ta = document.createElement("textarea"); ta.className = "nbx-ta"; ta.value = c.s;
-    host.appendChild(ta);
-    var out = document.createElement("pre"); out.className = "nbx-out";
-    cell.appendChild(bar); cell.appendChild(host); cell.appendChild(out);
-    mount.appendChild(cell);
-
-    // editor (CodeMirror if available, else textarea)
-    var ed;
-    if (window.CodeMirror){
-      var cm = CodeMirror.fromTextArea(ta, { mode:"python", lineNumbers:true, indentUnit:4, viewportMargin:Infinity });
-      ed = { get:function(){return cm.getValue();}, set:function(v){cm.setValue(v);},
-             onRun:function(fn){ cm.setOption("extraKeys", {"Shift-Enter":function(){fn();}}); } };
-    } else {
-      ed = { get:function(){return ta.value;}, set:function(v){ta.value=v;},
-             onRun:function(fn){ ta.addEventListener("keydown",function(e){ if(e.shiftKey&&e.key==="Enter"){e.preventDefault();fn();}}); } };
+    var s = (c.s||"").trim();
+    if(/^#\s/.test(s)){ intro = (intro? intro+"\n\n":"") + s; return; }
+    if(/^##\s/.test(s)){
+      var titleLine = s.split("\n")[0].replace(/^#+\s*/,"");
+      cur = { title: stripEmoji(titleLine).trim() || titleLine, num: sections.length+1, codes:[], expected:[], body:"" };
+      var rest = s.split("\n").slice(1).join("\n").trim();
+      if(rest) cur.body = rest;
+      sections.push(cur);
+      return;
     }
-    var rec = { get:ed.get, set:ed.set, original:c.s, out:out, run:run };
-    editors.push(rec);
-    function doRun(){ runCell(rec); }
-    run.onclick = doRun;
-    ed.onRun(doRun);
-    reset.onclick = function(){ ed.set(c.s); out.className = "nbx-out"; out.textContent=""; };
+    if(isOutput(s)){ var f = fenced(s); if(cur && f!=null) cur.expected.push(f); return; }
+    if(cur){ cur.body = (cur.body? cur.body+"\n\n":"") + s; }
+    else { intro = (intro? intro+"\n\n":"") + s; }
   });
 
-  // ---- Pyodide ----
-  async function ensurePyodide(){
-    if (pyReady) return pyodide;
-    if (pyLoading) return pyLoading;
-    setStatus("Loading Python…", "loading");
+  // concept / use-cases split
+  function splitBody(body){
+    var clean = body.replace(/📘\s*/g,"").replace(/🧠\s*/g,"").replace(/⚠️\s*/g,"");
+    var ci = clean.indexOf("**Concept**"), ui = clean.indexOf("**Use cases**");
+    var concept="", uses="";
+    if(ci>=0){ concept = clean.slice(ci+11, (ui>ci?ui:clean.length)); }
+    else if(ui<0){ concept = clean; }
+    if(ui>=0){ uses = clean.slice(ui+13); }
+    return { concept:concept.trim(), uses:uses.trim() };
+  }
+  function useChips(usesMd){
+    return usesMd.split("\n").map(function(l){ return l.replace(/^[-*]\s*/,"").trim(); })
+      .filter(function(l){ return l && !/Use cases/i.test(l); });
+  }
+
+  // intro → masthead subtitle
+  (function(){
+    var lines = intro.split("\n").map(function(l){return l.trim();}).filter(Boolean);
+    var sub = lines.filter(function(l){ return !/^#\s/.test(l); }).join(" ")
+                   .replace(/\*\*/g,"").replace(/📘|⚠️/g,"").replace(/\s+/g," ").trim();
+    if(sub) document.getElementById("mast-sub").innerHTML = mdInline(sub);
+  })();
+
+  // ---------- build DOM ----------
+  var mount = document.getElementById("sections");
+  var editors = [];      // {get,set,original,run,out,sectionIdx}
+  var sectionEls = [];
+  var allCM = [];        // CodeMirror instances, refreshed after layout settles
+
+  sections.forEach(function(sec, si){
+    var parsed = splitBody(sec.body);
+    var wrap = document.createElement("section"); wrap.className = "sec"; wrap.id = "sec-"+si;
+
+    var head = document.createElement("div"); head.className = "sec-head";
+    head.innerHTML =
+      '<div class="node">'+String(sec.num).padStart(2,"0")+'</div>'+
+      '<div class="htext"><h2>'+esc(sec.title)+'</h2>'+
+      '<div class="st"><span class="pip"></span><span class="lab">not explored</span></div></div>';
+    wrap.appendChild(head);
+
+    var panel = document.createElement("div"); panel.className = "panel";
+
+    if(parsed.concept){
+      var cp = document.createElement("div"); cp.className="concept";
+      cp.innerHTML = '<div class="eyebrow">Concept</div><div class="body">'+md(parsed.concept)+'</div>';
+      panel.appendChild(cp);
+    }
+    var chips = useChips(parsed.uses);
+    if(chips.length){
+      var us = document.createElement("div"); us.className="uses";
+      us.innerHTML = '<div class="eyebrow">Use cases</div><div class="chips">'+
+        chips.map(function(c){ return '<span class="chip">'+esc(c)+'</span>'; }).join("")+'</div>';
+      panel.appendChild(us);
+    }
+
+    var task = document.createElement("div"); task.className="task";
+    task.innerHTML = '<span class="ic">✎</span> Read it, predict the result, then run the code and check.';
+    panel.appendChild(task);
+
+    // code cells
+    sec.codes.forEach(function(code, ci){
+      var top = document.createElement("div"); top.className="ed-top";
+      var lbl = document.createElement("span"); lbl.className="lbl"; lbl.textContent = "your_attempt.py";
+      var resetMini = document.createElement("button"); resetMini.className="minibtn"; resetMini.textContent="Reset";
+      var runB = document.createElement("button"); runB.className="runbtn"; runB.textContent="▶ Run";
+      top.appendChild(lbl); top.appendChild(resetMini); top.appendChild(runB);
+      panel.appendChild(top);
+
+      var host = document.createElement("div");
+      var ta = document.createElement("textarea"); ta.className="fallback-ta"; 
+      var saved = null; try{ saved = localStorage.getItem(LS("c"+si+"_"+ci)); }catch(e){}
+      ta.value = (saved!=null && saved!=="") ? saved : code;
+      host.appendChild(ta); panel.appendChild(host);
+
+      var out = document.createElement("pre"); out.className="out"; panel.appendChild(out);
+
+      var ed;
+      if(window.CodeMirror){
+        var cm = CodeMirror.fromTextArea(ta,{ mode:"python", lineNumbers:true, indentUnit:4, viewportMargin:Infinity });
+        setTimeout(function(){ cm.refresh(); }, 0);
+        allCM.push(cm);
+        ed = { get:function(){return cm.getValue();}, set:function(v){cm.setValue(v);},
+               onChange:function(fn){ cm.on("change",fn); }, onRun:function(fn){ cm.setOption("extraKeys",{"Shift-Enter":function(){fn();}}); } };
+      } else {
+        ed = { get:function(){return ta.value;}, set:function(v){ta.value=v;},
+               onChange:function(fn){ ta.addEventListener("input",fn); },
+               onRun:function(fn){ ta.addEventListener("keydown",function(e){ if(e.shiftKey&&e.key==="Enter"){e.preventDefault();fn();}}); } };
+      }
+      var rec = { get:ed.get, set:ed.set, original:code, out:out, run:runB, si:si, ci:ci };
+      editors.push(rec);
+      function doRun(){ runCell(rec); markExplored(si); }
+      runB.onclick = doRun; ed.onRun(doRun);
+      resetMini.onclick = function(){ ed.set(code); out.className="out"; out.textContent=""; persist(rec); };
+      ed.onChange(function(){ persist(rec); });
+    });
+
+    // actions: save + explored note
+    var acts = document.createElement("div"); acts.className="ed-actions";
+    var saveB = document.createElement("button"); saveB.className="savebtn"; saveB.textContent="Save attempt";
+    var note = document.createElement("span"); note.className="savednote";
+    acts.appendChild(saveB); acts.appendChild(Object.assign(document.createElement("span"),{className:"grow"})); acts.appendChild(note);
+    panel.appendChild(acts);
+    saveB.onclick = function(){
+      editors.filter(function(e){return e.si===si;}).forEach(persist);
+      markExplored(si);
+      note.textContent = session ? "✓ saved & synced" : "✓ saved on this device";
+      setTimeout(function(){ note.textContent=""; }, 2400);
+    };
+
+    // reveal expected
+    if(sec.expected.length){
+      var rev = document.createElement("div"); rev.className="reveal";
+      var rb = document.createElement("button"); rb.className="reveal-btn"; rb.textContent="🔒 Reveal expected output — try predicting first";
+      var exp = document.createElement("div"); exp.className="expected";
+      exp.innerHTML = '<div class="eyebrow">Expected output</div><pre>'+esc(sec.expected.join("\n"))+'</pre>'+
+        '<div class="cav">Example only — random values differ on each run unless you seed with <code>random.seed()</code>.</div>';
+      rb.onclick = function(){ exp.classList.add("open"); rb.style.display="none"; };
+      rev.appendChild(rb); rev.appendChild(exp); panel.appendChild(rev);
+    }
+
+    wrap.appendChild(panel); mount.appendChild(wrap);
+    sectionEls.push(wrap);
+  });
+
+  // ---------- progress / persistence ----------
+  function persist(rec){ try{ localStorage.setItem(LS("c"+rec.si+"_"+rec.ci), rec.get()); }catch(e){} }
+  function exploredSet(){ try{ return new Set(JSON.parse(localStorage.getItem(LS("explored"))||"[]")); }catch(e){ return new Set(); } }
+  function saveExplored(set){ try{ localStorage.setItem(LS("explored"), JSON.stringify(Array.from(set))); }catch(e){} }
+  function markExplored(si){
+    var set = exploredSet(); if(set.has(si)) { paintProgress(); return; }
+    set.add(si); saveExplored(set); cloudSave(si); paintProgress();
+  }
+  function paintProgress(){
+    var set = exploredSet(); var n = sections.length;
+    sectionEls.forEach(function(el,i){
+      var done = set.has(i); el.classList.toggle("done", done);
+      var lab = el.querySelector(".st .lab"); if(lab) lab.textContent = done ? "explored" : "not explored";
+    });
+    document.getElementById("pfill").style.width = (n? Math.round(set.size/n*100):0)+"%";
+    document.getElementById("ppc").textContent = set.size+" / "+n+" explored";
+  }
+  paintProgress();
+  // refresh CodeMirror once layout + fonts have settled (avoids collapsed-height bug)
+  function refreshAllCM(){ allCM.forEach(function(cm){ try{ cm.refresh(); }catch(e){} }); }
+  window.addEventListener("load", function(){ setTimeout(refreshAllCM, 50); });
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ setTimeout(refreshAllCM, 0); }); }
+  setTimeout(refreshAllCM, 300);
+
+  // ---------- Pyodide ----------
+  var pyodide=null, pyReady=false, pyLoading=null;
+  var led=document.getElementById("pyled"), ledT=document.getElementById("pyled-t");
+  function setLed(t,c){ led.className="pyled "+(c||""); ledT.textContent=t; }
+  async function ensurePy(){
+    if(pyReady) return pyodide; if(pyLoading) return pyLoading;
+    setLed("loading Python…","");
     pyLoading = (async function(){
       pyodide = await loadPyodide();
-      pyodide.globals.set("__js_input", function(p){ var r = window.prompt(p || ""); return r === null ? "" : r; });
+      pyodide.globals.set("__js_input", function(p){ var r=window.prompt(p||""); return r===null?"":r; });
       await pyodide.runPythonAsync(
-        "import builtins, os\n" +
-        "os.environ['MPLBACKEND'] = 'AGG'\n" +
-        "def __input(prompt=''):\n" +
-        "    r = __js_input(str(prompt))\n" +
-        "    print(str(prompt) + str(r))\n" +
-        "    return str(r)\n" +
-        "builtins.input = __input\n"
-      );
-      pyReady = true; setStatus("Python ready", "ready");
-      return pyodide;
+        "import builtins, os\n"+
+        "os.environ['MPLBACKEND']='AGG'\n"+
+        "def __input(prompt=''):\n"+
+        "    r=__js_input(str(prompt))\n"+
+        "    print(str(prompt)+str(r))\n"+
+        "    return str(r)\n"+
+        "builtins.input=__input\n");
+      pyReady=true; setLed("Python ready","ready"); return pyodide;
     })();
     return pyLoading;
   }
-
   var FIGCODE =
-    "def __nbx_capture_figs():\n" +
-    "    import sys\n" +
-    "    if 'matplotlib' not in sys.modules: return []\n" +
-    "    import matplotlib.pyplot as plt, io, base64\n" +
-    "    out = []\n" +
-    "    for n in plt.get_fignums():\n" +
-    "        f = plt.figure(n); b = io.BytesIO(); f.savefig(b, format='png', bbox_inches='tight')\n" +
-    "        out.append(base64.b64encode(b.getvalue()).decode())\n" +
-    "    plt.close('all'); return out\n" +
+    "def __nbx_capture_figs():\n"+
+    "    import sys\n"+
+    "    if 'matplotlib' not in sys.modules: return []\n"+
+    "    import matplotlib.pyplot as plt, io, base64\n"+
+    "    out=[]\n"+
+    "    for n in plt.get_fignums():\n"+
+    "        f=plt.figure(n); b=io.BytesIO(); f.savefig(b,format='png',bbox_inches='tight')\n"+
+    "        out.append(base64.b64encode(b.getvalue()).decode())\n"+
+    "    plt.close('all'); return out\n"+
     "__nbx_capture_figs()\n";
 
   async function runCell(rec){
-    var code = rec.get();
-    var out = rec.out;
-    out.className = "nbx-out show"; out.textContent = "";
-    rec.run.disabled = true;
-    var buf = "";
-    function append(s){ buf += s; out.textContent = buf; }
+    var out=rec.out; out.className="out show"; out.textContent=""; rec.run.disabled=true;
+    var buf=""; function append(s){ buf+=s; out.textContent=buf; }
     try{
-      var py = await ensurePyodide();
-      py.setStdout({ batched: append });
-      py.setStderr({ batched: append });
-      await py.loadPackagesFromImports(code);
-      var res = await py.runPythonAsync(code);
-      if (res !== undefined && res !== null){
-        var rep;
-        try { var b = py.pyimport("builtins"); rep = b.repr(res); b.destroy(); } catch(e){ rep = String(res); }
-        append((buf && !buf.endsWith("\n") ? "\n" : "") + rep);
-        if (res && typeof res.destroy === "function"){ try{ res.destroy(); }catch(e){} }
+      var py=await ensurePy();
+      py.setStdout({batched:append}); py.setStderr({batched:append});
+      await py.loadPackagesFromImports(rec.get());
+      var res=await py.runPythonAsync(rec.get());
+      if(res!==undefined && res!==null){
+        var rep; try{ var b=py.pyimport("builtins"); rep=b.repr(res); b.destroy(); }catch(e){ rep=String(res); }
+        append((buf && !buf.endsWith("\n")?"\n":"")+rep);
+        if(res && typeof res.destroy==="function"){ try{res.destroy();}catch(e){} }
       }
-      // matplotlib figures, if any
-      var figsProxy = await py.runPythonAsync(FIGCODE);
-      var figs = figsProxy.toJs(); figsProxy.destroy();
-      figs.forEach(function(b64){ var img = new Image(); img.src = "data:image/png;base64," + b64; out.appendChild(img); });
-      if (!buf && !figs.length) append("(ran — no output)");
-    }catch(e){
-      out.classList.add("err");
-      append((buf ? buf + "\n" : "") + (e && e.message ? e.message : String(e)));
-    }finally{
-      rec.run.disabled = false;
-    }
+      var figsProxy=await py.runPythonAsync(FIGCODE); var figs=figsProxy.toJs(); figsProxy.destroy();
+      figs.forEach(function(b64){ var img=new Image(); img.src="data:image/png;base64,"+b64; out.appendChild(img); });
+      if(!buf && !figs.length) append("(ran — no output)");
+    }catch(e){ out.classList.add("err"); append((buf?buf+"\n":"")+(e&&e.message?e.message:String(e))); }
+    finally{ rec.run.disabled=false; }
   }
 
-  document.getElementById("nbx-runall").onclick = async function(){
-    for (var i=0;i<editors.length;i++){ await runCell(editors[i]); }
+  document.getElementById("runall").onclick = async function(){ for(var i=0;i<editors.length;i++){ await runCell(editors[i]); markExplored(editors[i].si); } };
+  document.getElementById("resetall").onclick = function(){
+    editors.forEach(function(r){ r.set(r.original); r.out.className="out"; r.out.textContent=""; persist(r); });
   };
-  document.getElementById("nbx-reset").onclick = function(){
-    editors.forEach(function(r){ r.set(r.original); r.out.className="nbx-out"; r.out.textContent=""; });
-  };
+  setTimeout(function(){ ensurePy().catch(function(){ setLed("Python failed (offline?)","err"); }); }, 400);
 
-  // warm up Python in the background so the first Run is snappy
-  setTimeout(function(){ ensurePyodide().catch(function(){ setStatus("Python failed to load (offline?)", ""); }); }, 400);
+  // ---------- Supabase sync (optional, reuses Commonplace account) ----------
+  var SUPABASE_URL="https://wylxvmkcrexwfpjpbhyy.supabase.co";
+  var SUPABASE_KEY="sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
+  var RESOURCE_SET="pystudy_"+PAGE_ID;
+  var sb=null, session=null, syncEl=document.getElementById("sync");
+  try{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); }catch(e){}
+  function renderSync(){
+    if(!sb){ syncEl.innerHTML='<span>cloud sync unavailable</span>'; return; }
+    if(session){
+      syncEl.innerHTML='<span class="ok">✓ Synced</span><span class="who">'+esc(session.user.email)+'</span><button class="b" id="so">Sign out</button>';
+      document.getElementById("so").onclick=function(){ sb.auth.signOut(); };
+    } else {
+      syncEl.innerHTML='<span>Save attempts across devices ·</span><input id="se" type="email" placeholder="you@email.com"><button class="b" id="sl">Sync via email</button>';
+      var go=function(){ var em=(document.getElementById("se").value||"").trim(); if(!em) return; var b=document.getElementById("sl"); b.disabled=true; b.textContent="sending…"; sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.href.split("#")[0]}}).then(function(r){ b.disabled=false; b.textContent=r.error?"try again":"check inbox ✉"; },function(){ b.disabled=false; b.textContent="try again"; }); };
+      document.getElementById("sl").onclick=go;
+      var i=document.getElementById("se"); if(i) i.addEventListener("keydown",function(e){ if(e.key==="Enter") go(); });
+    }
+  }
+  function cloudSave(si){
+    if(!sb||!session) return; var sec=sections[si]; if(!sec) return; var now=new Date().toISOString();
+    sb.from("commonplace_external_resources").upsert({
+      user_id:session.user.id, resource_set:RESOURCE_SET, item_key:"sec_"+si,
+      name:sec.title, url:location.pathname.split("/").pop()+"#sec-"+si, order_index:si,
+      status:"explored", last_attempted:now, updated_at:now
+    },{onConflict:"user_id,resource_set,item_key"}).then(function(){},function(){});
+  }
+  function cloudPull(){
+    if(!sb||!session) return;
+    sb.from("commonplace_external_resources").select("item_key,status").eq("resource_set",RESOURCE_SET).then(function(res){
+      if(res.error||!res.data) return; var set=exploredSet();
+      res.data.forEach(function(r){ var m=r.item_key.match(/^sec_(\d+)$/); if(m && r.status==="explored") set.add(+m[1]); });
+      saveExplored(set); paintProgress();
+    });
+  }
+  if(sb){ sb.auth.getSession().then(function(r){ session=r.data.session||null; renderSync(); cloudPull(); }); sb.auth.onAuthStateChange(function(_e,s){ session=s; renderSync(); if(session) cloudPull(); }); }
+  else renderSync();
 })();
 </script>
 </body>

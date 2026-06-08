@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 12.2 — Capstone: A JSON-like Parser · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* JSON parser demo */
+  .json-input { width: 100%; font-family: var(--mono); font-size: 12.5px; padding: 12px 14px; border: 2px solid var(--purple-light); border-radius: 12px; background: #0d1033; color: #e0e7ff; line-height: 1.6; resize: vertical; min-height: 120px; }
+  .json-input:focus { outline: none; border-color: var(--purple); }
+  .json-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+  .json-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; transition: transform 0.2s var(--bouncy); }
+  .json-btn:hover { transform: translateY(-2px); }
+  .json-ex { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 8px 12px; font: inherit; font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--purple-deep); cursor: pointer; }
+  .json-ex:hover { border-color: var(--purple); transform: translateY(-2px); }
+  .json-lbl { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; margin: 6px 0 4px; }
+  .json-out { background: #0d1033; border-radius: 12px; padding: 14px 16px; font-family: var(--mono); font-size: 13px; color: #e0e7ff; overflow-x: auto; min-height: 40px; line-height: 1.7; }
+  .json-out.err { background: linear-gradient(135deg, #7f1d1d, #450a0a); color: #fecaca; border: 1px solid #ef4444; }
+  .jrow { padding-left: 18px; }
+  .jbrace { color: #c4b5fd; font-weight: 700; }
+  .jkey { color: #5eead4; }
+  .jstr { color: #86efac; }
+  .jnum { color: #fde047; }
+  .jbool { color: #f0abfc; }
+  .jnull { color: #fca5a5; }
+  .jtag { color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; margin-left: 4px; }
+
+  /* Code walkthrough */
+  .ft-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .ftmode { flex: 1; min-width: 90px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 11.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ftmode.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ftmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .ftmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .ft-code { background: #0d1033; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: #e0e7ff; white-space: pre-wrap; overflow-x: auto; }
+  .ft-code .kw { color: #c4b5fd; font-weight: 700; }
+  .ft-code .cm { color: #818cf8; font-style: italic; }
+  .ft-code .str { color: #86efac; }
+  .ft-code .hl { color: #fde047; font-weight: 700; }
+  .ft-code .bad { color: #fca5a5; font-weight: 700; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--purple-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Our last build! A parser that turns JSON text into a tree — using <code>std::variant</code> and a dash of recursion. 🌲
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 12.2</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 79 / 84</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🏗️ PART XII &middot; CAPSTONES</span>
+    <h1>Capstone: A JSON-like Parser</h1>
+    <p class="hero-sub">For the final build, we'll parse a JSON-like format — objects, arrays, strings, numbers, <code>true</code>/<code>false</code>/<code>null</code> — into an in-memory tree. It shows off two big ideas at once: a <code>std::variant</code> value that can hold any of several types, and <strong>recursive descent</strong>, where the parser calls itself to handle nesting of any depth.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> What we're building</div>
+    <h2>From text to a tree 🌲</h2>
+
+    <div class="new-content">
+      JSON is everywhere — config files, web APIs, save data. A <strong>parser</strong> reads that flat text and turns it into a <em>structured tree</em> your program can walk. We'll handle the core of JSON: <strong>objects</strong> <code>{ "key": value }</code>, <strong>arrays</strong> <code>[ value, … ]</code>, <strong>strings</strong>, <strong>numbers</strong>, and the literals <code>true</code>, <code>false</code>, <code>null</code>. The build rests on two ideas you've met: a <code>std::variant</code> (Part IX–ish modern C++) to make one value type that can be <em>any</em> of those kinds, and <strong>recursive descent</strong> — a set of small functions that call one another (and themselves) to match the grammar. It's the perfect finale: a real, useful program that leans on the type system and recursion together.
+    </div>
+
+    <p>Paste some JSON into the interactive below and watch it become a tree; then walk through the five pieces of the C++ that does it.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The value type</div>
+    <h2>One type, many shapes — std::variant 🎭</h2>
+
+    <p>A JSON value can be a string, a number, a bool, null, an array, or an object. A <code>std::variant</code> lets a single type hold exactly one of those at a time:</p>
+
+    <pre class="code"><span class="kw">#include</span> <span class="str">&lt;variant&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;string&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;vector&gt;</span>
+<span class="kw">#include</span> <span class="str">&lt;map&gt;</span>
+
+<span class="kw">struct</span> JsonValue;                          <span class="cm">// forward declaration (recursive)</span>
+<span class="kw">using</span> Array  = std::vector&lt;JsonValue&gt;;
+<span class="kw">using</span> Object = std::map&lt;std::string, JsonValue&gt;;
+
+<span class="kw">struct</span> JsonValue {
+    std::variant&lt;std::nullptr_t, <span class="kw">bool</span>, <span class="kw">double</span>,
+                 std::string, Array, Object&gt; data;   <span class="hl">// exactly one kind</span>
+};</pre>
+
+    <div class="new-content">
+      <code>std::variant</code> is a <em>type-safe union</em>: a <code>JsonValue</code> stores one of the six listed types, and the variant remembers <em>which</em>. The clever part is that <code>Array</code> and <code>Object</code> are themselves built from <code>JsonValue</code> — so the type is <strong>recursive</strong>, exactly mirroring how JSON nests values inside values. (The <code>struct JsonValue;</code> forward declaration lets us name the type before it's fully defined, which the recursion needs.) Later you read a value with <code>std::get&lt;T&gt;(v.data)</code>, or check the kind first with <code>std::holds_alternative&lt;T&gt;(v.data)</code>.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> The parser skeleton</div>
+    <h2>Walk the string with an index 🚶</h2>
+
+    <p>The parser holds the input and a current position, plus tiny helpers. The heart is <code>value()</code>, which looks at the next character and dispatches:</p>
+
+    <pre class="code"><span class="kw">class</span> Parser {
+    <span class="kw">const</span> std::string&amp; s_;
+    size_t i_ = 0;                       <span class="cm">// current position</span>
+<span class="kw">public</span>:
+    Parser(<span class="kw">const</span> std::string&amp; s) : s_(s) {}
+    JsonValue parse() { JsonValue v = value(); skipWs(); <span class="kw">return</span> v; }
+<span class="kw">private</span>:
+    <span class="kw">void</span> skipWs() { <span class="kw">while</span> (i_ &lt; s_.size() &amp;&amp; std::isspace(s_[i_])) ++i_; }
+    <span class="kw">char</span> peek() { skipWs(); <span class="kw">return</span> i_ &lt; s_.size() ? s_[i_] : <span class="str">'\0'</span>; }
+
+    JsonValue value();                   <span class="cm">// dispatch on peek()</span>
+    std::string parseString();
+    Array  parseArray();
+    Object parseObject();
+};</pre>
+
+    <div class="new-content">
+      This is the shape of a <strong>recursive-descent</strong> parser: one object that scans the input left to right via the index <code>i_</code>, never backing up. <code>skipWs</code> jumps over spaces and newlines; <code>peek</code> reports the next meaningful character without consuming it. Each grammar rule — a value, a string, an array, an object — becomes its own function. Keeping the position in a member means every function shares one cursor as they hand control back and forth.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Recursion is the trick</div>
+    <h2>Containers call value() again 🔁</h2>
+
+    <p><code>value()</code> picks a rule from the first character. The container rules then call <code>value()</code> right back — that mutual recursion is what handles nesting:</p>
+
+    <pre class="code">JsonValue Parser::value() {
+    <span class="kw">char</span> c = peek();
+    <span class="kw">if</span> (c == <span class="str">'{'</span>) <span class="kw">return</span> { parseObject() };
+    <span class="kw">if</span> (c == <span class="str">'['</span>) <span class="kw">return</span> { parseArray() };
+    <span class="kw">if</span> (c == <span class="str">'"'</span>) <span class="kw">return</span> { parseString() };
+    <span class="kw">if</span> (c == <span class="str">'t'</span> || c == <span class="str">'f'</span>) <span class="kw">return</span> { parseBool() };
+    <span class="kw">if</span> (c == <span class="str">'n'</span>) { i_ += 4; <span class="kw">return</span> { <span class="kw">nullptr</span> }; }   <span class="cm">// null</span>
+    <span class="kw">return</span> { parseNumber() };
+}
+
+Array Parser::parseArray() {
+    ++i_;                                <span class="cm">// consume '['</span>
+    Array arr;
+    <span class="kw">if</span> (peek() == <span class="str">']'</span>) { ++i_; <span class="kw">return</span> arr; }
+    <span class="kw">while</span> (<span class="kw">true</span>) {
+        arr.push_back(value());          <span class="hl">// &lt;-- recursion!</span>
+        <span class="kw">if</span> (peek() == <span class="str">','</span>) { ++i_; <span class="kw">continue</span>; }
+        <span class="kw">if</span> (peek() == <span class="str">']'</span>) { ++i_; <span class="kw">break</span>; }
+        <span class="kw">throw</span> std::runtime_error(<span class="str">"expected , or ]"</span>);
+    }
+    <span class="kw">return</span> arr;
+}</pre>
+
+    <div class="new-content">
+      Here's the key insight of the whole capstone: <code>parseArray</code> calls <code>value()</code> for each element, and <code>value()</code> might call <code>parseArray</code> (or <code>parseObject</code>) again — so an array of objects of arrays just <em>works</em>, to any depth, with no special handling. The grammar is recursive, so the code is recursive. <code>parseObject</code> is the same idea: read a string key, expect a <code>:</code>, call <code>value()</code> for the value, repeat on <code>,</code> until <code>}</code>. The scalar parsers (<code>parseString</code>, <code>parseNumber</code>, <code>parseBool</code>) just scan characters — they're the base cases that stop the recursion.
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Using it</div>
+    <h2>Parse, then read the tree 🌳</h2>
+
+    <p>A small free function kicks it off, and you read results out of the variant with <code>std::get</code>:</p>
+
+    <pre class="code">JsonValue parse(<span class="kw">const</span> std::string&amp; text) {
+    <span class="kw">return</span> Parser(text).parse();
+}
+
+<span class="kw">int</span> main() {
+    JsonValue v = parse(R"({"name":"Ada","tags":["math","code"]})");
+
+    Object&amp; o = std::get&lt;Object&gt;(v.data);          <span class="cm">// it's an object</span>
+    std::cout &lt;&lt; std::get&lt;std::string&gt;(o[<span class="str">"name"</span>].data);   <span class="cm">// Ada</span>
+
+    Array&amp; tags = std::get&lt;Array&gt;(o[<span class="str">"tags"</span>].data);
+    std::cout &lt;&lt; tags.size();                       <span class="cm">// 2</span>
+}</pre>
+
+    <div class="trap">
+      <h4>🚨 Check the kind before you <code>std::get</code> the wrong type</h4>
+      <p><code>std::get&lt;T&gt;(v.data)</code> throws <code>std::bad_variant_access</code> if the variant doesn't currently hold a <code>T</code> — so reading <code>std::get&lt;double&gt;</code> from a value that's actually a string is a runtime error (the exception machinery from Part X catches it). When you're not certain of the kind, test first with <code>std::holds_alternative&lt;T&gt;(v.data)</code>, or use <code>std::visit</code> to handle every alternative in one place. The other thing to remember: this is a <em>teaching</em> parser. A production JSON library also handles string escapes (<code>\n</code>, <code>\"</code>, <code>\uXXXX</code>), exponent numbers, deep-nesting limits, and precise error positions. The <em>shape</em> here is real; the edge cases are where the work is.</p>
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — the JSON Parser</div>
+    <h2>Parse some JSON, then read the code 🔬</h2>
+
+    <p>Two tabs. <strong>Try the Parser</strong> runs a working version of this parser — type or load some JSON, hit Parse, and see it become a typed tree (or a clear error if it's malformed). <strong>Code Walkthrough</strong> steps through the five pieces of the C++ source.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🌲 JSON Parser</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 5 walkthrough steps</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="ft">Try the Parser</button>
+        <button class="tab-btn" data-tab="out">Code Walkthrough</button>
+      </div>
+
+      <!-- WORKING PARSER -->
+      <div class="tab-panel active" id="tab-ft">
+        <textarea class="json-input" id="jsonInput" spellcheck="false">{
+  "name": "Ada",
+  "age": 36,
+  "admin": true,
+  "tags": ["math", "code"],
+  "address": null
+}</textarea>
+        <div class="json-bar">
+          <button class="json-btn" id="parseBtn">▶ Parse</button>
+          <button class="json-ex" data-ex="obj">object</button>
+          <button class="json-ex" data-ex="arr">nested array</button>
+          <button class="json-ex" data-ex="err">malformed</button>
+        </div>
+        <div class="json-lbl">parsed tree</div>
+        <div class="json-out" id="jsonOut"></div>
+      </div>
+
+      <!-- CODE WALKTHROUGH -->
+      <div class="tab-panel" id="tab-out">
+        <div class="ft-modes" id="ftMode">
+          <button class="ftmode active" data-m="model">1 · value<small>std::variant</small></button>
+          <button class="ftmode" data-m="skel">2 · skeleton<small>index + peek</small></button>
+          <button class="ftmode" data-m="value">3 · dispatch<small>value()</small></button>
+          <button class="ftmode" data-m="rec">4 · recursion<small>containers</small></button>
+          <button class="ftmode" data-m="use">5 · using it<small>std::get</small></button>
+        </div>
+        <div class="ft-code" id="ftChain"></div>
+        <div class="fs-msg" id="ftMsg"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        How does this parser handle arbitrarily nested structures — say, an array of objects, each holding more arrays?
+      </div>
+      <button class="opt" data-correct="true"><span><strong>Recursion</strong> — <code>value()</code> dispatches to <code>parseArray</code>/<code>parseObject</code>, which call <code>value()</code> again for each element, so any depth of nesting is handled with the same few functions</span></button>
+      <button class="opt" data-correct="false"><span>A fixed loop with a hard-coded maximum nesting depth of, say, 10 levels</span></button>
+      <button class="opt" data-correct="false"><span>It can't — this parser only handles a single flat object with no nesting</span></button>
+      <button class="opt" data-correct="false"><span>It counts all the brackets first, then allocates exactly that many levels</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: the grammar nests, so the functions that match it call each other.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, extensions, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🎭</div>
+      <div class="mistake-body">
+        <strong><code>std::get</code> on the wrong alternative</strong>
+        <small><code>std::get&lt;T&gt;</code> throws <code>std::bad_variant_access</code> if the variant holds a different type. Check with <code>std::holds_alternative&lt;T&gt;</code> first, or handle all cases with <code>std::visit</code>.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🚶</div>
+      <div class="mistake-body">
+        <strong>Forgetting to consume a character</strong>
+        <small>Each parse function must advance <code>i_</code> past what it matched (the <code>[</code>, the <code>,</code>, the closing <code>"</code>). Forget one and the parser loops forever or misreads — step the index deliberately.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🕳️</div>
+      <div class="mistake-body">
+        <strong>No error on malformed input</strong>
+        <small>A parser that silently accepts garbage hides bugs. Throw (or return an error) on an unexpected character, a missing <code>:</code> or <code>]</code>, or trailing junk after the value — and report where.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Extend it 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Pretty-print it.</strong> Write a function that takes a <code>JsonValue</code> and prints it back out as indented JSON — a recursive walk that mirrors the parser (use <code>std::visit</code> or check each alternative).
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>String escapes.</strong> Extend <code>parseString</code> to handle <code>\"</code>, <code>\\</code>, <code>\n</code>, and <code>\t</code> inside strings, turning the escape sequences into the real characters.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Good errors.</strong> Make parse failures report the line and column (not just the byte index), and write a handful of malformed inputs to confirm each gives a clear, located message.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What you built</h3>
+      <ul>
+        <li><strong>A recursive-descent JSON parser</strong> turning text into an in-memory tree of values.</li>
+        <li><strong><code>std::variant</code></strong> gives one <code>JsonValue</code> type that holds any of six kinds; <code>Array</code>/<code>Object</code> reference it, making the type recursive.</li>
+        <li><strong>The parser</strong> walks the string with an index; <code>value()</code> dispatches on the next character to a per-rule function.</li>
+        <li><strong>Recursion is the engine:</strong> container rules call <code>value()</code>, which calls them back — so nesting of any depth just works.</li>
+        <li><strong>Read results</strong> with <code>std::get</code>/<code>std::holds_alternative</code>; check the kind first, and report errors on bad input.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_12_1.html" class="nav-btn prev">
+      <small>← Previous</small>
+      12.1  Capstone — a to-do app
+    </a>
+    <a href="#" class="nav-btn next disabled">
+      <small>Next: capstone →</small>
+      12.3  Capstone — an expression evaluator
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "A parser turns flat JSON text into a structured tree. 🌲",
+    "std::variant: one JsonValue that holds any of six kinds. 🎭",
+    "A recursive-descent parser walks the string with an index. 🚶",
+    "The trick: containers call value(), which calls them back. 🔁",
+    "Read the tree with std::get; check the kind first. 🌳",
+    "Parse some JSON, then read the five pieces of code. 🔬",
+    "std::get on the wrong type throws bad_variant_access. 🎭",
+    "You finished the capstones — congratulations! 🎉"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 12.2 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Working JSON parser (recursive descent, mirrors the C++) =====
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function parseJSON(src) {
+    let i = 0;
+    function ws() { while (i < src.length && /\s/.test(src[i])) i++; }
+    function peek() { ws(); return i < src.length ? src[i] : '\0'; }
+    function err(msg) { throw { msg, pos: i }; }
+
+    function value() {
+      const c = peek();
+      if (c === '{') return obj();
+      if (c === '[') return arr();
+      if (c === '"') return { type: 'string', value: str() };
+      if (c === 't' || c === 'f') return bool();
+      if (c === 'n') return nul();
+      if (c === '-' || (c >= '0' && c <= '9')) return num();
+      err('unexpected character "' + (c === '\0' ? 'EOF' : c) + '"');
+    }
+    function str() {
+      i++;                       // opening quote
+      let s = '';
+      while (i < src.length && src[i] !== '"') s += src[i++];
+      if (src[i] !== '"') err('unterminated string');
+      i++;                       // closing quote
+      return s;
+    }
+    function num() {
+      const start = i;
+      if (src[i] === '-') i++;
+      while (i < src.length && /[0-9.]/.test(src[i])) i++;
+      const n = Number(src.slice(start, i));
+      if (Number.isNaN(n)) err('invalid number');
+      return { type: 'number', value: n };
+    }
+    function bool() {
+      if (src.startsWith('true', i)) { i += 4; return { type: 'bool', value: true }; }
+      if (src.startsWith('false', i)) { i += 5; return { type: 'bool', value: false }; }
+      err('invalid literal');
+    }
+    function nul() {
+      if (src.startsWith('null', i)) { i += 4; return { type: 'null', value: null }; }
+      err('invalid literal');
+    }
+    function arr() {
+      i++;                       // consume '['
+      const items = [];
+      if (peek() === ']') { i++; return { type: 'array', value: items }; }
+      while (true) {
+        items.push(value());     // recursion
+        const c = peek();
+        if (c === ',') { i++; continue; }
+        if (c === ']') { i++; break; }
+        err("expected ',' or ']'");
+      }
+      return { type: 'array', value: items };
+    }
+    function obj() {
+      i++;                       // consume '{'
+      const pairs = [];
+      if (peek() === '}') { i++; return { type: 'object', value: pairs }; }
+      while (true) {
+        if (peek() !== '"') err('expected string key');
+        const key = str();
+        if (peek() !== ':') err("expected ':'");
+        i++;                     // consume ':'
+        pairs.push([key, value()]);   // recursion
+        const c = peek();
+        if (c === ',') { i++; continue; }
+        if (c === '}') { i++; break; }
+        err("expected ',' or '}'");
+      }
+      return { type: 'object', value: pairs };
+    }
+
+    const result = value();
+    ws();
+    if (i < src.length) err('trailing characters after value');
+    return result;
+  }
+
+  function renderNode(node) {
+    switch (node.type) {
+      case 'object':
+        if (node.value.length === 0) return '<span class="jbrace">{ }</span> <span class="jtag">object</span>';
+        return '<span class="jbrace">{</span> <span class="jtag">object</span>' +
+          node.value.map(([k, v]) => `<div class="jrow"><span class="jkey">"${esc(k)}"</span>: ${renderNode(v)}</div>`).join('') +
+          '<span class="jbrace">}</span>';
+      case 'array':
+        if (node.value.length === 0) return '<span class="jbrace">[ ]</span> <span class="jtag">array</span>';
+        return '<span class="jbrace">[</span> <span class="jtag">array</span>' +
+          node.value.map(v => `<div class="jrow">${renderNode(v)}</div>`).join('') +
+          '<span class="jbrace">]</span>';
+      case 'string': return `<span class="jstr">"${esc(node.value)}"</span><span class="jtag">string</span>`;
+      case 'number': return `<span class="jnum">${node.value}</span><span class="jtag">number</span>`;
+      case 'bool':   return `<span class="jbool">${node.value}</span><span class="jtag">bool</span>`;
+      case 'null':   return `<span class="jnull">null</span><span class="jtag">null</span>`;
+    }
+    return '';
+  }
+
+  const jsonInput = document.getElementById('jsonInput');
+  const jsonOut = document.getElementById('jsonOut');
+  const parseBtn = document.getElementById('parseBtn');
+  let parsedOnce = false;
+
+  const EXAMPLES = {
+    obj: '{\n  "name": "Ada",\n  "age": 36,\n  "admin": true,\n  "address": null\n}',
+    arr: '{\n  "team": "compilers",\n  "members": [\n    { "name": "Bo", "level": 3 },\n    { "name": "Cy", "level": 5 }\n  ]\n}',
+    err: '{\n  "name": "Ada",\n  "age": ,\n  "oops": true\n}'
+  };
+
+  function doParse() {
+    const src = jsonInput.value;
+    try {
+      const tree = parseJSON(src);
+      jsonOut.classList.remove('err');
+      jsonOut.innerHTML = renderNode(tree);
+      if (!parsedOnce) {
+        parsedOnce = true;
+        const r = parseBtn.getBoundingClientRect();
+        addXP(10, r.left, r.top, '🌲 Parsed! +10 XP');
+        bumpStreak(); burst();
+      }
+    } catch (e) {
+      jsonOut.classList.add('err');
+      const where = (e && typeof e.pos === 'number') ? ' at position ' + e.pos : '';
+      jsonOut.textContent = '✗ Parse error' + where + ': ' + (e && e.msg ? e.msg : e);
+      breakStreak();
+    }
+  }
+  parseBtn.addEventListener('click', doParse);
+  document.querySelectorAll('.json-ex').forEach(b => b.addEventListener('click', () => {
+    jsonInput.value = EXAMPLES[b.dataset.ex];
+    doParse();
+  }));
+  doParse();   // parse the prefilled sample on load
+  parsedOnce = false;   // don't count the auto-parse as the user's first
+
+  // ===== Code Walkthrough =====
+  const ftModeEl = document.getElementById('ftMode');
+  const ftChain = document.getElementById('ftChain');
+  const ftMsg = document.getElementById('ftMsg');
+  const seen = new Set();
+
+  const WT = {
+    model: {
+      code: '<span class="kw">struct</span> JsonValue;     <span class="cm">// forward decl (recursive)</span>\n<span class="kw">using</span> Array  = std::vector&lt;JsonValue&gt;;\n<span class="kw">using</span> Object = std::map&lt;std::string, JsonValue&gt;;\n\n<span class="kw">struct</span> JsonValue {\n    std::variant&lt;std::nullptr_t, <span class="kw">bool</span>, <span class="kw">double</span>,\n                 std::string, Array, Object&gt; data;\n};',
+      msg: `<b>1 · The value type.</b> A <code>std::variant</code> holds exactly one of six kinds. Because <code>Array</code>/<code>Object</code> are built from <code>JsonValue</code>, the type is <span class="grn">recursive</span> — mirroring how JSON nests.`
+    },
+    skel: {
+      code: '<span class="kw">class</span> Parser {\n    <span class="kw">const</span> std::string&amp; s_;\n    size_t i_ = 0;\n<span class="kw">public</span>:\n    Parser(<span class="kw">const</span> std::string&amp; s) : s_(s) {}\n    JsonValue parse() { <span class="kw">return</span> value(); }\n<span class="kw">private</span>:\n    <span class="kw">void</span> skipWs();\n    <span class="kw">char</span> peek();      <span class="cm">// next char, skipping spaces</span>\n    JsonValue value();\n};',
+      msg: `<b>2 · The skeleton.</b> One object scans the input left-to-right via the index <code>i_</code>, never backing up. <code>skipWs</code> and <code>peek</code> are helpers; each grammar rule becomes a function sharing that one cursor.`
+    },
+    value: {
+      code: 'JsonValue Parser::value() {\n    <span class="kw">char</span> c = peek();\n    <span class="kw">if</span> (c == <span class="str">\'{\'</span>) <span class="kw">return</span> { parseObject() };\n    <span class="kw">if</span> (c == <span class="str">\'[\'</span>) <span class="kw">return</span> { parseArray() };\n    <span class="kw">if</span> (c == <span class="str">\'"\'</span>) <span class="kw">return</span> { parseString() };\n    <span class="kw">if</span> (c == <span class="str">\'t\'</span> || c == <span class="str">\'f\'</span>) <span class="kw">return</span> { parseBool() };\n    <span class="kw">if</span> (c == <span class="str">\'n\'</span>) { i_ += 4; <span class="kw">return</span> { <span class="kw">nullptr</span> }; }\n    <span class="kw">return</span> { parseNumber() };\n}',
+      msg: `<b>3 · Dispatch.</b> <code>value()</code> peeks at the next character and routes to the matching rule. One char is enough to know which kind of value comes next — that's what makes recursive descent so simple.`
+    },
+    rec: {
+      code: 'Array Parser::parseArray() {\n    ++i_;                    <span class="cm">// consume \'[\'</span>\n    Array arr;\n    <span class="kw">if</span> (peek() == <span class="str">\']\'</span>) { ++i_; <span class="kw">return</span> arr; }\n    <span class="kw">while</span> (<span class="kw">true</span>) {\n        arr.push_back(value());      <span class="hl">// recursion!</span>\n        <span class="kw">if</span> (peek() == <span class="str">\',\'</span>) { ++i_; <span class="kw">continue</span>; }\n        <span class="kw">if</span> (peek() == <span class="str">\']\'</span>) { ++i_; <span class="kw">break</span>; }\n        <span class="kw">throw</span> std::runtime_error(<span class="str">"expected , or ]"</span>);\n    }\n    <span class="kw">return</span> arr;\n}',
+      msg: `<b>4 · Recursion.</b> <code>parseArray</code> calls <code>value()</code> per element, and <code>value()</code> may call <code>parseArray</code>/<code>parseObject</code> right back. <span class="grn">That mutual recursion is the nesting</span> — any depth just works. Scalars are the base cases.`
+    },
+    use: {
+      code: 'JsonValue parse(<span class="kw">const</span> std::string&amp; text) {\n    <span class="kw">return</span> Parser(text).parse();\n}\n\n<span class="kw">int</span> main() {\n    <span class="kw">auto</span> v = parse(R"({"name":"Ada"})");\n    Object&amp; o = std::get&lt;Object&gt;(v.data);\n    std::cout &lt;&lt; std::get&lt;std::string&gt;(o[<span class="str">"name"</span>].data);\n}',
+      msg: `<b>5 · Using it.</b> <code>parse()</code> builds the tree; read it with <code>std::get&lt;T&gt;</code> (or check first with <code>std::holds_alternative</code>). <span class="red">Wrong type → bad_variant_access.</span> The shape here is real; a production parser adds escapes and richer errors.`
+    }
+  };
+  function renderWT(mode) { ftChain.innerHTML = WT[mode].code; ftMsg.innerHTML = WT[mode].msg; }
+  ftModeEl.querySelectorAll('.ftmode').forEach(b => b.addEventListener('click', (e) => {
+    ftModeEl.querySelectorAll('.ftmode').forEach(x => x.classList.toggle('active', x === b));
+    renderWT(b.dataset.m);
+    if (!seen.has(b.dataset.m)) {
+      seen.add(b.dataset.m);
+      playCount.textContent = seen.size;
+      playCount.style.transform = 'scale(1.3)';
+      setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+      addXP(5, e.clientX, e.clientY);
+      bumpStreak();
+      if (seen.size === 5) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 Whole parser walked! +20 XP'); }
+    }
+  }));
+  renderWT('model');
+  seen.add('model'); playCount.textContent = 1;
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly.</strong> The grammar is recursive, so the code is too: <code>value()</code> dispatches to <code>parseArray</code>/<code>parseObject</code>, which call <code>value()</code> for each element — which may dispatch right back. A handful of small functions handle nesting of <em>any</em> depth with no special cases.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> Mutual recursion mirrors the nested grammar.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. There\'s no hard-coded depth limit, it handles nesting fine, and it doesn\'t pre-count brackets. The mechanism is plain <em>recursion</em>: container rules call <code>value()</code>, which calls them back.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
