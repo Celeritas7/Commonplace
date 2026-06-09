@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 12.4 — Where to Go Next · The C++ Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Roadmap explorer */
+  .ft-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .ftmode { flex: 1; min-width: 100px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-weight: 700; font-size: 11.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ftmode.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ftmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .ftmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .rm-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); margin-bottom: 8px; }
+  .ft-info { background: #fff; border: 2px solid var(--purple-light); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 8px; }
+  .ft-info .row { display: flex; gap: 8px; padding: 3px 0; }
+  .ft-info .k { color: var(--purple-deep); font-weight: 700; min-width: 96px; flex-shrink: 0; }
+  .ft-info .v { color: var(--ink-soft); }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--purple-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; }
+
+  /* Resources */
+  .res-item { display: block; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; text-decoration: none; transition: all 0.2s var(--bouncy); }
+  .res-item:hover { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .res-item .res-name { font-weight: 700; color: var(--purple-deep); font-size: 14.5px; }
+  .res-item .res-url { font-family: var(--mono); font-size: 11px; color: var(--cyan); }
+  .res-item .res-desc { color: var(--ink-soft); font-size: 13px; margin-top: 2px; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .habit { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #ecfdf5, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--green); transition: transform 0.3s var(--bouncy); }
+  .habit:hover { transform: translateX(4px); }
+  .habit-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .habit-body strong { color: #15803d; display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .habit-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .habit-body code { font-size: 0.9em; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    You made it to the end! 🎉 Let's look back at how far you've come — and map out where the road goes from here.
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 12.4</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 81 / 81 &middot; FINALE</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🎓 FINALE &middot; WHERE TO GO NEXT</span>
+    <h1>Where to Go Next</h1>
+    <p class="hero-sub">You've reached the last page. From "what is a program?" to a JSON parser and an expression evaluator, you've learned a real, modern slice of C++. This finale looks back at what you can now do, points to the big areas still ahead — concurrency, networking, build systems, the wider STL — and leaves you with habits and resources to keep growing.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Look how far you've come</div>
+    <h2>The whole journey 🎉</h2>
+
+    <div class="new-content">
+      Take a moment. You started not knowing what a program <em>was</em>, and you now understand variables, control flow, and functions; arrays, strings, and the STL containers; <strong>object-oriented programming</strong> with classes, inheritance, and polymorphism; <strong>templates</strong> and concepts; <strong>modern resource management</strong> with RAII and smart pointers; the full <strong>error-handling</strong> toolkit — exceptions, <code>noexcept</code>, and <code>std::expected</code>; and <strong>file and stream I/O</strong> in every flavour. Then you put it together into three working programs: a persistent to-do app, a JSON-like parser, and an expression evaluator. That's not a beginner's checklist any more — that's a foundation you can build a career on.
+    </div>
+
+    <p>Real fluency comes from <em>using</em> this, so the rest of this page is about momentum: what to learn next, what habits to keep, and where to find help.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> What you can do now</div>
+    <h2>Your toolbox 🧰</h2>
+
+    <p>It's worth naming the capabilities explicitly — these are things you can sit down and write today:</p>
+
+    <ul>
+      <li><strong>Model a problem</strong> with your own types (<code>struct</code>/<code>class</code>), collections (<code>std::vector</code>, <code>std::map</code>), and clean interfaces.</li>
+      <li><strong>Manage resources safely</strong> with RAII and smart pointers — no manual <code>new</code>/<code>delete</code>, no leaks.</li>
+      <li><strong>Handle failure</strong> deliberately: throw and catch exceptions, or return <code>std::optional</code>/<code>std::expected</code> when failure is routine.</li>
+      <li><strong>Read and write data</strong> — files, strings, formatted output, even raw binary.</li>
+      <li><strong>Write reusable code</strong> with templates and constrain it with concepts.</li>
+      <li><strong>Build a small program end-to-end</strong>, from data model to a command loop with persistence.</li>
+    </ul>
+
+    <div class="new-content">
+      Notice the through-line: nearly all of this leans on a few big ideas applied over and over — <em>let types own their resources</em>, <em>make illegal states hard to represent</em>, and <em>lean on the standard library instead of hand-rolling</em>. Those instincts matter more than memorising syntax, and you've been building them the whole way.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> The big roads ahead</div>
+    <h2>What this book didn't cover 🛣️</h2>
+
+    <p>C++ is vast, and a first book has to stop somewhere. Here are the largest areas still in front of you — each a whole topic in its own right:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Area</th><th>What's there</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Concurrency</td><td class="mono plain">threads, <code>async</code>, mutexes, atomics, C++20 coroutines — doing many things at once</td></tr>
+        <tr><td class="mono">Networking</td><td class="mono plain">sockets, HTTP, async I/O — talking to other machines (via Asio / libraries)</td></tr>
+        <tr><td class="mono">Build &amp; tooling</td><td class="mono plain">CMake, package managers, debuggers, sanitizers, CI — shipping real projects</td></tr>
+        <tr><td class="mono">The wider STL</td><td class="mono plain"><code>&lt;algorithm&gt;</code>, ranges, more containers, <code>&lt;chrono&gt;</code>, <code>string_view</code>, <code>span</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      Don't try to learn all four at once. Pick whichever serves the project in front of you: building a web service? Networking and CMake. Crunching data fast? Concurrency and the algorithms library. The interactive below is a little map of each — what it is, why it matters, and a solid place to start. The good news: every one of them builds on exactly the foundations you already have.
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Habits worth keeping</div>
+    <h2>What good C++ programmers do 🌱</h2>
+
+    <div class="habit">
+      <div class="habit-icon">♻️</div>
+      <div class="habit-body">
+        <strong>Let RAII own everything</strong>
+        <small>Tie every resource — memory, files, locks, sockets — to an object's lifetime. If you're typing <code>delete</code>, ask whether a smart pointer or container should do it instead.</small>
+      </div>
+    </div>
+
+    <div class="habit">
+      <div class="habit-icon">🧱</div>
+      <div class="habit-body">
+        <strong>Prefer the standard library</strong>
+        <small>Before writing a loop, check <code>&lt;algorithm&gt;</code>. Before a raw array, reach for <code>std::vector</code>. The STL is faster, safer, and clearer than most hand-rolled code.</small>
+      </div>
+    </div>
+
+    <div class="habit">
+      <div class="habit-icon">🚦</div>
+      <div class="habit-body">
+        <strong>Turn on warnings &amp; sanitizers</strong>
+        <small>Compile with <code>-Wall -Wextra</code> and treat warnings as bugs. Run with <code>-fsanitize=address,undefined</code> to catch memory and UB errors the compiler can't see (recall Part X / 10.5).</small>
+      </div>
+    </div>
+
+    <div class="habit">
+      <div class="habit-icon">📐</div>
+      <div class="habit-body">
+        <strong>Be <code>const</code>-correct &amp; precise</strong>
+        <small>Mark things <code>const</code> by default, pass big objects by <code>const&amp;</code>, name things clearly, and keep functions small. Future-you (and your reviewers) will thank you.</small>
+      </div>
+    </div>
+
+    <p style="margin-top:14px">None of these are new — they're the habits this book has been quietly modelling. Keeping them is what separates code that merely works from code that lasts.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> How to keep learning</div>
+    <h2>Momentum &gt; cramming 🚀</h2>
+
+    <p>The single best thing you can do now is <strong>build things</strong>. Reading teaches you what's possible; writing teaches you what's true. A few ways to keep the gradient steep:</p>
+
+    <ul>
+      <li><strong>Pick a real project</strong> you actually want — a game, a tool, a small server — and let its needs pull you into new topics.</li>
+      <li><strong>Read good code.</strong> Browse a well-regarded open-source C++ library and notice how it's structured.</li>
+      <li><strong>Use the reference.</strong> Keep <a href="https://en.cppreference.com" target="_blank" rel="noopener">cppreference</a> open while you code; look things up rather than guessing.</li>
+      <li><strong>Experiment cheaply</strong> on <a href="https://godbolt.org" target="_blank" rel="noopener">Compiler Explorer</a> — try a snippet, see the assembly, compare compilers.</li>
+      <li><strong>Revisit this book.</strong> Concepts you skimmed will click differently once you've hit the problems they solve.</li>
+    </ul>
+
+    <div class="new-content">
+      And be patient with yourself. C++ is famously large, and <em>nobody</em> holds all of it in their head — experienced engineers look things up constantly. You don't need to know everything; you need to know enough to start, and the judgement to find the rest. You already have both. The interactive's <strong>Resources</strong> tab collects the handful of places worth bookmarking.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Explore — your roadmap</div>
+    <h2>Pick a road, grab the map 🗺️</h2>
+
+    <p>Two tabs. <strong>What's Next</strong> lets you explore each big area ahead — what it is, why it matters, and where to start. <strong>Resources</strong> is a short, curated list of the places worth bookmarking for the rest of your C++ journey.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🗺️ Your C++ Roadmap</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 explored</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="ft">What's Next</button>
+        <button class="tab-btn" data-tab="out">Resources</button>
+      </div>
+
+      <!-- ROADMAP EXPLORER -->
+      <div class="tab-panel active" id="tab-ft">
+        <div class="ft-modes" id="ftMode">
+          <button class="ftmode active" data-m="conc">⚙️ Concurrency<small>do many things</small></button>
+          <button class="ftmode" data-m="net">🌐 Networking<small>talk to machines</small></button>
+          <button class="ftmode" data-m="build">🔧 Build &amp; tooling<small>ship projects</small></button>
+          <button class="ftmode" data-m="stl">📚 Wider STL<small>algorithms &amp; ranges</small></button>
+        </div>
+        <div class="rm-title" id="rmTitle"></div>
+        <div class="ft-info" id="ftInfo"></div>
+        <div class="fs-msg" id="ftMsg"></div>
+      </div>
+
+      <!-- RESOURCES -->
+      <div class="tab-panel" id="tab-out">
+        <a class="res-item" href="https://en.cppreference.com" target="_blank" rel="noopener">
+          <span class="res-name">cppreference.com</span> <span class="res-url">en.cppreference.com</span>
+          <div class="res-desc">The reference for the language and standard library. Accurate, complete, and the page you'll open most.</div>
+        </a>
+        <a class="res-item" href="https://www.learncpp.com" target="_blank" rel="noopener">
+          <span class="res-name">LearnCpp.com</span> <span class="res-url">learncpp.com</span>
+          <div class="res-desc">A free, thorough, beginner-to-intermediate tutorial series — great for shoring up anything that felt shaky here.</div>
+        </a>
+        <a class="res-item" href="https://www.stroustrup.com/tour.html" target="_blank" rel="noopener">
+          <span class="res-name">A Tour of C++ (Stroustrup)</span> <span class="res-url">stroustrup.com/tour.html</span>
+          <div class="res-desc">A concise modern overview by the language's creator — the ideal "next book" after this one.</div>
+        </a>
+        <a class="res-item" href="https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines" target="_blank" rel="noopener">
+          <span class="res-name">C++ Core Guidelines</span> <span class="res-url">isocpp.github.io/CppCoreGuidelines</span>
+          <div class="res-desc">Best-practice rules from Stroustrup, Sutter, and the community — how to write modern, safe C++.</div>
+        </a>
+        <a class="res-item" href="https://godbolt.org" target="_blank" rel="noopener">
+          <span class="res-name">Compiler Explorer</span> <span class="res-url">godbolt.org</span>
+          <div class="res-desc">Type code, instantly see the assembly and output across compilers. Unbeatable for experimenting and understanding.</div>
+        </a>
+        <a class="res-item" href="https://www.youtube.com/@CppCon" target="_blank" rel="noopener">
+          <span class="res-name">CppCon talks</span> <span class="res-url">youtube.com/@CppCon</span>
+          <div class="res-desc">Conference talks on everything from "back to basics" to deep dives — a great way to keep learning passively.</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One last question 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        Across this whole book, one idea underpins safe C++ more than any other: tie each resource (memory, files, locks) to an object's lifetime so it's released automatically. What's it called?
+      </div>
+      <button class="opt" data-correct="true"><span><strong>RAII</strong> — Resource Acquisition Is Initialization: an object acquires a resource in its constructor and releases it in its destructor, so cleanup is automatic and exception-safe</span></button>
+      <button class="opt" data-correct="false"><span>Calling <code>new</code> and <code>delete</code> by hand for every resource, carefully</span></button>
+      <button class="opt" data-correct="false"><span>Putting all your data in global variables so it never goes away</span></button>
+      <button class="opt" data-correct="false"><span>Wrapping every line of code in a <code>try</code>/<code>catch</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: it's the idea behind smart pointers, <code>std::vector</code>, and file streams alike.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> The end — and the beginning</div>
+    <h2>Goodbye for now 👋</h2>
+
+    <p>That's the book. Twelve parts, dozens of lessons, and three programs you wrote yourself. You came in curious and you're leaving capable — that's exactly how it's supposed to go.</p>
+
+    <div class="new-content">
+      Keep the momentum: open an editor, start something small, and look things up as you go. Every expert C++ programmer was once exactly where you are now, and got better the same way you will — one compiled program at a time. Whenever a concept here clicks into place on a real problem, that's the book doing its job, even after you've closed it. Thank you for letting me come along. 🤖💜
+    </div>
+
+    <div class="recap">
+      <h3>🎓 Carry these with you</h3>
+      <ul>
+        <li><strong>You can build real C++</strong> — from data models to working, persistent programs.</li>
+        <li><strong>Roads ahead:</strong> concurrency, networking, build systems &amp; tooling, and the wider STL — pick the one your next project needs.</li>
+        <li><strong>Habits over facts:</strong> RAII everywhere, prefer the standard library, warnings + sanitizers on, <code>const</code>-correct and clear.</li>
+        <li><strong>Learn by building</strong> and keep <a href="https://en.cppreference.com" target="_blank" rel="noopener">cppreference</a> close — nobody memorises it all.</li>
+        <li><strong>This isn't the end</strong> of learning C++ — just the end of the beginning. Go build something. 🚀</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_12_3.html" class="nav-btn prev">
+      <small>← Previous</small>
+      12.3  An expression evaluator
+    </a>
+    <a href="../index.html" class="nav-btn next">
+      <small>🎉 The C++ book is complete!</small>
+      ↩ Back to the bookshelf
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "You made it to the end — look how far you've come! 🎉",
+    "Your toolbox: types, RAII, error handling, templates, I/O. 🧰",
+    "Big roads ahead: concurrency, networking, build tooling, the wider STL. 🛣️",
+    "Keep the habits this book modelled — they're what last. 🌱",
+    "Momentum beats cramming: build things and look things up. 🚀",
+    "Explore each road, then bookmark the resources. 🗺️",
+    "RAII is the idea behind it all — let lifetimes own resources. ♻️",
+    "This is the end of the beginning. Go build something! 👋"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); setTimeout(burst, 400); setTimeout(burst, 800); showToast('🎓 The C++ book is complete! +100 XP'); addXP(100); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Roadmap explorer =====
+  const ftModeEl = document.getElementById('ftMode');
+  const rmTitle = document.getElementById('rmTitle');
+  const ftInfo = document.getElementById('ftInfo');
+  const ftMsg = document.getElementById('ftMsg');
+  const seen = new Set();
+
+  const RM = {
+    conc: {
+      title: '⚙️ Concurrency — doing many things at once',
+      what: 'std::thread, std::async, std::mutex, atomics, C++20 coroutines & std::jthread',
+      why: 'Modern CPUs have many cores; servers, games, and UIs all run work in parallel',
+      start: '"C++ Concurrency in Action" (Williams); cppreference &lt;thread&gt;/&lt;atomic&gt;',
+      msg: `<b>Run things in parallel.</b> Start a thread, share data safely with a <code>mutex</code>, or hand work to <code>std::async</code> and collect a <code>future</code>. It's powerful and the <em>trickiest</em> area — data races and deadlocks are easy to create, so the discipline you've built around ownership and clear interfaces matters even more here.`
+    },
+    net: {
+      title: '🌐 Networking — talking to other machines',
+      what: 'Sockets, HTTP clients/servers, asynchronous I/O',
+      why: 'Almost all real software is networked — APIs, services, multiplayer, the cloud',
+      start: 'Asio (standalone or Boost.Asio) docs; cpp-httplib for a quick HTTP start',
+      msg: `<b>Reach across the wire.</b> The standard library has no networking yet, so the community standard is <strong>Asio</strong> (the basis of the proposed std networking). For a quick win, a small library like <code>cpp-httplib</code> lets you stand up an HTTP server in a few lines — then go deeper into async I/O when you need scale.`
+    },
+    build: {
+      title: '🔧 Build & tooling — shipping real projects',
+      what: 'CMake, package managers (vcpkg/Conan), debuggers, sanitizers, CI',
+      why: 'Beyond one g++ command you need reproducible builds, dependencies, and tests',
+      start: 'The official CMake tutorial; "Professional CMake" (Scott); Modern CMake guide',
+      msg: `<b>Grow past a single file.</b> <strong>CMake</strong> is the de-facto way to describe how a multi-file, multi-library, cross-platform project builds. Pair it with a package manager (vcpkg or Conan) for dependencies, <code>ctest</code> for tests, and sanitizers in CI. This is the unglamorous skill that makes you employable on real codebases.`
+    },
+    stl: {
+      title: '📚 The wider STL — algorithms & ranges',
+      what: '&lt;algorithm&gt; (sort, find, transform, accumulate), C++20 ranges, more containers, &lt;chrono&gt;, string_view, span',
+      why: 'The STL is fast, correct, and expressive — "don\'t reinvent the wheel"',
+      start: 'cppreference algorithm library; "A Tour of C++" (Stroustrup); learncpp.com',
+      msg: `<b>Use the library you already started.</b> You met <code>vector</code> and <code>map</code>; next come the <strong>algorithms</strong> (<code>std::sort</code>, <code>std::find_if</code>, <code>std::accumulate</code>) that replace hand-written loops, and C++20 <strong>ranges</strong> that let you compose them like a pipeline. Add <code>string_view</code>, <code>span</code>, <code>&lt;chrono&gt;</code>, and <code>&lt;random&gt;</code> and you'll write less code that does more.`
+    }
+  };
+  function renderRM(mode) {
+    const r = RM[mode];
+    rmTitle.textContent = r.title;
+    ftInfo.innerHTML =
+      `<div class="row"><span class="k">what's there</span><span class="v">${r.what}</span></div>` +
+      `<div class="row"><span class="k">why it matters</span><span class="v">${r.why}</span></div>` +
+      `<div class="row"><span class="k">where to start</span><span class="v">${r.start}</span></div>`;
+    ftMsg.innerHTML = r.msg;
+  }
+  ftModeEl.querySelectorAll('.ftmode').forEach(b => b.addEventListener('click', (e) => {
+    ftModeEl.querySelectorAll('.ftmode').forEach(x => x.classList.toggle('active', x === b));
+    renderRM(b.dataset.m);
+    if (!seen.has(b.dataset.m)) {
+      seen.add(b.dataset.m);
+      playCount.textContent = seen.size;
+      playCount.style.transform = 'scale(1.3)';
+      setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+      addXP(5, e.clientX, e.clientY);
+      bumpStreak();
+      if (seen.size === 4) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🗺️ Whole roadmap explored! +20 XP'); }
+    }
+  }));
+  renderRM('conc');
+  seen.add('conc'); playCount.textContent = 1;
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly — and what a note to end on.</strong> RAII is the idea threaded through the entire book: <code>std::vector</code>, <code>std::unique_ptr</code>, <code>std::lock_guard</code>, and file streams all acquire in their constructor and release in their destructor. Master it and most resource bugs simply never happen.'
+        : '✓ <strong style="color: var(--green)">Right.</strong> RAII — lifetimes own resources, cleanup is automatic.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 20 : 5, r.left + r.width / 2, r.top);
+      burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Manual <code>new</code>/<code>delete</code> is the thing RAII <em>replaces</em>; globals and blanket <code>try</code>/<code>catch</code> aren\'t it. The answer is <strong>RAII</strong> — tie each resource to an object\'s lifetime.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

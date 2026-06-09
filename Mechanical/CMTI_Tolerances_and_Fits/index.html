@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMTI Handbook — Tolerances &amp; Fits (Interactive)</title>
+<style>
+:root{
+  --bg:#0f1216;--panel:#171c22;--panel2:#1d242c;--line:#2a333d;
+  --ink:#e8edf2;--mut:#9aa7b4;--accent:#e0a23a;--accent2:#4a9edb;--avail:#3fb27f;
+  --serif:"Iowan Old Style","Palatino Linotype",Georgia,"Times New Roman",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+.app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:9px 16px;background:linear-gradient(180deg,#1b222b,#141a20);border-bottom:1px solid var(--line)}
+.brand{display:flex;flex-direction:column;line-height:1.15}
+.brand b{font-family:var(--serif);font-size:16px}
+.brand span{color:var(--mut);font-size:11px}
+.badge{background:rgba(224,162,58,.14);color:var(--accent);border:1px solid rgba(224,162,58,.4);padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+header .spacer{flex:1}
+.searchbox{position:relative}
+.searchbox input{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 12px 8px 32px;width:240px;font-size:13px;outline:none}
+.searchbox input:focus{border-color:var(--accent2)}
+.searchbox svg{position:absolute;left:9px;top:8px;opacity:.5}
+.body{display:grid;grid-template-columns:312px 1fr;min-height:0}
+@media(max-width:860px){.body{grid-template-columns:0 1fr}}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:none;color:var(--mut);padding:11px 6px;font-size:12px;font-weight:600;letter-spacing:.3px;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.tabwrap{overflow:auto;flex:1;min-height:0}
+.tabpane{display:none;padding:6px 0 30px}
+.tabpane.on{display:block}
+.toc-part{font-family:var(--serif);font-size:12px;font-weight:700;letter-spacing:.6px;color:var(--accent);padding:14px 14px 5px;text-transform:uppercase}
+.toc-sec{padding:6px 14px 3px;color:var(--ink);font-weight:600;font-size:13px}
+.toc-row{display:flex;align-items:baseline;gap:8px;padding:4px 14px 4px 22px;color:var(--mut);font-size:12.5px;border-left:2px solid transparent}
+.toc-row .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toc-row .pg{font-variant-numeric:tabular-nums;font-size:11px;opacity:.6}
+.toc-row.sec-link{padding-left:14px;color:var(--ink);font-weight:600}
+.toc-row.avail{cursor:pointer;color:var(--ink)}
+.toc-row.avail:hover{background:var(--panel2);border-left-color:var(--accent)}
+.toc-row.avail .pg{color:var(--avail);opacity:1}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--avail);flex:none;align-self:center}
+.toc-row:not(.avail) .dot{background:#39424d}
+.qh{padding:14px 14px 6px;color:var(--mut);font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+.qrow{display:flex;align-items:center;gap:10px;margin:5px 10px;padding:9px 11px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;cursor:pointer}
+.qrow:hover{border-color:var(--accent)}
+.qrow .qt{flex:1}
+.qrow .qn{font-weight:700;font-size:12.5px}
+.qrow .qsub{color:var(--mut);font-size:11px}
+.qrow .qpg{color:var(--accent);font-weight:700;font-size:11px}
+.note{margin:12px;padding:11px 12px;background:rgba(74,158,219,.08);border:1px solid rgba(74,158,219,.3);border-radius:9px;color:var(--mut);font-size:12px;line-height:1.6}
+.note b{color:var(--ink)}
+main{min-height:0;overflow:auto;background:#0c0f13}
+.doc{max-width:880px;margin:0 auto;padding:30px 40px 120px}
+.doc h1{font-family:var(--serif);font-size:30px;margin:.2em 0 .1em}
+.doc .sub{color:var(--mut);font-size:13px;margin-bottom:8px}
+.testbar{margin:14px 0 30px;padding:11px 14px;background:rgba(63,178,127,.08);border:1px solid rgba(63,178,127,.3);border-radius:10px;color:var(--mut);font-size:12.5px;line-height:1.6}
+.testbar b{color:var(--ink)}
+section{padding-top:14px;margin-top:26px;border-top:1px solid var(--line)}
+section:first-of-type{border-top:none}
+.doc h2{font-family:var(--serif);font-size:23px;color:#fff;margin:.3em 0 .1em}
+.doc h2 .pg{font-family:var(--sans);font-size:11px;color:var(--mut);font-weight:400;margin-left:8px;vertical-align:middle}
+.doc h3{font-family:var(--serif);font-size:17px;color:var(--accent);margin:1.3em 0 .3em}
+.doc p{line-height:1.72;color:#d7dee6;margin:.7em 0;font-size:14.5px}
+.doc ul,.doc ol{line-height:1.74;color:#d7dee6;font-size:14.5px;margin:.6em 0;padding-left:22px}
+.doc li{margin:.25em 0}
+.doc b{color:#fff}
+.eq{background:#0e1318;border:1px solid var(--line);border-left:3px solid var(--accent2);border-radius:8px;padding:11px 14px;margin:12px 0;font-family:var(--serif);font-size:16px;color:#fff;overflow-x:auto}
+.eq .where{display:block;font-size:12.5px;color:var(--mut);font-family:var(--sans);margin-top:6px}
+.callout{background:rgba(63,178,127,.07);border:1px solid rgba(63,178,127,.3);border-radius:9px;padding:12px 14px;margin:14px 0}
+.callout .lbl{color:var(--avail);font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.fig{border:1px dashed #3a4654;border-radius:10px;padding:26px 16px;margin:16px 0;text-align:center;color:var(--mut);background:repeating-linear-gradient(45deg,#10151a,#10151a 12px,#121821 12px,#121821 24px)}
+.fig .ic{font-size:26px;opacity:.5}
+.fig .ti{font-weight:600;color:#c4ccd4;margin-top:6px;font-size:13px}
+.fig .de{font-size:12px;margin-top:3px}
+.tablewrap{margin:16px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tcap{background:var(--panel);padding:9px 13px;font-size:12.5px;color:var(--ink);font-weight:600;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tcap .tno{color:var(--accent);white-space:nowrap}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:center;white-space:nowrap}
+th{background:#10161c;color:var(--mut);font-weight:600;position:sticky;top:0}
+td.l,th.l{text-align:left;white-space:normal}
+tbody tr:nth-child(even){background:rgba(255,255,255,.018)}
+tbody tr:hover{background:rgba(224,162,58,.07)}
+.tfoot{background:var(--panel);padding:8px 13px;font-size:11.5px;color:var(--mut);border-top:1px solid var(--line);line-height:1.55}
+.verify{color:#d8a24a}
+.fitname{font-family:var(--serif);color:#fff;font-weight:600}
+mark{background:rgba(224,162,58,.4);color:#fff;border-radius:2px}
+.dn{vertical-align:sub;font-size:.75em}
+.up{vertical-align:super;font-size:.75em}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><b>CMTI · Machine Tool Design Handbook</b><span>Interactive edition · Central Machine Tool Institute, Bangalore</span></div>
+    <span class="badge">Notebook 2 · Tolerances &amp; Fits</span>
+    <div class="spacer"></div>
+    <div class="searchbox">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input id="search" placeholder="Search contents…  ( / )">
+    </div>
+  </header>
+  <div class="body">
+    <aside>
+      <div class="tabs">
+        <button class="on" data-tab="toc">CONTENTS</button>
+        <button data-tab="tables">TABLES</button>
+      </div>
+      <div class="tabwrap">
+        <div class="tabpane on" id="pane-toc"></div>
+        <div class="tabpane" id="pane-tables"></div>
+      </div>
+    </aside>
+    <main id="main">
+      <div class="doc">
+        <h1>Tolerances and Fits</h1>
+        <div class="sub">Machine Tool Design · printed pp. 489–512</div>
+        <div class="testbar"><b>Notebook 2.</b> Same format as the Shafts notebook — selectable text and real tables, with figure slots for AI-generated illustrations. The ISO limits-and-fits µm deviation table (Table 183) is standardised ISO 286 / IS 919 data and is left for your OCR; everything else is transcribed here. <span class="verify">Verify critical fit values against the standard before machining.</span></div>
+
+        <!-- ISO SYSTEM -->
+        <section id="s-iso">
+          <h2>ISO system of tolerances <span class="pg">p.489–490</span></h2>
+          <p>A toleranced dimension is written as a <b>basic size</b> followed by a <b>tolerance zone</b> made of two parts: a <b>letter</b> (the fundamental deviation — the position of the zone relative to the zero line) and a <b>number</b> (the IT grade — the width of the zone).</p>
+          <ul>
+            <li><b>Fundamental deviation</b> — lower-case letters <i>a…zc</i> for shafts, upper-case <i>A…ZC</i> for holes. Letters near the start (a, b, c…) sit far below the zero line (clearance); <i>h</i>/<i>H</i> touch the zero line; letters past <i>k</i>/<i>K</i> move into interference.</li>
+            <li><b>IT grade (IT01, IT0, IT1 … IT18)</b> — the magnitude of the tolerance. Grades 01–4 for gauges, 5–11 for general engineering fits, 12–16 for rough/coarse tolerances.</li>
+          </ul>
+          <div class="eq">Tolerance zone&nbsp;=&nbsp;letter (deviation) + grade (IT number)
+            <span class="where">e.g. shaft “g6” = deviation g, grade IT6; hole “H7” = deviation H, grade IT7. Example: ⌀30 H7/g6.</span></div>
+          <div class="callout"><span class="lbl">Hole basis vs shaft basis</span>
+            <p style="margin:.4em 0 0"><b>Hole basis (preferred):</b> the hole is held at <b>H</b> and the fit is varied by changing the shaft letter. <b>Shaft basis:</b> the shaft is held at <b>h</b> and the hole letter is varied — used when one shaft size must carry several different mating parts (e.g. drawn bar stock). The handbook recommends ≈⌀20 IT9 for ABC bores and ⌀20 IT7 for others as a starting point.</p></div>
+          <div class="fig"><div class="ic">▭</div><div class="ti">Figures 143–145 — IT grade application, hole/shaft deviation letters, tolerance-zone chart for ⌀50</div><div class="de">to be added</div></div>
+        </section>
+
+        <!-- TYPES OF FITS -->
+        <section id="s-fits">
+          <h2>Types of fits &amp; recommended fits <span class="pg">p.490–491</span></h2>
+          <p>A fit is the relationship between a hole and shaft before assembly. There are three classes:</p>
+          <ul>
+            <li><b>Clearance fit</b> — shaft always smaller than hole (slide, close-running, running, easy-running, loose-running, extra-loose-running).</li>
+            <li><b>Transition fit</b> — may give slight clearance or slight interference (push, wringing / easy-keying, light-keying, drive).</li>
+            <li><b>Interference (force) fit</b> — shaft always larger than hole (light-press, press, heavy-press).</li>
+          </ul>
+          <div class="fig"><div class="ic">▭</div><div class="ti">Figure 146 — Tolerance zones for shafts on basic hole ⌀30 H7, by fit type</div><div class="de">to be added</div></div>
+
+          <div class="tablewrap">
+            <div class="tcap"><span><span class="tno">Table 180a</span> — Recommended fits, <b>hole basis</b> (shafts for each basic hole)</span></div>
+            <div class="tscroll"><table>
+              <thead><tr><th>Basic hole</th><th class="l">Running / clearance fit</th><th class="l">Transition fit</th><th class="l">Interference fit</th></tr></thead>
+              <tbody>
+                <tr><td>H6</td><td class="l">e7, f6, f5, h5</td><td class="l">j5, k5, m5, n5</td><td class="l">p5, r5, s5, t5, u5</td></tr>
+                <tr><td>H7</td><td class="l">a9, b8, c8, d8, e8, f7, f6, h6</td><td class="l">j6, k6, m6, n6</td><td class="l">p6, r6, s6, t6, u6</td></tr>
+                <tr><td>H8</td><td class="l">d9, e9, f9, e8, f8, h9, h8, h7</td><td class="l">j7, k7, m7, n7</td><td class="l">p7, r7, s7, t7, u7</td></tr>
+                <tr><td>H10</td><td class="l">a11, b11, c11, d11, h10, h11</td><td class="l">—</td><td class="l">—</td></tr>
+                <tr><td>H12</td><td class="l">h12</td><td class="l">—</td><td class="l">—</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="tablewrap">
+            <div class="tcap"><span><span class="tno">Table 180b</span> — Recommended fits, <b>shaft basis</b> (holes for each basic shaft)</span></div>
+            <div class="tscroll"><table>
+              <thead><tr><th>Basic shaft</th><th class="l">Running / clearance fit</th><th class="l">Transition fit</th><th class="l">Interference fit</th></tr></thead>
+              <tbody>
+                <tr><td>h5</td><td class="l">E7, F6, G6, H6</td><td class="l">J6, K6, M6, N6</td><td class="l">P6, R6, S6, T6, U6</td></tr>
+                <tr><td>h6</td><td class="l">A9, B8, C8, D8, D9, E8, F7, G7, H7</td><td class="l">J7, K7, M7, N7</td><td class="l">P7, R7, S7, T7, U7</td></tr>
+                <tr><td>h7</td><td class="l">A9, B9, C8, H8</td><td class="l">J8, K8, M8, N8</td><td class="l">—</td></tr>
+                <tr><td>h8</td><td class="l">B9, C9, E8, F8, H8</td><td class="l">—</td><td class="l">—</td></tr>
+                <tr><td>h9</td><td class="l">C10, D10, E9, F8, H8, H9</td><td class="l">—</td><td class="l">—</td></tr>
+                <tr><td>h11</td><td class="l">A11, B11, C11, D11, H11</td><td class="l">—</td><td class="l">—</td></tr>
+              </tbody>
+            </table></div>
+            <div class="tfoot">The printed table marks 1st / 2nd / 3rd preference per combination. Hole basis is generally preferred for machine-tool work.</div>
+          </div>
+
+          <h3>Commonly used fits — quick guide</h3>
+          <p>Standard hole-basis combinations and where they're used (general ISO 286 guidance, for fast selection):</p>
+          <div class="tablewrap">
+            <div class="tcap"><span>Common hole-basis fits</span><span class="tno">standard reference</span></div>
+            <div class="tscroll"><table>
+              <thead><tr><th>Fit</th><th class="l">Class</th><th class="l">Typical use</th></tr></thead>
+              <tbody>
+                <tr><td class="fitname">H11/c11</td><td class="l">Loose clearance</td><td class="l">Wide-clearance, rough location; agricultural / exposed parts</td></tr>
+                <tr><td class="fitname">H9/d9</td><td class="l">Free running</td><td class="l">Large clearance, no accuracy; high temp or speed</td></tr>
+                <tr><td class="fitname">H8/f7</td><td class="l">Close running</td><td class="l">Running on good lubrication; general spindle/bearing journals</td></tr>
+                <tr><td class="fitname">H7/g6</td><td class="l">Sliding</td><td class="l">Locates accurately, slides freely; spigots, sliding gears</td></tr>
+                <tr><td class="fitname">H7/h6</td><td class="l">Location (clearance)</td><td class="l">Accurate location, easy assembly by hand; keyed pulleys</td></tr>
+                <tr><td class="fitname">H7/k6</td><td class="l">Location (transition)</td><td class="l">Snug, light tap to assemble; gears, pulleys on shafts</td></tr>
+                <tr><td class="fitname">H7/n6</td><td class="l">Location (transition)</td><td class="l">Tighter transition, press needed; rigidly located parts</td></tr>
+                <tr><td class="fitname">H7/p6</td><td class="l">Press (light interference)</td><td class="l">Press fit on light sections; located by interference</td></tr>
+                <tr><td class="fitname">H7/s6</td><td class="l">Medium interference</td><td class="l">Shrink/press for permanent assembly; bushes, collars</td></tr>
+                <tr><td class="fitname">H7/u6</td><td class="l">Heavy interference</td><td class="l">Force/shrink fit, high torque; couplings on shafts</td></tr>
+              </tbody>
+            </table></div>
+            <div class="tfoot">Exact upper/lower deviations (µm) come from the limits-and-fits table below.</div>
+          </div>
+
+          <div class="tablewrap">
+            <div class="tcap"><span><span class="tno">Table 183</span> — Limits and fits: deviations (µm) for selected fits, ⌀1–500</span><span class="tno verify">OCR</span></div>
+            <div class="tfoot" style="border-top:none">This is the full numeric deviation matrix (running / transition / interference fits × 13 diameter steps, upper &amp; lower deviation in µm). It is standardised ISO 286 / IS 919 data — large and dense in the scan, and best populated by your full-book OCR rather than hand-transcription. <span class="verify">Placeholder — to be filled from OCR.</span></div>
+          </div>
+        </section>
+
+        <!-- ALLOWABLE DEVIATIONS -->
+        <section id="s-gen">
+          <h2>Allowable deviations without specified tolerances <span class="pg">p.492</span></h2>
+          <p>For dimensions left untoleranced on the drawing, IS 2102-1969 fixes general deviations. Machined parts follow the <b>medium</b> grade; sheet-metal work follows the <b>extra-coarse</b> grade.</p>
+          <div class="tablewrap">
+            <div class="tcap"><span><span class="tno">Table 181</span> — Allowable deviations for linear dimensions (± mm)</span><span class="tno">IS 2102 : 1969</span></div>
+            <div class="tscroll"><table>
+              <thead>
+                <tr><th class="l">Dimension over</th><th>0.5</th><th>3</th><th>6</th><th>30</th><th>120</th><th>315</th><th>1000</th><th>2000</th><th>4000</th></tr>
+                <tr><th class="l">… up to</th><th>3</th><th>6</th><th>30</th><th>120</th><th>315</th><th>1000</th><th>2000</th><th>4000</th><th>8000</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="l">Machined parts</td><td>0.1</td><td>0.1</td><td>0.2</td><td>0.3</td><td>0.5</td><td>0.8</td><td>1.2</td><td>2</td><td>3</td></tr>
+                <tr><td class="l">… radii &amp; chamfers</td><td>0.2</td><td>0.5</td><td>1</td><td>2</td><td>4</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+                <tr><td class="l">Sheet-metal work</td><td>—</td><td>0.5</td><td>1</td><td>1.5</td><td>2</td><td>3</td><td>4</td><td>6</td><td>8</td></tr>
+                <tr><td class="l">… radii &amp; chamfers</td><td>—</td><td>1</td><td>2</td><td>4</td><td>8</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+          <div class="tablewrap">
+            <div class="tcap"><span><span class="tno">Table 182</span> — Allowable deviations for angular dimensions</span></div>
+            <div class="tscroll"><table>
+              <thead>
+                <tr><th class="l">Shorter side L: over</th><th>—</th><th>10</th><th>50</th><th>120</th></tr>
+                <tr><th class="l">… up to</th><th>10</th><th>50</th><th>120</th><th>—</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="l">Machined — Δm (mm)</td><td>0.1</td><td>0.2</td><td>0.6</td><td>0.8</td></tr>
+                <tr><td class="l">Machined — Δα</td><td>1°</td><td>30′</td><td>20′</td><td>10′</td></tr>
+                <tr><td class="l">Sheet metal — Δm (mm)</td><td>0.3</td><td>0.8</td><td>1.8</td><td>2.4</td></tr>
+                <tr><td class="l">Sheet metal — Δα</td><td>3°</td><td>2°</td><td>1°</td><td>30′</td></tr>
+              </tbody>
+            </table></div>
+            <div class="tfoot">Δm = linear deviation at the end of the shorter side; Δα = the corresponding angular deviation.</div>
+          </div>
+        </section>
+
+        <!-- FORM & POSITION -->
+        <section id="s-formpos">
+          <h2>Tolerances of form and position <span class="pg">p.497–510</span></h2>
+          <p>Table 190 gives a guideline for selecting form- and position-tolerance values for critical components of light and medium machine tools, by <b>class of accuracy</b> (Normal, Precision, High precision). Values are a starting point — the designer chooses in light of function, economy and class of machine, and need not tolerance every feature.</p>
+          <div class="fig"><div class="ic">▭</div><div class="ti">Figure — feature sketches with form/position symbols (circularity ○, coaxiality ⌖, runout ↗, perpendicularity ⟂)</div><div class="de">to be added</div></div>
+          <div class="tablewrap">
+            <div class="tcap"><span><span class="tno">Table 190</span> — Tolerances of form and position (µm), representative rows</span></div>
+            <div class="tscroll"><table>
+              <thead><tr><th class="l">Feature / surface</th><th class="l">Error</th><th class="l">Machine / size</th><th>Normal</th><th>Precision</th><th>High prec.</th></tr></thead>
+              <tbody>
+                <tr><td class="l" rowspan="4">Journal bearing surfaces of spindles (main)</td><td class="l">Circularity ○</td><td class="l">Lathes, D≤100</td><td>3</td><td>2</td><td>1</td></tr>
+                <tr><td class="l">Circularity ○</td><td class="l">Grinding m/c, D≤100</td><td>1</td><td>0.8</td><td>0.5</td></tr>
+                <tr><td class="l">Coaxiality ⌖</td><td class="l">Lathes, D≤100</td><td>5</td><td>3</td><td>2</td></tr>
+                <tr><td class="l">Coaxiality ⌖</td><td class="l">Grinding m/c, D≤100</td><td>2</td><td>1.5</td><td>0.8</td></tr>
+                <tr><td class="l" rowspan="3">Mounting surfaces for auxiliary bearings, pulleys, gears, bushes</td><td class="l">Circularity ○</td><td class="l">Lathes</td><td>8</td><td>5</td><td>3</td></tr>
+                <tr><td class="l">Circularity ○</td><td class="l">Grinding m/c</td><td>5</td><td>3</td><td>2</td></tr>
+                <tr><td class="l">Runout ↗</td><td class="l">Lathes</td><td>10</td><td>8</td><td>5</td></tr>
+                <tr><td class="l" rowspan="2">Axial bearing surfaces (prevent axial movement)</td><td class="l">Non-sliding</td><td class="l">Lathes</td><td>5</td><td>3</td><td>3</td></tr>
+                <tr><td class="l">Sliding</td><td class="l">Grinding m/c</td><td>3</td><td>2</td><td>1</td></tr>
+                <tr><td class="l">Tapered end of grinding spindles</td><td class="l">Perp. ⟂ / runout</td><td class="l">Grinding m/c</td><td>2</td><td>1.5</td><td>0.8</td></tr>
+                <tr><td class="l" rowspan="2">Spindle noses (lathes, milling, boring)</td><td class="l">Taper bore ○</td><td class="l">—</td><td>3</td><td>3</td><td>2</td></tr>
+                <tr><td class="l">External taper / facial</td><td class="l">—</td><td>5</td><td>5</td><td>3</td></tr>
+                <tr><td class="l" rowspan="2">Housing bush for spindle bearings</td><td class="l">Radial</td><td class="l">—</td><td>10</td><td>5</td><td>3</td></tr>
+                <tr><td class="l">Facial</td><td class="l">—</td><td>10</td><td>5</td><td>2</td></tr>
+              </tbody>
+            </table></div>
+            <div class="tfoot">Representative extract — the printed Table 190 continues through p.497–509 covering many more machine-tool features (each with a sketch). <span class="verify">Verify the row matching your exact feature against the printed table.</span></div>
+          </div>
+          <div class="tablewrap">
+            <div class="tcap"><span><span class="tno">Table 190a</span> — Form &amp; position obtainable from manufacturing processes (p.510)</span><span class="tno verify">OCR</span></div>
+            <div class="tfoot" style="border-top:none">A bar-chart table mapping each process (turning, boring, reaming, grinding — centreless / internal / cylindrical, honing, super-finishing) to the error band it normally achieves vs. achieves with difficulty. Best captured by OCR / from the page image. <span class="verify">Placeholder — to be filled from OCR.</span></div>
+          </div>
+        </section>
+
+        <div class="note" style="margin:34px 0 0">Notebook 2 of the handbook, same format as Shafts, Keys &amp; Splines. The two dense standardised tables (limits-and-fits µm deviations, process-capability bars) are left as labelled placeholders for your OCR pass; everything else is transcribed and ready to use.</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const TOC = [
+ ["part","BASIC REFERENCE DATA",null],
+ ["sec","Mathematics",null],["sub","Numbers, cubes, squares, roots",1],["sub","Logarithmic tables",21],["sub","Trigonometric tables",39],["sub","Involute function",43],["sub","Areas, volume etc.",51],
+ ["sec","Mechanics",null],["sub","SI units",58],["sub","Conversion units",62],["sub","CG, MI, section modulus",68],["sub","Bending moment, slope, deflection",71],
+ ["sec","Drawing standards",null],["sub","Drawing sheet sizes",83],["sub","Orthographic projections",84],["sub","Kinematic scheme symbols",95],["sub","Geometrical tolerances",101],
+ ["sec","Screw threads & fasteners",null],["sub","Thread profiles & pitch dia",103],["sub","Bolts, nuts and screws",110],["sub","Clearance holes",127],["sub","Washers and spring washers",131],
+ ["sec","General engineering tables",null],["sub","Centre holes",133],["sub","Tapers",137],["sub","Knurling",141],["sub","Preferred numbers",142],["sub","Speeds and feeds",143],["sub","Circlips",150],["sub","Cylindrical & taper pins",155],
+ ["part","MACHINE ELEMENTS",null],
+ ["sec","Shafts, keys and splines",163],["sub","Calculation for strength",165],["sub","Calculation for stiffness",166],["sub","Critical speeds",169],["sub","Stability in buckling",171],["sub","Keys & splines",172],["sub","Rotary shaft seals",182],
+ ["sec","Toothed clutches",186],["sec","Friction clutches",210],["sec","Brakes",219],["sec","Universal joints",221],
+ ["sec","Belts",227],["sec","Roller chains",244],
+ ["sec","Toothed gearing",253],["sub","Spur and helical gears",259],["sub","Internal gears",292],["sub","Worm gearing",308],["sub","Bevel gearing",322],["sub","Planetary gearing",338],
+ ["sec","Bearings",350],["sub","Life calculation",350],["sub","Dimensions & load ratings",363],["sub","Mounting arrangements",419],["sub","Hydrodynamic bearings",441],
+ ["sec","Springs (helical / spiral / disc)",453],
+ ["part","MACHINE TOOL DESIGN",null],
+ ["sec","Tolerances and fits",null],["sub","ISO system of tolerances",489,"s-iso"],["sub","Types of fits & recommended fits",490,"s-fits"],["sub","Allowable deviations without tolerances",492,"s-gen"],["sub","Selected shaft & hole fits",493,"s-fits"],["sub","Tolerances of form & position",497,"s-formpos"],
+ ["sec","Surface roughness",513],["sub","Guide for selection",513],["sub","Roughness from processes",521],["sub","Roughness symbols",522],
+ ["sec","Machine tool tables — sizes",523],["sec","Quality of scraped surfaces",524],
+ ["sec","Guideways for machine tools",525],["sub","Allowable bearing pressures",526],["sub","Guideway & gib dimensions",528],
+ ["sec","Machine tool spindles",539],["sub","Rigidity calculations",539],["sub","Type A spindle noses",542],["sub","Camlock spindle noses",549],["sub","Self-holding & drillchuck tapers",569],
+ ["sec","Lubricants and lubrication",589],["sec","Gear boxes for machine tools",599],
+ ["part","MACHINING DATA",null],["sec","Power and force requirements",637],["sec","Cutting conditions",654],["sec","Tool geometry",662],
+ ["part","MATERIALS & HEAT TREATMENT",null],["sec","Cast iron",675],["sec","Steels",678],["sec","Hardness conversion",682],["sec","Heat treatment of steels",723],
+ ["part","ELECTRICAL EQUIPMENT",null],["sec","Design & installation",731],["sec","Electric motors",741],["sec","Electrical circuit symbols",769],["sec","Coolant pump",773],
+ ["part","OIL HYDRAULICS",null],["sec","Hydraulic fluids & flow",779],["sec","Hydraulic elements",787],["sec","Hydraulic systems",840],["sec","Applications in machine tools",864],["sec","Hydraulic reference data",880],
+ ["part","INDEX",939],
+];
+const TABLES = [
+ ["Table 180a","Recommended fits — hole basis","s-fits"],
+ ["Table 180b","Recommended fits — shaft basis","s-fits"],
+ ["Common fits","Quick selection guide","s-fits"],
+ ["Table 183","Limits & fits (µm) — OCR","s-fits"],
+ ["Table 181","Allowable linear deviations","s-gen"],
+ ["Table 182","Allowable angular deviations","s-gen"],
+ ["Table 190","Form & position tolerances","s-formpos"],
+ ["Table 190a","Process capability — OCR","s-formpos"],
+];
+const $=s=>document.querySelector(s);
+const main=$("#main");
+function scrollTo(id){const el=document.getElementById(id);if(el)main.scrollTo({top:el.offsetTop-12,behavior:"smooth"});}
+function hl(t,f){if(!f)return t;const i=t.toLowerCase().indexOf(f);if(i<0)return t;return t.slice(0,i)+"<mark>"+t.slice(i,i+f.length)+"</mark>"+t.slice(i+f.length);}
+function buildTOC(filter){
+  const pane=$("#pane-toc");pane.innerHTML="";filter=(filter||"").trim().toLowerCase();let shown=0;
+  TOC.forEach(row=>{
+    const [type,title,pg,anchor]=row;const avail=!!anchor;
+    if(filter&&!title.toLowerCase().includes(filter)&&!((pg||"")+"").includes(filter))return;
+    shown++;
+    if(type==="part"){const d=document.createElement("div");d.className="toc-part";d.textContent=title;pane.appendChild(d);return;}
+    if(type==="sec"&&pg==null){const d=document.createElement("div");d.className="toc-sec";d.textContent=title;pane.appendChild(d);return;}
+    const el=document.createElement("div");
+    el.className="toc-row"+(type==="sec"?" sec-link":"")+(avail?" avail":"");
+    el.innerHTML='<span class="dot"></span><span class="t">'+hl(title,filter)+'</span><span class="pg">'+(pg||"")+'</span>';
+    if(avail)el.onclick=()=>scrollTo(anchor);
+    pane.appendChild(el);
+  });
+  if(shown===0)pane.innerHTML='<div class="note">No contents match “'+filter+'”.</div>';
+}
+function buildTables(){
+  const pane=$("#pane-tables");pane.innerHTML='<div class="qh">Jump to a table</div>';
+  TABLES.forEach(([n,d,a])=>{
+    const r=document.createElement("div");r.className="qrow";
+    r.innerHTML='<div class="qt"><div class="qn">'+n+'</div><div class="qsub">'+d+'</div></div><div class="qpg">▸</div>';
+    r.onclick=()=>scrollTo(a);pane.appendChild(r);
+  });
+  const note=document.createElement("div");note.className="note";note.innerHTML="<b>Tip:</b> all tables are real HTML — select and copy values straight into your calc sheet.";pane.appendChild(note);
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".tabpane").forEach(p=>p.classList.remove("on"));
+  $("#pane-"+b.dataset.tab).classList.add("on");
+});
+$("#search").addEventListener("input",e=>buildTOC(e.target.value));
+window.addEventListener("keydown",e=>{if(e.key==="/"&&e.target.tagName!=="INPUT"){e.preventDefault();$("#search").focus();}else if(e.key==="Escape")$("#search").blur();});
+buildTOC();buildTables();
+</script>
+</body>
+</html>

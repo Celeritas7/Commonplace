@@ -7,15 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<!-- Markdown renderer -->
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
-<!-- CodeMirror editor -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
-<!-- Pyodide -->
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-<!-- Supabase (optional sync) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
@@ -29,28 +25,39 @@
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body { margin:0; font-family:"EB Garamond",Georgia,serif; color:var(--ink); background:var(--paper);
-    background-image: radial-gradient(circle at 14% 4%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 36%),
-      radial-gradient(circle at 90% 90%, rgba(47,107,79,0.06) 0%, rgba(47,107,79,0) 42%);
+    background-image:
+      radial-gradient(circle at 14% 4%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 36%),
+      radial-gradient(circle at 90% 90%, rgba(47,107,79,0.06) 0%, rgba(47,107,79,0) 42%),
+      linear-gradient(rgba(47,107,79,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(47,107,79,0.045) 1px, transparent 1px);
+    background-size: auto, auto, 26px 26px, 26px 26px;
     line-height:1.62; font-size:17px; -webkit-font-smoothing:antialiased; }
 
-  /* ===== sticky header ===== */
-  .bar { position:sticky; top:0; z-index:40; background:rgba(236,238,228,0.92); backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--line); }
-  .bar-in { max-width:1000px; margin:0 auto; padding:11px 26px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  .bar .tag { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--green); }
-  .bar .ttl { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:22px; line-height:1; color:var(--ink); }
-  .bar .prog { display:flex; align-items:center; gap:9px; margin-left:auto; }
-  .bar .prog .track { width:130px; height:6px; background:var(--sage-soft); border-radius:999px; overflow:hidden; }
-  .bar .prog .fill { height:100%; width:0; background:linear-gradient(90deg,var(--green-2),var(--brass)); transition:width .4s; }
-  .bar .prog .pc { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-mute); white-space:nowrap; }
-  .bar .acts { display:flex; align-items:center; gap:7px; }
-  .hbtn { font-family:"JetBrains Mono",monospace; font-size:11.5px; border:1px solid var(--line); background:#fff; color:var(--ink-soft);
-    border-radius:7px; padding:6px 11px; cursor:pointer; }
-  .hbtn:hover { border-color:var(--sage); color:var(--green); }
-  .pyled { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--ink-mute); display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  /* ===== sticky header — dark IDE toolbar ===== */
+  .bar { position:sticky; top:0; z-index:40; background:rgba(13,30,22,0.94); backdrop-filter:blur(10px);
+    border-bottom:1px solid #284736; box-shadow:0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 20px -16px rgba(0,0,0,0.7); }
+  .bar-in { max-width:1000px; margin:0 auto; padding:9px 22px; display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+  .bar .wd { display:flex; gap:6px; margin-right:4px; flex:none; }
+  .bar .wd i { width:11px; height:11px; border-radius:50%; }
+  .bar .wd .r{ background:#ec6a5e; } .bar .wd .y{ background:#f4bf4f; } .bar .wd .g{ background:#61c554; }
+  .bar .ttl { font-family:"JetBrains Mono",monospace; font-weight:500; font-size:12.5px; line-height:1; color:#9fb3a7;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0; }
+  .bar .ttl b { color:#e7f2ea; font-weight:600; }
+  .bar .prog { display:flex; align-items:center; gap:9px; margin-left:auto; flex:none; }
+  .bar .prog .track { width:120px; height:6px; background:rgba(255,255,255,0.10); border-radius:999px; overflow:hidden; }
+  .bar .prog .fill { height:100%; width:0; background:linear-gradient(90deg,#6fce9a,#5bc6cf,#7d9af0,#e0a45f,#f4cf6a); transition:width .4s; box-shadow:0 0 10px rgba(111,206,154,0.5); }
+  .bar .prog .pc { font-family:"JetBrains Mono",monospace; font-size:11px; color:#9fb3a7; white-space:nowrap; }
+  .bar .acts { display:flex; align-items:center; gap:7px; flex:none; }
+  .hbtn { font-family:"JetBrains Mono",monospace; font-size:11.5px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.07); color:#cfe0d5;
+    border-radius:7px; padding:6px 11px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; flex:none; transition:background .15s, border-color .15s, color .15s; }
+  .hbtn:hover { border-color:#6fce9a; color:#bff0cf; background:rgba(111,206,154,0.12); }
+  .hbtn.home { background:#2f6b4f; color:#eef6ef; border-color:#3c8362; }
+  .hbtn.home:hover { background:var(--green-2); color:#fff; }
+  .pyled { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:#9fb3a7; display:flex; align-items:center; gap:6px; white-space:nowrap; flex:none; }
   .pyled .dot { width:8px; height:8px; border-radius:50%; background:var(--brass); box-shadow:0 0 6px rgba(169,138,75,.7); }
   .pyled.ready .dot { background:#6fce9a; box-shadow:0 0 6px rgba(111,206,154,.8); }
   .pyled.err .dot { background:var(--err); }
+  @media (max-width:760px){ .bar .wd, .bar .pyled, .bar .ttl { display:none; } }
 
   .wrap { max-width:1000px; margin:0 auto; padding:8px 26px 96px; }
   a { color:var(--green); }
@@ -60,34 +67,63 @@
   .crumb a { color:var(--ink-mute); text-decoration:none; } .crumb a:hover { color:var(--green); }
   .crumb .sep { color:var(--line); } .crumb .here { color:var(--ink); }
 
-  /* ===== masthead ===== */
-  .mast { padding-bottom:22px; border-bottom:1px solid var(--line); margin-bottom:10px; }
+  /* ===== masthead — editor-window frame ===== */
+  .mast { position:relative; background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:46px 30px 26px; margin-bottom:18px; overflow:hidden;
+    box-shadow:0 18px 44px -30px rgba(20,40,30,0.55); }
+  .mast::before { content:""; position:absolute; top:0; left:0; right:0; height:34px; background:var(--green-deep);
+    border-bottom:1px solid #0e2418; }
+  .mast::after { content:"random.py"; position:absolute; top:0; left:54px; height:34px; display:flex; align-items:center;
+    font-family:"JetBrains Mono",monospace; font-size:11px; color:#8fa89a; letter-spacing:0.5px; }
+  .mast .wdots { position:absolute; top:12px; left:16px; display:flex; gap:6px; z-index:2; }
+  .mast .wdots i { width:11px; height:11px; border-radius:50%; }
+  .mast .wdots .r{ background:#ec6a5e; } .mast .wdots .y{ background:#f4bf4f; } .mast .wdots .g{ background:#61c554; }
   .mast .k { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--green); margin-bottom:10px; }
   .mast h1 { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(38px,6.5vw,58px); line-height:1; letter-spacing:-0.6px; margin:0; }
   .mast h1 code { font-family:"JetBrains Mono",monospace; font-size:0.62em; font-weight:600; background:var(--green-deep); color:#cfe7d6; padding:3px 12px; border-radius:8px; vertical-align:middle; }
   .mast .sub { font-style:italic; font-size:17px; color:var(--ink-soft); margin:14px 0 0; max-width:64ch; text-wrap:pretty; }
+  .mast .repl { display:inline-flex; align-items:center; gap:7px; margin-top:16px; padding:9px 15px; border-radius:9px;
+    background:var(--code-bg); color:#cfe7d6; font-family:"JetBrains Mono",monospace; font-size:13px; box-shadow:0 8px 22px -16px rgba(20,40,30,0.6); }
+  .repl .pr { color:#6fce9a; font-weight:700; } .repl .kw { color:#e2a3cb; } .repl .mod { color:#8fcabc; }
+  .repl .cur { width:8px; height:15px; background:#6fce9a; display:inline-block; margin-left:2px; animation:replblink 1.1s steps(1) infinite; }
+  @keyframes replblink { 50%{opacity:0;} }
   .mast .sync { margin-top:16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--ink-mute); }
   .mast .sync .ok { color:var(--green); font-weight:600; } .mast .sync .who { color:var(--ink); }
   .mast .sync input { font-family:inherit; font-size:11px; border:1px solid var(--line); border-radius:6px; padding:5px 9px; width:152px; background:#fff; color:var(--ink); }
   .mast .sync .b { font-family:inherit; font-size:11px; border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:6px; padding:5px 10px; cursor:pointer; }
   .mast .sync .b:hover { border-color:var(--sage); color:var(--green); }
 
-  /* ===== study section ===== */
-  .sec { margin:30px 0; }
-  .sec-head { display:flex; align-items:flex-start; gap:14px; margin-bottom:14px; }
-  .sec-head .node { width:38px; height:38px; flex:none; border-radius:50%; background:var(--paper-2); border:2px solid var(--green-2);
-    box-shadow:0 0 0 3px rgba(255,255,255,0.7); display:grid; place-items:center; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:13px; color:var(--green-dk); position:relative; }
-  .sec.done .sec-head .node { background:var(--green); color:#eef6ef; border-color:var(--green); }
-  .sec-head .htext { flex:1; min-width:0; }
-  .sec-head h2 { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:30px; line-height:1.04; letter-spacing:-0.3px; margin:2px 0 0; }
-  .sec-head .st { font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-mute); margin-top:6px; display:flex; align-items:center; gap:7px; }
-  .sec.done .sec-head .st .lab { color:var(--green); }
-  .sec-head .st .pip { width:7px; height:7px; border-radius:50%; border:1.5px solid var(--ink-mute); }
-  .sec.done .sec-head .st .pip { background:var(--green); border-color:var(--green); }
+  /* ===== tier header ===== */
+  .tier { display:flex; align-items:center; gap:14px; margin:34px 0 8px; }
+  .tier .tnum { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--ac,#2f6b4f); }
+  .tier h2 { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:30px; line-height:1; letter-spacing:-0.3px; margin:0; white-space:nowrap; }
+  .tier .ln { flex:1; height:1px; background:var(--line); }
+  .tier .reroll { font-family:"JetBrains Mono",monospace; font-size:11.5px; border:1px solid var(--sage); background:#fff; color:var(--green); border-radius:8px; padding:7px 13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; transition:background .15s; }
+  .tier .reroll:hover { background:var(--sage-soft); }
+  .tier .reroll .ico { display:inline-block; transition:transform .5s; } .tier .reroll.spin .ico { transform:rotate(360deg); }
+  .tiercap { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-mute); margin:0 0 14px; letter-spacing:0.3px; }
 
-  .panel { background:var(--card); border:1px solid var(--line); border-radius:13px; overflow:hidden; box-shadow:0 12px 30px -24px rgba(20,40,30,0.5); }
+  /* ===== exercise card (collapsible) ===== */
+  .sec { margin:14px 0; }
+  .sec-head { display:flex; align-items:center; gap:14px; cursor:pointer; padding:6px 4px; border-radius:10px; transition:background .15s; }
+  .sec-head:hover { background:rgba(255,255,255,0.45); }
+  .sec-head .node { width:38px; height:38px; flex:none; border-radius:50%; background:var(--paper-2); border:2px solid var(--ac,#3c8362);
+    box-shadow:0 0 0 3px rgba(255,255,255,0.7); display:grid; place-items:center; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:13px; color:var(--ac,#234f3b); transition:background .2s, color .2s, transform .2s; }
+  .sec-head .node.bump { animation:nodepop .5s ease; }
+  @keyframes nodepop { 0%{transform:scale(1)} 40%{transform:scale(1.22)} 100%{transform:scale(1)} }
+  .sec-head .htext { flex:1; min-width:0; }
+  .sec-head h2 { font-family:"Cormorant Garamond",serif; font-weight:600; font-size:25px; line-height:1.05; letter-spacing:-0.3px; margin:2px 0 0; }
+  .sec-head .st { font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink-mute); display:flex; align-items:center; gap:8px; }
+  .sec-head .st .pip { width:7px; height:7px; border-radius:50%; border:1.5px solid var(--ink-mute); }
+  .sec-head .tag { font-family:"JetBrains Mono",monospace; font-size:9px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; padding:2px 7px; border-radius:5px; border:1px solid var(--ac,#3c8362); color:var(--ac,#2f6b4f); background:var(--ac-soft,#dde7dd); }
+  .sec-head .tag.challenge { border-color:#b0612f; color:#b0612f; background:#f3e2d4; }
+  .sec-head .chev { flex:none; width:26px; height:26px; border:none; background:none; color:var(--ink-mute); font-size:13px; cursor:pointer; transition:transform .2s; display:grid; place-items:center; }
+  .sec.collapsed .chev { transform:rotate(-90deg); }
+  .sec.collapsed .panel { display:none; }
+
+  .panel { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--ac,#3c8362); border-radius:13px; overflow:hidden; box-shadow:0 12px 30px -24px rgba(20,40,30,0.5); margin-top:8px; }
   .panel .concept { padding:18px 22px 6px; }
-  .eyebrow { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--green); margin-bottom:5px; }
+  .eyebrow { font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--ac,#2f6b4f); margin-bottom:5px; }
   .concept .body { font-size:16.5px; color:var(--ink-soft); }
   .concept .body p { margin:0 0 8px; }
   .concept .body code { font-family:"JetBrains Mono",monospace; font-size:0.86em; background:var(--sage-soft); border:1px solid var(--line-soft); border-radius:5px; padding:1px 6px; color:var(--green-dk); }
@@ -95,14 +131,23 @@
 
   .uses { padding:12px 22px 18px; }
   .uses .chips { display:flex; flex-wrap:wrap; gap:7px; }
-  .uses .chip { font-size:14px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:999px; padding:4px 13px; }
+  .uses .chip { font-size:14px; color:var(--ink-soft); background:var(--paper-2); border:1px solid var(--line); border-radius:999px; padding:4px 13px; transition:background .15s, border-color .15s, transform .15s, color .15s; cursor:default; }
+  .uses .chip:hover { background:var(--ac-soft,#dde7dd); border-color:var(--ac,#7fa68b); color:var(--ink); transform:translateY(-1px); }
 
-  .task { display:flex; align-items:center; gap:9px; padding:11px 22px; background:var(--paper-2); border-top:1px solid var(--line); border-bottom:1px solid var(--line);
-    font-style:italic; font-size:15.5px; color:var(--ink-soft); }
-  .task .ic { font-style:normal; color:var(--brass); }
+  /* real-problem requirements */
+  .reqs { padding:4px 22px 16px; }
+  .reqs ul { margin:6px 0 0; padding-left:0; list-style:none; }
+  .reqs li { font-size:15.5px; color:var(--ink-soft); padding:3px 0 3px 26px; position:relative; }
+  .reqs li::before { content:"›"; position:absolute; left:8px; color:var(--ac,#b0612f); font-family:"JetBrains Mono",monospace; font-weight:700; }
+
+  .task { display:flex; align-items:center; gap:10px; padding:11px 22px; background:var(--paper-2); border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-style:italic; font-size:15.5px; color:var(--ink-soft); }
+  .task .ic { font-style:normal; color:#6fce9a; background:var(--green-deep); font-family:"JetBrains Mono",monospace; font-weight:700; font-size:12px; padding:3px 8px; border-radius:5px; letter-spacing:0; }
 
   /* editor */
   .ed-top { display:flex; align-items:center; gap:9px; padding:9px 14px; background:var(--green-deep); color:#bccdc0; font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:0.5px; }
+  .ed-top .dots { display:flex; gap:6px; margin-right:3px; }
+  .ed-top .dots i { width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .ed-top .dots .r{ background:#ec6a5e; } .ed-top .dots .y{ background:#f4bf4f; } .ed-top .dots .g{ background:#61c554; }
   .ed-top .lbl { flex:1; }
   .runbtn { font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; border:none; border-radius:7px; padding:6px 15px; cursor:pointer; background:#6fce9a; color:#0e2117; }
   .runbtn:hover { background:#84e0ac; } .runbtn:disabled { opacity:0.5; cursor:default; }
@@ -119,6 +164,8 @@
   textarea.fallback-ta { width:100%; border:none; outline:none; resize:vertical; min-height:90px; padding:12px 14px; background:var(--code-bg); color:var(--w);
     font-family:"JetBrains Mono",monospace; font-size:13.5px; line-height:1.6; tab-size:4; }
 
+  .out.show::before { content:"\203a\203a\203a output"; display:block; color:#5f7568; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+  .out.err.show::before { content:"\203a\203a\203a traceback"; color:#b5635a; }
   .out { margin:0; max-height:0; overflow:auto; transition:max-height .15s, padding .15s; background:#0f1d17; color:var(--w);
     font-family:"JetBrains Mono",monospace; font-size:12.5px; line-height:1.6; white-space:pre-wrap; border-top:1px solid transparent; }
   .out.show { max-height:420px; padding:13px 16px; border-top:1px solid rgba(255,255,255,0.08); }
@@ -131,7 +178,6 @@
   .ed-actions .grow { flex:1; }
   .ed-actions .savednote { font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--ink-mute); }
 
-  /* reveal expected */
   .reveal { padding:12px 16px; background:var(--paper-2); border-top:1px solid var(--line); }
   .reveal-btn { font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--green); background:none; border:1px dashed var(--sage); border-radius:8px; padding:9px 14px; cursor:pointer; width:100%; text-align:left; }
   .reveal-btn:hover { background:var(--sage-soft); }
@@ -139,22 +185,58 @@
   .expected.open { display:block; }
   .expected .eyebrow { color:var(--brass); }
   .expected pre { margin:4px 0 0; background:var(--code-bg); color:var(--ret); border-radius:8px; padding:11px 14px; font-family:"JetBrains Mono",monospace; font-size:13px; overflow:auto; }
+  .expected pre.solcode { color:#bff0cf; }
+  .expected .useit { margin-top:9px; }
+  .expected .loadsol { font-family:"JetBrains Mono",monospace; font-size:11.5px; border:1px solid var(--sage); background:#fff; color:var(--green); border-radius:7px; padding:6px 12px; cursor:pointer; }
+  .expected .loadsol:hover { background:var(--sage-soft); }
   .expected .cav { font-size:13px; color:var(--ink-mute); font-style:italic; margin-top:8px; }
+
+  .sec.explored .sec-head .node { background:var(--ac-soft,#dde7dd); border-color:var(--ac,#3c8362); color:var(--ac,#234f3b); }
+  .sec.solved .sec-head .node { background:var(--ac,#2f6b4f); color:#fff; border-color:var(--ac,#2f6b4f); }
+  .sec.review .sec-head .node { background:#f4ecd6; border-color:var(--brass); color:#8a6d2f; }
+  .sec.explored .st .pip { background:var(--ac,#3c8362); border-color:var(--ac,#3c8362); }
+  .sec.solved .st .pip { background:var(--ac,#2f6b4f); border-color:var(--ac,#2f6b4f); }
+  .sec.review .st .pip { background:var(--brass); border-color:var(--brass); }
+
+  .hintbtn.on { border-color:var(--brass); color:#a07a1f; }
+  .hintpanel { display:none; padding:11px 16px; margin:0; background:#fbf6e8; border-top:1px solid #ecdfbd; font-size:15.5px; color:#6a551f; font-style:italic; }
+  .hintpanel.open { display:block; }
+  .hintpanel code { font-style:normal; font-family:"JetBrains Mono",monospace; font-size:0.85em; background:#f3e7c4; border:1px solid #e6d6a6; border-radius:5px; padding:1px 6px; color:#7a5d18; }
+
+  .rate { display:flex; gap:8px; margin-top:14px; }
+  .rate .rb { font-family:"JetBrains Mono",monospace; font-size:11.5px; border-radius:7px; padding:7px 13px; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink-soft); }
+  .rate .rb.got { border-color:var(--green); color:var(--green); }
+  .rate .rb.got:hover { background:var(--green); color:#fff; }
+  .rate .rb.rev:hover { background:#f4ecd6; border-color:var(--brass); color:#8a6d2f; }
+
+  .zoom-backdrop { position:fixed; inset:0; background:rgba(15,29,23,0.5); z-index:9990; display:none; }
+  .zoom-backdrop.on { display:block; }
+  .panel.focus { position:fixed; inset:18px; z-index:9991; overflow:auto; box-shadow:0 30px 80px rgba(0,0,0,0.5); }
+  .panel.focus .CodeMirror { min-height:50vh; }
+  @media (max-width:720px){ .panel.focus { inset:8px; } }
+
+  .toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(18px); opacity:0; pointer-events:none;
+    background:var(--green-deep); color:#eaf2ea; font-family:"JetBrains Mono",monospace; font-size:13px; padding:11px 20px; border-radius:999px;
+    box-shadow:0 14px 34px -16px rgba(0,0,0,0.5); z-index:10000; transition:opacity .25s, transform .25s; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .confetti-pc { position:fixed; top:-14px; width:9px; height:14px; z-index:10001; pointer-events:none; border-radius:2px; will-change:transform, opacity; }
+  @keyframes confetti-fall { 0%{ transform:translateY(0) rotate(0); opacity:1; } 100%{ transform:translateY(102vh) rotate(720deg); opacity:0.9; } }
 
   .note { margin:26px 0 0; font-family:"JetBrains Mono",monospace; font-size:12px; line-height:1.6; color:var(--ink-mute);
     background:rgba(251,252,246,0.7); border:1px dashed var(--sage); border-radius:10px; padding:13px 17px; }
   .colophon { margin-top:40px; padding-top:22px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-mute); }
   .colophon a { color:var(--green); text-decoration:none; }
-
-  @media (max-width:720px){ .wrap,.bar-in{ padding-left:16px; padding-right:16px; } .bar .ttl{ display:none; } }
+  @media (max-width:720px){ .wrap,.bar-in{ padding-left:16px; padding-right:16px; } }
 </style>
 </head>
 <body>
 
 <div class="bar">
   <div class="bar-in">
-    <span class="tag">Python · Study</span>
-    <span class="ttl" id="bar-title">random module</span>
+    <span class="wd"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+    <a class="hbtn home" href="../../../index.html" title="Commonplace home">⌂ Home</a>
+    <a class="hbtn" href="../index.html" title="Python hub">‹ Python</a>
+    <span class="ttl" id="bar-title">~/python/fundamentals/<b>random.py</b></span>
     <span class="pyled" id="pyled"><span class="dot"></span><span id="pyled-t">loading Python…</span></span>
     <div class="acts">
       <button class="hbtn" id="runall">▶ Run all</button>
@@ -176,15 +258,34 @@
   </nav>
 
   <header class="mast">
+    <span class="wdots"><i class="r"></i><i class="y"></i><i class="g"></i></span>
     <div class="k">Fundamentals · 01</div>
-    <h1 id="mast-title">Python <code>random</code></h1>
-    <p class="sub" id="mast-sub"></p>
+    <h1>Python <code>random</code></h1>
+    <p class="sub">Practice the <code>random</code> module hands-on — a fresh set of basics each visit, then real problems that put them to work.</p>
+    <div class="repl"><span class="pr">&gt;&gt;&gt;</span> <span class="kw">import</span> <span class="mod">random</span><span class="cur"></span></div>
     <div class="sync" id="sync"></div>
   </header>
 
-  <div id="sections"></div>
+  <!-- TIER I — rotating basics -->
+  <div class="tier" style="--ac:#2f6b4f">
+    <span class="tnum">§ I</span>
+    <h2>Basics</h2>
+    <span class="ln"></span>
+    <button class="reroll" id="reroll"><span class="ico">⟳</span> New set</button>
+  </div>
+  <p class="tiercap" id="basics-cap">— one-liners · tagged basic · rotates each visit</p>
+  <div id="basics"></div>
 
-  <div class="note">First run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection. All sections share one Python session — run them top-to-bottom. Your code and progress save automatically on this device; sign in above to sync across devices.</div>
+  <!-- TIER II — real problems -->
+  <div class="tier" style="--ac:#b0612f">
+    <span class="tnum">§ II</span>
+    <h2>Real Problems</h2>
+    <span class="ln"></span>
+  </div>
+  <p class="tiercap">— combine the basics into something bigger · tagged challenge</p>
+  <div id="problems"></div>
+
+  <div class="note">First run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection. All cards share one Python session. Your code &amp; progress save on this device; sign in above to sync across devices. The Basics rotate — hit <b>New set</b> any time for fresh ones.</div>
 
   <footer class="colophon">
     <span><a href="../index.html">← Python hub</a></span>
@@ -192,198 +293,336 @@
   </footer>
 </div>
 
-<!-- ===== CONTENT (unchanged notebook data) ===== -->
-<script type="application/json" id="nbdata">[{"t": "md", "s": "# 🎲 Python `random` Module — Complete Study Notebook\n\n📘 **Style:** Theory + Use cases + Executable code  \n⚠️ Outputs shown are examples; actual values vary on each run (unless seeded)."}, {"t": "md", "s": "## 1️⃣ Random float between 0 and 1\n\n📘 **Concept**\nGenerates a floating‑point number in the interval **[0.0, 1.0)**.\n\n🧠 **Use cases**\n- Probability simulation\n- Coin‑toss logic\n- Random branching\n- Monte‑Carlo methods"}, {"t": "code", "s": "import random\nrandom.random()"}, {"t": "md", "s": "📤 **Output (example)**\n```\n0.3724185968471239\n```"}, {"t": "md", "s": "## 2️⃣ Random float in a given range\n\n📘 **Concept**\nGenerates a random floating‑point number between two values.\n\n🧠 **Use cases**\n- Temperature simulation\n- Sensor noise modeling\n- Random delays"}, {"t": "code", "s": "import random\nrandom.uniform(10, 20)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n14.873492185\n```"}, {"t": "md", "s": "## 3️⃣ Random integer (inclusive)\n\n📘 **Concept**\nReturns a random integer including both endpoints.\n\n🧠 **Use cases**\n- Dice simulation\n- Game logic\n- Lottery systems"}, {"t": "code", "s": "import random\nrandom.randint(1, 10)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n7\n```"}, {"t": "md", "s": "## 4️⃣ Random integer using range logic\n\n📘 **Concept**\nWorks like Python's `range(start, stop)` (stop excluded).\n\n🧠 **Use cases**\n- Index selection\n- Loop‑based random logic"}, {"t": "code", "s": "import random\nrandom.randrange(1, 10)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n4\n```"}, {"t": "md", "s": "## 5️⃣ Random element from a list\n\n📘 **Concept**\nSelects one random element from a sequence.\n\n🧠 **Use cases**\n- Random question selection\n- Card games\n- Sampling"}, {"t": "code", "s": "import random\ncolors = ['red','blue','green','yellow']\nrandom.choice(colors)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n'green'\n```"}]</script>
+<!-- ===== BASIC BANK (tagged "basic") ===== -->
+<script type="application/json" id="basic-bank">[
+ {"id":"rand_float","title":"Random float between 0 and 1","concept":"Generates a floating-point number in the interval **[0.0, 1.0)**.","uses":["Probability simulation","Coin-toss logic","Monte-Carlo methods"],"solution":"import random\nrandom.random()","expected":"0.3724185968471239"},
+ {"id":"uniform_range","title":"Random float in a range","concept":"Generates a random float between two values, **a** and **b** inclusive of the bounds region.","uses":["Temperature simulation","Sensor noise","Random delays"],"solution":"import random\nrandom.uniform(10, 20)","expected":"14.873492185"},
+ {"id":"randint","title":"Random integer (inclusive)","concept":"Returns a random integer **including both endpoints** — `randint(1, 10)` can return 1 or 10.","uses":["Dice simulation","Game logic","Lottery systems"],"solution":"import random\nrandom.randint(1, 10)","expected":"7"},
+ {"id":"randrange","title":"Random integer, range-style","concept":"Works like Python's `range(start, stop)` — the **stop value is excluded**.","uses":["Index selection","Loop-based logic","Zero-based picks"],"solution":"import random\nrandom.randrange(1, 10)","expected":"4"},
+ {"id":"randrange_step","title":"Random integer with a step","concept":"Picks from a stepped range — `randrange(0, 100, 5)` yields multiples of 5.","uses":["Stepped values","Grid coordinates","Rounded amounts"],"solution":"import random\nrandom.randrange(0, 100, 5)","expected":"65"},
+ {"id":"choice","title":"Random element from a list","concept":"Selects **one** random element from a sequence.","uses":["Card games","Sampling","Random pick"],"solution":"import random\ncolors = ['red','blue','green','yellow']\nrandom.choice(colors)","expected":"'green'"},
+ {"id":"choices_weighted","title":"Weighted random picks","concept":"`choices` draws **with replacement** and supports weights — bigger weight, more likely. `k` sets how many.","uses":["Loot tables","Biased sampling","Weighted draws"],"solution":"import random\nrandom.choices(['a','b','c'], weights=[1,1,8], k=5)","expected":"['c', 'c', 'b', 'c', 'c']"},
+ {"id":"sample","title":"Unique random sample","concept":"`sample` draws **k unique** elements — no repeats, unlike `choices`.","uses":["Lottery draw","Pick winners","Random subset"],"solution":"import random\nrandom.sample(range(1, 50), 6)","expected":"[4, 17, 23, 31, 42, 49]"},
+ {"id":"shuffle","title":"Shuffle a list in place","concept":"`shuffle` reorders a list **in place** and returns `None` — print the list to see it.","uses":["Shuffle a deck","Randomize order","Quiz questions"],"solution":"import random\nnums = [1, 2, 3, 4, 5]\nrandom.shuffle(nums)\nnums","expected":"[3, 1, 5, 2, 4]"},
+ {"id":"seed","title":"Reproducible randomness","concept":"`seed(n)` fixes the sequence — same seed, same 'random' results every run.","uses":["Reproducible tests","Debugging","Fixed demos"],"solution":"import random\nrandom.seed(42)\nrandom.random()","expected":"0.6394267984578837"},
+ {"id":"getrandbits","title":"Random bits","concept":"`getrandbits(k)` returns an integer with **k random bits** (0 to 2^k − 1).","uses":["Random bytes","Bitmasks","Fast IDs"],"solution":"import random\nrandom.getrandbits(8)","expected":"173"},
+ {"id":"gauss","title":"Gaussian (normal) value","concept":"`gauss(mu, sigma)` draws from a **normal distribution** centred on `mu`.","uses":["Realistic noise","Heights / weights","Measurement error"],"solution":"import random\nrandom.gauss(0, 1)","expected":"-0.4182746"},
+ {"id":"expovariate","title":"Exponential wait time","concept":"`expovariate(lambd)` models **time between events** — `lambd` is the rate.","uses":["Wait times","Arrival modeling","Queue simulation"],"solution":"import random\nrandom.expovariate(1.5)","expected":"0.4218573"},
+ {"id":"triangular","title":"Triangular estimate","concept":"`triangular(low, high, mode)` skews values toward a most-likely `mode`.","uses":["Time estimates","Skewed ranges","PERT planning"],"solution":"import random\nrandom.triangular(0, 10, 3)","expected":"4.182"},
+ {"id":"randbytes","title":"Random bytes","concept":"`randbytes(n)` returns **n random bytes** (Python 3.9+).","uses":["Tokens","Nonces","Test data"],"solution":"import random\nrandom.randbytes(4)","expected":"b'\\x9f\\x12\\xa3\\x04'"},
+ {"id":"random_char","title":"Random character","concept":"`choice` works on **strings** too — strings are sequences of characters.","uses":["Captcha","Random initials","Short tokens"],"solution":"import random\nrandom.choice('ABCDEFG')","expected":"'D'"},
+ {"id":"coin_flip","title":"Coin flip","concept":"Pick between two options for a fair 50/50 result.","uses":["Coin toss","Boolean choice","A/B split"],"solution":"import random\nrandom.choice(['Heads', 'Tails'])","expected":"'Heads'"},
+ {"id":"random_key","title":"Random key from a dict","concept":"`list(d)` gives the keys — then `choice` picks one.","uses":["Random config","Pick a category","Sampling keys"],"solution":"import random\nd = {'a': 1, 'b': 2, 'c': 3}\nrandom.choice(list(d))","expected":"'b'"},
+ {"id":"shuffle_copy","title":"Shuffle without mutating","concept":"`sample(list, len(list))` returns a **shuffled copy**, leaving the original intact.","uses":["Non-destructive shuffle","Immutable data","Keep the source"],"solution":"import random\nnums = [1, 2, 3, 4]\nrandom.sample(nums, len(nums))","expected":"[2, 4, 1, 3]"},
+ {"id":"hex_color","title":"Random hex colour","concept":"A colour is 24 random bits — format an int as a 6-digit hex string.","uses":["Random theming","Generative art","Avatar colours"],"solution":"import random\n'#%06x' % random.randint(0, 0xFFFFFF)","expected":"'#3af19c'"},
+ {"id":"random_index","title":"Random index of a list","concept":"`randrange(len(seq))` gives a valid random index into any sequence.","uses":["Pick a slot","Random access","Manual choice"],"solution":"import random\nseq = ['x', 'y', 'z']\nseq[random.randrange(len(seq))]","expected":"'y'"},
+ {"id":"betavariate","title":"Beta-distributed value","concept":"`betavariate(a, b)` returns a value in **[0, 1]** — handy for probabilities and rates.","uses":["Probabilities","Bayesian priors","Conversion rates"],"solution":"import random\nrandom.betavariate(2, 5)","expected":"0.2713"},
+ {"id":"random_sign","title":"Random sign (+1 or −1)","concept":"Pick a random direction — the building block of a random walk.","uses":["Random walk step","Direction","Sign flip"],"solution":"import random\nrandom.choice([-1, 1])","expected":"-1"},
+ {"id":"normalvariate","title":"Normal variate","concept":"`normalvariate(mu, sigma)` is another draw from the normal distribution (thread-safe variant of `gauss`).","uses":["Statistics","Sampling","Simulation"],"solution":"import random\nrandom.normalvariate(50, 10)","expected":"57.21"}
+]</script>
+
+<!-- ===== REAL PROBLEMS (tagged "challenge") ===== -->
+<script type="application/json" id="problem-bank">[
+ {"id":"dice_sim","title":"Dice-roll simulator","brief":"Roll two six-sided dice 1000 times. Tally how often each total (2–12) comes up, then print every total with its count.","reqs":["Roll each die with random.randint(1, 6)","Loop 1000 times and sum the two dice","Count each total in a dict","Print totals 2 through 12 with their counts"],"starter":"import random\n\nrolls = 1000\ncounts = {}\n\n# roll two dice `rolls` times and tally each sum\n\n# print totals 2..12 with their counts\n","solution":"import random\n\nrolls = 1000\ncounts = {}\nfor _ in range(rolls):\n    total = random.randint(1, 6) + random.randint(1, 6)\n    counts[total] = counts.get(total, 0) + 1\n\nfor s in range(2, 13):\n    print(s, counts.get(s, 0))","expected":"2 27\n3 56\n4 81\n5 110\n6 139\n7 168\n8 138\n9 112\n10 83\n11 55\n12 31","hint":"Each die is `random.randint(1, 6)`; sum two of them, then `counts[total] = counts.get(total, 0) + 1`. Loop `range(2, 13)` to print in order."},
+ {"id":"password_gen","title":"Password generator","brief":"Generate a random 12-character password with at least one lowercase letter, one uppercase, one digit and one symbol — then print it.","reqs":["Use the `string` module for character pools","Guarantee one character from each required class","Fill the rest from the combined pool","Shuffle so the guaranteed chars aren't always first"],"starter":"import random, string\n\nlength = 12\n# pools: lowercase, uppercase, digits, symbols\n\n# 1) one from each pool  2) fill the rest  3) shuffle  4) join & print\n","solution":"import random, string\n\nlength = 12\npools = [string.ascii_lowercase, string.ascii_uppercase, string.digits, '!@#$%^&*']\n\npw = [random.choice(p) for p in pools]          # one of each\nall_chars = ''.join(pools)\npw += [random.choice(all_chars) for _ in range(length - len(pw))]\nrandom.shuffle(pw)                               # mix them up\n\nprint(''.join(pw))","expected":"aQ3!kPz9w#mR","hint":"Take one `random.choice` from each pool first so every class is present, fill the remaining slots from the combined string, then `random.shuffle` the list before `''.join`."},
+ {"id":"shuffle_deck","title":"Shuffle &amp; deal a deck","brief":"Build a standard 52-card deck (ranks A,2–10,J,Q,K across four suits), shuffle it, and deal a 5-card hand. Print the hand.","reqs":["Build the deck with a comprehension over ranks × suits","random.shuffle the whole deck","Deal the top 5 cards","Print the hand"],"starter":"import random\n\nranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']\nsuits = ['\u2660','\u2665','\u2666','\u2663']\n\n# build the 52-card deck, shuffle, deal 5, print\n","solution":"import random\n\nranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']\nsuits = ['\u2660','\u2665','\u2666','\u2663']\n\ndeck = [r + s for s in suits for r in ranks]\nrandom.shuffle(deck)\nhand = deck[:5]\n\nprint(hand)","expected":"['Q\u2665', '7\u2663', 'A\u2660', '10\u2666', '4\u2663']","hint":"`deck = [r + s for s in suits for r in ranks]` builds all 52, then `random.shuffle(deck)` and slice `deck[:5]` for the hand."},
+ {"id":"monte_carlo_pi","title":"Estimate \u03c0 (Monte-Carlo)","brief":"Estimate \u03c0 by dropping 10,000 random points in the unit square and counting how many land inside the quarter-circle of radius 1. \u03c0 \u2248 4 \u00d7 inside / total.","reqs":["Generate x, y in [0, 1) with random.random()","A point is inside when x*x + y*y <= 1","Count hits over 10,000 trials","Print 4 * inside / total"],"starter":"import random\n\ntotal = 10000\ninside = 0\n\n# drop `total` random points; count those inside the quarter circle\n\n# print the estimate of pi\n","solution":"import random\n\ntotal = 10000\ninside = 0\nfor _ in range(total):\n    x, y = random.random(), random.random()\n    if x*x + y*y <= 1:\n        inside += 1\n\nprint(4 * inside / total)","expected":"3.1416","hint":"A random point (x, y) is inside the quarter circle when `x*x + y*y <= 1`. The fraction inside approximates \u03c0/4, so multiply by 4."},
+ {"id":"random_walk","title":"1-D random walk","brief":"Simulate a 1-D random walk of 1000 steps starting at 0; each step is +1 or −1 with equal chance. Print the final position and the farthest distance from the origin reached.","reqs":["Each step is random.choice([-1, 1])","Update the position across 1000 steps","Track the maximum abs(position)","Print final position and max distance"],"starter":"import random\n\npos = 0\nmax_dist = 0\n\n# take 1000 steps of +1 / -1; track position and farthest distance\n\n# print final position and max distance\n","solution":"import random\n\npos = 0\nmax_dist = 0\nfor _ in range(1000):\n    pos += random.choice([-1, 1])\n    max_dist = max(max_dist, abs(pos))\n\nprint('final:', pos)\nprint('max distance:', max_dist)","expected":"final: -18\nmax distance: 47","hint":"Add `random.choice([-1, 1])` to `pos` each step, and after each step keep `max_dist = max(max_dist, abs(pos))`."}
+]</script>
 
 <script>
 (function(){
   "use strict";
-  var CELLS = JSON.parse(document.getElementById("nbdata").textContent);
+  var BASIC = JSON.parse(document.getElementById("basic-bank").textContent);
+  var PROBLEMS = JSON.parse(document.getElementById("problem-bank").textContent);
   var PAGE_ID = (location.pathname.split("/").pop() || "module").replace(/\.html?$/,"");
   var LS = function(k){ return "pystudy_" + PAGE_ID + "_" + k; };
+  var SHOW_BASICS = 5;
 
-  // ---------- helpers ----------
+  var PALETTE = [
+    {ac:"#2f6b4f", soft:"#dbe9df"},
+    {ac:"#2a6f7b", soft:"#d7e8ea"},
+    {ac:"#5a6cb0", soft:"#e0e4f3"},
+    {ac:"#9a4f86", soft:"#efdfeb"},
+    {ac:"#7a8f2e", soft:"#e9eccf"},
+    {ac:"#b0612f", soft:"#f1e2d4"}
+  ];
+
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-  function md(src){ if(window.marked){ try{ return marked.parse(src);}catch(e){} } return "<pre>"+esc(src)+"</pre>"; }
   function mdInline(src){ if(window.marked){ try{ return marked.parseInline(src);}catch(e){} } return esc(src); }
-  function stripEmoji(t){
-    return t.replace(/^\s*[0-9]\uFE0F?\u20E3\s*/,"")               // keycap number
-            .replace(/^\s*[\u2190-\u2BFF\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF]\uFE0F?\s*/,"") // one leading emoji
-            .replace(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F]/gu,""); // strip remaining decorative
-  }
-  function isOutput(s){ return /Output\s*\(example\)/i.test(s) || /^\s*📤/.test(s); }
-  function fenced(s){ var m=s.match(/```[\w]*\n?([\s\S]*?)```/); return m ? m[1].replace(/\n+$/,"") : null; }
-
-  // ---------- parse cells into sections ----------
-  var intro = "", sections = [], cur = null;
-  CELLS.forEach(function(c){
-    if(c.t === "code"){
-      if(!cur){ cur = { title:"Try it", num:sections.length+1, codes:[], expected:[], body:"" }; sections.push(cur); }
-      cur.codes.push(c.s);
-      return;
-    }
-    var s = (c.s||"").trim();
-    if(/^#\s/.test(s)){ intro = (intro? intro+"\n\n":"") + s; return; }
-    if(/^##\s/.test(s)){
-      var titleLine = s.split("\n")[0].replace(/^#+\s*/,"");
-      cur = { title: stripEmoji(titleLine).trim() || titleLine, num: sections.length+1, codes:[], expected:[], body:"" };
-      var rest = s.split("\n").slice(1).join("\n").trim();
-      if(rest) cur.body = rest;
-      sections.push(cur);
-      return;
-    }
-    if(isOutput(s)){ var f = fenced(s); if(cur && f!=null) cur.expected.push(f); return; }
-    if(cur){ cur.body = (cur.body? cur.body+"\n\n":"") + s; }
-    else { intro = (intro? intro+"\n\n":"") + s; }
-  });
-
-  // concept / use-cases split
-  function splitBody(body){
-    var clean = body.replace(/📘\s*/g,"").replace(/🧠\s*/g,"").replace(/⚠️\s*/g,"");
-    var ci = clean.indexOf("**Concept**"), ui = clean.indexOf("**Use cases**");
-    var concept="", uses="";
-    if(ci>=0){ concept = clean.slice(ci+11, (ui>ci?ui:clean.length)); }
-    else if(ui<0){ concept = clean; }
-    if(ui>=0){ uses = clean.slice(ui+13); }
-    return { concept:concept.trim(), uses:uses.trim() };
-  }
-  function useChips(usesMd){
-    return usesMd.split("\n").map(function(l){ return l.replace(/^[-*]\s*/,"").trim(); })
-      .filter(function(l){ return l && !/Use cases/i.test(l); });
+  function hintFromSolution(code){
+    var lines = String(code).split("\n").filter(function(l){ return l.trim() && !/^\s*(import|from)\s/.test(l); });
+    var joined = lines.join("\n");
+    var m = joined.match(/(random\.[A-Za-z_]+)\s*\(/) || joined.match(/([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)+)\s*\(/);
+    if(m) return "Reach for <code>"+esc(m[1])+"()</code> \u2014 work out the arguments from the concept above.";
+    return "Re-read the Concept, then translate it into a line or two of code.";
   }
 
-  // intro → masthead subtitle
-  (function(){
-    var lines = intro.split("\n").map(function(l){return l.trim();}).filter(Boolean);
-    var sub = lines.filter(function(l){ return !/^#\s/.test(l); }).join(" ")
-                   .replace(/\*\*/g,"").replace(/📘|⚠️/g,"").replace(/\s+/g," ").trim();
-    if(sub) document.getElementById("mast-sub").innerHTML = mdInline(sub);
-  })();
+  // ---------- status + seen + code persistence (keyed by exercise id) ----------
+  var RANK = { explored:1, review:2, solved:3 };
+  function statusMap(){ try{ return JSON.parse(localStorage.getItem(LS("status"))||"{}"); }catch(e){ return {}; } }
+  function saveStatusMap(m){ try{ localStorage.setItem(LS("status"), JSON.stringify(m)); }catch(e){} }
+  function seenMap(){ try{ return JSON.parse(localStorage.getItem(LS("seen"))||"{}"); }catch(e){ return {}; } }
+  function saveSeenMap(m){ try{ localStorage.setItem(LS("seen"), JSON.stringify(m)); }catch(e){} }
+  function codeKey(id){ return LS("code_"+id); }
+  function getCode(id){ try{ return localStorage.getItem(codeKey(id)); }catch(e){ return null; } }
+  function setCode(id,v){ try{ localStorage.setItem(codeKey(id), v); }catch(e){} }
 
-  // ---------- build DOM ----------
-  var mount = document.getElementById("sections");
-  var editors = [];      // {get,set,original,run,out,sectionIdx}
-  var sectionEls = [];
-  var allCM = [];        // CodeMirror instances, refreshed after layout settles
+  // ---------- rotation: unseen first, then least-recently-seen ----------
+  function chooseBasics(){
+    var seen = seenMap();
+    var ordered = BASIC.map(function(ex,i){ return {ex:ex, i:i, ts:seen[ex.id]||0}; });
+    ordered.sort(function(a,b){
+      var au = a.ts?1:0, bu = b.ts?1:0;
+      if(au!==bu) return au-bu;          // unseen (ts 0) first
+      if(a.ts!==b.ts) return a.ts-b.ts;  // then least-recently-seen
+      return a.i-b.i;                    // stable
+    });
+    return ordered.slice(0, SHOW_BASICS).map(function(o){ return o.ex; });
+  }
+  function markSeen(list){
+    var seen = seenMap(), now = Date.now();
+    list.forEach(function(ex){ seen[ex.id] = now; });
+    saveSeenMap(seen);
+  }
 
-  sections.forEach(function(sec, si){
-    var parsed = splitBody(sec.body);
-    var wrap = document.createElement("section"); wrap.className = "sec"; wrap.id = "sec-"+si;
+  // ---------- shared state ----------
+  var editors = [];      // {id, get, set, original, solution, out, run}
+  var cardEls = {};      // id -> wrap element
+  var allCM = [];
+  var visibleIds = [];   // ids currently rendered (for progress)
 
-    var head = document.createElement("div"); head.className = "sec-head";
+  // ---------- build one exercise card ----------
+  function buildCard(item, opts){
+    // opts: { kind:"basic"|"challenge", num, palette, collapsed }
+    var p = opts.palette;
+    var wrap = document.createElement("div");
+    wrap.className = "sec" + (opts.collapsed ? " collapsed" : "");
+    wrap.style.setProperty("--ac", p.ac);
+    wrap.style.setProperty("--ac-soft", p.soft);
+    cardEls[item.id] = wrap;
+
+    // header
+    var head = document.createElement("div"); head.className="sec-head";
     head.innerHTML =
-      '<div class="node">'+String(sec.num).padStart(2,"0")+'</div>'+
-      '<div class="htext"><h2>'+esc(sec.title)+'</h2>'+
-      '<div class="st"><span class="pip"></span><span class="lab">not explored</span></div></div>';
+      '<div class="node">'+String(opts.num).padStart(2,"0")+'</div>'+
+      '<div class="htext">'+
+        '<div class="st"><span class="pip"></span><span class="lab">not explored</span>'+
+          '<span class="tag'+(opts.kind==="challenge"?" challenge":"")+'">'+opts.kind+'</span></div>'+
+        '<h2>'+mdInline(item.title)+'</h2>'+
+      '</div>'+
+      '<button class="chev">\u25be</button>';
+    head.addEventListener("click", function(){ wrap.classList.toggle("collapsed"); if(!wrap.classList.contains("collapsed")) setTimeout(refreshAllCM,0); });
     wrap.appendChild(head);
 
-    var panel = document.createElement("div"); panel.className = "panel";
+    var panel = document.createElement("div"); panel.className="panel";
 
-    if(parsed.concept){
+    if(opts.kind==="basic"){
       var cp = document.createElement("div"); cp.className="concept";
-      cp.innerHTML = '<div class="eyebrow">Concept</div><div class="body">'+md(parsed.concept)+'</div>';
+      cp.innerHTML = '<div class="eyebrow">Concept</div><div class="body">'+mdInline(item.concept)+'</div>';
       panel.appendChild(cp);
-    }
-    var chips = useChips(parsed.uses);
-    if(chips.length){
-      var us = document.createElement("div"); us.className="uses";
-      us.innerHTML = '<div class="eyebrow">Use cases</div><div class="chips">'+
-        chips.map(function(c){ return '<span class="chip">'+esc(c)+'</span>'; }).join("")+'</div>';
-      panel.appendChild(us);
+      if(item.uses && item.uses.length){
+        var us = document.createElement("div"); us.className="uses";
+        us.innerHTML = '<div class="eyebrow">Use cases</div><div class="chips">'+
+          item.uses.map(function(c){ return '<span class="chip">'+esc(c)+'</span>'; }).join("")+'</div>';
+        panel.appendChild(us);
+      }
+    } else {
+      var br = document.createElement("div"); br.className="concept";
+      br.innerHTML = '<div class="eyebrow">The problem</div><div class="body">'+mdInline(item.brief)+'</div>';
+      panel.appendChild(br);
+      if(item.reqs && item.reqs.length){
+        var rq = document.createElement("div"); rq.className="reqs";
+        rq.innerHTML = '<div class="eyebrow">Requirements</div><ul>'+
+          item.reqs.map(function(r){ return '<li>'+mdInline(r)+'</li>'; }).join("")+'</ul>';
+        panel.appendChild(rq);
+      }
     }
 
     var task = document.createElement("div"); task.className="task";
-    task.innerHTML = '<span class="ic">✎</span> Read it, predict the result, then run the code and check.';
+    task.innerHTML = '<span class="ic">&gt;&gt;&gt;</span> '+
+      (opts.kind==="basic"
+        ? "Write the code yourself, run it \u2014 then reveal the answer to check."
+        : "Solve it in the editor, run it \u2014 reveal the model solution only after you\u2019ve tried.");
     panel.appendChild(task);
 
-    // code cells
-    sec.codes.forEach(function(code, ci){
-      var top = document.createElement("div"); top.className="ed-top";
-      var lbl = document.createElement("span"); lbl.className="lbl"; lbl.textContent = "your_attempt.py";
-      var resetMini = document.createElement("button"); resetMini.className="minibtn"; resetMini.textContent="Reset";
-      var runB = document.createElement("button"); runB.className="runbtn"; runB.textContent="▶ Run";
-      top.appendChild(lbl); top.appendChild(resetMini); top.appendChild(runB);
-      panel.appendChild(top);
+    // editor
+    var top = document.createElement("div"); top.className="ed-top";
+    top.innerHTML = '<span class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></span><span class="lbl">your_attempt.py</span>';
+    var resetMini = document.createElement("button"); resetMini.className="minibtn"; resetMini.textContent="Reset";
+    var runB = document.createElement("button"); runB.className="runbtn"; runB.textContent="\u25b6 Run";
+    top.appendChild(resetMini); top.appendChild(runB);
+    panel.appendChild(top);
 
-      var host = document.createElement("div");
-      var ta = document.createElement("textarea"); ta.className="fallback-ta"; 
-      var saved = null; try{ saved = localStorage.getItem(LS("c"+si+"_"+ci)); }catch(e){}
-      ta.value = (saved!=null && saved!=="") ? saved : code;
-      host.appendChild(ta); panel.appendChild(host);
+    var ORIGINAL = (opts.kind==="challenge" && item.starter) ? item.starter : "# Write your code here\n";
+    var host = document.createElement("div");
+    var ta = document.createElement("textarea"); ta.className="fallback-ta";
+    var saved = getCode(item.id);
+    ta.value = (saved!=null && saved!=="") ? saved : ORIGINAL;
+    host.appendChild(ta); panel.appendChild(host);
 
-      var out = document.createElement("pre"); out.className="out"; panel.appendChild(out);
+    var out = document.createElement("pre"); out.className="out"; panel.appendChild(out);
 
-      var ed;
-      if(window.CodeMirror){
-        var cm = CodeMirror.fromTextArea(ta,{ mode:"python", lineNumbers:true, indentUnit:4, viewportMargin:Infinity });
-        setTimeout(function(){ cm.refresh(); }, 0);
-        allCM.push(cm);
-        ed = { get:function(){return cm.getValue();}, set:function(v){cm.setValue(v);},
-               onChange:function(fn){ cm.on("change",fn); }, onRun:function(fn){ cm.setOption("extraKeys",{"Shift-Enter":function(){fn();}}); } };
-      } else {
-        ed = { get:function(){return ta.value;}, set:function(v){ta.value=v;},
-               onChange:function(fn){ ta.addEventListener("input",fn); },
-               onRun:function(fn){ ta.addEventListener("keydown",function(e){ if(e.shiftKey&&e.key==="Enter"){e.preventDefault();fn();}}); } };
-      }
-      var rec = { get:ed.get, set:ed.set, original:code, out:out, run:runB, si:si, ci:ci };
-      editors.push(rec);
-      function doRun(){ runCell(rec); markExplored(si); }
-      runB.onclick = doRun; ed.onRun(doRun);
-      resetMini.onclick = function(){ ed.set(code); out.className="out"; out.textContent=""; persist(rec); };
-      ed.onChange(function(){ persist(rec); });
-    });
+    var ed;
+    if(window.CodeMirror){
+      var cm = CodeMirror.fromTextArea(ta,{ mode:"python", lineNumbers:true, indentUnit:4, viewportMargin:Infinity });
+      setTimeout(function(){ cm.refresh(); }, 0); allCM.push(cm);
+      ed = { get:function(){return cm.getValue();}, set:function(v){cm.setValue(v);},
+             onChange:function(fn){ cm.on("change",fn); }, onRun:function(fn){ cm.setOption("extraKeys",{"Shift-Enter":function(){fn();}}); } };
+    } else {
+      ed = { get:function(){return ta.value;}, set:function(v){ta.value=v;},
+             onChange:function(fn){ ta.addEventListener("input",fn); },
+             onRun:function(fn){ ta.addEventListener("keydown",function(e){ if(e.shiftKey&&e.key==="Enter"){e.preventDefault();fn();}}); } };
+    }
+    var rec = { id:item.id, get:ed.get, set:ed.set, original:ORIGINAL, solution:item.solution, out:out, run:runB };
+    editors.push(rec);
+    function doRun(){ runCell(rec); markExplored(item.id); }
+    runB.onclick = doRun; ed.onRun(doRun);
+    resetMini.onclick = function(){ ed.set(ORIGINAL); out.className="out"; out.textContent=""; persist(rec); };
+    ed.onChange(function(){ persist(rec); });
 
-    // actions: save + explored note
+    // actions
     var acts = document.createElement("div"); acts.className="ed-actions";
     var saveB = document.createElement("button"); saveB.className="savebtn"; saveB.textContent="Save attempt";
+    var hintB = document.createElement("button"); hintB.className="savebtn hintbtn"; hintB.textContent="\ud83d\udca1 Hint";
+    var expandB = document.createElement("button"); expandB.className="savebtn"; expandB.textContent="\u2922 Expand";
+    var grow = document.createElement("span"); grow.className="grow";
     var note = document.createElement("span"); note.className="savednote";
-    acts.appendChild(saveB); acts.appendChild(Object.assign(document.createElement("span"),{className:"grow"})); acts.appendChild(note);
+    acts.appendChild(saveB); acts.appendChild(hintB); acts.appendChild(expandB); acts.appendChild(grow); acts.appendChild(note);
     panel.appendChild(acts);
+
+    var hintP = document.createElement("div"); hintP.className="hintpanel";
+    var hintText = (opts.kind==="challenge" && item.hint) ? item.hint : hintFromSolution(item.solution);
+    hintP.innerHTML = '<strong style="font-style:normal;color:#a07a1f">Hint \u00b7 </strong>'+hintText;
+    panel.appendChild(hintP);
+    hintB.onclick = function(){ var open=hintP.classList.toggle("open"); hintB.classList.toggle("on",open); markExplored(item.id); };
+    expandB.onclick = function(){ toggleFocus(panel, expandB); };
     saveB.onclick = function(){
-      editors.filter(function(e){return e.si===si;}).forEach(persist);
-      markExplored(si);
-      note.textContent = session ? "✓ saved & synced" : "✓ saved on this device";
+      persist(rec); markExplored(item.id);
+      cloudSaveCode(item.id, rec.get());
+      note.textContent = session ? "\u2713 saved & synced" : "\u2713 saved on this device";
       setTimeout(function(){ note.textContent=""; }, 2400);
     };
 
-    // reveal expected
-    if(sec.expected.length){
-      var rev = document.createElement("div"); rev.className="reveal";
-      var rb = document.createElement("button"); rb.className="reveal-btn"; rb.textContent="🔒 Reveal expected output — try predicting first";
-      var exp = document.createElement("div"); exp.className="expected";
-      exp.innerHTML = '<div class="eyebrow">Expected output</div><pre>'+esc(sec.expected.join("\n"))+'</pre>'+
-        '<div class="cav">Example only — random values differ on each run unless you seed with <code>random.seed()</code>.</div>';
-      rb.onclick = function(){ exp.classList.add("open"); rb.style.display="none"; };
-      rev.appendChild(rb); rev.appendChild(exp); panel.appendChild(rev);
+    // reveal answer
+    var rev = document.createElement("div"); rev.className="reveal";
+    var rb = document.createElement("button"); rb.className="reveal-btn"; rb.textContent="\ud83d\udd12 Reveal the answer \u2014 try writing it yourself first";
+    var exp = document.createElement("div"); exp.className="expected";
+    var inner = '<div class="eyebrow">Answer</div><pre class="solcode">'+esc(item.solution)+'</pre>'+
+      '<div class="useit"><button class="loadsol">\u2193 Load answer into editor</button></div>';
+    if(item.expected){
+      inner += '<div class="eyebrow" style="margin-top:12px">Expected output</div><pre>'+esc(item.expected)+'</pre>'+
+        '<div class="cav">Example only \u2014 random values differ each run unless you seed with <code>random.seed()</code>.</div>';
     }
+    inner += '<div class="rate"><button class="rb got">\u2713 Got it</button><button class="rb rev">\u21bb Review later</button></div>';
+    exp.innerHTML = inner;
+    rb.onclick = function(){ exp.classList.add("open"); rb.style.display="none"; };
+    rev.appendChild(rb); rev.appendChild(exp); panel.appendChild(rev);
+    exp.querySelector(".loadsol").onclick = function(){ rec.set(item.solution); persist(rec); };
+    exp.querySelector(".got").onclick = function(){ setStatus(item.id,"solved"); showToast("Marked solved \u2713"); };
+    exp.querySelector(".rev").onclick = function(){ setStatus(item.id,"review"); showToast("Flagged to review \u21bb"); };
 
-    wrap.appendChild(panel); mount.appendChild(wrap);
-    sectionEls.push(wrap);
-  });
+    wrap.appendChild(panel);
+    return wrap;
+  }
+
+  // ---------- render tiers ----------
+  var shownBasics = [];
+  function renderBasics(){
+    var mount = document.getElementById("basics");
+    mount.innerHTML = "";
+    // drop old basic editors from the shared list
+    editors = editors.filter(function(r){ return PROBLEMS.some(function(p){return p.id===r.id;}); });
+    shownBasics = chooseBasics();
+    shownBasics.forEach(function(ex, idx){
+      var wrap = buildCard(ex, { kind:"basic", num:idx+1, palette:PALETTE[idx % PALETTE.length], collapsed: idx!==0 });
+      mount.appendChild(wrap);
+    });
+    markSeen(shownBasics);
+    document.getElementById("basics-cap").textContent =
+      "\u2014 showing "+shownBasics.length+" of "+BASIC.length+" \u00b7 tagged basic \u00b7 rotates each visit";
+    recomputeVisible();
+    paintProgress();
+    setTimeout(refreshAllCM, 0);
+  }
+  function renderProblems(){
+    var mount = document.getElementById("problems");
+    PROBLEMS.forEach(function(pr, idx){
+      var wrap = buildCard(pr, { kind:"challenge", num:idx+1, palette:PALETTE[5], collapsed:true });
+      mount.appendChild(wrap);
+    });
+  }
+
+  function recomputeVisible(){
+    visibleIds = shownBasics.map(function(e){return e.id;}).concat(PROBLEMS.map(function(p){return p.id;}));
+  }
 
   // ---------- progress / persistence ----------
-  function persist(rec){ try{ localStorage.setItem(LS("c"+rec.si+"_"+rec.ci), rec.get()); }catch(e){} }
-  function exploredSet(){ try{ return new Set(JSON.parse(localStorage.getItem(LS("explored"))||"[]")); }catch(e){ return new Set(); } }
-  function saveExplored(set){ try{ localStorage.setItem(LS("explored"), JSON.stringify(Array.from(set))); }catch(e){} }
-  function markExplored(si){
-    var set = exploredSet(); if(set.has(si)) { paintProgress(); return; }
-    set.add(si); saveExplored(set); cloudSave(si); paintProgress();
+  function persist(rec){ setCode(rec.id, rec.get()); }
+  function setStatus(id, st){
+    var m = statusMap();
+    if(st==="explored"){ if(!m[id]) m[id]="explored"; } else m[id]=st;
+    saveStatusMap(m); cloudSaveStatus(id, m[id]); paintProgress();
+    var node = cardEls[id] && cardEls[id].querySelector(".node");
+    if(node){ node.classList.remove("bump"); void node.offsetWidth; node.classList.add("bump"); }
   }
+  function markExplored(id){ setStatus(id, "explored"); }
   function paintProgress(){
-    var set = exploredSet(); var n = sections.length;
-    sectionEls.forEach(function(el,i){
-      var done = set.has(i); el.classList.toggle("done", done);
-      var lab = el.querySelector(".st .lab"); if(lab) lab.textContent = done ? "explored" : "not explored";
+    var m = statusMap(), n = visibleIds.length, explored=0, solved=0;
+    visibleIds.forEach(function(id){
+      var el = cardEls[id]; if(!el) return;
+      var st = m[id];
+      el.classList.remove("explored","solved","review");
+      if(st){ el.classList.add(st); explored++; if(st==="solved") solved++; }
+      var lab = el.querySelector(".st .lab");
+      if(lab) lab.textContent = st==="solved" ? "solved" : (st==="review" ? "review later" : (st==="explored" ? "explored" : "not explored"));
     });
-    document.getElementById("pfill").style.width = (n? Math.round(set.size/n*100):0)+"%";
-    document.getElementById("ppc").textContent = set.size+" / "+n+" explored";
+    document.getElementById("pfill").style.width = (n? Math.round(explored/n*100):0)+"%";
+    document.getElementById("ppc").textContent = (solved?solved+" solved \u00b7 ":"")+explored+" / "+n+" explored";
+    if(n>0 && solved===n && !paintProgress._cheer){ paintProgress._cheer=true; confetti(); showToast("\ud83c\udf8a All "+n+" solved \u2014 mastered!"); }
   }
-  paintProgress();
-  // refresh CodeMirror once layout + fonts have settled (avoids collapsed-height bug)
   function refreshAllCM(){ allCM.forEach(function(cm){ try{ cm.refresh(); }catch(e){} }); }
-  window.addEventListener("load", function(){ setTimeout(refreshAllCM, 50); });
-  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ setTimeout(refreshAllCM, 0); }); }
-  setTimeout(refreshAllCM, 300);
+
+  // ---------- focus / expand ----------
+  var backdrop = document.createElement("div"); backdrop.className="zoom-backdrop"; document.body.appendChild(backdrop);
+  var focusedPanel=null, focusedBtn=null;
+  function toggleFocus(panel, btn){
+    var on = !panel.classList.contains("focus");
+    if(focusedPanel && focusedPanel!==panel){ focusedPanel.classList.remove("focus"); if(focusedBtn) focusedBtn.textContent="\u2922 Expand"; }
+    panel.classList.toggle("focus", on); backdrop.classList.toggle("on", on);
+    btn.textContent = on ? "\u2923 Collapse" : "\u2922 Expand";
+    focusedPanel = on?panel:null; focusedBtn = on?btn:null;
+    setTimeout(refreshAllCM, 0);
+  }
+  backdrop.addEventListener("click", function(){ if(focusedPanel){ focusedPanel.classList.remove("focus"); backdrop.classList.remove("on"); if(focusedBtn) focusedBtn.textContent="\u2922 Expand"; focusedPanel=null; } });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && focusedPanel){ focusedPanel.classList.remove("focus"); backdrop.classList.remove("on"); if(focusedBtn) focusedBtn.textContent="\u2922 Expand"; focusedPanel=null; } });
+
+  // ---------- toast + confetti ----------
+  var toastEl=null, toastT=null;
+  function showToast(msg){
+    if(!toastEl){ toastEl=document.createElement("div"); toastEl.className="toast"; document.body.appendChild(toastEl); }
+    toastEl.textContent=msg; toastEl.classList.add("show");
+    clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.classList.remove("show"); }, 2200);
+  }
+  function confetti(){
+    var colors=["#6fce9a","#5bc6cf","#7d9af0","#e0a45f","#f4cf6a","#e89ac0"];
+    for(var i=0;i<90;i++){ (function(){
+      var p=document.createElement("div"); p.className="confetti-pc";
+      p.style.left=(Math.random()*100)+"vw"; p.style.background=colors[i%colors.length];
+      p.style.animation="confetti-fall "+(1.6+Math.random()*1.4)+"s linear "+(Math.random()*0.5)+"s forwards";
+      document.body.appendChild(p); setTimeout(function(){ p.remove(); }, 3800);
+    })(); }
+  }
+
+  // ---------- reroll ----------
+  document.getElementById("reroll").onclick = function(){
+    var btn=this; btn.classList.add("spin"); setTimeout(function(){ btn.classList.remove("spin"); }, 500);
+    // bump currently shown to "now" so next least-recently-seen surface
+    markSeen(shownBasics);
+    renderBasics();
+    showToast("Fresh set of basics \u2728");
+    document.getElementById("basics").scrollIntoView({behavior:"smooth", block:"start"});
+  };
 
   // ---------- Pyodide ----------
   var pyodide=null, pyReady=false, pyLoading=null;
@@ -418,7 +657,6 @@
     "        out.append(base64.b64encode(b.getvalue()).decode())\n"+
     "    plt.close('all'); return out\n"+
     "__nbx_capture_figs()\n";
-
   async function runCell(rec){
     var out=rec.out; out.className="out show"; out.textContent=""; rec.run.disabled=true;
     var buf=""; function append(s){ buf+=s; out.textContent=buf; }
@@ -434,53 +672,79 @@
       }
       var figsProxy=await py.runPythonAsync(FIGCODE); var figs=figsProxy.toJs(); figsProxy.destroy();
       figs.forEach(function(b64){ var img=new Image(); img.src="data:image/png;base64,"+b64; out.appendChild(img); });
-      if(!buf && !figs.length) append("(ran — no output)");
+      if(!buf && !figs.length) append("(ran \u2014 no output)");
     }catch(e){ out.classList.add("err"); append((buf?buf+"\n":"")+(e&&e.message?e.message:String(e))); }
     finally{ rec.run.disabled=false; }
   }
-
-  document.getElementById("runall").onclick = async function(){ for(var i=0;i<editors.length;i++){ await runCell(editors[i]); markExplored(editors[i].si); } };
+  document.getElementById("runall").onclick = async function(){ for(var i=0;i<editors.length;i++){ await runCell(editors[i]); markExplored(editors[i].id); } };
   document.getElementById("resetall").onclick = function(){
     editors.forEach(function(r){ r.set(r.original); r.out.className="out"; r.out.textContent=""; persist(r); });
   };
   setTimeout(function(){ ensurePy().catch(function(){ setLed("Python failed (offline?)","err"); }); }, 400);
 
-  // ---------- Supabase sync (optional, reuses Commonplace account) ----------
+  // ---------- Supabase (optional, reuses Commonplace account) ----------
   var SUPABASE_URL="https://wylxvmkcrexwfpjpbhyy.supabase.co";
   var SUPABASE_KEY="sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
-  var RESOURCE_SET="pystudy_"+PAGE_ID;
+  var SET_STATUS="pystudy_"+PAGE_ID;     // progress rows
+  var SET_CODE="pycode_"+PAGE_ID;        // saved code attempts (stored in `name`)
   var sb=null, session=null, syncEl=document.getElementById("sync");
   try{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); }catch(e){}
   function renderSync(){
     if(!sb){ syncEl.innerHTML='<span>cloud sync unavailable</span>'; return; }
     if(session){
-      syncEl.innerHTML='<span class="ok">✓ Synced</span><span class="who">'+esc(session.user.email)+'</span><button class="b" id="so">Sign out</button>';
+      syncEl.innerHTML='<span class="ok">\u2713 Synced</span><span class="who">'+esc(session.user.email)+'</span><button class="b" id="so">Sign out</button>';
       document.getElementById("so").onclick=function(){ sb.auth.signOut(); };
     } else {
-      syncEl.innerHTML='<span>Save attempts across devices ·</span><input id="se" type="email" placeholder="you@email.com"><button class="b" id="sl">Sync via email</button>';
-      var go=function(){ var em=(document.getElementById("se").value||"").trim(); if(!em) return; var b=document.getElementById("sl"); b.disabled=true; b.textContent="sending…"; sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.href.split("#")[0]}}).then(function(r){ b.disabled=false; b.textContent=r.error?"try again":"check inbox ✉"; },function(){ b.disabled=false; b.textContent="try again"; }); };
+      syncEl.innerHTML='<span>Save attempts across devices \u00b7</span><input id="se" type="email" placeholder="you@email.com"><button class="b" id="sl">Sync via email</button>';
+      var go=function(){ var em=(document.getElementById("se").value||"").trim(); if(!em) return; var b=document.getElementById("sl"); b.disabled=true; b.textContent="sending\u2026"; sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.href.split("#")[0]}}).then(function(r){ b.disabled=false; b.textContent=r.error?"try again":"check inbox \u2709"; },function(){ b.disabled=false; b.textContent="try again"; }); };
       document.getElementById("sl").onclick=go;
       var i=document.getElementById("se"); if(i) i.addEventListener("keydown",function(e){ if(e.key==="Enter") go(); });
     }
   }
-  function cloudSave(si){
-    if(!sb||!session) return; var sec=sections[si]; if(!sec) return; var now=new Date().toISOString();
+  function titleOf(id){ var b=BASIC.concat(PROBLEMS).find(function(x){return x.id===id;}); return b?b.title:id; }
+  function cloudSaveStatus(id, status){
+    if(!sb||!session) return; var now=new Date().toISOString();
     sb.from("commonplace_external_resources").upsert({
-      user_id:session.user.id, resource_set:RESOURCE_SET, item_key:"sec_"+si,
-      name:sec.title, url:location.pathname.split("/").pop()+"#sec-"+si, order_index:si,
-      status:"explored", last_attempted:now, updated_at:now
+      user_id:session.user.id, resource_set:SET_STATUS, item_key:id,
+      name:titleOf(id), url:location.pathname.split("/").pop()+"#"+id, order_index:0,
+      status:status||"explored", last_attempted:now, updated_at:now
+    },{onConflict:"user_id,resource_set,item_key"}).then(function(){},function(){});
+  }
+  function cloudSaveCode(id, code){
+    if(!sb||!session) return; var now=new Date().toISOString();
+    // store the latest code attempt in the `name` field of a separate resource_set
+    sb.from("commonplace_external_resources").upsert({
+      user_id:session.user.id, resource_set:SET_CODE, item_key:id,
+      name:(code||"").slice(0, 4000), url:location.pathname.split("/").pop()+"#"+id, order_index:0,
+      status:"attempt", last_attempted:now, updated_at:now
     },{onConflict:"user_id,resource_set,item_key"}).then(function(){},function(){});
   }
   function cloudPull(){
     if(!sb||!session) return;
-    sb.from("commonplace_external_resources").select("item_key,status").eq("resource_set",RESOURCE_SET).then(function(res){
-      if(res.error||!res.data) return; var set=exploredSet();
-      res.data.forEach(function(r){ var m=r.item_key.match(/^sec_(\d+)$/); if(m && r.status==="explored") set.add(+m[1]); });
-      saveExplored(set); paintProgress();
+    // progress
+    sb.from("commonplace_external_resources").select("item_key,status").eq("resource_set",SET_STATUS).then(function(res){
+      if(res.error||!res.data) return; var m=statusMap();
+      res.data.forEach(function(r){ var inc=r.status; if(inc && (!m[r.item_key] || (RANK[inc]||1)>(RANK[m[r.item_key]]||1))) m[r.item_key]=inc; });
+      saveStatusMap(m); paintProgress();
+    });
+    // code attempts → fill editors that are still at default
+    sb.from("commonplace_external_resources").select("item_key,name").eq("resource_set",SET_CODE).then(function(res){
+      if(res.error||!res.data) return;
+      res.data.forEach(function(r){
+        if(getCode(r.item_key)) return; // device copy wins
+        if(r.name){ setCode(r.item_key, r.name); var rec=editors.find(function(e){return e.id===r.item_key;}); if(rec) rec.set(r.name); }
+      });
     });
   }
   if(sb){ sb.auth.getSession().then(function(r){ session=r.data.session||null; renderSync(); cloudPull(); }); sb.auth.onAuthStateChange(function(_e,s){ session=s; renderSync(); if(session) cloudPull(); }); }
   else renderSync();
+
+  // ---------- go ----------
+  renderProblems();
+  renderBasics();
+  window.addEventListener("load", function(){ setTimeout(refreshAllCM, 50); });
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ setTimeout(refreshAllCM, 0); }); }
+  setTimeout(refreshAllCM, 300);
 })();
 </script>
 </body>
