@@ -57,7 +57,7 @@ CONFIG = {
             "label": "External app · 507 movements",
             "title": "Brown's 507 Mechanical Movements",
             "summary": "Interactive study app for Henry T. Brown's 1868 classic — searchable diagrams, Wikimedia animations, notes, bookmarks, and dark mode.",
-            "href": "file:///D:/%23%23%23%23%23%23%23%23%23Database/%23Mechanical/3_Advanced_study/Mechanisms/mechanisms_book.html",
+            "href": "Brown_507_Movements/index.html",
         },
     ],
 }

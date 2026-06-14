@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Brown's 507 Mechanical Movements</title>
+<style>
+  :root {
+    --bg: #fafaf7; --fg: #1a1a1a; --muted: #666; --accent: #8b5a2b;
+    --card: #fff; --border: #e5e0d6; --tag-bg: #f0ebe0; --tag-fg: #5a4a30;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+  }
+  html.dark {
+    --bg: #1a1d22; --fg: #e8e4dc; --muted: #999; --accent: #d4a574;
+    --card: #25282d; --border: #353a42; --tag-bg: #2f3239; --tag-fg: #b8a888;
+    --shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.2);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.55 Georgia, 'Iowan Old Style', serif;
+    background: var(--bg); color: var(--fg); transition: background .2s, color .2s; }
+  header.top { position: sticky; top: 0; z-index: 50; background: var(--bg);
+    border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; backdrop-filter: blur(8px); }
+  .top-row { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 1.4rem; letter-spacing: -.01em; }
+  h1 small { font-weight: normal; color: var(--muted); font-size: .8rem; margin-left: .5rem; }
+  .controls { margin-left: auto; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  input[type=search] { font: inherit; padding: .45rem .7rem; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--card); color: var(--fg); min-width: 220px; }
+  input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+  .icon-btn { background: var(--card); border: 1px solid var(--border); color: var(--fg);
+    border-radius: 6px; padding: .4rem .7rem; cursor: pointer; font: inherit; font-size: .85rem;
+    font-family: system-ui, sans-serif; }
+  .icon-btn:hover { border-color: var(--accent); }
+  .icon-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .chip-row { max-width: 1100px; margin: .75rem auto 0; display: flex; gap: .35rem; flex-wrap: wrap; }
+  .chip { background: var(--tag-bg); color: var(--tag-fg); border: 1px solid transparent;
+    border-radius: 999px; padding: .25rem .7rem; font-size: .8rem; cursor: pointer;
+    font-family: system-ui, sans-serif; }
+  .chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .stats { max-width: 1100px; margin: .5rem auto 0; color: var(--muted); font-size: .85rem;
+    font-family: system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 1.5rem auto; padding: 0 1.5rem; display: grid;
+    grid-template-columns: 1fr; gap: 1.25rem; }
+  .loading, .empty { text-align: center; color: var(--muted); padding: 3rem; font-style: italic;
+    font-family: system-ui, sans-serif; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.25rem; display: grid; grid-template-columns: 220px 1fr; gap: 1.5rem;
+    box-shadow: var(--shadow); scroll-margin-top: 6rem; transition: opacity .2s; }
+  .card.bookmarked { border-left: 3px solid var(--accent); }
+  .card.archived { opacity: .55; }
+  .card.archived:hover { opacity: 1; }
+  .card.hidden { display: none; }
+  .card-img { text-align: center; }
+  .card-img { position: relative; }
+  .card-img img { max-width: 100%; height: auto; background: #fff; padding: .5rem;
+    border-radius: 6px; cursor: zoom-in; border: 1px solid var(--border); min-height: 120px; }
+  .card-img img.broken { background: var(--tag-bg); padding: 2rem; font-size: .75rem; color: var(--muted); }
+  .anim-badge { position: absolute; top: 6px; right: 6px; background: var(--accent);
+    color: white; border: 0; border-radius: 999px; padding: .25rem .55rem; font-size: .72rem;
+    cursor: pointer; font-family: system-ui, sans-serif; font-weight: 500;
+    box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+  .anim-badge:hover { transform: scale(1.05); }
+  .anim-badge.playing { background: #c44; }
+  .fignum { font-style: italic; color: var(--muted); font-size: .85rem; margin-top: .35rem; }
+  .card-body header { display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 1rem; flex-wrap: wrap; }
+  h3 { margin: 0 0 .6rem; font-size: 1.1rem; letter-spacing: -.01em; }
+  .num { color: var(--accent); font-weight: normal; font-family: system-ui, sans-serif; }
+  .tags { display: flex; gap: .25rem; flex-wrap: wrap; }
+  .tag { background: var(--tag-bg); color: var(--tag-fg); padding: .12rem .55rem;
+    border-radius: 999px; font-size: .72rem; font-family: system-ui, sans-serif; }
+  .desc p { margin: 0 0 .7rem; }
+  .desc p:last-child { margin-bottom: 0; }
+  .xref { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); cursor: pointer; }
+  .xref:hover { background: var(--accent); color: white; }
+  .actions { margin-top: 1rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+  .actions button { background: transparent; border: 1px solid var(--border); color: var(--fg);
+    padding: .3rem .7rem; border-radius: 6px; cursor: pointer; font-size: .8rem;
+    font-family: system-ui, sans-serif; }
+  .actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .actions button.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .notes { margin-top: .75rem; }
+  .notes textarea { width: 100%; font: inherit; padding: .5rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--fg); resize: vertical; }
+  .notes .saved { color: var(--muted); font-size: .75rem; margin-top: .25rem; font-family: system-ui, sans-serif; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none;
+    align-items: center; justify-content: center; z-index: 100; cursor: zoom-out; padding: 2rem; }
+  .modal.open { display: flex; }
+  .modal img { max-width: 95%; max-height: 95vh; background: white; padding: 1rem; border-radius: 8px; }
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    background: var(--card); border: 1px solid var(--border); padding: .5rem 1rem;
+    border-radius: 6px; box-shadow: var(--shadow); font-size: .85rem; font-family: system-ui, sans-serif;
+    opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 200; }
+  .toast.show { opacity: 1; }
+  kbd { background: var(--tag-bg); padding: .1rem .4rem; border-radius: 3px;
+    font-size: .75rem; font-family: ui-monospace, monospace; border: 1px solid var(--border); }
+  footer.bottom { max-width: 1100px; margin: 2rem auto; padding: 1rem 1.5rem;
+    color: var(--muted); font-size: .8rem; font-family: system-ui, sans-serif; border-top: 1px solid var(--border); }
+  /* --- TOC drawer --- */
+  .toc-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 90;
+    opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .toc-backdrop.open { opacity: 1; pointer-events: auto; }
+  .toc { position: fixed; top: 0; left: 0; height: 100vh; width: 320px; max-width: 85vw;
+    background: var(--bg); border-right: 1px solid var(--border); z-index: 95;
+    transform: translateX(-100%); transition: transform .22s ease; display: flex; flex-direction: column;
+    box-shadow: 2px 0 16px rgba(0,0,0,.12); }
+  .toc.open { transform: translateX(0); }
+  .toc-head { padding: 1rem 1.1rem .6rem; border-bottom: 1px solid var(--border); }
+  .toc-head h2 { margin: 0 0 .5rem; font-size: 1.05rem; letter-spacing: -.01em; }
+  .toc-head input { width: 100%; font: inherit; font-size: .9rem; padding: .4rem .6rem;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--fg); }
+  .toc-head input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+  .toc-close { position: absolute; top: .7rem; right: .7rem; background: none; border: 0;
+    color: var(--muted); font-size: 1.3rem; cursor: pointer; line-height: 1; }
+  .toc-list { overflow-y: auto; flex: 1; padding: .35rem 0; }
+  .toc-item { display: block; width: 100%; text-align: left; background: none; border: 0;
+    color: var(--fg); cursor: pointer; padding: .4rem 1.1rem; font: inherit; font-size: .88rem;
+    border-left: 3px solid transparent; }
+  .toc-item:hover { background: var(--tag-bg); border-left-color: var(--accent); }
+  .toc-item .toc-num { color: var(--accent); font-family: system-ui, sans-serif; font-size: .8rem; margin-right: .5rem; }
+  .toc-empty { padding: 1rem 1.1rem; color: var(--muted); font-style: italic; font-size: .85rem; }
+  .card.flash { animation: flash 1.4s ease; }
+  @keyframes flash { 0%,15% { box-shadow: 0 0 0 3px var(--accent), var(--shadow); } 100% { box-shadow: var(--shadow); } }
+  #sentinel { height: 1px; }
+  @media (max-width: 640px) {
+    .card { grid-template-columns: 1fr; }
+    .card-img { max-width: 220px; margin: 0 auto; }
+    h1 { font-size: 1.1rem; }
+    input[type=search] { min-width: 0; flex: 1; }
+  }
+  @media print {
+    header.top, .actions, .notes, footer.bottom { display: none; }
+    .card { break-inside: avoid; box-shadow: none; opacity: 1 !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-row">
+    <h1>Brown's 507 Mechanical Movements <small id="subtitle">· loading…</small></h1>
+    <div class="controls">
+      <button class="icon-btn" id="toc-toggle" title="Table of contents (T)">☰ Contents</button>
+      <button class="icon-btn" id="random" title="Jump to a random movement (R)">⚄ Random</button>
+      <input type="search" id="search" placeholder="Search… ( / )" />
+      <button class="icon-btn" id="filter-bookmarks" title="Show only bookmarked">★ Bookmarks</button>
+      <button class="icon-btn" id="filter-archived" title="Toggle archived visibility">✓ Hide done</button>
+      <button class="icon-btn" id="theme" title="Dark mode (D)">◐</button>
+    </div>
+  </div>
+  <div class="chip-row" id="chips"></div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="toc-backdrop" id="toc-backdrop"></div>
+<nav class="toc" id="toc" aria-label="Table of contents">
+  <div class="toc-head">
+    <button class="toc-close" id="toc-close" title="Close (Esc)">×</button>
+    <h2>Contents</h2>
+    <input type="search" id="toc-search" placeholder="Filter list…" />
+  </div>
+  <div class="toc-list" id="toc-list"></div>
+</nav>
+
+<main id="grid">
+  <div class="loading" id="loading">Loading mechanisms…</div>
+</main>
+<div id="sentinel"></div>
+
+<footer class="bottom">
+  Henry T. Brown, <em>Five Hundred and Seven Mechanical Movements</em> (1868).
+  Keyboard: <kbd>/</kbd> search · <kbd>↑</kbd>/<kbd>↓</kbd> navigate · <kbd>T</kbd> contents · <kbd>R</kbd> random · <kbd>Esc</kbd> close · <kbd>D</kbd> dark mode.
+  Notes, bookmarks &amp; archive sync to Supabase.
+</footer>
+
+<div class="modal" id="modal" onclick="this.classList.remove('open')">
+  <img id="modal-img" alt="Zoomed diagram" />
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://ulgrfumbwjovbjzjiems.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZ3JmdW1id2pvdmJqemppZW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNzIyNjcsImV4cCI6MjA4Mjk0ODI2N30.ix5Vh4Y3GXNbQbzVtTD_WSko0L3cr5q_eCnTuDEMh7M";
+const BUCKET = "mechanisms-book-diagrams";
+const REST = `${SUPABASE_URL}/rest/v1`;
+const STORAGE = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}`;
+const HEADERS = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" };
+
+const LS_THEME = "mb_theme_v1";
+if (localStorage.getItem(LS_THEME) === "dark") document.documentElement.classList.add("dark");
+
+const $ = (s) => document.querySelector(s);
+const grid = $("#grid"), loading = $("#loading"), stats = $("#stats"), chips = $("#chips");
+const subtitle = $("#subtitle"), search = $("#search"), toast = $("#toast");
+const toc = $("#toc"), tocList = $("#toc-list"), tocBackdrop = $("#toc-backdrop"), tocSearch = $("#toc-search");
+const sentinel = $("#sentinel");
+
+let movements = [], categories = [], userState = {};
+let activeTag = null, filterBookmarks = false, hideArchived = false;
+let saveTimer = {};
+
+// --- windowed rendering ---
+const BATCH = 30;
+let visible = [], renderedCount = 0;
+
+async function api(path, opts = {}) {
+  const res = await fetch(`${REST}${path}`, { headers: HEADERS, ...opts });
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  return res.status === 204 ? null : res.json();
+}
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove("show"), 1500);
+}
+
+async function loadAll() {
+  try {
+    const [m, c, mc, u] = await Promise.all([
+      api(`/mechanisms_book_movements?select=*&order=id.asc`),
+      api(`/mechanisms_book_categories?select=*&order=sort_order.asc`),
+      api(`/mechanisms_book_movement_categories?select=*`),
+      api(`/mechanisms_book_user_state?select=*`),
+    ]);
+    movements = m;
+    categories = c;
+    const catMap = Object.fromEntries(c.map(x => [x.id, x]));
+    const movCats = {};
+    mc.forEach(r => (movCats[r.movement_id] = movCats[r.movement_id] || []).push(catMap[r.category_id]));
+    movements.forEach(x => x.categories = (movCats[x.id] || []).sort((a,b)=>a.sort_order-b.sort_order));
+    u.forEach(s => userState[s.movement_id] = s);
+    subtitle.textContent = `· ${movements.length} loaded`;
+    renderChips();
+    render();
+  } catch (e) {
+    loading.textContent = `Failed to load: ${e.message}`;
+    console.error(e);
+  }
+}
+
+function renderChips() {
+  const counts = {};
+  movements.forEach(m => m.categories.forEach(c => counts[c.id] = (counts[c.id]||0) + 1));
+  const present = categories.filter(c => counts[c.id]);
+  chips.innerHTML = present.map(c =>
+    `<button class="chip" data-cat="${c.id}">${c.name} <span style="opacity:.6">${counts[c.id]}</span></button>`
+  ).join("");
+  chips.querySelectorAll(".chip").forEach(btn => btn.onclick = () => {
+    const id = +btn.dataset.cat;
+    if (activeTag === id) { activeTag = null; btn.classList.remove("active"); }
+    else { chips.querySelectorAll(".chip").forEach(b => b.classList.remove("active"));
+           btn.classList.add("active"); activeTag = id; }
+    render();
+  });
+}
+
+function linkRefs(desc) {
+  const ids = new Set(movements.map(m => m.id));
+  return desc.replace(/\b(Resembles|Resembling|same as|modification of|like|as in|as)\s+(\d+)\b/g,
+    (full, verb, n) => ids.has(+n)
+      ? `${verb} <a href="#m${n}" class="xref" data-jump="${n}">${n}</a>`
+      : full);
+}
+
+function cardHtml(m) {
+  const state = userState[m.id] || {};
+  const tags = m.categories.map(c => `<span class="tag">${c.name}</span>`).join("");
+  const descHtml = linkRefs(m.description)
+    .split(/\n\n+/).map(p => `<p>${p}</p>`).join("");
+  const imgUrl = `${STORAGE}/${encodeURIComponent(m.image_path)}`;
+  const animBadge = m.has_animation && m.animation_url
+    ? `<button class="anim-badge" data-anim="${m.animation_url}" data-static="${imgUrl}" data-id="${m.id}" title="Play animation">▶ animate</button>`
+    : '';
+  return `
+    <article class="card ${state.bookmarked ? "bookmarked" : ""} ${state.archived ? "archived" : ""}"
+             id="m${m.id}" data-id="${m.id}" data-text="${(m.title+" "+m.description+" "+m.number_label).toLowerCase().replace(/"/g,'&quot;')}">
+      <div class="card-img">
+        <img src="${imgUrl}" alt="Fig ${m.number_label}" loading="lazy" decoding="async"
+             onclick="zoom(this)"
+             onerror="this.classList.add('broken');this.alt='Image not yet uploaded';this.removeAttribute('src')" />
+        ${animBadge}
+        <div class="fignum">Fig. ${m.number_label}</div>
+      </div>
+      <div class="card-body">
+        <header>
+          <h3><span class="num">#${m.number_label}</span> ${m.title || ""}</h3>
+          <div class="tags">${tags}</div>
+        </header>
+        <div class="desc">${descHtml}</div>
+        <div class="actions">
+          <button data-act="bookmark" data-id="${m.id}" class="${state.bookmarked?"active":""}">★ ${state.bookmarked?"Bookmarked":"Bookmark"}</button>
+          <button data-act="archive"  data-id="${m.id}" class="${state.archived?"active":""}">✓ ${state.archived?"Done":"Mark done"}</button>
+          <button data-act="notes"    data-id="${m.id}">📝 Notes${state.notes?" (saved)":""}</button>
+        </div>
+        <div class="notes" id="notes-${m.id}" hidden>
+          <textarea data-id="${m.id}" rows="3" placeholder="Your study notes for #${m.number_label}…">${(state.notes||"").replace(/</g,"&lt;")}</textarea>
+          <div class="saved" id="saved-${m.id}"></div>
+        </div>
+      </div>
+    </article>`;
+}
+
+function render() {
+  const q = search.value.trim().toLowerCase();
+  visible = movements.filter(m => {
+    const state = userState[m.id] || {};
+    const matchQ = !q || (m.title+" "+m.description+" "+m.number_label).toLowerCase().includes(q);
+    const matchT = !activeTag || m.categories.some(c => c.id === activeTag);
+    const matchB = !filterBookmarks || state.bookmarked;
+    const matchA = !hideArchived || !state.archived;
+    return matchQ && matchT && matchB && matchA;
+  });
+  renderedCount = 0;
+  grid.innerHTML = visible.length ? "" : `<div class="empty">No mechanisms match.</div>`;
+  if (visible.length) appendBatch();
+  const tagName = activeTag ? categories.find(c => c.id === activeTag)?.name : null;
+  stats.textContent =
+    `Showing ${visible.length} of ${movements.length}` +
+    (tagName ? ` · ${tagName}` : "") +
+    (filterBookmarks ? " · bookmarks only" : "") +
+    (hideArchived ? " · hiding done" : "");
+  renderToc();
+}
+
+// Render the next slice of `visible` into the grid, binding only the new cards.
+function appendBatch() {
+  if (renderedCount >= visible.length) return;
+  const slice = visible.slice(renderedCount, renderedCount + BATCH);
+  grid.insertAdjacentHTML("beforeend", slice.map(cardHtml).join(""));
+  const allCards = grid.querySelectorAll(".card");
+  bindCards([...allCards].slice(renderedCount));
+  renderedCount += slice.length;
+}
+
+// Ensure the card at the given index within `visible` is in the DOM, then return its element.
+function ensureRendered(idx) {
+  while (renderedCount <= idx && renderedCount < visible.length) appendBatch();
+  return grid.children[idx];
+}
+
+// Append more cards as the sentinel scrolls into view.
+new IntersectionObserver((entries) => {
+  if (entries.some(e => e.isIntersecting)) appendBatch();
+}, { rootMargin: "600px" }).observe(sentinel);
+
+function jumpToId(id, flash = true) {
+  const idx = visible.findIndex(m => m.id === id);
+  if (idx === -1) return false;
+  const el = ensureRendered(idx);
+  if (!el) return false;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (flash) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+  return true;
+}
+
+function bindCards(cards) {
+  // `cards` is an array of newly-added .card elements; normalize to array.
+  const list = [...(cards || grid.querySelectorAll(".card"))];
+  list.forEach(card => {
+    card.querySelectorAll("button[data-act]").forEach(b => b.onclick = () => action(b.dataset.act, +b.dataset.id, b));
+    card.querySelectorAll("textarea[data-id]").forEach(t => t.oninput = () => saveNotes(+t.dataset.id, t.value));
+    card.querySelectorAll("a[data-jump]").forEach(a => a.onclick = (e) => {
+      e.preventDefault();
+      jumpToId(+a.dataset.jump);
+    });
+    bindAnimBadges(card.querySelectorAll("button.anim-badge"));
+  });
+}
+
+function bindAnimBadges(badges) {
+  badges.forEach(b => {
+    const animUrl = b.dataset.anim;
+    const isVideo = /\.(mp4|webm)(\?|$)/i.test(animUrl);
+    if (!isVideo) {
+      const probe = new Image();
+      probe.onerror = () => { b.style.display = 'none'; };
+      probe.src = animUrl;
+    }
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const wrap = b.parentElement;
+      const staticImg = wrap.querySelector('img');
+      if (b.classList.contains("playing")) {
+        const v = wrap.querySelector('video');
+        if (v) v.remove();
+        staticImg.style.display = '';
+        b.classList.remove("playing");
+        b.textContent = "▶ animate";
+      } else {
+        if (isVideo) {
+          const v = document.createElement('video');
+          v.src = animUrl;
+          v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+          v.style.maxWidth = '100%'; v.style.borderRadius = '6px';
+          v.style.border = '1px solid var(--border)';
+          v.style.background = '#fff'; v.style.padding = '.5rem';
+          v.onerror = () => {
+            v.remove(); staticImg.style.display = '';
+            b.textContent = "⚠ unavailable"; b.style.background = '#888';
+            b.disabled = true; setTimeout(() => b.style.display = 'none', 1500);
+          };
+          staticImg.style.display = 'none';
+          staticImg.insertAdjacentElement('afterend', v);
+        } else {
+          const origOnError = staticImg.onerror;
+          staticImg.onerror = () => {
+            staticImg.src = b.dataset.static;
+            staticImg.classList.remove("broken");
+            staticImg.onerror = origOnError;
+            b.classList.remove("playing");
+            b.textContent = "⚠ unavailable"; b.style.background = '#888';
+            b.disabled = true; setTimeout(() => b.style.display = 'none', 1500);
+          };
+          staticImg.classList.remove("broken");
+          staticImg.src = animUrl;
+        }
+        b.classList.add("playing");
+        b.textContent = "■ stop";
+      }
+    };
+  });
+}
+
+async function upsertState(id, patch) {
+  const current = userState[id] || { movement_id: id, archived: false, bookmarked: false, notes: null };
+  const next = { ...current, ...patch, movement_id: id };
+  userState[id] = next;
+  await fetch(`${REST}/mechanisms_book_user_state`, {
+    method: "POST",
+    headers: { ...HEADERS, Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify(next),
+  });
+}
+
+function updateCardChrome(id) {
+  const card = document.getElementById("m" + id);
+  if (!card) return;
+  const st = userState[id] || {};
+  card.classList.toggle("bookmarked", !!st.bookmarked);
+  card.classList.toggle("archived", !!st.archived);
+  const bb = card.querySelector('button[data-act="bookmark"]');
+  const ab = card.querySelector('button[data-act="archive"]');
+  if (bb) { bb.classList.toggle("active", !!st.bookmarked); bb.textContent = "★ " + (st.bookmarked ? "Bookmarked" : "Bookmark"); }
+  if (ab) { ab.classList.toggle("active", !!st.archived);   ab.textContent = "✓ " + (st.archived ? "Done" : "Mark done"); }
+}
+
+async function action(act, id, btn) {
+  const state = userState[id] || {};
+  if (act === "bookmark") {
+    const now = !state.bookmarked;
+    await upsertState(id, { bookmarked: now });
+    showToast(now ? "Bookmarked" : "Bookmark removed");
+    if (filterBookmarks && !now) render();
+    else updateCardChrome(id);
+  } else if (act === "archive") {
+    const now = !state.archived;
+    await upsertState(id, { archived: now });
+    showToast(now ? "Marked done" : "Re-opened");
+    if (hideArchived && now) render();
+    else updateCardChrome(id);
+  } else if (act === "notes") {
+    const n = document.getElementById("notes-" + id);
+    n.hidden = !n.hidden;
+    if (!n.hidden) n.querySelector("textarea").focus();
+  }
+}
+
+function saveNotes(id, value) {
+  clearTimeout(saveTimer[id]);
+  const saved = document.getElementById("saved-" + id);
+  if (saved) saved.textContent = "Saving…";
+  saveTimer[id] = setTimeout(async () => {
+    await upsertState(id, { notes: value || null });
+    if (saved) saved.textContent = "Saved";
+    setTimeout(() => { if (saved) saved.textContent = ""; }, 1500);
+  }, 600);
+}
+
+window.zoom = (img) => {
+  if (!img.src) return;
+  $("#modal-img").src = img.src;
+  $("#modal").classList.add("open");
+};
+
+// --- Table of contents ---
+function renderToc() {
+  const f = tocSearch.value.trim().toLowerCase();
+  const items = visible.filter(m => !f ||
+    (m.number_label + " " + (m.title || "")).toLowerCase().includes(f));
+  tocList.innerHTML = items.length
+    ? items.map(m =>
+        `<button class="toc-item" data-id="${m.id}"><span class="toc-num">#${m.number_label}</span>${m.title || "—"}</button>`
+      ).join("")
+    : `<div class="toc-empty">Nothing matches.</div>`;
+  tocList.querySelectorAll(".toc-item").forEach(b => b.onclick = () => {
+    jumpToId(+b.dataset.id);
+    closeToc();
+  });
+}
+function openToc()  { toc.classList.add("open"); tocBackdrop.classList.add("open"); }
+function closeToc() { toc.classList.remove("open"); tocBackdrop.classList.remove("open"); }
+function toggleToc() { toc.classList.contains("open") ? closeToc() : openToc(); }
+
+$("#toc-toggle").onclick = toggleToc;
+$("#toc-close").onclick = closeToc;
+tocBackdrop.onclick = closeToc;
+tocSearch.oninput = renderToc;
+
+// --- Random movement ---
+function randomMech() {
+  if (!visible.length) return;
+  const m = visible[Math.floor(Math.random() * visible.length)];
+  jumpToId(m.id);
+  showToast(`#${m.number_label} ${m.title || ""}`.trim());
+}
+$("#random").onclick = randomMech;
+
+search.oninput = render;
+$("#filter-bookmarks").onclick = (e) => { filterBookmarks = !filterBookmarks; e.target.classList.toggle("active", filterBookmarks); render(); };
+$("#filter-archived").onclick  = (e) => { hideArchived  = !hideArchived;  e.target.classList.toggle("active", hideArchived);  e.target.textContent = hideArchived ? "✓ Hidden" : "✓ Hide done"; render(); };
+$("#theme").onclick = () => {
+  document.documentElement.classList.toggle("dark");
+  localStorage.setItem(LS_THEME, document.documentElement.classList.contains("dark") ? "dark" : "light");
+};
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("input,textarea")) { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.key === "/") { e.preventDefault(); search.focus(); }
+  if (e.key === "Escape") { $("#modal").classList.remove("open"); closeToc(); }
+  if (e.key.toLowerCase() === "d") $("#theme").click();
+  if (e.key.toLowerCase() === "t") toggleToc();
+  if (e.key.toLowerCase() === "r") randomMech();
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const cards = [...document.querySelectorAll(".card")];
+    const y = window.scrollY + 100;
+    const idx = cards.findIndex(c => c.offsetTop >= y);
+    const next = e.key === "ArrowDown" ? (idx === -1 ? 0 : Math.min(idx + 1, cards.length - 1))
+                                       : Math.max((idx === -1 ? cards.length : idx) - 1, 0);
+    cards[next]?.scrollIntoView({behavior: "smooth", block: "start"});
+  }
+});
+
+loadAll();
+
+</script>
+</body>
+</html>
