@@ -13,7 +13,7 @@ const GROUP_COLORS = {
 };
 const SPECTRUM_VARS = ["var(--cyan)", "var(--blue)", "var(--violet)", "var(--magenta)", "var(--solar)"];
 const ACCENTS = window.AI_ACCENTS || {};
-const NB_BASE = "./notebooks/index.html?path=";   // real JupyterLite target
+const NB_BASE = "./html/";   // standalone nbconvert HTML (open directly, no server)
 const PROGRESS_KEY = "aistudy.progress.v1";
 const ROUTE_KEY = "aistudy.route.v1";
 
@@ -232,7 +232,7 @@ function Contents({ prog, setMark, onOpen }) {
 function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
   const prev = idx > 0 ? CHAPTERS[idx - 1] : null;
   const next = idx < CHAPTERS.length - 1 ? CHAPTERS[idx + 1] : null;
-  const nbUrl = NB_BASE + encodeURIComponent(ch.file);
+  const nbUrl = NB_BASE + ch.file.replace(/\.ipynb$/, ".html");
 
   return (
     <div className="cover" style={{ "--acc": ACCENTS[ch.id] }}>
@@ -292,7 +292,7 @@ function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
             <div className="side-row"><span className="k">Status</span><span className="v" style={{ whiteSpace: "nowrap", color: status === "done" ? "var(--done)" : status === "revisit" ? "var(--coral)" : "var(--ink-mute)" }}>{status === "done" ? "Understood" : status === "revisit" ? "To revisit" : "Not started"}</span></div>
 
             <div className="cta-row">
-              <a className="btn primary" href={nbUrl}>Open the live notebook <span className="arr">→</span></a>
+              <a className="btn primary" href={nbUrl}>Open the notebook <span className="arr">→</span></a>
             </div>
             <div className="mark-row">
               <button className={"mark-btn" + (status === "done" ? " on-done" : "")} onClick={() => setMark(ch.id, "done")}>✓ Understood</button>
