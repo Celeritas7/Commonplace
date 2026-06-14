@@ -103,13 +103,6 @@
   .ip-msg { font-family: "JetBrains Mono", monospace; font-size: 13px; line-height: 1.6; color: var(--ink-mute);
     background: rgba(251,252,246,0.7); border: 1px dashed var(--sage); border-radius: 10px; padding: 14px 18px; }
   .ip-list { display: flex; flex-direction: column; gap: 12px; }
-
-  /* ===== 100 Days — section groups ===== */
-  .hd-group { margin-top: 24px; }
-  .hd-group:first-child { margin-top: 4px; }
-  .hd-group-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 11px; padding-bottom: 6px; border-bottom: 1px solid var(--line-soft); }
-  .hd-group-head h3 { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 24px; line-height: 1; letter-spacing: -0.2px; margin: 0; color: var(--green-dk); }
-  .hd-group-count { font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 700; color: var(--green); background: var(--sage-soft); border: 1px solid var(--sage); border-radius: 999px; padding: 1px 8px; }
   .ip-ex { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--sage); border-radius: 12px; padding: 14px 16px; }
   .ip-ex-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .ip-ex-title { flex: 1; min-width: 200px; font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 21px; line-height: 1.1; color: var(--ink); }
@@ -239,18 +232,17 @@
     </div>
   </section>
 
-  <!-- ===== 100 DAYS (live, grouped by section) ===== -->
-  <section class="sec" id="hundred-days">
+  <!-- ===== 100 DAYS ===== -->
+  <section class="sec">
     <div class="sec-head">
       <span class="n">§ III</span>
       <h2>100 Days (Angela Yu)</h2>
-      <span class="count" id="hd-count">—</span>
+      <span class="count">1</span>
       <span class="ln"></span>
-      <button class="ip-refresh" id="hd-refresh" type="button" hidden>⟳ Refresh</button>
     </div>
-    <p class="sec-desc">Your imported Python practice, grouped by course section — with every attempt and mistake. Sign in (top right) to load.</p>
-    <div id="hd-body">
-      <div class="ip-msg">Sign in above to load your 100 Days practice.</div>
+    <p class="sec-desc">Course notes from the 100 Days of Code course — coming soon.</p>
+    <div class="grid">
+      <a class="card coming" href="100_days/index.html"><span class="ct">Coming soon</span><span class="soon">soon</span></a>
     </div>
   </section>
 
@@ -275,7 +267,20 @@
     </div>
   </section>
 
-  <!-- ===== IMPORTED PRACTICE: folded into §III (100 Days), grouped by section ===== -->
+  <!-- ===== IMPORTED PRACTICE (Supabase) ===== -->
+  <section class="sec" id="imported">
+    <div class="sec-head">
+      <span class="n">§ V</span>
+      <h2>Imported Practice</h2>
+      <span class="count" id="ip-count">—</span>
+      <span class="ln"></span>
+      <button class="ip-refresh" id="ip-refresh" type="button" hidden>⟳ Refresh</button>
+    </div>
+    <p class="sec-desc">Your saved Python exercises, attempts and mistakes — synced from your practice sessions. Sign in (top right) to load them.</p>
+    <div id="ip-body">
+      <div class="ip-msg">Sign in above to load your imported Python practice.</div>
+    </div>
+  </section>
 
   <div class="note">First run on any page downloads Python (~10&nbsp;MB) from a CDN, so an internet connection is needed. Cells share one session — run them top-to-bottom.</div>
 
@@ -335,8 +340,8 @@ function sendMagicLink(){
 
 /* ---------- load: python exercises + their attempts & mistakes ---------- */
 function loadImported(){
-  if(!currentUser){ renderGrouped(null); return; }
-  $("hd-body").innerHTML = '<div class="ip-msg">Loading your Python practice…</div>';
+  if(!currentUser){ renderImported(null); return; }
+  $("ip-body").innerHTML = '<div class="ip-msg">Loading your Python practice…</div>';
   // Embed related rows via the exercise_id foreign keys; RLS scopes attempts/mistakes to the signed-in user.
   sb.from("commonplace_exercises")
     .select("*, commonplace_attempts(*), commonplace_mistakes(*)")
@@ -344,113 +349,82 @@ function loadImported(){
     .order("order_index")
     .then(function(res){
       if(res.error){
-        $("hd-count").textContent = "—";
-        $("hd-body").innerHTML = '<div class="ip-msg">Could not load: '+esc(res.error.message)+'</div>';
+        $("ip-count").textContent = "—";
+        $("ip-body").innerHTML = '<div class="ip-msg">Could not load: '+esc(res.error.message)+'</div>';
         return;
       }
-      renderGrouped(res.data || []);
+      renderImported(res.data || []);
     });
 }
 
-/* section name = first tag that isn't an import:* marker (e.g. "Section 3: …", "own project") */
-function sectionOf(ex){
-  var tags = ex.tags || [];
-  for(var i=0;i<tags.length;i++){ if(!/^import:/i.test(tags[i])) return tags[i]; }
-  return "Ungrouped";
-}
-/* course sections ("Section 3: …") sort numerically and come first; other buckets follow alphabetically */
-function sectionSortKey(name){
-  var m = /^\s*Section\s+(\d+)/i.exec(name);
-  return m ? [0, parseInt(m[1],10), ""] : [1, 0, String(name).toLowerCase()];
-}
-var byDateDesc = function(a, b){ return String(b.created_at||"").localeCompare(String(a.created_at||"")); };
-
-function renderGrouped(rows){
-  var body = $("hd-body"), refresh = $("hd-refresh");
+function renderImported(rows){
+  var body = $("ip-body"), refresh = $("ip-refresh");
   if(!currentUser){
-    $("hd-count").textContent = "—";
+    $("ip-count").textContent = "—";
     if(refresh){ refresh.hidden = true; }
-    body.innerHTML = '<div class="ip-msg">Sign in above to load your 100 Days practice.</div>';
+    body.innerHTML = '<div class="ip-msg">Sign in above to load your imported Python practice.</div>';
     return;
   }
   if(refresh){ refresh.hidden = false; }
   rows = rows || [];
-  $("hd-count").textContent = rows.length;
+  $("ip-count").textContent = rows.length;
   if(!rows.length){
-    body.innerHTML = '<div class="ip-msg">No imported Python exercises yet. Once you practise with subject = python, they\'ll appear here grouped by section.</div>';
+    body.innerHTML = '<div class="ip-msg">No imported Python exercises yet. Once you practise with subject = python, they\'ll appear here with your attempts and mistakes.</div>';
     return;
   }
-  // group rows by section, preserving order_index order within each group
-  var groups = {}, order = [];
-  rows.forEach(function(ex){
-    var s = sectionOf(ex);
-    if(!groups[s]){ groups[s] = []; order.push(s); }
-    groups[s].push(ex);
-  });
-  order.sort(function(a, b){
-    var ka = sectionSortKey(a), kb = sectionSortKey(b);
-    return ka[0]-kb[0] || ka[1]-kb[1] || ka[2].localeCompare(kb[2]);
-  });
-  body.innerHTML = order.map(function(name){
-    var exs = groups[name];
-    return '<div class="hd-group">' +
-        '<div class="hd-group-head"><h3>'+esc(name)+'</h3><span class="hd-group-count">'+exs.length+'</span></div>' +
-        '<div class="ip-list">' + exs.map(renderExerciseCard).join("") + '</div>' +
+  var byDateDesc = function(a, b){ return String(b.created_at||"").localeCompare(String(a.created_at||"")); };
+
+  body.innerHTML = '<div class="ip-list">' + rows.map(function(ex){
+    var diff = (ex.difficulty||"").toLowerCase();
+    var diffBadge = diff ? '<span class="ip-badge d-'+esc(diff)+'">'+esc(diff)+'</span>' : '';
+    var tags = (ex.tags||[]).map(function(t){ return '<span class="ip-tag">'+esc(t)+'</span>'; }).join("");
+
+    var attempts = (ex.commonplace_attempts||[]).slice().sort(byDateDesc);
+    var mistakes = (ex.commonplace_mistakes||[]).slice().sort(byDateDesc);
+    var passN = attempts.filter(function(a){ return a.passed === true; }).length;
+    var failN = attempts.filter(function(a){ return a.passed === false; }).length;
+
+    // Each attempt expands to show the actual code, plus stdout when present.
+    var attemptsHtml = attempts.length ? attempts.map(function(a){
+      var v = a.passed === true ? ["v-pass","✓ pass"] : (a.passed === false ? ["v-fail","✗ fail"] : ["v-ungraded","• ungraded"]);
+      var dur = (a.duration_ms != null) ? '<span class="att-dur">'+esc(a.duration_ms)+' ms</span>' : '';
+      var code = (a.code && String(a.code).length)
+        ? '<h5>Code</h5><pre class="ip-code">'+esc(a.code)+'</pre>'
+        : '<div class="ip-empty-sub">No code saved for this attempt.</div>';
+      var out = (a.stdout && String(a.stdout).length) ? '<h5>Output</h5><pre class="ip-stdout">'+esc(a.stdout)+'</pre>' : '';
+      return '<details class="ip-att-d">' +
+          '<summary class="ip-att-sum"><span class="verdict '+v[0]+'">'+v[1]+'</span>' +
+            '<span class="att-date">'+esc(fmtDate(a.created_at))+'</span>'+dur+'</summary>' +
+          '<div class="ip-att-detail">'+code+out+'</div>' +
+        '</details>';
+    }).join("") : '<div class="ip-empty-sub">No attempts recorded.</div>';
+
+    // reason is free-form text — show it verbatim (wrapping) behind a neutral "Note" badge.
+    var mistakesHtml = mistakes.length ? mistakes.map(function(m){
+      var reasonText = (m.reason && String(m.reason).trim()) ? esc(m.reason) : '<em>(no note)</em>';
+      return '<div class="ip-mis'+(m.resolved?" resolved":"")+'">' +
+          '<span class="m-reason m-note">Note</span>' +
+          '<span class="m-reason-text">'+reasonText+'</span>' +
+          (m.resolved?'<span class="ip-tag">resolved</span>':'') +
+          '<span class="m-date">'+esc(fmtDate(m.created_at))+'</span>' +
+        '</div>';
+    }).join("") : '<div class="ip-empty-sub">No mistakes filed. 🎉</div>';
+
+    return '<div class="ip-ex">' +
+        '<div class="ip-ex-head">' +
+          '<span class="ip-ex-title">'+esc(ex.title||"Untitled")+'</span>' +
+          '<span class="ip-badges">'+diffBadge+tags+'</span>' +
+        '</div>' +
+        (ex.prompt ? '<p class="ip-prompt">'+esc(ex.prompt)+'</p>' : '') +
+        '<div class="ip-sub"><h4>Attempts — '+passN+' pass · '+failN+' fail · '+attempts.length+' total</h4>' +
+          '<div class="ip-attempts">'+attemptsHtml+'</div></div>' +
+        '<div class="ip-sub"><h4>Mistakes</h4><div class="ip-mistakes">'+mistakesHtml+'</div></div>' +
       '</div>';
-  }).join("");
-}
-
-/* one exercise card: title, badges/tags, prompt, expandable attempts, mistakes */
-function renderExerciseCard(ex){
-  var diff = (ex.difficulty||"").toLowerCase();
-  var diffBadge = diff ? '<span class="ip-badge d-'+esc(diff)+'">'+esc(diff)+'</span>' : '';
-  var tags = (ex.tags||[]).map(function(t){ return '<span class="ip-tag">'+esc(t)+'</span>'; }).join("");
-
-  var attempts = (ex.commonplace_attempts||[]).slice().sort(byDateDesc);
-  var mistakes = (ex.commonplace_mistakes||[]).slice().sort(byDateDesc);
-  var passN = attempts.filter(function(a){ return a.passed === true; }).length;
-  var failN = attempts.filter(function(a){ return a.passed === false; }).length;
-
-  // Each attempt expands to show the actual code, plus stdout when present.
-  var attemptsHtml = attempts.length ? attempts.map(function(a){
-    var v = a.passed === true ? ["v-pass","✓ pass"] : (a.passed === false ? ["v-fail","✗ fail"] : ["v-ungraded","• ungraded"]);
-    var dur = (a.duration_ms != null) ? '<span class="att-dur">'+esc(a.duration_ms)+' ms</span>' : '';
-    var code = (a.code && String(a.code).length)
-      ? '<h5>Code</h5><pre class="ip-code">'+esc(a.code)+'</pre>'
-      : '<div class="ip-empty-sub">No code saved for this attempt.</div>';
-    var out = (a.stdout && String(a.stdout).length) ? '<h5>Output</h5><pre class="ip-stdout">'+esc(a.stdout)+'</pre>' : '';
-    return '<details class="ip-att-d">' +
-        '<summary class="ip-att-sum"><span class="verdict '+v[0]+'">'+v[1]+'</span>' +
-          '<span class="att-date">'+esc(fmtDate(a.created_at))+'</span>'+dur+'</summary>' +
-        '<div class="ip-att-detail">'+code+out+'</div>' +
-      '</details>';
-  }).join("") : '<div class="ip-empty-sub">No attempts recorded.</div>';
-
-  // reason is free-form text — show it verbatim (wrapping) behind a neutral "Note" badge.
-  var mistakesHtml = mistakes.length ? mistakes.map(function(m){
-    var reasonText = (m.reason && String(m.reason).trim()) ? esc(m.reason) : '<em>(no note)</em>';
-    return '<div class="ip-mis'+(m.resolved?" resolved":"")+'">' +
-        '<span class="m-reason m-note">Note</span>' +
-        '<span class="m-reason-text">'+reasonText+'</span>' +
-        (m.resolved?'<span class="ip-tag">resolved</span>':'') +
-        '<span class="m-date">'+esc(fmtDate(m.created_at))+'</span>' +
-      '</div>';
-  }).join("") : '<div class="ip-empty-sub">No mistakes filed. 🎉</div>';
-
-  return '<div class="ip-ex">' +
-      '<div class="ip-ex-head">' +
-        '<span class="ip-ex-title">'+esc(ex.title||"Untitled")+'</span>' +
-        '<span class="ip-badges">'+diffBadge+tags+'</span>' +
-      '</div>' +
-      (ex.prompt ? '<p class="ip-prompt">'+esc(ex.prompt)+'</p>' : '') +
-      '<div class="ip-sub"><h4>Attempts — '+passN+' pass · '+failN+' fail · '+attempts.length+' total</h4>' +
-        '<div class="ip-attempts">'+attemptsHtml+'</div></div>' +
-      '<div class="ip-sub"><h4>Mistakes</h4><div class="ip-mistakes">'+mistakesHtml+'</div></div>' +
-    '</div>';
+  }).join("") + '</div>';
 }
 
 /* ---------- wire up ---------- */
-$("hd-refresh").onclick = loadImported;
+$("ip-refresh").onclick = loadImported;
 renderAuth();
 sb.auth.onAuthStateChange(function(_event, session){
   currentUser = session ? session.user : null;
