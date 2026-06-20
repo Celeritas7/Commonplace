@@ -230,6 +230,10 @@
 .cc-runbtn{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;cursor:pointer;border:none;border-radius:7px;padding:3px 11px;background:#2f6b4f;color:#fff;}
 .cc-runbtn:disabled{opacity:.6;cursor:default;}
 .cc-resetbtn{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:3px 9px;background:var(--card);color:var(--ink-mute);}
+.cc-savebtn{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;cursor:pointer;border:1px solid var(--brass);border-radius:7px;padding:3px 11px;background:var(--brass);color:#fff;}
+.cc-savebtn:disabled{opacity:.7;cursor:default;}
+.cc-savebtn.is-saved{background:#2f6b4f;border-color:#2f6b4f;}
+.cc-savebtn.is-err{background:#b3261e;border-color:#b3261e;}
 .cc-editor{position:relative;background:var(--green-deep);}
 /* ---- Focus / expand mode ---- */
 .cc-expandbtn{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:3px 9px;background:var(--card);color:var(--ink-mute);line-height:1;}
@@ -520,6 +524,44 @@ function loadImported(){
     });
 }
 
+/* explicit "Save attempt" — inserts the current editor (and last run output, if any)
+   as a NEW commonplace_attempts row = the next v(n) in this exercise's chain.
+   user_id MUST be the session user (own_insert RLS: auth.uid() = user_id). */
+window.__saveAttempt = function(key, btn){
+  if(!currentUser){ toast("Sign in to save your attempt."); return; }
+  var HC = window.__hc;
+  var exId = String(key).split(':')[0];               // key = exercise_id + ':' + attempt index
+  var taEl = document.querySelector('.cc-ta[data-key="'+key+'"]');
+  var code = taEl ? taEl.value : ((HC.edits[key]!=null) ? HC.edits[key] : '');
+  var run = HC.out[key];
+  var stdout = (run && run.text) ? run.text : '';      // stdout only if a run produced output
+  // next version number for friendly confirmation
+  var vnum = '', rows = HC.rows || [];
+  for(var ri=0; ri<rows.length; ri++){ if(rows[ri].id===exId){ vnum = 'v'+(((rows[ri].commonplace_attempts||[]).length)+1); break; } }
+  var orig = btn.textContent;
+  function fail(msg){
+    btn.classList.remove('is-saved'); btn.classList.add('is-err');
+    btn.textContent = 'Save failed'; btn.disabled = false;
+    toast("Save failed: "+msg);
+    setTimeout(function(){ btn.classList.remove('is-err'); btn.textContent = orig; }, 4000);
+  }
+  btn.disabled = true; btn.classList.remove('is-err','is-saved'); btn.textContent = 'Saving…';
+  sb.from("commonplace_attempts").insert({
+    user_id: currentUser.id,
+    exercise_id: exId,
+    subject: 'python',
+    language: 'python',
+    code: code,
+    stdout: stdout,
+    passed: null                                       // ungraded — self-grade UI handles PASSED
+  }).then(function(res){
+    if(res.error){ fail(res.error.message); return; }
+    btn.classList.add('is-saved');
+    btn.textContent = vnum ? ('Saved '+vnum+' ✓') : 'Saved ✓';
+    setTimeout(function(){ loadImported(); }, 700);    // refresh chain to show the new v(n)
+  }).catch(function(e){ fail(e && e.message ? e.message : String(e)); });
+};
+
 /* section name = first tag that isn't an import:* marker (e.g. "Section 3: …", "own project") */
 function sectionOf(ex){
   var tags = ex.tags || [];
@@ -624,7 +666,7 @@ function renderExerciseCard(ex){
       ? '<div class="cc-runout-label">Run output</div><pre class="cc-runout'+(o.err?' cc-err':'')+'" data-out="'+key+'">'+escH(o.text)+'</pre>'
       : '<div class="cc-runout-label">Run output</div><pre class="cc-runout cc-runout-empty" data-out="'+key+'">Press Run to execute.</pre>';
     panels+='<div class="cc-panel"><div class="cc-panelhead"><span class="cc-pdot" style="background:'+info.c+'"></span><span class="cc-pver">v'+(i+1)+'</span><span class="cc-chip" style="background:'+info.bg+';color:'+info.fg+'">'+info.label+'</span>'
-      +'<span class="cc-runbar"><button class="cc-runbtn" data-hc="run" data-key="'+key+'">&#9654; Run</button><button class="cc-resetbtn" data-hc="rcode" data-key="'+key+'">Reset</button><button class="cc-expandbtn" data-hc="focus" data-key="'+key+'" title="Expand (focus mode)">&#9974;</button></span></div>'
+      +'<span class="cc-runbar"><button class="cc-runbtn" data-hc="run" data-key="'+key+'">&#9654; Run</button><button class="cc-savebtn" data-hc="save" data-key="'+key+'" title="Save this as a new attempt in your chain">Save attempt</button><button class="cc-resetbtn" data-hc="rcode" data-key="'+key+'">Reset</button><button class="cc-expandbtn" data-hc="focus" data-key="'+key+'" title="Expand (focus mode)">&#9974;</button></span></div>'
       +'<div class="cc-editor"><pre class="cc-hl" aria-hidden="true"><code>'+window.highlightPy(codeNow)+'</code></pre>'
       +'<textarea class="cc-ta" wrap="off" spellcheck="false" data-hc="edit" data-key="'+key+'">'+escH(codeNow)+'</textarea></div>'
       +'<div class="cc-inwrap"><div class="cc-inlabel">Inputs &middot; fed to input() in order, then prompts</div>'
@@ -706,6 +748,7 @@ function __wireChains(){
     var t = e.target.closest('[data-hc]'); if(!t) return;
     var a = t.getAttribute('data-hc'), ex = t.getAttribute('data-ex'), HC = window.__hc;
     if(a==='run'){ e.preventDefault(); window.__runPanel(t.getAttribute('data-key'), t); return; }
+    else if(a==='save'){ e.preventDefault(); window.__saveAttempt(t.getAttribute('data-key'), t); return; }
     else if(a==='focus'){ e.preventDefault();
       var fp=t.closest('.cc-panel'); if(!fp) return;
       var wasOn=fp.classList.contains('code-focus');
