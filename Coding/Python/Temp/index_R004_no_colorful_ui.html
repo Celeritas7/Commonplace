@@ -225,28 +225,6 @@
 .cc-tstub{width:12px;height:2px;background:#c9d3c4;flex:none;}
 .cc-tbox{font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.3;border:1.5px solid #d2dacb;border-radius:7px;padding:4px 9px;white-space:pre-wrap;word-break:break-word;}
 .cc-tempty{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-mute);font-style:italic;margin-top:7px;}
-
-.cc-runbar{margin-left:auto;display:flex;gap:6px;}
-.cc-runbtn{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;cursor:pointer;border:none;border-radius:7px;padding:3px 11px;background:#2f6b4f;color:#fff;}
-.cc-runbtn:disabled{opacity:.6;cursor:default;}
-.cc-resetbtn{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:3px 9px;background:var(--card);color:var(--ink-mute);}
-.cc-editor{position:relative;background:var(--green-deep);}
-.cc-hl,.cc-ta{font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.55;padding:11px 13px;margin:0;white-space:pre;tab-size:4;}
-.cc-hl{position:absolute;inset:0;overflow:auto;color:#d7e8dd;pointer-events:none;}
-.cc-hl code{font:inherit;}
-.cc-ta{position:relative;display:block;width:100%;box-sizing:border-box;min-height:118px;border:none;outline:none;resize:vertical;background:transparent;color:transparent;caret-color:#fff;overflow:auto;}
-.t-kw{color:#e08aa6;}
-.t-str{color:#a6c97a;}
-.t-com{color:#7e9486;font-style:italic;}
-.t-num{color:#e0b36b;}
-.t-bi{color:#8fd0b0;}
-.cc-inwrap{padding:8px 13px;background:var(--paper-2);border-top:1px solid var(--line-soft);}
-.cc-inlabel,.cc-runout-label{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-mute);margin-bottom:4px;}
-.cc-in{width:100%;box-sizing:border-box;font-family:"JetBrains Mono",monospace;font-size:12px;border:1px solid var(--line);border-radius:7px;padding:6px 9px;resize:vertical;min-height:34px;outline:none;background:var(--card);color:var(--ink);}
-.cc-runout-label{padding:8px 13px 0;background:var(--card);}
-.cc-runout{font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;margin:0;padding:9px 13px;background:#0f241c;color:#bfe3cc;min-height:18px;}
-.cc-runout.cc-err{color:#ffb4a8;}
-.cc-runout-empty{color:#6f8c7e;font-style:italic;}
 </style>
 </head>
 <body>
@@ -372,70 +350,6 @@
 
 <!-- Imported Practice: Supabase client + magic-link login, mirroring cpp_playground.html -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-<script>(function __RUNNER(){
-  var pyodide=null, pyReady=false, pyLoading=null;
-  function setBtn(b,txt,dis){ if(b){ b.innerHTML=txt; b.disabled=dis; } }
-  async function ensurePy(){
-    if(pyReady) return pyodide;
-    if(pyLoading) return pyLoading;
-    pyLoading=(async function(){
-      pyodide=await loadPyodide();
-      window.__inq=[];
-      pyodide.globals.set("__js_input", function(p){
-        if(window.__inq && window.__inq.length){ var v=window.__inq.shift(); return v==null?'':String(v); }
-        var r=window.prompt(p||''); return r===null?'':String(r);
-      });
-      await pyodide.runPythonAsync("import builtins\ndef __input(prompt=''):\n    r=__js_input(str(prompt))\n    print(str(prompt)+str(r))\n    return str(r)\nbuiltins.input=__input\n");
-      pyReady=true; return pyodide;
-    })();
-    return pyLoading;
-  }
-  window.__runPanel=async function(key, btn){
-    var panel=btn.closest('.cc-panel'); if(!panel) return;
-    var ta=panel.querySelector('.cc-ta'), inEl=panel.querySelector('.cc-in'), outEl=panel.querySelector('.cc-runout');
-    if(!outEl) return;
-    var code=ta?ta.value:'';
-    var ins=(inEl&&inEl.value!=='')?inEl.value.split('\n'):[];
-    if(ins.length && ins[ins.length-1]==='') ins.pop();
-    outEl.className='cc-runout'; outEl.textContent='Loading Python\u2026'; setBtn(btn,'Running\u2026',true);
-    var buf='';
-    function append(s){ buf+=s; outEl.textContent=buf; }
-    try{
-      var py=await ensurePy();
-      window.__inq=ins.slice();
-      outEl.textContent='';
-      py.setStdout({batched:function(x){ append(x+'\n'); }}); py.setStderr({batched:function(x){ append(x+'\n'); }});
-      await py.loadPackagesFromImports(code);
-      var res=await py.runPythonAsync(code);
-      if(res!==undefined && res!==null){ var rep; try{ var b=py.pyimport('builtins'); rep=b.repr(res); b.destroy(); }catch(e){ rep=String(res); } append((buf&&!buf.endsWith('\n')?'\n':'')+rep); if(res&&typeof res.destroy==='function'){try{res.destroy();}catch(e){}} }
-      if(!buf) append('(ran \u2014 no output)');
-      window.__hc.out[key]={text:buf, err:false};
-    }catch(e){
-      outEl.className='cc-runout cc-err'; append((buf?buf+'\n':'')+(e&&e.message?e.message:String(e)));
-      window.__hc.out[key]={text:outEl.textContent, err:true};
-    }finally{ setBtn(btn,'\u25B6 Run',false); }
-  };
-  window.highlightPy=function(code){
-    var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-    var kw=/\b(False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\b/g;
-    var bi=/\b(print|input|len|range|int|str|float|list|dict|set|tuple|bool|abs|sum|min|max|enumerate|zip|map|filter|sorted|open|type|isinstance|round)\b/g;
-    var num=/\b(\d+\.?\d*)\b/g;
-    function paint(t){ return esc(t).replace(kw,'<span class="t-kw">$1</span>').replace(bi,'<span class="t-bi">$1</span>').replace(num,'<span class="t-num">$1</span>'); }
-    return String(code).split('\n').map(function(line){
-      var re=/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|#.*$)/g;
-      var html='', idx=0, m;
-      while((m=re.exec(line))!==null){
-        html+=paint(line.slice(idx,m.index));
-        var tok=m[0];
-        html+= tok.charAt(0)==='#' ? '<span class="t-com">'+esc(tok)+'</span>' : '<span class="t-str">'+esc(tok)+'</span>';
-        idx=m.index+tok.length;
-      }
-      return html+paint(line.slice(idx));
-    }).join('\n');
-  };
-  setTimeout(function(){ try{ ensurePy().catch(function(){}); }catch(e){} }, 800);
-})();</script>
 <script>
 /* ---------- config (same project as cpp_playground.html) ---------- */
 var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
@@ -445,7 +359,7 @@ var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
 var currentUser = null;
-window.__hc = window.__hc || { exp:{}, sel:{}, tview:'lines', edits:{}, ins:{}, out:{}, notes:(function(){try{return JSON.parse(localStorage.getItem("cp_chain_notes")||"{}");}catch(e){return {};}})(), rows:null };
+window.__hc = window.__hc || { exp:{}, sel:{}, tview:'lines', notes:(function(){try{return JSON.parse(localStorage.getItem("cp_chain_notes")||"{}");}catch(e){return {};}})(), rows:null };
 
 /* ---------- helpers ---------- */
 function $(id){ return document.getElementById(id); }
@@ -590,27 +504,14 @@ function renderExerciseCard(ex){
     chain+='<div class="cc-conn" style="background:#2f6b4f"></div><div class="cc-solved"><div class="cc-solveddot">&#10003;</div><span>solved &middot; '+attempts.length+' tries</span></div>';
   }
 
-  // expanded code panels (editable + runnable)
+  // expanded code panels
   var panels='';
   attempts.forEach(function(att,i){
     if(!HC.exp[id+':'+i]) return;
     var info=vinfo(att.passed);
-    var key=id+':'+i;
-    var codeNow=(HC.edits[key]!=null)?HC.edits[key]:att.code;
-    var insNow=(HC.ins[key]!=null)?HC.ins[key]:'';
-    var o=HC.out[key];
-    var outBlock=o
-      ? '<div class="cc-runout-label">Run output</div><pre class="cc-runout'+(o.err?' cc-err':'')+'" data-out="'+key+'">'+escH(o.text)+'</pre>'
-      : '<div class="cc-runout-label">Run output</div><pre class="cc-runout cc-runout-empty" data-out="'+key+'">Press Run to execute.</pre>';
-    panels+='<div class="cc-panel"><div class="cc-panelhead"><span class="cc-pdot" style="background:'+info.c+'"></span><span class="cc-pver">v'+(i+1)+'</span><span class="cc-chip" style="background:'+info.bg+';color:'+info.fg+'">'+info.label+'</span>'
-      +'<span class="cc-runbar"><button class="cc-runbtn" data-hc="run" data-key="'+key+'">&#9654; Run</button><button class="cc-resetbtn" data-hc="rcode" data-key="'+key+'">Reset</button></span></div>'
-      +'<div class="cc-editor"><pre class="cc-hl" aria-hidden="true"><code>'+window.highlightPy(codeNow)+'</code></pre>'
-      +'<textarea class="cc-ta" wrap="off" spellcheck="false" data-hc="edit" data-key="'+key+'">'+escH(codeNow)+'</textarea></div>'
-      +'<div class="cc-inwrap"><div class="cc-inlabel">Inputs &middot; fed to input() in order, then prompts</div>'
-      +'<textarea class="cc-in" data-hc="inputs" data-key="'+key+'" placeholder="one value per line">'+escH(insNow)+'</textarea></div>'
-      +outBlock
-      +(att.stdout?'<div class="cc-runout-label">Saved output</div><pre class="cc-out">'+escH(att.stdout)+'</pre>':'')
-      +'</div>';
+    panels+='<div class="cc-panel"><div class="cc-panelhead"><span class="cc-pdot" style="background:'+info.c+'"></span><span class="cc-pver">v'+(i+1)+'</span><span class="cc-chip" style="background:'+info.bg+';color:'+info.fg+'">'+info.label+'</span></div>'
+      +'<pre class="cc-pre">'+escH(att.code)+'</pre>'
+      +(att.stdout?'<div class="cc-outlabel">Output</div><pre class="cc-out">'+escH(att.stdout)+'</pre>':'')+'</div>';
   });
 
   // compare diff (lines or tree)
@@ -680,9 +581,7 @@ function __wireChains(){
   body.addEventListener('click', function(e){
     var t = e.target.closest('[data-hc]'); if(!t) return;
     var a = t.getAttribute('data-hc'), ex = t.getAttribute('data-ex'), HC = window.__hc;
-    if(a==='run'){ e.preventDefault(); window.__runPanel(t.getAttribute('data-key'), t); return; }
-    else if(a==='rcode'){ var rk=t.getAttribute('data-key'); HC.edits[rk]=null; HC.out[rk]=null; renderGrouped(window.__hc.rows); return; }
-    else if(a==='toggle'){ var k = ex+':'+t.getAttribute('data-att'); HC.exp[k] = !HC.exp[k]; }
+    if(a==='toggle'){ var k = ex+':'+t.getAttribute('data-att'); HC.exp[k] = !HC.exp[k]; }
     else if(a==='select'){ e.stopPropagation(); var i = +t.getAttribute('data-att'); var cur = (HC.sel[ex]||[]).slice(); var p = cur.indexOf(i); if(p>=0) cur.splice(p,1); else { cur.push(i); if(cur.length>2) cur.shift(); } HC.sel[ex] = cur; }
     else if(a==='clear'){ HC.sel[ex] = []; }
     else if(a==='view'){ HC.tview = t.getAttribute('data-view'); }
@@ -690,13 +589,11 @@ function __wireChains(){
     renderGrouped(window.__hc.rows);
   });
   body.addEventListener('input', function(e){
-    var t = e.target; if(!t.getAttribute) return;
-    var a = t.getAttribute('data-hc');
-    if(a==='note'){ window.__hc.notes[t.getAttribute('data-ex')] = t.value; try { localStorage.setItem('cp_chain_notes', JSON.stringify(window.__hc.notes)); } catch(err){} }
-    else if(a==='edit'){ var k=t.getAttribute('data-key'); window.__hc.edits[k]=t.value; var hl=t.parentNode.querySelector('.cc-hl code'); if(hl) hl.innerHTML=window.highlightPy(t.value); }
-    else if(a==='inputs'){ window.__hc.ins[t.getAttribute('data-key')]=t.value; }
+    var t = e.target; if(t.getAttribute && t.getAttribute('data-hc')==='note'){
+      window.__hc.notes[t.getAttribute('data-ex')] = t.value;
+      try { localStorage.setItem('cp_chain_notes', JSON.stringify(window.__hc.notes)); } catch(err){}
+    }
   });
-  body.addEventListener('scroll', function(e){ var t=e.target; if(t.getAttribute && t.getAttribute('data-hc')==='edit'){ var pre=t.parentNode.querySelector('.cc-hl'); if(pre){ pre.scrollTop=t.scrollTop; pre.scrollLeft=t.scrollLeft; } } }, true);
 }
 
 /* ---------- wire up ---------- */
