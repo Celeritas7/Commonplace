@@ -372,15 +372,27 @@
 
 <!-- Imported Practice: Supabase client + magic-link login, mirroring cpp_playground.html -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script>(function __RUNNER(){
   var pyodide=null, pyReady=false, pyLoading=null;
   function setBtn(b,txt,dis){ if(b){ b.innerHTML=txt; b.disabled=dis; } }
+  // Pyodide is lazy-loaded on first Run (not at startup) to keep page load fast.
+  var PY_VERSION = "v0.26.4";
+  var PY_BASE = "https://cdn.jsdelivr.net/pyodide/" + PY_VERSION + "/full/";
+  function loadScript(src){
+    return new Promise(function(resolve, reject){
+      if(document.querySelector('script[src="'+src+'"]')) return resolve();
+      var s=document.createElement("script");
+      s.src=src; s.onload=resolve;
+      s.onerror=function(){ reject(new Error("Failed to load "+src)); };
+      document.head.appendChild(s);
+    });
+  }
   async function ensurePy(){
     if(pyReady) return pyodide;
     if(pyLoading) return pyLoading;
     pyLoading=(async function(){
-      pyodide=await loadPyodide();
+      await loadScript(PY_BASE + "pyodide.js");   // defines loadPyodide FIRST
+      pyodide=await loadPyodide({ indexURL: PY_BASE });
       window.__inq=[];
       pyodide.globals.set("__js_input", function(p){
         if(window.__inq && window.__inq.length){ var v=window.__inq.shift(); return v==null?'':String(v); }
@@ -398,7 +410,7 @@
     var code=ta?ta.value:'';
     var ins=(inEl&&inEl.value!=='')?inEl.value.split('\n'):[];
     if(ins.length && ins[ins.length-1]==='') ins.pop();
-    outEl.className='cc-runout'; outEl.textContent='Loading Python\u2026'; setBtn(btn,'Running\u2026',true);
+    outEl.className='cc-runout'; outEl.textContent = pyReady ? '' : 'Loading Python\u2026'; setBtn(btn,'Running\u2026',true);
     var buf='';
     function append(s){ buf+=s; outEl.textContent=buf; }
     try{
@@ -434,7 +446,7 @@
       return html+paint(line.slice(idx));
     }).join('\n');
   };
-  setTimeout(function(){ try{ ensurePy().catch(function(){}); }catch(e){} }, 800);
+  // Removed startup warm-up: Pyodide now loads only on the first Run click.
 })();</script>
 <script>
 /* ---------- config (same project as cpp_playground.html) ---------- */
