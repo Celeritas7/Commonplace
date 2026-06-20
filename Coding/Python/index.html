@@ -231,6 +231,15 @@
 .cc-runbtn:disabled{opacity:.6;cursor:default;}
 .cc-resetbtn{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:3px 9px;background:var(--card);color:var(--ink-mute);}
 .cc-editor{position:relative;background:var(--green-deep);}
+/* ---- Focus / expand mode ---- */
+.cc-expandbtn{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:3px 9px;background:var(--card);color:var(--ink-mute);line-height:1;}
+.cc-focusclose{display:none;}
+body.cc-focus-lock{overflow:hidden;}
+.cc-panel.code-focus{position:fixed;inset:0;z-index:9999;margin:0;border:none;border-radius:0;background:var(--card);display:flex;flex-direction:column;overflow:auto;}
+.cc-panel.code-focus .cc-editor{flex:1;min-height:0;}
+.cc-panel.code-focus .cc-ta,
+.cc-panel.code-focus .cc-hl{height:100%;}
+.cc-panel.code-focus .cc-focusclose{display:flex;align-items:center;justify-content:center;position:fixed;top:14px;right:16px;z-index:10000;width:32px;height:32px;font-size:15px;font-weight:700;cursor:pointer;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .cc-hl,.cc-ta{font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.55;padding:11px 13px;margin:0;white-space:pre;tab-size:4;}
 .cc-hl{position:absolute;inset:0;overflow:auto;color:#d7e8dd;pointer-events:none;}
 .cc-hl code{font:inherit;}
@@ -615,13 +624,14 @@ function renderExerciseCard(ex){
       ? '<div class="cc-runout-label">Run output</div><pre class="cc-runout'+(o.err?' cc-err':'')+'" data-out="'+key+'">'+escH(o.text)+'</pre>'
       : '<div class="cc-runout-label">Run output</div><pre class="cc-runout cc-runout-empty" data-out="'+key+'">Press Run to execute.</pre>';
     panels+='<div class="cc-panel"><div class="cc-panelhead"><span class="cc-pdot" style="background:'+info.c+'"></span><span class="cc-pver">v'+(i+1)+'</span><span class="cc-chip" style="background:'+info.bg+';color:'+info.fg+'">'+info.label+'</span>'
-      +'<span class="cc-runbar"><button class="cc-runbtn" data-hc="run" data-key="'+key+'">&#9654; Run</button><button class="cc-resetbtn" data-hc="rcode" data-key="'+key+'">Reset</button></span></div>'
+      +'<span class="cc-runbar"><button class="cc-runbtn" data-hc="run" data-key="'+key+'">&#9654; Run</button><button class="cc-resetbtn" data-hc="rcode" data-key="'+key+'">Reset</button><button class="cc-expandbtn" data-hc="focus" data-key="'+key+'" title="Expand (focus mode)">&#9974;</button></span></div>'
       +'<div class="cc-editor"><pre class="cc-hl" aria-hidden="true"><code>'+window.highlightPy(codeNow)+'</code></pre>'
       +'<textarea class="cc-ta" wrap="off" spellcheck="false" data-hc="edit" data-key="'+key+'">'+escH(codeNow)+'</textarea></div>'
       +'<div class="cc-inwrap"><div class="cc-inlabel">Inputs &middot; fed to input() in order, then prompts</div>'
       +'<textarea class="cc-in" data-hc="inputs" data-key="'+key+'" placeholder="one value per line">'+escH(insNow)+'</textarea></div>'
       +outBlock
       +(att.stdout?'<div class="cc-runout-label">Saved output</div><pre class="cc-out">'+escH(att.stdout)+'</pre>':'')
+      +'<button class="cc-focusclose" data-hc="focus" data-key="'+key+'" aria-label="Exit focus mode" title="Exit (Esc)">&#10005;</button>'
       +'</div>';
   });
 
@@ -689,10 +699,22 @@ function renderExerciseCard(ex){
 function __wireChains(){
   var body = document.getElementById('hd-body');
   if(!body || body.__hcWired) return; body.__hcWired = true;
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){ var f=document.querySelector('.cc-panel.code-focus'); if(f){ f.classList.remove('code-focus'); document.body.classList.remove('cc-focus-lock'); } }
+  });
   body.addEventListener('click', function(e){
     var t = e.target.closest('[data-hc]'); if(!t) return;
     var a = t.getAttribute('data-hc'), ex = t.getAttribute('data-ex'), HC = window.__hc;
     if(a==='run'){ e.preventDefault(); window.__runPanel(t.getAttribute('data-key'), t); return; }
+    else if(a==='focus'){ e.preventDefault();
+      var fp=t.closest('.cc-panel'); if(!fp) return;
+      var wasOn=fp.classList.contains('code-focus');
+      var open=document.querySelectorAll('.cc-panel.code-focus');
+      for(var ci=0;ci<open.length;ci++) open[ci].classList.remove('code-focus');
+      document.body.classList.toggle('cc-focus-lock', !wasOn);
+      if(!wasOn){ fp.classList.add('code-focus'); var fta=fp.querySelector('.cc-ta'); if(fta) fta.focus(); }
+      return;
+    }
     else if(a==='rcode'){ var rk=t.getAttribute('data-key'); HC.edits[rk]=null; HC.out[rk]=null; renderGrouped(window.__hc.rows); return; }
     else if(a==='toggle'){ var k = ex+':'+t.getAttribute('data-att'); HC.exp[k] = !HC.exp[k]; }
     else if(a==='select'){ e.stopPropagation(); var i = +t.getAttribute('data-att'); var cur = (HC.sel[ex]||[]).slice(); var p = cur.indexOf(i); if(p>=0) cur.splice(p,1); else { cur.push(i); if(cur.length>2) cur.shift(); } HC.sel[ex] = cur; }
