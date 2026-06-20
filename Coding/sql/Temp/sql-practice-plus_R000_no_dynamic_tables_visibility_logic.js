@@ -14,26 +14,18 @@
   var BY_TABLE = {};
   SCHEMA.forEach(function (t) { BY_TABLE[t.name] = (t.cols || []).slice(); });
   var DS_TABLES = { world: ["world"], nobel: ["nobel"], football: ["eteam", "game", "goal"] };
-
-  // Which tables does this exercise actually touch? Parse its solution SQL
-  // (FROM / JOIN), then union with the rest of its dataset so in-dataset joins
-  // are reachable. Falls back to every table if nothing is detected.
-  function tablesForEx(ex) {
-    var found = [];
-    if (ex && ex.sol) {
-      var re = /\b(?:from|join)\s+("?[a-z_][a-z0-9_]*"?)/gi, m;
-      while ((m = re.exec(ex.sol)) !== null) {
-        var t = m[1].replace(/"/g, "").toLowerCase();
-        if (BY_TABLE[t] && found.indexOf(t) < 0) found.push(t);
-      }
-    }
-    var dsTables = DS_TABLES[ex && ex.ds] || [];
-    dsTables.forEach(function (t) { if (found.indexOf(t) < 0) found.push(t); });
-    if (!found.length) found = Object.keys(BY_TABLE);
-    return found;
+  function dsTokens(ds) {
+    var tables = DS_TABLES[ds] || [];
+    var toks = [];
+    tables.forEach(function (tn) {
+      toks.push(tn);
+      (BY_TABLE[tn] || []).forEach(function (c) { if (toks.indexOf(c) < 0) toks.push(c); });
+    });
+    return toks;
   }
-  function exOf(card) {
-    return EX.find(function (x) { return ("card-" + x.id) === card.id || x.id === card.id; }) || null;
+  function dsOf(id) {
+    var e = EX.find(function (x) { return ("card-" + x.id) === id || x.id === id; });
+    return e ? e.ds : "world";
   }
 
   var KW_TOKENS = ["SELECT", "DISTINCT", "FROM", "WHERE", "AND", "OR", "ORDER BY", "DESC",
@@ -64,7 +56,7 @@
     var ta = card.querySelector("textarea.ex-editor");
     if (!ta) return;
     card.__plusBar = true;
-    var ex = exOf(card);
+    var ds = dsOf(card.id);
 
     var wrap = document.createElement("div");
     wrap.className = "pp-toolwrap";
@@ -87,21 +79,12 @@
     });
 
     var rowC = document.createElement("div"); rowC.className = "pp-row";
-    // group columns under their table — the table name is itself a tappable chip
-    tablesForEx(ex).forEach(function (tn) {
-      var tb = document.createElement("button");
-      tb.type = "button"; tb.className = "pp-tok pp-tok-tbl";
-      tb.textContent = tn;
-      tb.title = "table";
-      tb.addEventListener("click", function () { insertAtCursor(ta, tn); });
-      rowC.appendChild(tb);
-      (BY_TABLE[tn] || []).forEach(function (c) {
-        var b = document.createElement("button");
-        b.type = "button"; b.className = "pp-tok pp-tok-id";
-        b.textContent = c;
-        b.addEventListener("click", function () { insertAtCursor(ta, c); });
-        rowC.appendChild(b);
-      });
+    dsTokens(ds).forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "pp-tok pp-tok-id";
+      b.textContent = t;
+      b.addEventListener("click", function () { insertAtCursor(ta, t); });
+      rowC.appendChild(b);
     });
 
     tray.appendChild(rowK); tray.appendChild(rowC);
@@ -228,31 +211,22 @@
     .pp-ico{font-size:14px;} .pp-caret{color:var(--ink-mute);font-size:11px;}
     .pp-tray{display:none;flex-direction:column;gap:7px;margin-top:9px;}
     .pp-toolwrap.open .pp-tray{display:flex;}
-    .pp-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;
-      scrollbar-color:var(--rule) transparent;
-      -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);
-      mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);}
-    .pp-row::-webkit-scrollbar{height:5px;}
-    .pp-row::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+    .pp-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+    .pp-row::-webkit-scrollbar{display:none;}
     .pp-tok{flex:0 0 auto;font-family:"JetBrains Mono",monospace;font-size:13px;padding:8px 12px;
       border-radius:8px;cursor:pointer;border:1px solid;min-height:38px;display:inline-flex;align-items:center;
       user-select:none;}
     .pp-tok:active{transform:translateY(1px);}
     .pp-tok-kw{background:#fbe6f1;border-color:#f3c2dd;color:#b03a78;font-weight:600;}
     .pp-tok-id{background:#e3f0fb;border-color:#bcdcf3;color:#1f6fa6;}
-    .pp-tok-tbl{background:#e4f3ea;border-color:#bcdfca;color:#1f7a4d;font-weight:700;}
-    .pp-tok-tbl::before{content:"\\25A4";margin-right:6px;opacity:.7;font-size:11px;}
 
     .pp-tabs{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
       background:color-mix(in oklab, var(--paper) 92%, transparent);backdrop-filter:blur(8px);
       border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:0 0 18px;}
     .pp-tabs-label{flex:0 0 auto;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1.6px;
       text-transform:uppercase;color:var(--ink-mute);}
-    .pp-tabs-track{display:flex;gap:8px;overflow-x:auto;padding:9px 0;scrollbar-width:thin;
-      -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);
-      mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);}
-    .pp-tabs-track::-webkit-scrollbar{height:5px;}
-    .pp-tabs-track::-webkit-scrollbar-thumb{background:var(--rule);border-radius:99px;}
+    .pp-tabs-track{display:flex;gap:8px;overflow-x:auto;padding:9px 0;scrollbar-width:none;}
+    .pp-tabs-track::-webkit-scrollbar{display:none;}
     .pp-tab{--dc:#888;flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;
       border-radius:20px;cursor:pointer;border:1px solid var(--rule);background:var(--paper-3);
       font-family:"JetBrains Mono",monospace;max-width:230px;}
