@@ -211,20 +211,6 @@
 .cc-mis-txt{flex:1;color:var(--ink-soft);font-size:15px;}
 .cc-mis-res{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;color:#234f3b;background:rgba(47,107,79,.14);border-radius:7px;padding:2px 8px;white-space:nowrap;}
 .cc-nomis{font-size:14px;color:var(--ink-mute);font-style:italic;}
-
-.cc-toggle{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;}
-.cc-tgbtn{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;cursor:pointer;border:none;background:var(--card);color:var(--ink-mute);padding:3px 10px;}
-.cc-tgbtn.on{background:#2f6b4f;color:#fff;}
-.cc-trees{display:grid;grid-template-columns:1fr 1fr;gap:0;}
-.cc-tcol{padding:10px 13px 13px;border-right:1px solid var(--line-soft);min-width:0;}
-.cc-tcol:last-child{border-right:none;}
-.cc-thead{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;}
-.cc-thead-a{color:#9a2a1f;}
-.cc-thead-b{color:#1f5a3f;}
-.cc-trow{display:flex;align-items:center;margin-top:7px;}
-.cc-tstub{width:12px;height:2px;background:#c9d3c4;flex:none;}
-.cc-tbox{font-family:"JetBrains Mono",monospace;font-size:11.5px;line-height:1.3;border:1.5px solid #d2dacb;border-radius:7px;padding:4px 9px;white-space:pre-wrap;word-break:break-word;}
-.cc-tempty{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-mute);font-style:italic;margin-top:7px;}
 </style>
 </head>
 <body>
@@ -359,7 +345,7 @@ var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
 var currentUser = null;
-window.__hc = window.__hc || { exp:{}, sel:{}, tview:'lines', notes:(function(){try{return JSON.parse(localStorage.getItem("cp_chain_notes")||"{}");}catch(e){return {};}})(), rows:null };
+window.__hc = window.__hc || { exp:{}, sel:{}, notes:(function(){try{return JSON.parse(localStorage.getItem("cp_chain_notes")||"{}");}catch(e){return {};}})(), rows:null };
 
 /* ---------- helpers ---------- */
 function $(id){ return document.getElementById(id); }
@@ -514,42 +500,20 @@ function renderExerciseCard(ex){
       +(att.stdout?'<div class="cc-outlabel">Output</div><pre class="cc-out">'+escH(att.stdout)+'</pre>':'')+'</div>';
   });
 
-  // compare diff (lines or tree)
+  // compare diff
   var cmp='';
   var s2=sel.slice().sort(function(a,b){return a-b;});
   if(s2.length===2){
-    var A=attempts[s2[0]],B=attempts[s2[1]],rows=diffLines(A.code.split('\n'),B.code.split('\n')),addN=0,delN=0,cells='',aMarks=[],bMarks=[];
+    var A=attempts[s2[0]],B=attempts[s2[1]],rows=diffLines(A.code.split('\n'),B.code.split('\n')),addN=0,delN=0,cells='';
     rows.forEach(function(r){
-      if(r.t==='same'){ cells+='<div class="cc-d cc-l">  '+escH(r.l)+'</div><div class="cc-d">  '+escH(r.r)+'</div>'; aMarks.push({t:'same',text:r.l}); bMarks.push({t:'same',text:r.r}); }
-      else if(r.t==='del'){ delN++; cells+='<div class="cc-d cc-l cc-del">&#8722; '+escH(r.l)+'</div><div class="cc-d cc-empty"> </div>'; aMarks.push({t:'del',text:r.l}); }
-      else { addN++; cells+='<div class="cc-d cc-l cc-empty"> </div><div class="cc-d cc-add">+ '+escH(r.r)+'</div>'; bMarks.push({t:'add',text:r.r}); }
+      if(r.t==='same') cells+='<div class="cc-d cc-l">  '+escH(r.l)+'</div><div class="cc-d">  '+escH(r.r)+'</div>';
+      else if(r.t==='del'){delN++;cells+='<div class="cc-d cc-l cc-del">&#8722; '+escH(r.l)+'</div><div class="cc-d cc-empty"> </div>';}
+      else {addN++;cells+='<div class="cc-d cc-l cc-empty"> </div><div class="cc-d cc-add">+ '+escH(r.r)+'</div>';}
     });
-    function treeHtml(marks){
-      var stack=[],out='';
-      marks.forEach(function(m){
-        if(!m.text.trim()) return;
-        var indent=m.text.match(/^ */)[0].length;
-        while(stack.length && indent<stack[stack.length-1]) stack.pop();
-        if(!stack.length || indent>stack[stack.length-1]) stack.push(indent);
-        var depth=stack.length-1;
-        var bg=m.t==='del'?'rgba(190,40,30,.08)':(m.t==='add'?'rgba(47,107,79,.13)':'#fbfcf6');
-        var bd=m.t==='del'?'#cc9a90':(m.t==='add'?'#3c8362':'#d2dacb');
-        var fg=m.t==='del'?'#9a2a1f':(m.t==='add'?'#1f5a3f':'#1a2820');
-        var deco=m.t==='del'?'text-decoration:line-through;':'';
-        var sign=m.t==='del'?'&#8722; ':(m.t==='add'?'+ ':'');
-        out+='<div class="cc-trow" style="padding-left:'+(depth*18)+'px"><span class="cc-tstub"></span><span class="cc-tbox" style="background:'+bg+';border-color:'+bd+';color:'+fg+';'+deco+'">'+sign+escH(m.text.trim())+'</span></div>';
-      });
-      return out||'<div class="cc-tempty">(no lines)</div>';
-    }
-    var tview=window.__hc.tview||'lines';
-    var dbody=tview==='tree'
-      ? '<div class="cc-trees"><div class="cc-tcol"><div class="cc-thead cc-thead-a">v'+(s2[0]+1)+' &middot; what it had</div>'+treeHtml(aMarks)+'</div><div class="cc-tcol"><div class="cc-thead cc-thead-b">v'+(s2[1]+1)+' &middot; what changed</div>'+treeHtml(bMarks)+'</div></div>'
-      : '<div class="cc-diff">'+cells+'</div>';
-    var tg='<span class="cc-toggle"><button class="cc-tgbtn'+(tview!=='tree'?' on':'')+'" data-hc="view" data-view="lines" data-ex="'+id+'">Lines</button><button class="cc-tgbtn'+(tview==='tree'?' on':'')+'" data-hc="view" data-view="tree" data-ex="'+id+'">Tree</button></span>';
     cmp='<div class="cc-cmp"><div class="cc-cmphead"><span class="cc-cmptitle">Comparing v'+(s2[0]+1)+' &#9656; v'+(s2[1]+1)+'</span>'
-      +'<span class="cc-add-n">+'+addN+'</span><span class="cc-del-n">&#8722;'+delN+'</span>'+tg
+      +'<span class="cc-add-n">+'+addN+'</span><span class="cc-del-n">&#8722;'+delN+'</span>'
       +'<button class="cc-clear" data-hc="clear" data-ex="'+id+'">clear</button></div>'
-      +dbody
+      +'<div class="cc-diff">'+cells+'</div>'
       +'<div class="cc-notewrap"><div class="cc-notelabel">What was my mistake?</div>'
       +'<textarea class="cc-note" data-hc="note" data-ex="'+id+'" placeholder="e.g. forgot the return / len() check that turns the divisor count into True or False...">'+escH(HC.notes[id]||'')+'</textarea></div></div>';
   }
@@ -584,7 +548,6 @@ function __wireChains(){
     if(a==='toggle'){ var k = ex+':'+t.getAttribute('data-att'); HC.exp[k] = !HC.exp[k]; }
     else if(a==='select'){ e.stopPropagation(); var i = +t.getAttribute('data-att'); var cur = (HC.sel[ex]||[]).slice(); var p = cur.indexOf(i); if(p>=0) cur.splice(p,1); else { cur.push(i); if(cur.length>2) cur.shift(); } HC.sel[ex] = cur; }
     else if(a==='clear'){ HC.sel[ex] = []; }
-    else if(a==='view'){ HC.tview = t.getAttribute('data-view'); }
     else return;
     renderGrouped(window.__hc.rows);
   });
