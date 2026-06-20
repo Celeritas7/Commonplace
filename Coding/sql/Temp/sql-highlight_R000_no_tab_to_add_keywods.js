@@ -60,10 +60,9 @@
     if (document.getElementById("shl-style")) return;
     var css = [
       ".shl-wrap{position:relative;}",
-      ".shl-pre{position:absolute;margin:0;border:0;background:transparent;",
-        "overflow:hidden;pointer-events:none;white-space:pre-wrap;overflow-wrap:break-word;",
-        "word-break:normal;box-sizing:border-box;color:#e6e1d6;}",
-      ".shl-pre code{font:inherit;letter-spacing:inherit;white-space:inherit;}",
+      ".shl-pre{position:absolute;top:0;left:0;right:0;bottom:0;margin:0;",
+        "overflow:hidden;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere;",
+        "word-break:break-word;box-sizing:border-box;color:#e6e1d6;}",
       "textarea.shl-on{position:relative;background:transparent!important;",
         "color:transparent!important;-webkit-text-fill-color:transparent;caret-color:#ffd9ec;}",
       // palette (tuned for the #0e1116 terminal background)
@@ -83,8 +82,10 @@
   }
 
   /* ---------- enhance a textarea ---------- */
-  var FONTPROPS = ["fontFamily","fontSize","fontWeight","fontStyle","lineHeight",
-    "letterSpacing","textIndent","tabSize"];
+  var COPY = ["fontFamily","fontSize","fontWeight","fontStyle","lineHeight","letterSpacing",
+    "paddingTop","paddingRight","paddingBottom","paddingLeft",
+    "borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth",
+    "textIndent","tabSize"];
 
   function enhance(ta) {
     if (!ta || ta.__shl) return;
@@ -103,19 +104,14 @@
 
     ta.classList.add("shl-on");
 
-    // Position the overlay's content-box exactly over the textarea's content-box.
-    // Using clientWidth/clientHeight excludes any scrollbar, so wrapping matches.
-    function geom() {
+    function syncStyle() {
       var cs = getComputedStyle(ta);
-      FONTPROPS.forEach(function (p) { pre.style[p] = cs[p]; });
-      pre.style.paddingTop = cs.paddingTop;
-      pre.style.paddingRight = cs.paddingRight;
-      pre.style.paddingBottom = cs.paddingBottom;
-      pre.style.paddingLeft = cs.paddingLeft;
-      pre.style.left = (ta.offsetLeft + (parseFloat(cs.borderLeftWidth) || 0)) + "px";
-      pre.style.top = (ta.offsetTop + (parseFloat(cs.borderTopWidth) || 0)) + "px";
-      pre.style.width = ta.clientWidth + "px";
-      pre.style.height = ta.clientHeight + "px";
+      COPY.forEach(function (p) { pre.style[p] = cs[p]; });
+      // mirror the textarea's border as a transparent border so text origin lines up
+      pre.style.borderStyle = "solid";
+      pre.style.borderColor = "transparent";
+      // match the wrap to the textarea's outer box
+      wrap.style.borderRadius = cs.borderRadius;
     }
     function render() {
       code.innerHTML = highlight(ta.value + "\n");
@@ -124,21 +120,17 @@
     }
     function syncScroll() { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; }
 
-    geom();
+    syncStyle();
     render();
 
-    ta.addEventListener("input", function () { geom(); render(); });
+    ta.addEventListener("input", render);
     ta.addEventListener("scroll", syncScroll);
-    window.addEventListener("resize", geom);
-    if (window.ResizeObserver) {
-      var ro = new ResizeObserver(function () { geom(); render(); });
-      ro.observe(ta);
-    }
+    window.addEventListener("resize", syncStyle);
 
     // catch programmatic value changes (chips, column-insert, clear, restored code)
     var last = ta.value;
     setInterval(function () {
-      if (ta.value !== last) { last = ta.value; geom(); render(); }
+      if (ta.value !== last) { last = ta.value; render(); }
     }, 150);
   }
 
