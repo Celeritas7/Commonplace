@@ -8,14 +8,7 @@
 (function () {
   "use strict";
 
-  // idempotent: if this file is included twice, the second copy does nothing
-  if (window.__sqlPracticePlus) return;
-  window.__sqlPracticePlus = true;
-
   /* ---------- which columns belong to each dataset ---------- */
-  function esc(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
   var SCHEMA = window.SQLZOO_SCHEMA || [];
   var EX = window.SQLZOO_EXERCISES || [];
   var BY_TABLE = {};
@@ -248,7 +241,7 @@
     .pp-tok-kw{background:#fbe6f1;border-color:#f3c2dd;color:#b03a78;font-weight:600;}
     .pp-tok-id{background:#e3f0fb;border-color:#bcdcf3;color:#1f6fa6;}
     .pp-tok-tbl{background:#e4f3ea;border-color:#bcdfca;color:#1f7a4d;font-weight:700;}
-    .pp-tok-tbl::before{content:"▤";margin-right:6px;opacity:.7;font-size:11px;}
+    .pp-tok-tbl::before{content:"\\25A4";margin-right:6px;opacity:.7;font-size:11px;}
 
     .pp-tabs{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
       background:color-mix(in oklab, var(--paper) 92%, transparent);backdrop-filter:blur(8px);
@@ -270,174 +263,10 @@
     .pp-tab.active .pp-tab-id{color:#fff;} .pp-tab.active .pp-tab-t{color:var(--paper);}
     .pp-tab-chk{color:var(--ok);font-size:11px;flex:0 0 auto;} .pp-tab.active .pp-tab-chk{color:#8fe0b0;}
     @media (max-width:680px){ .pp-tabs-label{display:none;} }
-
-    /* attempts log */
-    .pp-att{margin-top:16px;border-top:1px dashed var(--rule);padding-top:13px;}
-    .pp-att-head{display:flex;align-items:center;gap:9px;font-family:"JetBrains Mono",monospace;
-      font-size:10.5px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-mute);
-      cursor:pointer;user-select:none;}
-    .pp-att-head:hover{color:var(--ink-soft);}
-    .pp-att-ico{font-size:13px;color:var(--oxblood);}
-    .pp-att-count{color:var(--oxblood);}
-    .pp-att-head::after{content:"▾";margin-left:auto;font-size:10px;color:var(--ink-mute);transition:transform .15s ease;}
-    .pp-att.open .pp-att-head::after{transform:rotate(180deg);}
-    .pp-att-list{display:none;flex-direction:column;gap:9px;margin-top:12px;}
-    .pp-att.open .pp-att-list{display:flex;}
-    .pp-att-empty{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-mute);
-      font-style:italic;padding:2px 0 4px;}
-    .pp-att-row{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:start;}
-    .pp-att-badge{flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;
-      font-size:11px;font-weight:800;color:#fff;margin-top:1px;}
-    .pp-att-badge.ok{background:var(--ok);}
-    .pp-att-badge.bad{background:var(--oxblood);}
-    .pp-att-main{min-width:0;}
-    .pp-att-q{font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.45;color:var(--term-w);
-      background:var(--term-bg);border:1px solid var(--term-bg-3);border-radius:6px;padding:7px 10px;
-      white-space:pre-wrap;word-break:break-word;}
-    .pp-att-reason{font-family:"JetBrains Mono",monospace;font-size:10.5px;margin-top:4px;letter-spacing:0.02em;}
-    .pp-att-reason.ok{color:var(--ok);}
-    .pp-att-reason.bad{color:var(--oxblood);}
-    .pp-att-when{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-mute);
-      white-space:nowrap;flex:0 0 auto;padding-top:3px;}
-    .pp-att-more{background:none;border:none;font-family:"JetBrains Mono",monospace;font-size:11px;
-      color:var(--oxblood);cursor:pointer;text-decoration:underline;text-underline-offset:3px;
-      padding:2px 0;text-align:left;align-self:flex-start;}
     `;
     var s = document.createElement("style");
     s.id = "pp-style"; s.textContent = css;
     document.head.appendChild(s);
-  }
-
-  /* ===========================================================
-     ATTEMPTS LOG — remembers every Run & Check per exercise,
-     pass or fail, and shows the trail inline on the card.
-     Wrong attempts are exactly what the Mistake Drill banks.
-     =========================================================== */
-  var ATT_KEY = "commonplace_sqlzoo_attempts";
-  function loadAttempts() {
-    try { return JSON.parse(localStorage.getItem(ATT_KEY) || "{}"); }
-    catch (e) { return {}; }
-  }
-  function saveAttempts(a) {
-    try { localStorage.setItem(ATT_KEY, JSON.stringify(a)); } catch (e) {}
-  }
-  var ATT = loadAttempts();
-
-  function relTime(ts) {
-    var s = Math.max(0, Math.round((Date.now() - ts) / 1000));
-    if (s < 45) return "just now";
-    var m = Math.round(s / 60);
-    if (m < 60) return m + " min ago";
-    var h = Math.round(m / 60);
-    if (h < 24) return h + "h ago";
-    var d = Math.round(h / 24);
-    if (d < 14) return d + "d ago";
-    return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  }
-  function exIdOf(card) { return card.id.replace(/^card-/, ""); }
-
-  function renderAttempts(card) {
-    var panel = card.querySelector(".pp-att");
-    if (!panel) return;
-    var id = exIdOf(card);
-    var list = (ATT[id] || []).slice().reverse();   // newest first
-    var body = panel.querySelector(".pp-att-list");
-    var countEl = panel.querySelector(".pp-att-count");
-    var solved = list.filter(function (a) { return a.ok; }).length;
-    var tries = list.length;
-
-    countEl.textContent = tries === 0 ? "none yet"
-      : tries + (tries === 1 ? " try" : " tries");
-
-    if (tries === 0) {
-      body.innerHTML = '<div class="pp-att-empty">No attempts yet — hit Run &amp; Check and your trail builds here.</div>';
-      return;
-    }
-
-    var shown = panel.classList.contains("more") ? list : list.slice(0, 4);
-    var rows = shown.map(function (a) {
-      var status = a.ok
-        ? '<span class="pp-att-badge ok">✓</span>'
-        : '<span class="pp-att-badge bad">✕</span>';
-      var meta = a.ok ? "solved" : (a.msg || "wrong result");
-      return '<div class="pp-att-row">' +
-          status +
-          '<div class="pp-att-main">' +
-            '<div class="pp-att-q">' + esc(a.q) + "</div>" +
-            '<div class="pp-att-reason ' + (a.ok ? "ok" : "bad") + '">' + esc(meta) + "</div>" +
-          "</div>" +
-          '<span class="pp-att-when">' + relTime(a.t) + "</span>" +
-        "</div>";
-    }).join("");
-
-    var extra = list.length - shown.length;
-    if (extra > 0 && !panel.classList.contains("more")) {
-      rows += '<button class="pp-att-more" type="button">+ ' + extra + " earlier " +
-        (extra === 1 ? "attempt" : "attempts") + "</button>";
-    }
-    body.innerHTML = rows;
-
-    var moreBtn = body.querySelector(".pp-att-more");
-    if (moreBtn) moreBtn.addEventListener("click", function () {
-      panel.classList.add("more"); renderAttempts(card);
-    });
-  }
-
-  function logAttempt(card) {
-    var id = exIdOf(card);
-    var ta = card.querySelector("textarea.ex-editor");
-    var fb = card.querySelector(".ex-feedback");
-    if (!ta) return;
-    var q = (ta.value || "").trim();
-    if (!q) return;                              // nothing typed
-    var ok = !!(fb && fb.classList.contains("ok"));
-    var msg = "";
-    if (fb) {
-      msg = fb.textContent.replace(/^[✓✕]\s*/, "").trim();
-      // tighten common phrasings for the compact reason line
-      if (/no result set/i.test(msg)) msg = "no rows returned";
-      else if (/^SQL error/i.test(msg)) msg = msg.split("—")[0].trim();
-    }
-    var arr = ATT[id] || (ATT[id] = []);
-    var last = arr[arr.length - 1];
-    if (last && last.q === q && last.ok === ok) { renderAttempts(card); return; } // dedupe identical consecutive
-    arr.push({ q: q, ok: ok, msg: msg, t: Date.now() });
-    if (arr.length > 25) arr.shift();
-    saveAttempts(ATT);
-    renderAttempts(card);
-  }
-
-  function attachAttempts(card) {
-    if (card.__ppAtt) return;
-    var runB = card.querySelector(".btn.run");
-    if (!runB) return;
-    card.__ppAtt = true;
-
-    var panel = document.createElement("div");
-    panel.className = "pp-att";
-    panel.innerHTML =
-      '<div class="pp-att-head">' +
-        '<span class="pp-att-ico">↻</span> Your attempts' +
-        '<span class="pp-att-count"></span>' +
-      "</div>" +
-      '<div class="pp-att-list"></div>';
-    card.appendChild(panel);
-
-    if ((ATT[exIdOf(card)] || []).length) panel.classList.add("open");
-    panel.querySelector(".pp-att-head").addEventListener("click", function () {
-      panel.classList.toggle("open");
-    });
-
-    // fires AFTER sqlzoo-lab's own check() handler (registered earlier), so
-    // the feedback element is already populated when we read it.
-    runB.addEventListener("click", function () { setTimeout(function () { logAttempt(card); }, 0); });
-    // also catch ⌘/Ctrl-Enter runs from inside the editor
-    var ta = card.querySelector("textarea.ex-editor");
-    if (ta) ta.addEventListener("keydown", function (ev) {
-      if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") setTimeout(function () { logAttempt(card); }, 0);
-    });
-
-    renderAttempts(card);
   }
 
   /* ---------- boot ---------- */
@@ -452,7 +281,6 @@
 
     injectCss();
     cards.forEach(addToolbar);
-    cards.forEach(attachAttempts);
     // pick the first unsolved as the opening tab
     var firstUnsolved = cards.find(function (c) { return !isDone(c); });
     activeId = (firstUnsolved || cards[0]).id;
