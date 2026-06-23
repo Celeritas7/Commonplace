@@ -220,6 +220,16 @@ ORDER BY population DESC;</textarea>
   <section>
     <h2 class="sec-title">Graded exercises</h2>
     <p class="sec-sub">Write a query, hit <b>Run &amp; Check</b>. Your result is compared against a reference answer — order is checked only where the question asks for it. Progress is saved on this device.</p>
+    <style>
+      .sqlzoo-auth { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 16px;
+        font-family: "JetBrains Mono", monospace; font-size: 12px; }
+      .sqlzoo-auth input { font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 8px 11px;
+        border: 1px solid var(--rule); border-radius: 7px; background: var(--paper-3); color: var(--ink); min-width: 210px; }
+      .sqlzoo-auth .who { color: var(--ink-soft); }
+      .sqlzoo-auth .who b { color: var(--ink); }
+      .sqlzoo-auth.reveal { outline: 2px solid var(--oxblood); outline-offset: 5px; border-radius: 4px; }
+    </style>
+    <div id="sqlzoo-auth" class="sqlzoo-auth"></div>
     <div class="progwrap">
       <div class="progbar"><div id="prog-fill"></div></div>
       <span id="prog-text">0 / 0 solved</span>
@@ -234,6 +244,70 @@ ORDER BY population DESC;</textarea>
 </div>
 <script src="sqlzoo-lab.js"></script>
 <script src="sql-highlight.js"></script>
+<!-- Supabase client + magic-link login, mirroring cpp_playground.html / the Python pages -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ---------- config (same project as cpp_playground.html / Python pages) ---------- */
+var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
+var SUPABASE_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
+
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+window.sb = sb;
+var currentUser = null;
+window.currentUser = null;
+
+function sqlzooEsc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ---------- auth UI: sign-in form when signed out, status line when signed in ---------- */
+function renderAuth(){
+  var el = document.getElementById("sqlzoo-auth");
+  if(!el) return;
+  if(currentUser){
+    el.classList.remove("reveal");
+    el.innerHTML = '<span class="who">Signed in as <b>'+sqlzooEsc(currentUser.email)+'</b></span> ' +
+      '<button class="btn ghost" id="sqlzoo-signout">Sign out</button>';
+    document.getElementById("sqlzoo-signout").onclick = function(){ sb.auth.signOut(); };
+  } else {
+    el.innerHTML =
+      '<input type="email" id="sqlzoo-email" placeholder="you@email.com" autocomplete="email">' +
+      '<button class="btn run" id="sqlzoo-magic">Email me a link</button>';
+    document.getElementById("sqlzoo-magic").onclick = sendMagicLink;
+    var inp = document.getElementById("sqlzoo-email");
+    if(inp){ inp.addEventListener("keydown", function(e){ if(e.key==="Enter") sendMagicLink(); }); }
+  }
+}
+function sendMagicLink(){
+  var email = (document.getElementById("sqlzoo-email").value||"").trim();
+  if(!email){ alert("Enter your email first"); return; }
+  var m = document.getElementById("sqlzoo-magic"); m.disabled = true; m.textContent = "Sending…";
+  sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href.split('#')[0] } })
+    .then(function(res){
+      if(res.error){ alert("Error: "+res.error.message); }
+      else { alert("Check your inbox for the sign-in link ✉️"); }
+    })
+    .catch(function(e){ alert("Error: "+e.message); })
+    .finally(function(){ var m=document.getElementById("sqlzoo-magic"); if(m){ m.disabled=false; m.textContent="Email me a link"; } });
+}
+
+/* Called by sql-practice-plus.js when a "Save to bank" tap has no session. */
+window.sqlzooRevealSignIn = function(){
+  var el = document.getElementById("sqlzoo-auth");
+  if(el){ el.classList.add("reveal"); var i = document.getElementById("sqlzoo-email"); if(i) i.focus(); }
+};
+
+sb.auth.onAuthStateChange(function(_event, session){
+  currentUser = session ? session.user : null;
+  window.currentUser = currentUser;
+  renderAuth();
+});
+sb.auth.getSession().then(function(res){
+  currentUser = res.data.session ? res.data.session.user : null;
+  window.currentUser = currentUser;
+  renderAuth();
+});
+</script>
 <script src="sql-practice-plus.js"></script>
 </body>
 </html>

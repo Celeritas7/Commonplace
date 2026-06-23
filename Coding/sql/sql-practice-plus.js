@@ -181,6 +181,7 @@
     buildStrip();
     var active = document.getElementById(id);
     if (active) {
+      if (isDone(active)) addNextButton(active);   // already-solved cards keep a Next →
       var t = track && track.querySelector(".pp-tab.active");
       if (t && t.scrollIntoView) t.scrollIntoView({ block: "nearest", inline: "center" });
     }
@@ -197,24 +198,38 @@
 
   function watchSolves() {
     var mo = new MutationObserver(function (muts) {
-      var advanced = false;
       muts.forEach(function (m) {
         if (m.type === "attributes" && m.target.classList.contains("ex-card") && isDone(m.target)) {
-          if (m.target.id === activeId && !advanced) {
-            advanced = true;
-            var nid = nextUnsolvedAfter(activeId);
-            // small delay so the user sees the ✓ feedback before the card switches
-            setTimeout(function () {
-              if (nid) { show(nid); window.scrollTo({ top: scrollAnchor(), behavior: "smooth" }); }
-              else buildStrip();
-            }, 900);
-          } else {
-            buildStrip();
-          }
+          // Manual advance only: keep the result + "Correct" state on screen and
+          // offer an explicit "Next →" button. No auto-jump, no timer.
+          addNextButton(m.target);
+          buildStrip();
         }
       });
     });
     cards.forEach(function (c) { mo.observe(c, { attributes: true, attributeFilter: ["class"] }); });
+  }
+
+  // Explicit "Next →" on a solved card. On tap: clear this card's result so no
+  // stale table lingers, then advance to the next unsolved problem.
+  function addNextButton(card) {
+    if (card.__ppNext) return;
+    card.__ppNext = true;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pp-next";
+    btn.textContent = "Next →";
+    btn.addEventListener("click", function () {
+      var nid = nextUnsolvedAfter(card.id);
+      var out = card.querySelector(".ex-out");
+      if (out) out.innerHTML = "";           // drop the previous card's result table
+      if (nid) { show(nid); }
+      else { buildStrip(); }
+      window.scrollTo({ top: scrollAnchor(), behavior: "smooth" });
+    });
+    var out = card.querySelector(".ex-out");
+    if (out && out.parentNode) out.parentNode.insertBefore(btn, out.nextSibling);
+    else card.appendChild(btn);
   }
 
   function scrollAnchor() {
@@ -302,6 +317,18 @@
     .pp-att-more{background:none;border:none;font-family:"JetBrains Mono",monospace;font-size:11px;
       color:var(--oxblood);cursor:pointer;text-decoration:underline;text-underline-offset:3px;
       padding:2px 0;text-align:left;align-self:flex-start;}
+    .pp-att-save{margin-top:7px;font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;
+      color:#fff;background:var(--oxblood);border:1px solid var(--oxblood);border-radius:6px;
+      padding:5px 11px;cursor:pointer;align-self:flex-start;}
+    .pp-att-save:hover{filter:brightness(1.08);}
+    .pp-att-save.saved,.pp-att-save:disabled{background:var(--paper-3);color:var(--ok);
+      border-color:var(--rule-soft);cursor:default;filter:none;}
+
+    /* manual-advance "Next →" on a solved card */
+    .pp-next{margin-top:14px;width:100%;justify-content:center;display:inline-flex;align-items:center;gap:8px;
+      font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;
+      background:var(--ok);color:#fff;border:1px solid var(--ok);border-radius:8px;padding:11px 16px;cursor:pointer;}
+    .pp-next:hover{filter:brightness(1.07);}
     `;
     var s = document.createElement("style");
     s.id = "pp-style"; s.textContent = css;
@@ -355,16 +382,20 @@
     }
 
     var shown = panel.classList.contains("more") ? list : list.slice(0, 4);
-    var rows = shown.map(function (a) {
+    var rows = shown.map(function (a, i) {
       var status = a.ok
         ? '<span class="pp-att-badge ok">✓</span>'
         : '<span class="pp-att-badge bad">✕</span>';
       var meta = a.ok ? "solved" : (a.msg || "wrong result");
+      var saveBtn = a.saved
+        ? '<button class="pp-att-save saved" type="button" disabled>Saved ✓</button>'
+        : '<button class="pp-att-save" type="button" data-i="' + i + '">Save to bank</button>';
       return '<div class="pp-att-row">' +
           status +
           '<div class="pp-att-main">' +
             '<div class="pp-att-q">' + esc(a.q) + "</div>" +
             '<div class="pp-att-reason ' + (a.ok ? "ok" : "bad") + '">' + esc(meta) + "</div>" +
+            saveBtn +
           "</div>" +
           '<span class="pp-att-when">' + relTime(a.t) + "</span>" +
         "</div>";
@@ -381,6 +412,83 @@
     if (moreBtn) moreBtn.addEventListener("click", function () {
       panel.classList.add("more"); renderAttempts(card);
     });
+
+    // per-attempt opt-in "Save to bank"
+    Array.prototype.forEach.call(body.querySelectorAll(".pp-att-save:not([disabled])"), function (btn) {
+      btn.addEventListener("click", function () {
+        var i = parseInt(btn.getAttribute("data-i"), 10);
+        saveAttemptToBank(card, shown[i], btn);
+      });
+    });
+  }
+
+  /* exercise-id map (commonplace_exercises rows). Keys are the lowercase
+     card/localStorage ids (w1, n3, f2) — no case conversion needed. */
+  var SQL_EXERCISE_IDS = {
+    w1:"d84d587b-82c6-4636-a18e-2d70a40b34b2", w2:"7f736c6a-f1d5-4947-be60-a878daa6f6cd",
+    w3:"8260a723-1a21-4d74-8b9e-e2fdfc57e2c4", w4:"642a7744-0c77-4189-8b24-61d3296f882c",
+    w5:"dac23c04-9dbf-4038-bf30-33f9bb1d3fdd", w6:"7c228bed-bbea-43bd-bf7f-67c7f3972858",
+    w7:"b2292092-bcde-4a2a-8252-173796788f08", w8:"f57bbb44-87b0-44cb-bb85-c3710020ceca",
+    n1:"ff4b8818-39bb-4321-bfa1-9707c129d90c", n2:"4a15b925-1a20-4c44-b9c9-601e02b159ea",
+    n3:"9560237e-ebeb-41d6-95e7-95a576fd8884", n4:"9c2c0ed0-fe0d-4a9a-8ddf-2b7df8d33e7a",
+    n5:"77241724-d6b3-45d2-9c4e-290dda0dc08d", n6:"517383e0-7195-4d28-8ce6-6ad3328adadc",
+    f1:"98e8e367-103d-47a4-a140-4cb2da000bfe", f2:"b3e35982-742e-4ca0-a048-066caa5d76ca",
+    f3:"eeb913d6-4015-4b2e-a16e-647a2e3cfca8", f4:"1bc32ddb-1be7-44ca-bbfe-841806273c1f",
+    f5:"972f4db8-6956-4290-ae06-3e4aa27f5c72",
+  };
+
+  // Insert ONE attempt into the bank. Requires a session (mirrors the C++/Python
+  // screens: RLS own_insert checks auth.uid() = user_id). Idempotent via a.saved.
+  function saveAttemptToBank(card, a, btn) {
+    if (!a || a.saved) return;
+    var user = window.currentUser;
+    if (!user) {
+      // no session — surface sign-in and abort; the user saves again after auth
+      if (typeof window.sqlzooRevealSignIn === "function") window.sqlzooRevealSignIn();
+      return;
+    }
+    var sb = window.sb;
+    if (!sb) { return; }
+    var exId = SQL_EXERCISE_IDS[exIdOf(card)] || null;
+
+    btn.disabled = true; btn.textContent = "Saving…";
+
+    function markSaved() {
+      a.saved = true;
+      saveAttempts(ATT);     // persist so it can never insert twice, even across reloads
+      renderAttempts(card);
+    }
+    function fail(msg) {
+      btn.disabled = false; btn.textContent = "Save to bank";
+      alert("Could not save: " + msg);
+    }
+
+    sb.from("commonplace_attempts").insert({
+      user_id: user.id,
+      subject: "sql",
+      language: "sql",
+      code: a.q,
+      passed: a.ok,
+      stderr: a.ok ? null : a.msg,
+      exercise_id: exId
+    }).select("id").single().then(function (res) {
+      if (res.error) { fail(res.error.message); return; }
+      var attemptId = res.data.id;
+      // failures also bank a mistake row; passed attempts get NO mistake row
+      if (a.ok === false) {
+        return sb.from("commonplace_mistakes").insert({
+          user_id: user.id,
+          attempt_id: attemptId,
+          exercise_id: exId,
+          subject: "sql",
+          reason: a.msg
+        }).then(function (r2) {
+          if (r2 && r2.error) { alert("Saved the attempt, but the mistake log failed: " + r2.error.message); }
+          markSaved();
+        });
+      }
+      markSaved();
+    }).catch(function (e) { fail(e.message); });
   }
 
   function logAttempt(card) {
