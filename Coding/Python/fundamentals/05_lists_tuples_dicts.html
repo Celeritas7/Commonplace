@@ -11,8 +11,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
-<!-- Pyodide (real Python in the browser) -->
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 
 <style>
   /* Minimal, neutral styling — meant to be restyled later in Claude design.
@@ -99,6 +97,19 @@
   var mount = document.getElementById("nbx-cells");
   var statusEl = document.getElementById("nbx-status");
   var pyodide = null, pyReady = false, pyLoading = null;
+
+  // Pyodide is lazy-loaded on first Run (not at startup) to keep page load fast.
+  var PY_VERSION = "v0.26.4";
+  var PY_BASE = "https://cdn.jsdelivr.net/pyodide/" + PY_VERSION + "/full/";
+  function loadScript(src){
+    return new Promise(function(resolve, reject){
+      if(document.querySelector('script[src="'+src+'"]')) return resolve();
+      var s=document.createElement("script");
+      s.src=src; s.onload=resolve;
+      s.onerror=function(){ reject(new Error("Failed to load "+src)); };
+      document.head.appendChild(s);
+    });
+  }
   var editors = [];           // {get, set, reset, original}
 
   function setStatus(txt, cls){ statusEl.className = "nbx-status " + (cls||""); statusEl.innerHTML = '<span class="dot"></span>' + txt; }
@@ -155,7 +166,8 @@
     if (pyLoading) return pyLoading;
     setStatus("Loading Python…", "loading");
     pyLoading = (async function(){
-      pyodide = await loadPyodide();
+      await loadScript(PY_BASE + "pyodide.js");   // defines loadPyodide FIRST
+      pyodide = await loadPyodide({ indexURL: PY_BASE });
       pyodide.globals.set("__js_input", function(p){ var r = window.prompt(p || ""); return r === null ? "" : r; });
       await pyodide.runPythonAsync(
         "import builtins, os\n" +
@@ -223,8 +235,7 @@
     editors.forEach(function(r){ r.set(r.original); r.out.className="nbx-out"; r.out.textContent=""; });
   };
 
-  // warm up Python in the background so the first Run is snappy
-  setTimeout(function(){ ensurePyodide().catch(function(){ setStatus("Python failed to load (offline?)", ""); }); }, 400);
+  // Removed startup warm-up: Pyodide now loads only on the first Run click.
 })();
 </script>
 </body>
