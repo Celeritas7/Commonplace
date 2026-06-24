@@ -474,6 +474,7 @@
     }).select("id").single().then(function (res) {
       if (res.error) { fail(res.error.message); return; }
       var attemptId = res.data.id;
+      a.dbId = attemptId;           // stable key so hydrate can't re-add this row
       // failures also bank a mistake row; passed attempts get NO mistake row
       if (a.ok === false) {
         return sb.from("commonplace_mistakes").insert({
@@ -489,6 +490,53 @@
       }
       markSaved();
     }).catch(function (e) { fail(e.message); });
+  }
+
+  // Pull this user's saved attempts back from Supabase and merge into the local
+  // trail. Without this the panel only ever reflects THIS browser's localStorage,
+  // so a device/browser with no local rows shows "none yet" despite stored data.
+  // Read-only: never writes commonplace_attempts or commonplace_mistakes.
+  function hydrateFromSupabase() {
+    var sb = window.sb, user = window.currentUser;
+    if (!sb || !user) return;
+    var byUuid = {};
+    Object.keys(SQL_EXERCISE_IDS).forEach(function (k) { byUuid[SQL_EXERCISE_IDS[k]] = k; });
+    sb.from("commonplace_attempts")
+      .select("id,code,passed,stderr,exercise_id,created_at")
+      .eq("user_id", user.id)
+      .eq("subject", "sql")
+      .order("created_at", { ascending: true })
+      .then(function (res) {
+        if (res.error || !res.data) return;
+        res.data.forEach(function (r) {
+          var id = byUuid[r.exercise_id];
+          if (!id) return;
+          var arr = ATT[id] || (ATT[id] = []);
+          // skew-proof dedupe: match on the DB row id, never on timestamps
+          if (arr.some(function (a) { return a.dbId === r.id; })) return;
+          var t = Date.parse(r.created_at) || Date.now();
+          arr.push({
+            q: r.code,
+            ok: r.passed,
+            msg: r.passed ? "" : (r.stderr || "wrong result"),
+            t: t,
+            saved: true,
+            dbId: r.id
+          });
+        });
+        Object.keys(ATT).forEach(function (id) {
+          ATT[id].sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
+          if (ATT[id].length > 25) ATT[id] = ATT[id].slice(-25);
+        });
+        saveAttempts(ATT);
+        cards.forEach(function (c) {
+          renderAttempts(c);
+          if ((ATT[exIdOf(c)] || []).length) {
+            var p = c.querySelector(".pp-att");
+            if (p) p.classList.add("open");
+          }
+        });
+      });
   }
 
   function logAttempt(card) {
@@ -561,6 +609,10 @@
     injectCss();
     cards.forEach(addToolbar);
     cards.forEach(attachAttempts);
+    hydrateFromSupabase();                                   // pull saved attempts now if a session exists…
+    if (window.sb && window.sb.auth) {                       // …and again once auth resolves (getSession is async)
+      window.sb.auth.onAuthStateChange(function () { hydrateFromSupabase(); });
+    }
     // pick the first unsolved as the opening tab
     var firstUnsolved = cards.find(function (c) { return !isDone(c); });
     activeId = (firstUnsolved || cards[0]).id;
