@@ -198,7 +198,7 @@ function HighlightedEditor({ code, setCode, taRef, onKey, full, placeholder }) {
   );
 }
 
-function CodeEditor({ code, setCode, onRun, onCheck, running, taRef, full, setFull, placeholder, stdin, promptHtml, exId, exTitle, feedback, output }) {
+function CodeEditor({ code, setCode, onRun, onCheck, running, taRef, full, setFull, placeholder, stdin, promptHtml, exId, exTitle }) {
   const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); onCheck(); } if (e.key === "Escape" && full) setFull(false); };
   const onInsert = (t) => insertAtCaret(taRef.current, t, setCode);
   const tray = <KeywordTray onInsert={onInsert} />;
@@ -233,17 +233,6 @@ function CodeEditor({ code, setCode, onRun, onCheck, running, taRef, full, setFu
         <div style={{ marginBottom: "12px" }}>{tray}</div>
         {editor}
         <div style={{ marginTop: "12px" }}>{controls}</div>
-        {(feedback || output) && (
-          <div style={{ marginTop: "12px", maxHeight: "34vh", overflow: "auto", flex: "0 0 auto" }}>
-            {feedback && <div style={{ fontFamily: "var(--font-mono)", fontSize: "12.5px", padding: "9px 12px", borderRadius: "8px", color: feedback.ok ? PP.ok : PP.err, background: feedback.ok ? "#e9f5ee" : "#f8ebe6", border: "1px solid " + (feedback.ok ? "#b6dcc4" : "#e7c3b4") }}>{feedback.msg}</div>}
-            {output && (
-              <div style={{ marginTop: feedback ? "10px" : 0 }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "9.5px", letterSpacing: "1.5px", textTransform: "uppercase", color: PP.sage, marginBottom: "5px" }}>Output</div>
-                <pre style={{ margin: 0, background: "#0f261e", color: output.isErr ? "#f0a99e" : PP.w, fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: 1.6, padding: "12px 14px", borderRadius: "8px", overflow: "auto", whiteSpace: "pre-wrap", border: "1px solid rgba(255,255,255,0.1)" }}>{output.text}</pre>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     );
   }
@@ -376,7 +365,7 @@ function PyExCard({ ex, py, state, user, onReveal, solved, store, onSolvedChange
 
       <CodeEditor code={code} setCode={setCodeP} onCheck={check} running={running} taRef={taRef} full={full} setFull={setFull}
         placeholder="Write your Python here…  ⌘/Ctrl + Enter to run" stdin={ex.stdin}
-        promptHtml={ex.prompt} exId={ex.id} exTitle={ex.title} feedback={fb} output={output} />
+        promptHtml={ex.prompt} exId={ex.id} exTitle={ex.title} />
 
       <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
         <button onClick={() => setShowHint((s) => !s)} style={ppBtn("ghost")}>{showHint ? "Hide hint" : "Hint"}</button>
@@ -550,7 +539,7 @@ function PyDrillCard({ py, state, bank, index, total, onResolved, onNext, onQuit
         </div>
         <CodeEditor code={code} setCode={setCode} onCheck={check} running={running} taRef={taRef} full={full} setFull={setFull}
           placeholder="Solve it yourself this time…" stdin={ex.stdin}
-          promptHtml={ex.prompt} exId={bank.exId} exTitle={bank.title} feedback={fb} output={output} />
+          promptHtml={ex.prompt} exId={bank.exId} exTitle={bank.title} />
         {done && <button onClick={onNext} style={{ ...ppBtn("go"), marginTop: "10px" }}>{index + 1 < total ? "Next mistake →" : "Finish drill ✓"}</button>}
         {fb && <div style={{ marginTop: "11px", fontFamily: "var(--font-mono)", fontSize: "12.5px", padding: "9px 12px", borderRadius: "8px", color: fb.ok ? PP.ok : PP.err, background: fb.ok ? "#e9f5ee" : "#f8ebe6", border: "1px solid " + (fb.ok ? "#b6dcc4" : "#e7c3b4") }}>{fb.msg}</div>}
         {output && <pre style={{ marginTop: "10px", background: PP.bg, color: output.isErr ? "#f0a99e" : PP.w, fontFamily: "var(--font-mono)", fontSize: "12.5px", lineHeight: 1.6, padding: "12px 14px", borderRadius: "8px", overflow: "auto", whiteSpace: "pre-wrap", margin: 0 }}>{output.text}</pre>}
