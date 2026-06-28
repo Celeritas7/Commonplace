@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Mistake Drill · Python · Commonplace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -314,22 +317,29 @@ button{font-family:inherit;cursor:pointer}
   }
 
   /* ---------- bank screen ---------- */
-  // Pull the topic bucket out of an exercise's tags (e.g. 'topic:OOP' -> 'OOP').
+  // Curriculum section = first tag that isn't an import:* or topic:* marker
+  // (matches the Practice page's grouping so both read the same way).
   function sectionOf(tags){
     if(!tags || !tags.length) return 'Unsorted';
     for(var i=0;i<tags.length;i++){
       var t=String(tags[i]||'');
-      if(t.toLowerCase().indexOf('topic:')===0) return t.slice(6).trim()||'Unsorted';
+      if(/^import:/i.test(t) || /^topic:/i.test(t)) continue;
+      return t.trim()||'Unsorted';
     }
     return 'Unsorted';
   }
-  // Group BANK into [{name, items}] ordered by size (largest first), Unsorted last.
+  // Fixed curriculum order so §I–§IV always line up with the Practice page.
+  var CURRICULUM_ORDER=['Fundamentals','Data Libraries','100 Days (Angela Yu)','Warm-ups'];
+  // Group BANK into [{name, items}] in curriculum order; unknown sections after, Unsorted last.
   function groupedBank(){
     var map={};
     BANK.forEach(function(m){ var s=m.section||'Unsorted'; (map[s]=map[s]||[]).push(m); });
     var names=Object.keys(map).sort(function(a,b){
+      var ia=CURRICULUM_ORDER.indexOf(a), ib=CURRICULUM_ORDER.indexOf(b);
       if(a==='Unsorted') return 1; if(b==='Unsorted') return -1;
-      return map[b].length-map[a].length || a.localeCompare(b);
+      if(ia!==-1 && ib!==-1) return ia-ib;
+      if(ia!==-1) return -1; if(ib!==-1) return 1;
+      return a.localeCompare(b);
     });
     return names.map(function(n){ return {name:n, items:map[n]}; });
   }
