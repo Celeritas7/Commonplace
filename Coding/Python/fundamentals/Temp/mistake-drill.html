@@ -54,20 +54,6 @@ button{font-family:inherit;cursor:pointer}
 
 /* ---- bank cards ---- */
 .banklist{display:flex;flex-direction:column;gap:13px;}
-
-/* ---- section index + groups (topic buckets) ---- */
-.sections{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 30px;}
-.sectionchip{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--head);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;transition:background .12s,border-color .12s;}
-.sectionchip:hover{background:var(--panel);border-color:var(--head);}
-.sc-count{font-size:11px;color:#fff;background:var(--red);border-radius:20px;min-width:18px;text-align:center;padding:1px 6px;}
-.secgroup{margin:0 0 26px;}
-.secgroup-head{display:flex;align-items:center;gap:11px;margin:0 0 12px;}
-.secgroup-name{font-family:var(--disp);font-weight:600;font-size:19px;color:var(--head);}
-.secgroup-count{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--head);border-radius:20px;padding:1px 8px;}
-.secgroup-rule{flex:1;height:1px;background:var(--line);}
-.secgroup-drill{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);background:transparent;border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;white-space:nowrap;}
-.secgroup-drill:hover{border-color:var(--green);background:var(--card);}
-.sectionchip-active{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--head);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 9px;}
 .mcard{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--red);border-radius:12px;padding:15px 17px;}
 .mcard-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 .mcode{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--head);background:#dde7dd;border-radius:7px;padding:2px 8px;}
@@ -174,7 +160,6 @@ button{font-family:inherit;cursor:pointer}
   var view = "bank";        // "bank" | "drill" | "done"
   var queue = [];           // ids being drilled, in order
   var qpos = 0;
-  var activeSection = null;  // null = all sections; else only drill this topic
   var lastSolvedCode = "";  // code shown on success screen
 
   /* ---------- utils ---------- */
@@ -225,7 +210,7 @@ button{font-family:inherit;cursor:pointer}
     loading=true; loadErr=""; render();
     var p1=sb.from('commonplace_mistakes')
       .select('id, reason, resolved, created_at, exercise_id, attempt_id,'+
-              'commonplace_exercises(id,title,prompt,expected_output,tags),'+
+              'commonplace_exercises(id,title,prompt,expected_output),'+
               'commonplace_attempts(code,stdout,stderr,created_at)')
       .eq('subject',SUBJECT).eq('resolved',false)
       .order('created_at',{ascending:false});
@@ -245,7 +230,6 @@ button{font-family:inherit;cursor:pointer}
           title:ex.title||'Untitled exercise',
           prompt:ex.prompt||'',
           expected:ex.expected_output||'',
-          section:sectionOf(ex.tags),
           reason:m.reason||'',
           mistakeAt:m.created_at,
           wrongCode:(at.code||'').replace(/\r\n/g,'\n'),
@@ -308,28 +292,6 @@ button{font-family:inherit;cursor:pointer}
   }
 
   /* ---------- bank screen ---------- */
-  // Pull the topic bucket out of an exercise's tags (e.g. 'topic:OOP' -> 'OOP').
-  function sectionOf(tags){
-    if(!tags || !tags.length) return 'Unsorted';
-    for(var i=0;i<tags.length;i++){
-      var t=String(tags[i]||'');
-      if(t.toLowerCase().indexOf('topic:')===0) return t.slice(6).trim()||'Unsorted';
-    }
-    return 'Unsorted';
-  }
-  // Group BANK into [{name, items}] ordered by size (largest first), Unsorted last.
-  function groupedBank(){
-    var map={};
-    BANK.forEach(function(m){ var s=m.section||'Unsorted'; (map[s]=map[s]||[]).push(m); });
-    var names=Object.keys(map).sort(function(a,b){
-      if(a==='Unsorted') return 1; if(b==='Unsorted') return -1;
-      return map[b].length-map[a].length || a.localeCompare(b);
-    });
-    return names.map(function(n){ return {name:n, items:map[n]}; });
-  }
-  function itemsForSection(sec){
-    return sec? BANK.filter(function(m){ return (m.section||'Unsorted')===sec; }) : BANK.slice();
-  }
   function bankCardHtml(m){
     var peek=(m.wrongCode||'(no code captured)').split('\n').slice(0,6).join('\n');
     return '<div class="mcard">'
@@ -345,12 +307,11 @@ button{font-family:inherit;cursor:pointer}
   }
   function bankHtml(){
     var n=BANK.length;
-    var groups=groupedBank();
     var html='<div class="head"><span class="sec">§ Review</span>'
       +'<h1 class="h1">Mistake Drill</h1>'
       +'<span class="count">'+(n? n+' to review':'clear')+'</span>'
       +'<span class="rule"></span></div>'
-      +'<p class="intro">Your real wrong attempts, pulled from the bank and grouped by topic. Drill one section at a time, or all of them.</p>';
+      +'<p class="intro">Your real wrong attempts, pulled from the bank. Re-solve each one until it sticks — every fix leaves the bank for good.</p>';
     if(!n){
       html+='<div class="empty"><div class="empty-mark">◯</div>'
         +'<div class="empty-h">The bank is clear.</div>'
@@ -363,28 +324,9 @@ button{font-family:inherit;cursor:pointer}
         +'<button data-act="mode" data-mode="blank" class="'+(mode==='blank'?'on':'')+'">Blank redo</button>'
       +'</div>'
       +'<span class="modehint">'+(mode==='spot'?'See your old code and fix it in place.':'Start from an empty editor — no peeking.')+'</span>'
-      +'<button class="start" data-act="start">Drill all · '+n+' →</button>'
+      +'<button class="start" data-act="start">Start drill · '+n+' →</button>'
     +'</div>';
-    // section index chips
-    html+='<div class="sections">';
-    groups.forEach(function(g){
-      html+='<button class="sectionchip" data-act="start-section" data-section="'+esc(g.name)+'">'
-        +'<span class="sc-name">'+esc(g.name)+'</span>'
-        +'<span class="sc-count">'+g.items.length+'</span></button>';
-    });
-    html+='</div>';
-    // grouped lists
-    groups.forEach(function(g){
-      html+='<div class="secgroup">'
-        +'<div class="secgroup-head">'
-          +'<span class="secgroup-name">'+esc(g.name)+'</span>'
-          +'<span class="secgroup-count">'+g.items.length+'</span>'
-          +'<span class="secgroup-rule"></span>'
-          +'<button class="secgroup-drill" data-act="start-section" data-section="'+esc(g.name)+'">Drill this section →</button>'
-        +'</div>'
-        +'<div class="banklist">'+g.items.map(bankCardHtml).join('')+'</div>'
-      +'</div>';
-    });
+    html+='<div class="banklist">'+BANK.map(bankCardHtml).join('')+'</div>';
     root.innerHTML=html;
   }
 
@@ -398,7 +340,6 @@ button{font-family:inherit;cursor:pointer}
     var html='<div class="drill-bar">'
       +'<button class="back" data-act="exit">← Bank</button>'
       +'<span class="modechip">'+(mode==='spot'?'Spot the bug':'Blank redo')+'</span>'
-      +(activeSection?'<span class="sectionchip-active">'+esc(activeSection)+'</span>':'')
       +'<span class="progress">'+(qpos+1)+' / '+total+'</span></div>'
       +'<h2 class="drill-title">'+esc(m.title)+'</h2>'
       +'<p class="drill-prompt">'+esc(m.prompt|| 'Re-solve this one correctly, then run to check.')+'</p>';
@@ -545,15 +486,7 @@ button{font-family:inherit;cursor:pointer}
   }
   function startDrill(){
     if(!BANK.length) return;
-    activeSection=null;
     queue=BANK.map(function(m){ return m.id; });
-    qpos=0; view='drill'; drillHtml();
-  }
-  function startSection(sec){
-    var items=itemsForSection(sec);
-    if(!items.length) return;
-    activeSection=sec;
-    queue=items.map(function(m){ return m.id; });
     qpos=0; view='drill'; drillHtml();
   }
   function exitDrill(){ clearInterval(advTimer); view='bank'; bankHtml(); }
@@ -578,7 +511,6 @@ button{font-family:inherit;cursor:pointer}
     else if(act==='magic'){ sendMagicLink(); }
     else if(act==='mode'){ mode=t.getAttribute('data-mode'); bankHtml(); }
     else if(act==='start'){ startDrill(); }
-    else if(act==='start-section'){ startSection(t.getAttribute('data-section')); }
     else if(act==='exit'){ exitDrill(); }
     else if(act==='run'){ doRun(); }
     else if(act==='hint'){ showHint(); }
