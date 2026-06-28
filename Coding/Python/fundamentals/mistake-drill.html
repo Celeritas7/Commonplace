@@ -60,11 +60,16 @@ button{font-family:inherit;cursor:pointer}
 .sectionchip{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--head);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;transition:background .12s,border-color .12s;}
 .sectionchip:hover{background:var(--panel);border-color:var(--head);}
 .sc-count{font-size:11px;color:#fff;background:var(--red);border-radius:20px;min-width:18px;text-align:center;padding:1px 6px;}
-.secgroup{margin:0 0 26px;}
-.secgroup-head{display:flex;align-items:center;gap:11px;margin:0 0 12px;}
-.secgroup-name{font-family:var(--disp);font-weight:600;font-size:19px;color:var(--head);}
-.secgroup-count{font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:var(--head);border-radius:20px;padding:1px 8px;}
-.secgroup-rule{flex:1;height:1px;background:var(--line);}
+.secgroup{margin:0 0 22px;}
+.secgroup-head{display:flex;align-items:baseline;gap:13px;margin:0 0 13px;cursor:pointer;user-select:none;}
+.secgroup-num{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green);letter-spacing:.3px;white-space:nowrap;}
+.secgroup-name{font-family:var(--disp);font-weight:600;font-size:27px;line-height:1;letter-spacing:-.3px;color:var(--head);white-space:nowrap;}
+.secgroup-count{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);background:#dde7dd;border:1px solid var(--softgreen);border-radius:999px;padding:2px 9px;}
+.secgroup-rule{flex:1;height:1px;background:var(--line);transform:translateY(-6px);}
+.secgroup-caret{font-family:var(--mono);font-size:13px;color:var(--muted);transition:transform .15s;transform:translateY(-2px);}
+.secgroup.collapsed .secgroup-caret{transform:translateY(-2px) rotate(-90deg);}
+.secgroup.collapsed .banklist{display:none;}
+.secgroup.collapsed .secgroup-drill{display:none;}
 .secgroup-drill{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--green);background:transparent;border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;white-space:nowrap;}
 .secgroup-drill:hover{border-color:var(--green);background:var(--card);}
 .sectionchip-active{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--head);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 9px;}
@@ -175,6 +180,7 @@ button{font-family:inherit;cursor:pointer}
   var queue = [];           // ids being drilled, in order
   var qpos = 0;
   var activeSection = null;  // null = all sections; else only drill this topic
+  var collapsedSections = {}; // section name -> true when collapsed
   var lastSolvedCode = "";  // code shown on success screen
 
   /* ---------- utils ---------- */
@@ -330,6 +336,12 @@ button{font-family:inherit;cursor:pointer}
   function itemsForSection(sec){
     return sec? BANK.filter(function(m){ return (m.section||'Unsorted')===sec; }) : BANK.slice();
   }
+  // Roman numerals for the §-style section headers (1..30 is plenty).
+  function roman(n){
+    var map=[[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']], out='';
+    for(var i=0;i<map.length;i++){ while(n>=map[i][0]){ out+=map[i][1]; n-=map[i][0]; } }
+    return out;
+  }
   function bankCardHtml(m){
     var peek=(m.wrongCode||'(no code captured)').split('\n').slice(0,6).join('\n');
     return '<div class="mcard">'
@@ -373,14 +385,17 @@ button{font-family:inherit;cursor:pointer}
         +'<span class="sc-count">'+g.items.length+'</span></button>';
     });
     html+='</div>';
-    // grouped lists
-    groups.forEach(function(g){
-      html+='<div class="secgroup">'
-        +'<div class="secgroup-head">'
+    // grouped lists, rendered as §-numbered collapsible sections
+    groups.forEach(function(g,gi){
+      var collapsed = !!collapsedSections[g.name];
+      html+='<div class="secgroup'+(collapsed?' collapsed':'')+'">'
+        +'<div class="secgroup-head" data-act="toggle-section" data-section="'+esc(g.name)+'">'
+          +'<span class="secgroup-num">§ '+roman(gi+1)+'</span>'
           +'<span class="secgroup-name">'+esc(g.name)+'</span>'
           +'<span class="secgroup-count">'+g.items.length+'</span>'
           +'<span class="secgroup-rule"></span>'
           +'<button class="secgroup-drill" data-act="start-section" data-section="'+esc(g.name)+'">Drill this section →</button>'
+          +'<span class="secgroup-caret">▾</span>'
         +'</div>'
         +'<div class="banklist">'+g.items.map(bankCardHtml).join('')+'</div>'
       +'</div>';
@@ -578,7 +593,8 @@ button{font-family:inherit;cursor:pointer}
     else if(act==='magic'){ sendMagicLink(); }
     else if(act==='mode'){ mode=t.getAttribute('data-mode'); bankHtml(); }
     else if(act==='start'){ startDrill(); }
-    else if(act==='start-section'){ startSection(t.getAttribute('data-section')); }
+    else if(act==='start-section'){ e.stopPropagation(); startSection(t.getAttribute('data-section')); }
+    else if(act==='toggle-section'){ var s=t.getAttribute('data-section'); collapsedSections[s]=!collapsedSections[s]; bankHtml(); }
     else if(act==='exit'){ exitDrill(); }
     else if(act==='run'){ doRun(); }
     else if(act==='hint'){ showHint(); }
