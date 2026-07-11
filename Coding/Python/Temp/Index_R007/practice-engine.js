@@ -122,10 +122,6 @@ window.CommonplacePractice = (function () {
     ta.focus(); var p=s+ins.length-back; ta.setSelectionRange(p,p);
   }
   function makeEditor(ex, initialCode, onCodeChange, onCheck, placeholder){
-    /* Compose Blocks replaces the flat textarea when compose-blocks.js is loaded */
-    if(window.ComposeBlocks && window.ComposeBlocks.enabled){
-      return window.ComposeBlocks.makeEditor(ex, initialCode, onCodeChange, onCheck, placeholder, { hl: hl, esc: esc });
-    }
     var block=document.createElement("div"); block.className="pmb-edblock";
     var ta=document.createElement("textarea");
     function tokBtn(t,kind){

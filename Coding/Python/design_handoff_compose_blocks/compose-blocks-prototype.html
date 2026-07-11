@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Compose Blocks — Python editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#f7f1e3; --paper:#fffdf6; --ink:#2b2b2b; --vermillion:#b8412e;
+    --key-kw:#ddd6f3; --key-fn:#cfe6c8;
+    --shadow:4px 4px 0 rgba(43,43,43,.9);
+    --shadow-sm:2px 2px 0 rgba(43,43,43,.85);
+    --shadow-lift:9px 9px 0 rgba(43,43,43,.9);
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --ui:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:#e9e4d8; font-family:var(--ui); color:var(--ink);
+    min-height:100vh; display:flex; justify-content:center; align-items:flex-start;
+    padding:24px 16px 80px; -webkit-tap-highlight-color:transparent;
+  }
+  a{color:var(--vermillion)} a:hover{color:#8f3223}
+
+  .app{
+    width:100%; max-width:380px; background:var(--cream);
+    border:1.5px solid var(--ink); border-radius:18px; box-shadow:6px 6px 0 rgba(43,43,43,.9);
+    padding:16px; display:flex; flex-direction:column; gap:14px;
+  }
+
+  .kicker{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(43,43,43,.55)}
+  .row-between{display:flex;align-items:center;justify-content:space-between}
+  .baseline{align-items:baseline}
+
+  /* palette */
+  .palette{background:var(--paper);border:1px solid var(--ink);border-radius:12px;box-shadow:var(--shadow);padding:10px 0 12px;overflow:hidden}
+  .palette.focused{border:2px solid var(--vermillion)}
+  .palette-head{display:flex;align-items:center;justify-content:space-between;padding:0 12px 9px}
+  .palette-head .arrow{color:var(--vermillion)}
+  .btn-mini{font-family:var(--mono);font-size:11px;font-weight:600;background:var(--cream);border:1px solid var(--ink);border-radius:8px;padding:7px 10px;box-shadow:var(--shadow-sm);color:var(--ink);cursor:pointer}
+  .btn-mini:active{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(43,43,43,.85)}
+  .key-row{display:flex;gap:8px;padding:2px 0 4px 12px;overflow-x:auto;scrollbar-width:none}
+  .key-row.second{padding-top:6px}
+  .key-row::-webkit-scrollbar{display:none}
+  .key{flex:0 0 auto;display:inline-flex;align-items:center;height:38px;padding:0 13px;border:1px solid var(--ink);border-radius:10px;box-shadow:var(--shadow-sm);font-family:var(--mono);font-size:13px;font-weight:600;cursor:pointer;user-select:none}
+  .key:active{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(43,43,43,.85)}
+  .key.kw{background:var(--key-kw)} .key.fn{background:var(--key-fn)}
+  .key[disabled]{opacity:.4;cursor:default}
+
+  /* pinned punctuation — always visible, wraps, no scroll */
+  .sym-row{display:flex;flex-wrap:wrap;gap:8px;padding:8px 12px 2px 12px;border-top:1px dashed rgba(43,43,43,.2);margin-top:8px}
+  .key.sym{background:var(--cream);min-width:38px;padding:0 10px;justify-content:center}
+
+  .palette-collapsed{display:flex;align-items:center;justify-content:space-between;background:var(--paper);border:1px solid var(--ink);border-radius:12px;box-shadow:var(--shadow);padding:6px 6px 6px 12px}
+
+  /* stack */
+  .stack{display:flex;flex-direction:column;gap:12px;position:relative}
+  .card{background:var(--paper);border:1px solid var(--ink);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;touch-action:none}
+  .card.focused{border:2px solid var(--vermillion)}
+  .card.err{border:1px solid var(--vermillion);box-shadow:4px 4px 0 rgba(184,65,46,.55)}
+  .card.dragging{box-shadow:var(--shadow-lift);transform:rotate(-2deg);border-width:1.5px;position:relative;z-index:5}
+  .card.dimmed{opacity:.45}
+  .card-head{display:flex;align-items:center;gap:10px;height:46px;padding:0 4px 0 13px;border-bottom:1px solid rgba(43,43,43,.2)}
+  .card.collapsed .card-head{border-bottom:none}
+  .grip{color:rgba(43,43,43,.45);font-size:14px;cursor:grab;touch-action:none;padding:0 2px}
+  .card.dragging .grip{color:var(--ink);cursor:grabbing}
+  .label{font-family:var(--mono);font-size:13px;font-weight:700}
+  .meta{font-family:var(--mono);font-size:11px;color:rgba(43,43,43,.45);white-space:nowrap;flex:0 0 auto}
+  .spacer{flex:1}
+  .stamp{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--vermillion);border:1px solid var(--vermillion);background:rgba(184,65,46,.07);padding:3px 6px;border-radius:6px;transform:rotate(-1.5deg);white-space:nowrap;flex:0 0 auto}
+  .icon-btn{width:40px;height:46px;display:flex;align-items:center;justify-content:center;color:rgba(43,43,43,.6);background:none;border:none;cursor:pointer;font-size:15px;font-family:var(--mono)}
+  .icon-btn.x{font-size:17px}
+  .icon-btn.chev.collapsed{transform:rotate(-90deg)}
+  .code{margin:0;padding:0}
+  .code textarea{width:100%;border:none;outline:none;resize:none;background:transparent;padding:12px 14px;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--ink);display:block;overflow:hidden}
+  .card.collapsed .code{display:none}
+
+  .ghost{width:100%;background:transparent;border:1.5px dashed rgba(43,43,43,.45);border-radius:12px;padding:13px;font-family:var(--mono);font-size:13px;font-weight:600;color:rgba(43,43,43,.55);cursor:pointer}
+  .ghost:active{transform:translate(1px,1px)}
+
+  .drop-line{display:flex;align-items:center;gap:6px;height:0;margin:-8px 0}
+  .drop-line .dot{width:10px;height:10px;border-radius:50%;background:var(--vermillion)}
+  .drop-line .bar{flex:1;height:3px;background:var(--vermillion);border-radius:2px}
+
+  /* actions */
+  .actions{display:flex;gap:12px}
+  .btn-primary{flex:1;background:var(--vermillion);color:#fff7ec;border:1.5px solid var(--ink);border-radius:12px;padding:14px;font-family:var(--ui);font-size:15px;font-weight:700;box-shadow:var(--shadow);cursor:pointer}
+  .btn-primary:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(43,43,43,.9)}
+  .btn-primary[disabled]{opacity:.55;cursor:default}
+  .btn-secondary{background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);border-radius:12px;padding:14px 16px;font-family:var(--ui);font-size:14px;font-weight:600;box-shadow:var(--shadow);cursor:pointer}
+  .btn-secondary:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(43,43,43,.9)}
+
+  /* output */
+  .panel{background:var(--paper);border:1px solid var(--ink);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid rgba(43,43,43,.2)}
+  .seg{position:relative;padding:8px 12px 6px 10px}
+  .seg + .seg{border-top:1px dashed rgba(43,43,43,.2)}
+  .seg.err-seg{background:rgba(184,65,46,.06)}
+  .seg-tag{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:1px;color:rgba(43,43,43,.4)}
+  .seg-tag.hot{color:var(--vermillion);font-weight:700}
+  .seg pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word}
+  .ln{color:rgba(43,43,43,.35)}
+  .kw{color:#6a58b8;font-weight:600} .fn{color:#2f6b4f;font-weight:600} .str{color:#2f6b4f} .fname{font-weight:700}
+  .hotln{color:var(--vermillion);font-weight:700}
+
+  .stdout{background:var(--ink);border:1px solid var(--ink);border-radius:12px;box-shadow:4px 4px 0 rgba(43,43,43,.35);overflow:hidden}
+  .stdout .panel-head{border-bottom:1px solid rgba(247,241,227,.15)}
+  .stdout .kicker{color:rgba(247,241,227,.6)}
+  .exit-ok{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:#8fd6a0}
+  .exit-err{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:#e0917e}
+  .stdout pre{margin:0;padding:12px 14px;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--cream);white-space:pre-wrap;word-break:break-word}
+  .stdout pre.trace{font-size:12px;color:#d08a7a}
+  .stdout pre.trace .head{color:#e0917e;font-weight:700}
+  .stdout .hint{border-top:1px solid rgba(247,241,227,.15);padding:9px 12px;font-family:var(--mono);font-size:11px;line-height:1.6;color:rgba(247,241,227,.6)}
+  .stdout .hint b{color:var(--cream);font-weight:600}
+  .running{display:flex;align-items:center;gap:8px}
+  .spin{width:11px;height:11px;border:2px solid rgba(247,241,227,.3);border-top-color:#f7f1e3;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){.spin{animation:none}}
+
+  @media (min-width:640px){
+    .app{max-width:700px;padding:20px}
+    .outputs.two-up{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  }
+
+  /* fullscreen */
+  body.fs{padding:0}
+  body.fs .app{max-width:none;width:100vw;min-height:100vh;border:none;border-radius:0;box-shadow:none}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="row-between baseline">
+    <span class="kicker">COMPOSE · PYTHON</span>
+    <span class="kicker" id="blockCount">№ 3 BLOCKS</span>
+  </div>
+
+  <!-- palette mounts here -->
+  <div id="paletteMount"></div>
+
+  <!-- stack mounts here -->
+  <div class="stack" id="stack"></div>
+
+  <div class="actions">
+    <button class="btn-primary" id="runBtn">▶&nbsp; Assemble &amp; run</button>
+    <button class="btn-secondary" id="fsBtn">⤢ Fullscreen</button>
+  </div>
+
+  <!-- output mounts here -->
+  <div class="outputs" id="outputs"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var KW = ['def','for','while','if','elif','else:','in','return','import','not','and','or','True','False','None'];
+  var FN = ['print(','input(','len(','int(','str(','range(','sum(','sorted('];
+  var SYM = [':','(',')','[',']','{','}',',','.','=','==','%'];
+
+  var state = {
+    blocks: [
+      { id: 'b1', label: 'imports',    code: 'import math', collapsed:false },
+      { id: 'b2', label: 'def is_odd', code: 'def is_odd(n):\n    return n % 2 == 1', collapsed:false },
+      { id: 'b3', label: 'main',       code: 'n = 17\nprint("odd" if is_odd(n) else "even")', collapsed:false }
+    ],
+    focusedId: null,
+    keysHidden: false,
+    dragId: null,
+    dropIndex: null,
+    run: null // {ok, assembled:[{label,code}], stdout, trace, errLabel, errLine}
+  };
+
+  var idSeq = 4;
+
+  // ---------- helpers ----------
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function el(html){ var t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstChild; }
+  function lineCount(code){ return code.split('\n').length; }
+
+  // naive python-ish syntax coloring for the assembled panel
+  function color(line){
+    var s = esc(line);
+    s = s.replace(/(&quot;[^&]*?&quot;|&#39;[^&]*?&#39;|"[^"]*"|'[^']*')/g, '<span class="str">$1</span>');
+    s = s.replace(/\b(import|from|def|return|if|elif|else|for|while|in|not|and|or|True|False|None|as|pass|break|continue)\b/g, '<span class="kw">$1</span>');
+    s = s.replace(/\b(print|input|len|int|str|range|sum|sorted)\b(?=\()/g, '<span class="fn">$1</span>');
+    return s;
+  }
+
+  // ---------- palette ----------
+  function renderPalette(){
+    var mount = document.getElementById('paletteMount');
+    mount.innerHTML = '';
+    if(state.keysHidden){
+      var pc = el(
+        '<div class="palette-collapsed">'+
+          '<span class="kicker">KEYS HIDDEN</span>'+
+          '<button class="btn-mini" id="showKeys">Show keys ⌄</button>'+
+        '</div>');
+      pc.querySelector('#showKeys').onclick = function(){ state.keysHidden=false; renderPalette(); };
+      mount.appendChild(pc);
+      return;
+    }
+    var focused = !!getFocused();
+    var wrap = el('<div class="palette'+(focused?' focused':'')+'"></div>');
+    var head = el(
+      '<div class="palette-head">'+
+        '<span class="kicker">KEY PALETTE'+(focused?' <span class="arrow">→ '+getFocused().label.toUpperCase()+'</span>':'')+'</span>'+
+        '<button class="btn-mini" id="hideKeys">Hide keys ⌃</button>'+
+      '</div>');
+    head.querySelector('#hideKeys').onclick = function(){ state.keysHidden=true; renderPalette(); };
+    wrap.appendChild(head);
+
+    wrap.appendChild(keyRow(KW,'kw',false));
+    wrap.appendChild(keyRow(FN,'fn',true));
+    wrap.appendChild(symRow(SYM));
+    mount.appendChild(wrap);
+  }
+  // pinned punctuation — always visible, no horizontal scroll
+  function symRow(keys){
+    var row = el('<div class="sym-row"></div>');
+    keys.forEach(function(k){
+      var b = el('<button class="key sym">'+esc(k)+'</button>');
+      if(!getFocused()) b.setAttribute('disabled','');
+      b.onclick = function(){ insertToken(k); };
+      row.appendChild(b);
+    });
+    return row;
+  }
+  function keyRow(keys, cls, second){
+    var row = el('<div class="key-row'+(second?' second':'')+'"></div>');
+    keys.forEach(function(k){
+      var b = el('<button class="key '+cls+'">'+esc(k)+'</button>');
+      if(!getFocused()) b.setAttribute('disabled','');
+      b.onclick = function(){ insertToken(k); };
+      row.appendChild(b);
+    });
+    return row;
+  }
+
+  // insert a token at the caret of the focused textarea
+  function insertToken(tok){
+    var f = getFocused(); if(!f) return;
+    var ta = document.querySelector('textarea[data-id="'+f.id+'"]');
+    if(!ta) return;
+    var start = ta.selectionStart, end = ta.selectionEnd;
+    var needSpace = start>0 && !/\s|\(|\[|\{$/.test(ta.value[start-1]) && !/^[:\)\]\},]/.test(tok);
+    var ins = (needSpace?' ':'') + tok;
+    ta.value = ta.value.slice(0,start) + ins + ta.value.slice(end);
+    f.code = ta.value;
+    var caret = start + ins.length;
+    ta.selectionStart = ta.selectionEnd = caret;
+    ta.focus();
+    autoSize(ta);
+  }
+
+  // ---------- stack ----------
+  function getFocused(){ return state.blocks.find(function(b){return b.id===state.focusedId;}) || null; }
+
+  function renderStack(){
+    var stack = document.getElementById('stack');
+    stack.innerHTML = '';
+    state.blocks.forEach(function(b, i){
+      if(state.dragId && state.dropIndex===i){ stack.appendChild(dropLine()); }
+      stack.appendChild(cardEl(b, i));
+    });
+    if(state.dragId && state.dropIndex===state.blocks.length){ stack.appendChild(dropLine()); }
+
+    var ghost = el('<button class="ghost">+ Add block</button>');
+    ghost.onclick = addBlock;
+    stack.appendChild(ghost);
+
+    document.getElementById('blockCount').textContent = '№ '+state.blocks.length+' BLOCK'+(state.blocks.length===1?'':'S');
+    sizeAll();
+  }
+  function dropLine(){ return el('<div class="drop-line"><span class="dot"></span><span class="bar"></span></div>'); }
+
+  function cardEl(b, index){
+    var focused = b.id===state.focusedId;
+    var isErr = state.run && !state.run.ok && state.run.errLabel===b.label;
+    var dragging = b.id===state.dragId;
+    var dimmed = state.dragId && !dragging;
+    var cls = 'card'+(b.collapsed?' collapsed':'')+(focused?' focused':'')+(isErr?' err':'')+(dragging?' dragging':'')+(dimmed?' dimmed':'');
+    var card = el('<div class="'+cls+'" data-id="'+b.id+'"></div>');
+
+    var head = el('<div class="card-head"></div>');
+    var grip = el('<span class="grip" title="Drag to reorder">⠿</span>');
+    head.appendChild(grip);
+    head.appendChild(el('<span class="label">'+esc(b.label)+'</span>'));
+    if(b.collapsed){ head.appendChild(el('<span class="meta">· '+lineCount(b.code)+' line'+(lineCount(b.code)===1?'':'s')+'</span>')); }
+    if(focused){ head.appendChild(el('<span class="stamp focus-stamp">KEYS INSERT HERE</span>')); }
+    if(isErr){ head.appendChild(el('<span class="stamp">RAN TOO EARLY</span>')); }
+    head.appendChild(el('<span class="spacer"></span>'));
+
+    var chev = el('<button class="icon-btn chev'+(b.collapsed?' collapsed':'')+'">⌄</button>');
+    chev.onclick = function(e){ e.stopPropagation(); b.collapsed=!b.collapsed; renderStack(); requestAnimationFrame(sizeAll); };
+    head.appendChild(chev);
+
+    var del = el('<button class="icon-btn x">×</button>');
+    del.onclick = function(e){ e.stopPropagation(); deleteBlock(b.id); };
+    head.appendChild(del);
+    card.appendChild(head);
+
+    var codeWrap = el('<div class="code"></div>');
+    var ta = el('<textarea data-id="'+b.id+'" spellcheck="false" rows="1"></textarea>');
+    ta.value = b.code;
+    ta.addEventListener('focus', function(){ state.focusedId=b.id; renderPalette(); markFocused(); });
+    ta.addEventListener('input', function(){ b.code=ta.value; autoSize(ta); if(b.collapsed) return; });
+    codeWrap.appendChild(ta);
+    card.appendChild(codeWrap);
+
+    // drag from grip
+    attachDrag(grip, card, b.id);
+
+    return card;
+  }
+
+  // lightweight focus repaint — update classes/stamp in place, never destroy the active textarea
+  function markFocused(){
+    document.querySelectorAll('.card').forEach(function(c){
+      var isFocused = c.getAttribute('data-id')===state.focusedId;
+      c.classList.toggle('focused', isFocused && !c.classList.contains('err'));
+      var existing = c.querySelector('.card-head .stamp.focus-stamp');
+      if(isFocused && !c.classList.contains('err')){
+        if(!existing){
+          var stamp = el('<span class="stamp focus-stamp">KEYS INSERT HERE</span>');
+          var label = c.querySelector('.card-head .label');
+          label.parentNode.insertBefore(stamp, label.nextSibling);
+        }
+      } else if(existing){
+        existing.remove();
+      }
+    });
+  }
+
+  function autoSize(ta){
+    // only measurable when the code body is actually visible
+    if(!ta.offsetParent && ta.offsetHeight===0) return;
+    ta.style.height='auto';
+    ta.style.height=(ta.scrollHeight)+'px';
+  }
+  function sizeAll(){ document.querySelectorAll('.card:not(.collapsed) .code textarea').forEach(autoSize); }
+
+  function addBlock(){
+    var id='b'+(idSeq++);
+    state.blocks.push({id:id,label:'block '+(state.blocks.length+1),code:'',collapsed:false});
+    state.focusedId=id;
+    state.run=null; renderAll();
+    var ta=document.querySelector('textarea[data-id="'+id+'"]'); if(ta) ta.focus();
+  }
+  function deleteBlock(id){
+    state.blocks=state.blocks.filter(function(b){return b.id!==id;});
+    if(state.focusedId===id) state.focusedId=null;
+    state.run=null; renderAll();
+  }
+
+  // ---------- drag (pointer) ----------
+  function attachDrag(handle, card, id){
+    handle.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      var startY=e.clientY, startX=e.clientX;
+      var started=false;
+      var rects=[];
+
+      // listeners on document FIRST, so nothing below can strand the drag
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+      try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+
+      function begin(){
+        started=true;
+        // snapshot current card centers BEFORE the re-render detaches them
+        rects=[];
+        state.blocks.forEach(function(b){
+          var c=document.querySelector('.card[data-id="'+b.id+'"]');
+          rects.push(c ? (function(){var r=c.getBoundingClientRect();return r.top+r.height/2;})() : null);
+        });
+        state.dragId=id;
+        state.dropIndex=state.blocks.findIndex(function(b){return b.id===id;});
+        renderStack();
+      }
+
+      function onMove(ev){
+        if(!started){
+          if(Math.abs(ev.clientY-startY)<5 && Math.abs(ev.clientX-startX)<5) return; // ignore taps
+          begin();
+        }
+        var y=ev.clientY;
+        var liftCard=document.querySelector('.card.dragging');
+        if(liftCard){ liftCard.style.transform='rotate(-2deg) translateY('+(y-startY)+'px)'; }
+        var idx=state.blocks.length;
+        for(var i=0;i<state.blocks.length;i++){
+          if(state.blocks[i].id===id) continue;
+          var mid=rects[i];
+          if(mid!=null && y < mid){ idx=i; break; }
+        }
+        if(idx!==state.dropIndex){ state.dropIndex=idx; paintDrop(idx, id); }
+      }
+
+      function onUp(ev){
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+        try{ handle.releasePointerCapture(e.pointerId); }catch(_){}
+        if(!started){ return; } // it was a tap/click, not a drag — leave everything alone
+        var from=state.blocks.findIndex(function(b){return b.id===id;});
+        var target=state.dropIndex;
+        var moving=state.blocks.splice(from,1)[0];
+        if(target>from) target--; // account for removal
+        target=Math.max(0,Math.min(state.blocks.length,target));
+        state.blocks.splice(target,0,moving);
+        state.dragId=null; state.dropIndex=null; state.run=null;
+        renderAll();
+      }
+    });
+  }
+
+  function paintDrop(idx, id){
+    // re-render stack to reposition the drop line, keep the lift transform
+    var draggingCard=document.querySelector('.card.dragging');
+    var tf = draggingCard ? draggingCard.style.transform : '';
+    renderStack();
+    var again=document.querySelector('.card[data-id="'+id+'"]');
+    if(again){ again.classList.add('dragging'); again.style.transform=tf; }
+  }
+
+  // ---------- run ----------
+  var pyReady=null;
+  function loadPyodide(){
+    if(pyReady) return pyReady;
+    pyReady=new Promise(function(resolve,reject){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';
+      s.onload=function(){
+        window.loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/'})
+          .then(resolve).catch(reject);
+      };
+      s.onerror=function(){ reject(new Error('Failed to load Pyodide')); };
+      document.head.appendChild(s);
+    });
+    return pyReady;
+  }
+
+  function assembleSource(){
+    return state.blocks.map(function(b){return b.code;}).join('\n');
+  }
+
+  async function run(){
+    var btn=document.getElementById('runBtn');
+    btn.disabled=true;
+    state.run={running:true};
+    renderOutputs();
+    var src=assembleSource();
+    try{
+      var py=await loadPyodide();
+      py.runPython('import sys, io\n_out=io.StringIO()\nsys.stdout=_out\nsys.stderr=_out');
+      var ok=true, errType=null, errMsg=null, errLine=null;
+      try{
+        await py.runPythonAsync(src);
+      }catch(err){
+        ok=false;
+        var m=String(err.message||err);
+        var mm=m.match(/(\w*Error): (.*)$/m); // last error line
+        // find line number in the traceback referencing <exec>/<string>
+        var lm=m.match(/line (\d+)/g);
+        if(lm){ errLine=parseInt(lm[lm.length-1].replace('line ',''),10); }
+        var em=m.match(/(\w*(?:Error|Exception)): ([^\n]*)/);
+        if(em){ errType=em[1]; errMsg=em[2]; }
+      }
+      var captured=py.runPython('_out.getvalue()');
+      py.runPython('sys.stdout=sys.__stdout__\nsys.stderr=sys.__stderr__');
+      finishRun(ok, captured, errType, errMsg, errLine);
+    }catch(e){
+      finishRun(false, '', 'RuntimeError', String(e.message||e), null);
+    }
+    btn.disabled=false;
+    document.getElementById('runBtn').textContent='▶  Run again';
+  }
+
+  // map a global (top-level) line number to the block it belongs to
+  function blockForLine(lineNo){
+    if(!lineNo) return null;
+    var acc=0;
+    for(var i=0;i<state.blocks.length;i++){
+      var n=lineCount(state.blocks[i].code);
+      if(lineNo<=acc+n) return {block:state.blocks[i], localLine:lineNo-acc};
+      acc+=n;
+    }
+    return null;
+  }
+
+  function finishRun(ok, stdout, errType, errMsg, errLine){
+    var assembled=state.blocks.map(function(b){return {label:b.label, code:b.code};});
+    var errLabel=null;
+    if(!ok){
+      var loc=blockForLine(errLine);
+      if(loc) errLabel=loc.block.label;
+    }
+    state.run={ ok:ok, assembled:assembled, stdout:(stdout||'').replace(/\s+$/,''),
+      errType:errType, errMsg:errMsg, errLine:errLine, errLabel:errLabel };
+    // collapse blocks after a run to make room
+    state.blocks.forEach(function(b){ b.collapsed=true; });
+    state.focusedId=null;
+    renderAll();
+  }
+
+  // ---------- output rendering ----------
+  function renderOutputs(){
+    var out=document.getElementById('outputs');
+    out.innerHTML='';
+    var r=state.run;
+    if(!r){ out.classList.remove('two-up'); return; }
+
+    if(r.running){
+      out.classList.remove('two-up');
+      out.appendChild(el(
+        '<div class="stdout"><div class="panel-head"><span class="kicker">STDOUT</span></div>'+
+        '<pre class="running"><span class="spin"></span>warming up the Python runtime…</pre></div>'));
+      return;
+    }
+
+    out.classList.add('two-up');
+
+    // assembled panel
+    var panel=el('<div class="panel"></div>');
+    panel.appendChild(el(
+      '<div class="panel-head"><span class="kicker">ASSEMBLED PROGRAM</span>'+
+      '<span class="meta">'+totalLines()+' LINES</span></div>'));
+    var ln=0;
+    r.assembled.forEach(function(seg){
+      var hot = !r.ok && r.errLabel===seg.label;
+      var segEl=el('<div class="seg'+(hot?' err-seg':'')+'"></div>');
+      segEl.appendChild(el('<span class="seg-tag'+(hot?' hot':'')+'">'+esc(seg.label.toUpperCase())+(hot?' — USES '+guiltyName(r):'')+'</span>'));
+      var pre=document.createElement('pre');
+      var lines=seg.code.split('\n');
+      var html='';
+      lines.forEach(function(line){
+        ln++;
+        var mark = (!r.ok && r.errLine===ln);
+        html += (mark?'<span class="hotln">'+ln+' ▸</span>':'<span class="ln">'+ln+'  </span>') + color(line) + '\n';
+      });
+      pre.innerHTML=html.replace(/\n$/,'');
+      segEl.appendChild(pre);
+      panel.appendChild(segEl);
+    });
+
+    // stdout panel
+    var so=el('<div class="stdout"></div>');
+    so.appendChild(el(
+      '<div class="panel-head"><span class="kicker">STDOUT</span>'+
+      '<span class="'+(r.ok?'exit-ok':'exit-err')+'">EXIT '+(r.ok?'0':'1')+'</span></div>'));
+    if(r.ok){
+      so.appendChild(el('<pre>'+esc(r.stdout||'')+'</pre>'));
+    }else{
+      var tb=el('<pre class="trace"></pre>');
+      var line=r.errLine||'?';
+      tb.innerHTML=
+        'Traceback (most recent call last):\n'+
+        '  File "program.py", line '+line+', in &lt;module&gt;\n'+
+        '<span class="head">'+esc((r.errType||'Error')+': '+(r.errMsg||''))+'</span>';
+      so.appendChild(tb);
+      var guilty=guiltyName(r);
+      if(guilty){
+        so.appendChild(el('<div class="hint">line '+line+' ran before <b>'+esc(defBlockLabel(guilty))+'</b> existed — drag <b>'+esc(r.errLabel||'')+'</b> below it ↓</div>'));
+      }
+    }
+
+    out.appendChild(panel);
+    out.appendChild(so);
+  }
+
+  function totalLines(){ return state.blocks.reduce(function(a,b){return a+lineCount(b.code);},0); }
+  function guiltyName(r){
+    if(!r.errMsg) return null;
+    var m=r.errMsg.match(/name '([^']+)'/); return m?m[1]:null;
+  }
+  function defBlockLabel(name){
+    var b=state.blocks.find(function(bl){return new RegExp('def\\s+'+name+'\\b').test(bl.code) || new RegExp('\\b'+name+'\\s*=').test(bl.code);});
+    return b?b.label:('def '+name);
+  }
+
+  // ---------- full render ----------
+  function renderAll(){ renderPalette(); renderStack(); renderOutputs(); sizeAll(); }
+
+  document.getElementById('runBtn').onclick=run;
+  document.getElementById('fsBtn').onclick=function(){
+    document.body.classList.toggle('fs');
+    this.textContent=document.body.classList.contains('fs')?'⤢ Exit full':'⤢ Fullscreen';
+    sizeAll();
+  };
+
+  renderAll();
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ sizeAll(); }); }
+  requestAnimationFrame(sizeAll);
+  window.addEventListener('resize', sizeAll);
+})();
+</script>
+</body>
+</html>
