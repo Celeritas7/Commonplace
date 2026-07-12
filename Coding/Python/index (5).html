@@ -141,8 +141,12 @@
   .today-date { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-soft); margin-left: auto; }
   .today-sub { font-family: "EB Garamond", serif; font-style: italic; font-size: 15px; color: var(--ink-soft); margin: 7px 0 0; }
   .today-cards { display: flex; gap: 11px; flex-wrap: wrap; margin-top: 15px; }
-  .today-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 11px; margin-top: 15px; }
+  .today-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 11px; margin-top: 10px; }
   .today-board .today-card { min-width: 0; }
+  .strip-h { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--green-dk); font-weight: 700; margin: 18px 0 0; display: flex; align-items: center; gap: 10px; }
+  .strip-h::after { content: ""; flex: 1; height: 1px; background: var(--sage); opacity: .5; }
+  .focus-cards { display: flex; gap: 11px; flex-wrap: wrap; margin-top: 10px; }
+  .focus-cards .today-card { border-width: 1.5px; border-color: var(--green); background: #fff; }
   .today-card { display: flex; align-items: center; gap: 13px; border: 1px solid var(--line); border-radius: 11px; padding: 13px 16px; cursor: pointer; background: var(--card); min-width: 210px; transition: border-color 0.15s, box-shadow 0.15s; }
   .today-card:hover { border-color: var(--green); box-shadow: 0 2px 0 var(--sage); }
   .today-card .tc-label { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 21px; line-height: 1; color: var(--ink); }
@@ -164,6 +168,11 @@
   .hd-group-head .hd-caret { margin-left: 4px; }
 
   @media (max-width: 720px) { .wrap { padding: 22px 16px 60px; } }
+  @media (max-width: 640px) {
+    .sec-head { flex-wrap: wrap; row-gap: 7px; align-items: center; }
+    .sec-head h2 { white-space: normal; font-size: 26px; min-width: 0; }
+    .sec-head .ln { display: none; }
+  }
 
   /* ===== Imported Practice (§V) — auth pill ===== */
   .ip-auth { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -968,10 +977,10 @@ sb.auth.getSession().then(function(res){
 </script>
 
 <!-- Practice panels + Mistake Bank — one shared CPython engine, a store per panel -->
-<script src="python-practice/python-practice-data.js"></script>
-<script src="practice-sets.js"></script>
-<script src="compose-blocks.js"></script>
-<script src="practice-engine.js"></script>
+<script src="lib/python-practice-data.js"></script>
+<script src="lib/practice-sets.js"></script>
+<script src="lib/compose-blocks.js"></script>
+<script src="lib/practice-engine.js"></script>
 <script>
 (function(){
   var CP = window.CommonplacePractice;
@@ -1061,8 +1070,14 @@ sb.auth.getSession().then(function(res){
         +'<div class="tc-meta">'+(num?num+" \u00b7 ":"")+'open \u2192</div></div>'
         +(isFeat?'<span class="sec-today-badge">Today</span>':'')+'</div>';
     }).join("");
+    var focusCards=featured.map(function(f){
+      var sec=secByKey[f.key]; if(!sec) return "";
+      return '<div class="today-card" data-key="'+f.key+'"><div><div class="tc-label">'+f.label+'</div><div class="tc-meta">today\u2019s focus</div></div><span class="tc-go">Start \u2192</span></div>';
+    }).join("");
     strip.innerHTML='<div class="today-top"><span class="today-kick">Practice sections</span><span class="today-date">'+dateStr+'</span></div>'
-      +'<p class="today-sub">Pick a section to focus \u2014 it opens on its own and the rest stay tucked. Two are featured today.</p>'
+      +'<div class="strip-h">Focus \u00b7 rotates daily</div>'
+      +'<div class="focus-cards">'+focusCards+'</div>'
+      +'<div class="strip-h">All sections</div>'
       +'<div class="today-cards today-board">'+cards+'</div>';
     pane.insertBefore(strip, pane.firstChild);
     strip.addEventListener("click",function(e){
@@ -1112,8 +1127,13 @@ sb.auth.getSession().then(function(res){
         +'<div class="tc-meta">'+(num?num+" \u00b7 ":"")+'open \u2192</div></div>'
         +(isFeat?'<span class="sec-today-badge">Today</span>':'')+'</div>';
     }).join("");
+    var focusCards=feat.map(function(f){
+      return '<div class="today-card" data-i="'+defs.indexOf(f)+'"><div><div class="tc-label">'+f.label+'</div><div class="tc-meta">today\u2019s focus</div></div><span class="tc-go">Open \u2192</span></div>';
+    }).join("");
     strip.innerHTML='<div class="today-top"><span class="today-kick">Syntax sections</span><span class="today-date">'+dateStr+'</span></div>'
-      +'<p class="today-sub">Pick a topic to focus \u2014 it opens on its own and the rest stay tucked. Two are featured today.</p>'
+      +'<div class="strip-h">Focus \u00b7 rotates daily</div>'
+      +'<div class="focus-cards">'+focusCards+'</div>'
+      +'<div class="strip-h">All sections</div>'
       +'<div class="today-cards today-board">'+cards+'</div>';
     pane.insertBefore(strip, pane.firstChild);
     strip.addEventListener("click",function(e){
