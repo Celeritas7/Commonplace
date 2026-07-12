@@ -51,7 +51,7 @@
     b.style.cssText =
       "font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:#211b13;" +
       "background:" + bg + ";border:1px solid #211b13;border-radius:7px;height:30px;padding:0 10px;" +
-      "cursor:pointer;box-shadow:2px 2px 0 rgba(33,27,19,0.5);" +
+      "cursor:pointer;box-shadow:2px 2px 0 rgba(33,27,19,0.5);flex:0 0 auto;white-space:nowrap;" +
       (square ? "min-width:30px;display:inline-flex;align-items:center;justify-content:center;padding:0 8px;" : "");
     function up() { b.style.transform = "none"; b.style.boxShadow = "2px 2px 0 rgba(33,27,19,0.5)"; }
     b.addEventListener("pointerdown", function () { b.style.transform = "translate(2px,2px)"; b.style.boxShadow = "none"; });
@@ -96,8 +96,12 @@
       card.appendChild(head);
       if (!state.open) return;
 
+      // Rows scroll horizontally instead of wrapping — keeps each category to one
+      // compact line on narrow (mobile) screens; swipe sideways to see the rest.
       function row(css) {
-        var r = el("div", "display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;align-items:center;" + (css || ""));
+        var r = el("div", "display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;" +
+          "-webkit-overflow-scrolling:touch;scrollbar-width:thin;margin-top:8px;padding-bottom:4px;" +
+          "align-items:center;" + (css || ""));
         card.appendChild(r);
         return r;
       }
@@ -106,12 +110,14 @@
       var r1 = row();
       KW.forEach(function (k) { r1.appendChild(keycap(k, "#ded6f0", function () { insertKey(ta, k, "kw"); })); });
 
-      // functions + punctuation on one row, dashed divider between
+      // functions
       var r2 = row();
       FN.forEach(function (k) { r2.appendChild(keycap(k, "#cfe4c4", function () { insertKey(ta, k, "fn"); })); });
-      r2.appendChild(el("span", "width:1px;height:20px;border-left:1px dashed #d8ccb2;margin:0 5px;flex:0 0 auto;"));
+
+      // punctuation / operators on their own line
+      var r3 = row();
       PUNCT.forEach(function (k) {
-        r2.appendChild(keycap(k, "#fbf8ef", function () { insertKey(ta, k, k === "''" ? "pair" : "p"); }, true));
+        r3.appendChild(keycap(k, "#fbf8ef", function () { insertKey(ta, k, k === "''" ? "pair" : "p"); }, true));
       });
 
       // tables + columns of the open table, one flowing row
@@ -129,7 +135,7 @@
           "display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;" +
           "font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;" +
           "color:" + (isOpen ? "#fff" : "#211b13") + ";background:" + (isOpen ? color : "#fff") +
-          ";border:1px solid #211b13;border-radius:7px;cursor:pointer;box-shadow:2px 2px 0 rgba(33,27,19,0.5);",
+          ";border:1px solid #211b13;border-radius:7px;cursor:pointer;box-shadow:2px 2px 0 rgba(33,27,19,0.5);white-space:nowrap;flex:0 0 auto;",
           tb.t + ' <span style="font-size:10px;font-weight:400;opacity:.75;">' + tb.cols.length + " cols</span>");
         chip.type = "button";
         chip.title = isOpen ? "Tap to insert \u201C" + tb.t + "\u201D" : "Tap to show " + tb.t + "\u2019s columns";

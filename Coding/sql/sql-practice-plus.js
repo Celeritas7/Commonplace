@@ -128,7 +128,7 @@
 
   /* ---------- problem tabs ---------- */
   var DS_COLOR = { world: "#2f7d57", nobel: "#7a4ea0", football: "#b06a1f" };
-  var host, strip, track, cards = [], activeId = null;
+  var host, strip, track, cards = [], activeId = null, summaryEl = null;
 
   function collectCards() {
     cards = Array.prototype.slice.call(document.querySelectorAll("#ex-list .ex-card"));
@@ -146,6 +146,7 @@
     }
     var remaining = cards.filter(function (c) { return !isDone(c) || c.id === activeId; });
     var allDone = cards.length && cards.every(isDone);
+    renderSummary(allDone);   // review summary appears above the tabs once all solved
     strip.querySelector(".pp-tabs-label").textContent = allDone ? "all solved" : "remaining";
 
     track.innerHTML = "";
@@ -235,6 +236,94 @@
   function scrollAnchor() {
     var s = strip ? strip.getBoundingClientRect().top + window.scrollY - 8 : 0;
     return s;
+  }
+
+  /* ---------- end-of-practice summary ---------- */
+  // Reads the attempts log (already recorded per exercise) + each exercise's
+  // difficulty. Strong = solved with no wrong answers; weak = solved but with
+  // wrong attempts (more wrong = weaker). Shows overall score/accuracy and a
+  // ranked list of what to review next, read by difficulty.
+  function diffLabel(d) { return d === 3 ? "Hard" : d === 2 ? "Medium" : "Easy"; }
+
+  function renderSummary(showIt) {
+    if (!showIt) { if (summaryEl) { summaryEl.remove(); summaryEl = null; } return; }
+
+    var stats = cards.map(function (c) {
+      var id = exIdOf(c);
+      var ex = EX.find(function (x) { return x.id === id; }) || {};
+      var arr = ATT[id] || [];
+      var wrong = arr.filter(function (a) { return !a.ok; }).length;
+      return { id: id, cardId: c.id, title: ex.title || id, diff: ex.diff || 1,
+               wrong: wrong, tries: arr.length, solved: isDone(c) };
+    });
+
+    var total = stats.length;
+    var solved = stats.filter(function (s) { return s.solved; }).length;
+    var totalTries = stats.reduce(function (a, s) { return a + s.tries; }, 0);
+    var totalWrong = stats.reduce(function (a, s) { return a + s.wrong; }, 0);
+    var accuracy = totalTries ? Math.round((totalTries - totalWrong) / totalTries * 100) : 100;
+    var clean = stats.filter(function (s) { return s.solved && s.wrong === 0; }).length;
+
+    var buckets = [1, 2, 3].map(function (d) {
+      var g = stats.filter(function (s) { return s.diff === d; });
+      var gWrong = g.reduce(function (a, s) { return a + s.wrong; }, 0);
+      var gTries = g.reduce(function (a, s) { return a + s.tries; }, 0);
+      var gClean = g.filter(function (s) { return s.wrong === 0; }).length;
+      return { d: d, n: g.length, clean: gClean,
+               acc: gTries ? Math.round((gTries - gWrong) / gTries * 100) : 100 };
+    }).filter(function (b) { return b.n > 0; });
+
+    var weak = stats.filter(function (s) { return s.wrong > 0; })
+      .sort(function (a, b) { return (b.wrong - a.wrong) || (b.tries - a.tries); })
+      .slice(0, 5);
+
+    var h = '<div class="pp-sum-head">' +
+      '<span class="pp-sum-badge">\u2713 Practice complete</span>' +
+      '<h3 class="pp-sum-title">Your SQL review</h3></div>';
+
+    h += '<div class="pp-sum-stats">' +
+      '<div class="pp-sum-stat"><div class="v">' + solved + '/' + total + '</div><div class="l">solved</div></div>' +
+      '<div class="pp-sum-stat"><div class="v">' + accuracy + '%</div><div class="l">accuracy</div></div>' +
+      '<div class="pp-sum-stat"><div class="v">' + clean + '/' + total + '</div><div class="l">first try, no mistakes</div></div>' +
+      '</div>';
+
+    h += '<div class="pp-sum-sec">By difficulty</div><div class="pp-sum-diffs">';
+    buckets.forEach(function (b) {
+      h += '<div class="pp-sum-diff">' +
+        '<div class="pp-sum-diff-top"><span>' + diffLabel(b.d) + '</span><span class="pp-sum-acc">' + b.acc + '%</span></div>' +
+        '<div class="pp-sum-track"><div class="pp-sum-fill" style="width:' + b.acc + '%"></div></div>' +
+        '<div class="pp-sum-diff-sub">' + b.clean + ' / ' + b.n + ' first try</div></div>';
+    });
+    h += '</div>';
+
+    h += '<div class="pp-sum-sec">Review these next</div>';
+    if (!weak.length) {
+      h += '<div class="pp-sum-clean">\u2713 No weak spots \u2014 you solved every exercise without a wrong answer.</div>';
+    } else {
+      h += '<div class="pp-sum-weak">';
+      weak.forEach(function (w, i) {
+        h += '<button type="button" class="pp-sum-wrow" data-card="' + w.cardId + '">' +
+          '<span class="pp-sum-rank">' + (i + 1) + '</span>' +
+          '<span class="pp-sum-wmain"><span class="pp-sum-wtitle">' + esc(w.title) + '</span>' +
+          '<span class="pp-sum-wmeta">' + diffLabel(w.diff) + ' \u00b7 ' + w.id.toUpperCase() + '</span></span>' +
+          '<span class="pp-sum-wcount">' + w.wrong + ' wrong ' + (w.wrong === 1 ? 'try' : 'tries') + '</span>' +
+          '<span class="pp-sum-warr">\u2192</span></button>';
+      });
+      h += '</div>';
+    }
+
+    if (!summaryEl) {
+      summaryEl = document.createElement("div");
+      summaryEl.className = "pp-summary";
+      strip.parentNode.insertBefore(summaryEl, strip);
+    }
+    summaryEl.innerHTML = h;
+    Array.prototype.forEach.call(summaryEl.querySelectorAll(".pp-sum-wrow"), function (btn) {
+      btn.addEventListener("click", function () {
+        show(btn.getAttribute("data-card"));
+        window.scrollTo({ top: scrollAnchor(), behavior: "smooth" });
+      });
+    });
   }
 
   /* ---------- CSS (reuses the page's own palette vars) ---------- */
@@ -329,6 +418,41 @@
       font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;
       background:var(--ok);color:#fff;border:1px solid var(--ok);border-radius:8px;padding:11px 16px;cursor:pointer;}
     .pp-next:hover{filter:brightness(1.07);}
+
+    /* end-of-practice summary */
+    .pp-summary{background:var(--paper-3);border:1px solid var(--rule);border-radius:12px;padding:20px 22px;margin:0 0 20px;}
+    .pp-sum-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+    .pp-sum-badge{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;letter-spacing:1.5px;
+      text-transform:uppercase;color:#fff;background:var(--ok);border-radius:20px;padding:4px 11px;}
+    .pp-sum-title{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:26px;margin:0;color:var(--ink);}
+    .pp-sum-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+    .pp-sum-stat{flex:1 1 120px;background:var(--paper-2);border:1px solid var(--rule-soft);border-radius:10px;padding:12px 14px;}
+    .pp-sum-stat .v{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:30px;line-height:1;color:var(--ink);}
+    .pp-sum-stat .l{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:0.6px;color:var(--ink-mute);margin-top:6px;text-transform:uppercase;}
+    .pp-sum-sec{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;letter-spacing:1.6px;
+      text-transform:uppercase;color:var(--ink-mute);margin:0 0 11px;}
+    .pp-sum-diffs{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;}
+    .pp-sum-diff{flex:1 1 150px;}
+    .pp-sum-diff-top{display:flex;justify-content:space-between;align-items:baseline;font-family:"JetBrains Mono",monospace;
+      font-size:12px;color:var(--ink-soft);margin-bottom:6px;}
+    .pp-sum-acc{font-weight:700;color:var(--ink);}
+    .pp-sum-track{height:7px;background:var(--paper-2);border:1px solid var(--rule-soft);border-radius:6px;overflow:hidden;}
+    .pp-sum-fill{height:100%;background:var(--ok);border-radius:6px;}
+    .pp-sum-diff-sub{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-mute);margin-top:6px;}
+    .pp-sum-clean{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ok);
+      background:#e9f5ee;border:1px solid #b6dcc4;border-radius:9px;padding:12px 14px;}
+    .pp-sum-weak{display:flex;flex-direction:column;gap:8px;}
+    .pp-sum-wrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+      background:var(--paper-2);border:1px solid var(--rule-soft);border-radius:9px;padding:11px 13px;font-family:"JetBrains Mono",monospace;}
+    .pp-sum-wrow:hover{border-color:var(--oxblood);}
+    .pp-sum-rank{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--oxblood);color:#fff;
+      display:grid;place-items:center;font-size:11px;font-weight:800;}
+    .pp-sum-wmain{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
+    .pp-sum-wtitle{font-size:13px;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pp-sum-wmeta{font-size:10px;color:var(--ink-mute);letter-spacing:0.5px;text-transform:uppercase;}
+    .pp-sum-wcount{flex:0 0 auto;font-size:11px;color:var(--oxblood);}
+    .pp-sum-warr{flex:0 0 auto;color:var(--ink-mute);font-size:14px;}
+    .pp-sum-wrow:hover .pp-sum-warr{color:var(--oxblood);}
     `;
     var s = document.createElement("style");
     s.id = "pp-style"; s.textContent = css;
@@ -607,7 +731,7 @@
     started = true;
 
     injectCss();
-    cards.forEach(addToolbar);
+    /* addToolbar intentionally NOT called — the KEY PALETTE (SQLZOO_KEYS.build in sqlzoo-lab.js) is now the single per-card palette */
     cards.forEach(attachAttempts);
     hydrateFromSupabase();                                   // pull saved attempts now if a session exists…
     if (window.sb && window.sb.auth) {                       // …and again once auth resolves (getSession is async)
