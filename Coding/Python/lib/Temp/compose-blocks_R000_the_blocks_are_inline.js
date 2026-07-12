@@ -23,7 +23,7 @@
 
   var PY_KW=["def ","for ","while ","if ","elif ","else:","in ","range(","return ","import ","not ","and ","or ","True","False","None"];
   var PY_BI=["print(","input(","len(","int(","str(","sum(","sorted(","enumerate("];
-  var PY_PUNCT=["\":\"",")","[]","{}","\"  \""];
+  var PY_PUNCT=["\":\"","[]","{}","\"  \""];
 
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
@@ -46,6 +46,7 @@
 ".cb-pillrow{display:flex;gap:8px;padding:2px 12px 4px;overflow-x:auto;scrollbar-width:none}"+
 ".cb-pillrow::-webkit-scrollbar{display:none}"+
 ".cb-pillrow+.cb-pillrow{padding-top:6px}"+
+"@media(max-width:600px){.cb-pillrow{flex-wrap:wrap}}"+
 ".cb-pill{flex:0 0 auto;display:inline-flex;align-items:center;height:38px;padding:0 13px;border:1px solid "+LINE+";border-radius:10px;box-shadow:0 1px 0 rgba(20,40,30,.12);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:"+INK+";cursor:pointer}"+
 ".cb-pill:active{transform:translateY(1px)}"+
 ".cb-pill-kw{background:"+KW_BG+"}.cb-pill-bi{background:"+FN_BG+"}"+
