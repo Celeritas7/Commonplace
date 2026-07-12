@@ -168,6 +168,33 @@
   .note code { background:var(--sage-soft); border:1px solid var(--line-soft); border-radius:5px; padding:1px 6px; color:var(--green-dk); }
   .colophon { margin-top:40px; padding-top:22px; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-mute); }
   .colophon a { color:var(--green); text-decoration:none; }
+  /* ===== stepped viewer: index strip + one cell at a time ===== */
+  .navstrip { position:sticky; top:47px; z-index:20; display:flex; gap:7px; align-items:center; overflow-x:auto;
+    padding:11px 2px; margin:6px 0 18px; background:var(--paper); border-bottom:1px solid var(--line); scrollbar-width:thin; }
+  .navstrip::-webkit-scrollbar { height:6px; } .navstrip::-webkit-scrollbar-thumb { background:var(--line); border-radius:3px; }
+  .chipsec { flex:none; font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:1px; color:var(--sage);
+    padding:0 4px 0 9px; border-left:1px solid var(--line); align-self:stretch; display:flex; align-items:center; }
+  .chipsec:first-child { border-left:none; }
+  .chip { flex:none; font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-soft); background:var(--card);
+    border:1px solid var(--line); border-radius:8px; padding:6px 11px; cursor:pointer; white-space:nowrap; max-width:200px;
+    overflow:hidden; text-overflow:ellipsis; transition:border-color .15s, background .15s, color .15s; }
+  .chip:hover { border-color:var(--sage); background:var(--paper-2); }
+  .chip.on { border-color:var(--green); background:var(--sage-soft); color:var(--green-dk); font-weight:600; }
+  .chip .cn { color:var(--ink-mute); margin-right:7px; }
+  .chip.on .cn { color:var(--green); }
+  .chip.done .cn::before { content:"\2713 "; color:var(--green); }
+  .vnav { display:flex; align-items:center; gap:12px; margin:0 0 14px; }
+  .vbtn { font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:600; color:var(--green); background:#fff;
+    border:1px solid var(--line); border-radius:8px; padding:8px 15px; cursor:pointer; transition:background .15s, border-color .15s; }
+  .vbtn:hover:not(:disabled) { border-color:var(--green); background:var(--sage-soft); }
+  .vbtn:disabled { opacity:.4; cursor:default; }
+  .vpos { flex:1; text-align:center; font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--ink-mute); }
+  .vpos b { color:var(--ink); font-weight:600; }
+  .sec.single { margin:0; }
+  .sec.single .sec-head { cursor:default; }
+  .sec.single .sec-head:hover { background:none; }
+  .sec.single .chev { display:none; }
+
   @media (max-width:720px){ .wrap,.bar-in{ padding-left:14px; padding-right:14px; } }
 </style>
 </head>
@@ -276,11 +303,13 @@
   var editors = [];     // {idx, get, set, original, out, run}
   var allCM = [];
   var TOTAL = 0;
+  var FLAT = [];        // flat list of every cell, with its section
+  var current = 0;      // index of the cell currently on screen
 
   // ---- build one code cell ----
-  function buildCell(item, idx, palette){
+  function buildCell(item, idx, palette, single){
     var firstLine = (item.code.split("\n").find(function(l){ return l.trim(); }) || item.code).trim();
-    var sec = document.createElement("div"); sec.className = "sec collapsed";
+    var sec = document.createElement("div"); sec.className = "sec" + (single ? " single" : " collapsed");
     sec.style.setProperty("--ac", palette.ac);
     sec.style.setProperty("--ac-soft", palette.soft);
 
@@ -293,7 +322,7 @@
         '<h3>'+esc(firstLine)+'</h3>'+
       '</div>'+
       '<button class="chev">\u25be</button>';
-    head.addEventListener("click", function(){ sec.classList.toggle("collapsed"); if(!sec.classList.contains("collapsed")) setTimeout(refreshAllCM,0); });
+    if(!single){ head.addEventListener("click", function(){ sec.classList.toggle("collapsed"); if(!sec.classList.contains("collapsed")) setTimeout(refreshAllCM,0); }); }
     sec.appendChild(head);
 
     var body = document.createElement("div"); body.className = "panel";
@@ -350,38 +379,67 @@
     return sec;
   }
 
-  // ---- render all sections ----
-  function render(){
-    var mount = document.getElementById("sections");
-    var sections = buildSections();
-    var idx = 0;
+  // ---- flatten notebook into a single stepped list ----
+  function buildFlat(){
+    var sections = buildSections(), flat = [];
     sections.forEach(function(sec, si){
-      var pal = PALETTE[si % PALETTE.length];
-      var wrap = document.createElement("div"); wrap.className = "section";
-
-      var tier = document.createElement("div"); tier.className = "tier";
-      tier.style.setProperty("--ac", pal.ac);
-      tier.innerHTML =
-        '<span class="tnum">\u00a7 '+(ROMAN[si]||(si+1))+'</span>'+
-        '<h2>'+esc(sec.title)+'</h2>'+
-        '<span class="ln"></span>'+
-        '<span class="cnt">'+sec.cells.length+' cell'+(sec.cells.length===1?'':'s')+'</span>'+
-        '<button class="fold">Collapse</button>';
-      var foldBtn = tier.querySelector(".fold");
-      foldBtn.onclick = function(){ var c = wrap.classList.toggle("collapsed"); foldBtn.textContent = c ? "Expand" : "Collapse"; if(!c) setTimeout(refreshAllCM,0); };
-      wrap.appendChild(tier);
-
-      var cellsBox = document.createElement("div"); cellsBox.className = "cells";
-      sec.cells.forEach(function(item){
-        cellsBox.appendChild(buildCell(item, idx, PALETTE[idx % PALETTE.length]));
-        idx++;
+      sec.cells.forEach(function(item, ci){
+        flat.push({ code:item.code, detail:item.detail, secTitle:sec.title,
+                    secRoman:(ROMAN[si]||(si+1)), firstInSec:(ci===0) });
       });
-      wrap.appendChild(cellsBox);
-      mount.appendChild(wrap);
     });
-    TOTAL = idx;
+    return flat;
+  }
+  function chipLabel(code){
+    var l = (code.split("\n").find(function(x){ return x.trim(); }) || code).trim();
+    return l.length>26 ? l.slice(0,25)+"\u2026" : l;
+  }
+
+  // ---- render the stepped viewer: index strip + one cell at a time ----
+  function render(){
+    FLAT = buildFlat(); TOTAL = FLAT.length;
+    var mount = document.getElementById("sections"); mount.innerHTML = "";
+
+    var strip = document.createElement("div"); strip.className = "navstrip";
+    FLAT.forEach(function(f, i){
+      if(f.firstInSec){ var s = document.createElement("span"); s.className = "chipsec"; s.textContent = "\u00a7 "+f.secRoman; strip.appendChild(s); }
+      var chip = document.createElement("button"); chip.className = "chip"; chip.setAttribute("data-i", i);
+      chip.innerHTML = '<span class="cn">'+String(i+1).padStart(2,"0")+'</span>'+esc(chipLabel(f.code));
+      if(ranSet()[i]) chip.classList.add("done");
+      chip.onclick = function(){ showCell(i); };
+      strip.appendChild(chip);
+    });
+
+    var viewer = document.createElement("div"); viewer.className = "viewer";
+    viewer.innerHTML =
+      '<div class="vnav"><button class="vbtn" id="prevb">\u2039 Prev</button>'+
+      '<span class="vpos" id="vpos"></span>'+
+      '<button class="vbtn" id="nextb">Next \u203a</button></div>'+
+      '<div id="cellhost"></div>';
+    mount.appendChild(strip); mount.appendChild(viewer);
+    document.getElementById("prevb").onclick = function(){ showCell(current-1); };
+    document.getElementById("nextb").onclick = function(){ showCell(current+1); };
     document.getElementById("cellcount").innerHTML = "\u00b7 "+TOTAL+" cells";
+
+    var saved = 0; try{ saved = parseInt(localStorage.getItem(LS("cur"))||"0",10)||0; }catch(e){}
+    if(saved<0 || saved>=TOTAL) saved = 0;
+    showCell(saved);
     paintProgress();
+  }
+
+  function showCell(i){
+    if(i<0 || i>=FLAT.length) return;
+    current = i; try{ localStorage.setItem(LS("cur"), String(i)); }catch(e){}
+    var host = document.getElementById("cellhost"); host.innerHTML = ""; allCM.length = 0;
+    host.appendChild(buildCell(FLAT[i], i, PALETTE[i % PALETTE.length], true));
+    var pos = document.getElementById("vpos");
+    pos.innerHTML = '\u00a7 '+FLAT[i].secRoman+' \u00b7 <b>'+esc(FLAT[i].secTitle)+'</b> \u00b7 '+(i+1)+' / '+TOTAL;
+    document.getElementById("prevb").disabled = (i===0);
+    document.getElementById("nextb").disabled = (i===TOTAL-1);
+    [].forEach.call(document.querySelectorAll(".chip"), function(c){
+      var on = (+c.getAttribute("data-i")===i); c.classList.toggle("on", on);
+      if(on){ var st = c.parentNode; st.scrollLeft = (c.offsetLeft - st.offsetLeft) - st.clientWidth/2 + c.clientWidth/2; }
+    });
     setTimeout(refreshAllCM, 0);
   }
 
@@ -391,7 +449,7 @@
     document.getElementById("pfill").style.width = (TOTAL? Math.round(n/TOTAL*100):0)+"%";
     document.getElementById("ppc").textContent = n+" / "+TOTAL+" run";
   }
-  function markRan(idx){ var m = ranSet(); if(!m[idx]){ m[idx]=1; saveRan(m); } var r=editors[idx]; if(r&&r.card){ r.card.classList.add("ran"); var node=r.card.querySelector(".node"); if(node){ node.classList.remove("bump"); void node.offsetWidth; node.classList.add("bump"); } var lab=r.card.querySelector(".st .lab"); if(lab) lab.textContent="ran"; } paintProgress(); }
+  function markRan(idx){ var m = ranSet(); if(!m[idx]){ m[idx]=1; saveRan(m); } var r=editors[idx]; if(r&&r.card){ r.card.classList.add("ran"); var node=r.card.querySelector(".node"); if(node){ node.classList.remove("bump"); void node.offsetWidth; node.classList.add("bump"); } var lab=r.card.querySelector(".st .lab"); if(lab) lab.textContent="ran"; } var chip=document.querySelector('.chip[data-i="'+idx+'"]'); if(chip) chip.classList.add("done"); paintProgress(); }
   function refreshAllCM(){ allCM.forEach(function(cm){ try{ cm.refresh(); }catch(e){} }); }
 
   // ---- Pyodide ----
@@ -427,11 +485,22 @@
     "        out.append(base64.b64encode(b.getvalue()).decode())\n"+
     "    plt.close('all'); return out\n"+
     "__nbx_capture_figs()\n";
-  async function runCell(rec){
+  // run every cell above this one, silently, so np + earlier variables exist
+  // even if you jumped straight to this cell.
+  async function runPrereqs(py, idx){
+    var codes=[];
+    for(var j=0;j<idx;j++){ var c=getCode(j); codes.push((c!=null&&c!=="")?c:FLAT[j].code); }
+    var pre=codes.join("\n\n");
+    if(!pre.trim()) return;
+    try{ await py.loadPackagesFromImports(pre); }catch(e){}
+    try{ await py.runPythonAsync(pre); }catch(e){}
+  }
+  async function runCell(rec, noPre){
     var out=rec.out; out.className="out show"; out.textContent=""; rec.run.disabled=true;
     var buf=""; function append(s){ buf+=s; out.textContent=buf; }
     try{
       var py=await ensurePy();
+      if(!noPre) await runPrereqs(py, rec.idx);
       py.setStdout({batched:append}); py.setStderr({batched:append});
       await py.loadPackagesFromImports(rec.get());
       var res=await py.runPythonAsync(rec.get());
@@ -447,9 +516,22 @@
     }catch(e){ out.classList.add("err"); append((buf?buf+"\n":"")+(e&&e.message?e.message:String(e))); }
     finally{ rec.run.disabled=false; }
   }
-  document.getElementById("runall").onclick = async function(){ for(var i=0;i<editors.length;i++){ if(editors[i]) await runCell(editors[i]); } };
+  document.getElementById("runall").onclick = async function(){
+    var py=await ensurePy();
+    for(var i=0;i<FLAT.length;i++){
+      var c=getCode(i); var code=(c!=null&&c!=="")?c:FLAT[i].code;
+      try{ await py.loadPackagesFromImports(code); await py.runPythonAsync(code); }catch(e){}
+      var m=ranSet(); m[i]=1; saveRan(m);
+      var chip=document.querySelector('.chip[data-i="'+i+'"]'); if(chip) chip.classList.add("done");
+    }
+    paintProgress();
+    var r=editors[current]; if(r) runCell(r, true);
+  };
   document.getElementById("resetall").onclick = function(){
-    editors.forEach(function(r){ if(!r) return; r.set(r.original); r.out.className="out"; r.out.textContent=""; setCode(r.idx, r.original); });
+    for(var i=0;i<FLAT.length;i++){ try{ localStorage.removeItem(codeKey(i)); }catch(e){} }
+    try{ localStorage.removeItem(LS("ran")); }catch(e){}
+    [].forEach.call(document.querySelectorAll(".chip.done"), function(c){ c.classList.remove("done"); });
+    showCell(current); paintProgress();
   };
   setTimeout(function(){ ensurePy().catch(function(){ setLed("Python failed (offline?)","err"); }); }, 400);
 
