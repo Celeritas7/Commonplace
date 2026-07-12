@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>While Loops · Interactive Practice</title>
+
+<!-- Markdown renderer -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<!-- CodeMirror editor (degrades to a plain textarea if unavailable) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<!-- Pyodide (real Python in the browser) -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+<style>
+  /* Minimal, neutral styling — meant to be restyled later in Claude design.
+     Everything is namespaced under .nbx so it is easy to replace wholesale. */
+  :root{ --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb; --accent:#4f46e5; --bg:#fafafa;
+         --code-bg:#0f172a; --ok:#16a34a; --bad:#dc2626; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.65;}
+  .nbx-wrap{max-width:900px;margin:0 auto;padding:24px 20px 100px;}
+  .nbx-head{position:sticky;top:0;z-index:30;background:rgba(250,250,250,.92);backdrop-filter:blur(6px);
+            border-bottom:1px solid var(--line);margin:0 -20px 20px;padding:12px 20px;
+            display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .nbx-head h1{font-size:17px;margin:0;font-weight:700;flex:1;min-width:160px;}
+  .nbx-btn{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--ink);
+           border-radius:8px;padding:6px 12px;cursor:pointer;}
+  .nbx-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .nbx-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .nbx-status{font-size:12px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;white-space:nowrap;}
+  .nbx-status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#cbd5e1;margin-right:6px;vertical-align:middle;}
+  .nbx-status.ready .dot{background:var(--ok);}
+  .nbx-status.loading .dot{background:#f59e0b;animation:nbx-pulse 1s infinite;}
+  @keyframes nbx-pulse{50%{opacity:.35}}
+
+  .nbx-md{margin:6px 0 14px;}
+  .nbx-md h1,.nbx-md h2,.nbx-md h3{line-height:1.25;}
+  .nbx-md h2{font-size:22px;margin:26px 0 10px;}
+  .nbx-md h3{font-size:18px;margin:20px 0 8px;}
+  .nbx-md code{background:#eef2ff;color:var(--accent);padding:1px 6px;border-radius:4px;
+               font-family:ui-monospace,Consolas,monospace;font-size:.9em;}
+  .nbx-md pre{background:var(--code-bg);color:#e0e7ff;padding:12px 14px;border-radius:10px;overflow:auto;}
+  .nbx-md pre code{background:none;color:inherit;padding:0;}
+  .nbx-md details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:10px 0;}
+  .nbx-md summary{cursor:pointer;font-weight:600;color:var(--accent);}
+  .nbx-md table{border-collapse:collapse;}
+  .nbx-md th,.nbx-md td{border:1px solid var(--line);padding:6px 10px;}
+
+  .nbx-cell{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;background:#fff;}
+  .nbx-cell .bar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border-bottom:1px solid var(--line);}
+  .nbx-cell .bar .lbl{font-size:11px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;flex:1;}
+  .nbx-run{font:inherit;font-size:12px;font-weight:600;border:none;border-radius:7px;padding:5px 14px;cursor:pointer;
+           background:var(--accent);color:#fff;}
+  .nbx-run:hover{filter:brightness(1.07);}
+  .nbx-run:disabled{opacity:.55;cursor:default;}
+  .nbx-reset{font:inherit;font-size:12px;border:1px solid var(--line);background:#fff;color:var(--mut);
+             border-radius:7px;padding:5px 10px;cursor:pointer;}
+  .nbx-reset:hover{color:var(--bad);border-color:#fecaca;}
+  .CodeMirror{height:auto;font-size:13.5px;font-family:ui-monospace,Consolas,monospace;}
+  textarea.nbx-ta{width:100%;border:none;outline:none;resize:vertical;min-height:70px;padding:10px 12px;
+                  font-family:ui-monospace,Consolas,monospace;font-size:13.5px;line-height:1.5;}
+  .nbx-out{margin:0;padding:0 12px;max-height:0;overflow:auto;transition:max-height .15s, padding .15s;
+           font-family:ui-monospace,Consolas,monospace;font-size:12.5px;white-space:pre-wrap;
+           background:#0b1020;color:#cde3ff;border-top:1px solid transparent;}
+  .nbx-out.show{max-height:520px;padding:10px 12px;border-top:1px solid var(--line);}
+  .nbx-out.err{color:#fca5a5;}
+  .nbx-out img{max-width:100%;background:#fff;border-radius:6px;margin:8px 0;display:block;}
+  .nbx-note{font-size:12.5px;color:var(--mut);background:#fff;border:1px dashed var(--line);
+            border-radius:10px;padding:10px 14px;margin:0 0 16px;}
+</style>
+</head>
+<body>
+<div class="nbx-wrap">
+  <div class="nbx-head">
+    <h1>While Loops</h1>
+    <button class="nbx-btn" id="nbx-runall">▶ Run all</button>
+    <button class="nbx-btn" id="nbx-reset">↺ Reset all</button>
+    <span class="nbx-status" id="nbx-status"><span class="dot"></span>Python not loaded</span>
+  </div>
+
+  <div class="nbx-note">
+    Interactive practice generated from <code>03_While_Loops.ipynb</code>. Edit any code cell and press
+    <b>Run</b> (or <b>Shift+Enter</b>). Cells share one Python session, so run them top-to-bottom.
+    The first run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection.
+  </div>
+
+  <div id="nbx-cells"></div>
+</div>
+
+<script type="application/json" id="nbdata">[{"t": "md", "s": "🔁 **Python `while` Loop — Complete Study Notebook**\n\nThis notebook explains `while` loops using:\n- 📘 Concept\n- 🧠 Real-world use cases\n- 💻 Executable code\n- 📤 Example output\n\nA `while` loop repeats **as long as a condition is true**."}, {"t": "md", "s": "## 1️⃣ Basic while loop\n\n📘 **Concept**\nRepeats execution while a condition remains true.\n\n🧠 **Use cases**\n- Counters\n- Repeated polling"}, {"t": "code", "s": "i = 0\nwhile i < 5:\n    print(i)\n    i += 1"}, {"t": "md", "s": "📤 **Output (example)**\n```\n0\n1\n2\n3\n4\n```"}, {"t": "md", "s": "## 2️⃣ Countdown loop\n\n📘 **Concept**\nUseful for reverse iteration.\n\n🧠 **Use cases**\n- Timers\n- Retry limits"}, {"t": "code", "s": "i = 5\nwhile i > 0:\n    print(i)\n    i -= 1"}, {"t": "md", "s": "📤 **Output (example)**\n```\n5\n4\n3\n2\n1\n```"}, {"t": "md", "s": "## 3️⃣ Infinite loop with break\n\n📘 **Concept**\nLoop runs forever unless broken.\n\n🧠 **Use cases**\n- Event listeners\n- Game loops"}, {"t": "code", "s": "i = 0\nwhile True:\n    print(i)\n    i += 1\n    if i == 3:\n        break"}, {"t": "md", "s": "📤 **Output (example)**\n```\n0\n1\n2\n```"}, {"t": "md", "s": "## 4️⃣ Using continue\n\n📘 **Concept**\nSkip current iteration.\n\n🧠 **Use cases**\n- Filtering invalid data"}, {"t": "code", "s": "i = 0\nwhile i < 6:\n    i += 1\n    if i == 3:\n        continue\n    print(i)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n1\n2\n4\n5\n6\n```"}, {"t": "md", "s": "## 5️⃣ User input loop\n\n📘 **Concept**\nLoop until a valid input is received.\n\n🧠 **Use cases**\n- CLI tools\n- Validation"}, {"t": "code", "s": "password = \"\"\nwhile password != \"secret\":\n    password = \"secret\"\n    print(\"Trying...\")\nprint(\"Access granted\")"}, {"t": "md", "s": "📤 **Output (example)**\n```\nTrying...\nAccess granted\n```"}, {"t": "md", "s": "## 6️⃣ Accumulator pattern\n\n📘 **Concept**\nUsed for summation or aggregation.\n\n🧠 **Use cases**\n- Statistics\n- Running totals"}, {"t": "code", "s": "total = 0\ni = 1\nwhile i <= 5:\n    total += i\n    i += 1\nprint(total)"}, {"t": "md", "s": "📤 **Output (example)**\n```\n15\n```"}, {"t": "md", "s": "## 7️⃣ While loop with list\n\n📘 **Concept**\nProcess elements using index.\n\n🧠 **Use cases**\n- Manual iteration"}, {"t": "code", "s": "items = ['a', 'b', 'c']\ni = 0\nwhile i < len(items):\n    print(items[i])\n    i += 1"}, {"t": "md", "s": "📤 **Output (example)**\n```\na\nb\nc\n```"}, {"t": "md", "s": "## 8️⃣ Sentinel-controlled loop\n\n📘 **Concept**\nLoop until sentinel value appears.\n\n🧠 **Use cases**\n- File reading\n- Streams"}, {"t": "code", "s": "data = [1, 2, -1, 4]\ni = 0\nwhile data[i] != -1:\n    print(data[i])\n    i += 1"}, {"t": "md", "s": "📤 **Output (example)**\n```\n1\n2\n```"}, {"t": "md", "s": "## 9️⃣ Nested while loops\n\n📘 **Concept**\nWhile loops inside while loops.\n\n🧠 **Use cases**\n- Grids\n- Matrix operations"}, {"t": "code", "s": "i = 1\nwhile i <= 3:\n    j = 1\n    while j <= 3:\n        print(i, j)\n        j += 1\n    i += 1"}, {"t": "md", "s": "📤 **Output (example)**\n```\n1 1\n1 2\n1 3\n2 1\n2 2\n2 3\n3 1\n3 2\n3 3\n```"}, {"t": "md", "s": "## 🔟 Loop with condition update\n\n📘 **Concept**\nCondition depends on runtime changes.\n\n🧠 **Use cases**\n- Control systems"}, {"t": "code", "s": "value = 10\nwhile value > 0:\n    print(value)\n    value //= 2"}, {"t": "md", "s": "📤 **Output (example)**\n```\n10\n5\n2\n1\n```"}, {"t": "md", "s": "## ✅ Final Notes\n\n- Always ensure termination condition\n- Beware of infinite loops\n- Prefer `for` when iteration count is known\n- `while` is ideal for condition-based repetition"}]</script>
+<script>
+(function(){
+  "use strict";
+  var CELLS = JSON.parse(document.getElementById("nbdata").textContent);
+  var mount = document.getElementById("nbx-cells");
+  var statusEl = document.getElementById("nbx-status");
+  var pyodide = null, pyReady = false, pyLoading = null;
+  var editors = [];           // {get, set, reset, original}
+
+  function setStatus(txt, cls){ statusEl.className = "nbx-status " + (cls||""); statusEl.innerHTML = '<span class="dot"></span>' + txt; }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function renderMd(src){
+    if (window.marked) { try { return marked.parse(src); } catch(e){} }
+    return "<pre>" + esc(src) + "</pre>";
+  }
+
+  // ---- build the page ----
+  CELLS.forEach(function(c, idx){
+    if (c.t === "md"){
+      var d = document.createElement("div");
+      d.className = "nbx-md";
+      d.innerHTML = renderMd(c.s);
+      mount.appendChild(d);
+      return;
+    }
+    // code cell
+    var cell = document.createElement("div"); cell.className = "nbx-cell";
+    var bar = document.createElement("div"); bar.className = "bar";
+    var lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = "In [" + (idx) + "]";
+    var run = document.createElement("button"); run.className = "nbx-run"; run.textContent = "▶ Run";
+    var reset = document.createElement("button"); reset.className = "nbx-reset"; reset.textContent = "Reset";
+    bar.appendChild(lbl); bar.appendChild(run); bar.appendChild(reset);
+    var host = document.createElement("div");
+    var ta = document.createElement("textarea"); ta.className = "nbx-ta"; ta.value = c.s;
+    host.appendChild(ta);
+    var out = document.createElement("pre"); out.className = "nbx-out";
+    cell.appendChild(bar); cell.appendChild(host); cell.appendChild(out);
+    mount.appendChild(cell);
+
+    // editor (CodeMirror if available, else textarea)
+    var ed;
+    if (window.CodeMirror){
+      var cm = CodeMirror.fromTextArea(ta, { mode:"python", lineNumbers:true, indentUnit:4, viewportMargin:Infinity });
+      ed = { get:function(){return cm.getValue();}, set:function(v){cm.setValue(v);},
+             onRun:function(fn){ cm.setOption("extraKeys", {"Shift-Enter":function(){fn();}}); } };
+    } else {
+      ed = { get:function(){return ta.value;}, set:function(v){ta.value=v;},
+             onRun:function(fn){ ta.addEventListener("keydown",function(e){ if(e.shiftKey&&e.key==="Enter"){e.preventDefault();fn();}}); } };
+    }
+    var rec = { get:ed.get, set:ed.set, original:c.s, out:out, run:run };
+    editors.push(rec);
+    function doRun(){ runCell(rec); }
+    run.onclick = doRun;
+    ed.onRun(doRun);
+    reset.onclick = function(){ ed.set(c.s); out.className = "nbx-out"; out.textContent=""; };
+  });
+
+  // ---- Pyodide ----
+  async function ensurePyodide(){
+    if (pyReady) return pyodide;
+    if (pyLoading) return pyLoading;
+    setStatus("Loading Python…", "loading");
+    pyLoading = (async function(){
+      pyodide = await loadPyodide();
+      pyodide.globals.set("__js_input", function(p){ var r = window.prompt(p || ""); return r === null ? "" : r; });
+      await pyodide.runPythonAsync(
+        "import builtins, os\n" +
+        "os.environ['MPLBACKEND'] = 'AGG'\n" +
+        "def __input(prompt=''):\n" +
+        "    r = __js_input(str(prompt))\n" +
+        "    print(str(prompt) + str(r))\n" +
+        "    return str(r)\n" +
+        "builtins.input = __input\n"
+      );
+      pyReady = true; setStatus("Python ready", "ready");
+      return pyodide;
+    })();
+    return pyLoading;
+  }
+
+  var FIGCODE =
+    "def __nbx_capture_figs():\n" +
+    "    import sys\n" +
+    "    if 'matplotlib' not in sys.modules: return []\n" +
+    "    import matplotlib.pyplot as plt, io, base64\n" +
+    "    out = []\n" +
+    "    for n in plt.get_fignums():\n" +
+    "        f = plt.figure(n); b = io.BytesIO(); f.savefig(b, format='png', bbox_inches='tight')\n" +
+    "        out.append(base64.b64encode(b.getvalue()).decode())\n" +
+    "    plt.close('all'); return out\n" +
+    "__nbx_capture_figs()\n";
+
+  async function runCell(rec){
+    var code = rec.get();
+    var out = rec.out;
+    out.className = "nbx-out show"; out.textContent = "";
+    rec.run.disabled = true;
+    var buf = "";
+    function append(s){ buf += s; out.textContent = buf; }
+    try{
+      var py = await ensurePyodide();
+      py.setStdout({ batched: append });
+      py.setStderr({ batched: append });
+      await py.loadPackagesFromImports(code);
+      var res = await py.runPythonAsync(code);
+      if (res !== undefined && res !== null){
+        var rep;
+        try { var b = py.pyimport("builtins"); rep = b.repr(res); b.destroy(); } catch(e){ rep = String(res); }
+        append((buf && !buf.endsWith("\n") ? "\n" : "") + rep);
+        if (res && typeof res.destroy === "function"){ try{ res.destroy(); }catch(e){} }
+      }
+      // matplotlib figures, if any
+      var figsProxy = await py.runPythonAsync(FIGCODE);
+      var figs = figsProxy.toJs(); figsProxy.destroy();
+      figs.forEach(function(b64){ var img = new Image(); img.src = "data:image/png;base64," + b64; out.appendChild(img); });
+      if (!buf && !figs.length) append("(ran — no output)");
+    }catch(e){
+      out.classList.add("err");
+      append((buf ? buf + "\n" : "") + (e && e.message ? e.message : String(e)));
+    }finally{
+      rec.run.disabled = false;
+    }
+  }
+
+  document.getElementById("nbx-runall").onclick = async function(){
+    for (var i=0;i<editors.length;i++){ await runCell(editors[i]); }
+  };
+  document.getElementById("nbx-reset").onclick = function(){
+    editors.forEach(function(r){ r.set(r.original); r.out.className="nbx-out"; r.out.textContent=""; });
+  };
+
+  // warm up Python in the background so the first Run is snappy
+  setTimeout(function(){ ensurePyodide().catch(function(){ setStatus("Python failed to load (offline?)", ""); }); }, 400);
+})();
+</script>
+</body>
+</html>

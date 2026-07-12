@@ -278,16 +278,20 @@
 
   // ---- group flat notebook cells into sections ----
   function buildSections(){
-    var sections = [], cur = null;
+    var sections = [], cur = null, lead = null;
     CELLS.forEach(function(c){
       if(c.t === "md" && /^##\s/.test(c.s.trim())){
-        cur = { title: cleanTitle(c.s), cells: [] };
+        var lines = c.s.trim().split("\n");
+        cur = { title: cleanTitle(lines[0]), cells: [] };
+        lead = lines.slice(1).join("\n").trim() || null;   // concept text under the heading
         sections.push(cur);
       } else if(c.t === "code"){
         if(!cur){ cur = { title:"Notebook", cells:[] }; sections.push(cur); }
-        cur.cells.push({ code:c.s, detail:null });
-      } else { // md detail block -> attach to last code cell
+        cur.cells.push({ code:c.s, detail: lead });          // heading body becomes this cell's Detail
+        lead = null;
+      } else { // md detail block -> attach to last code cell (or hold as lead)
         if(cur && cur.cells.length){ var last = cur.cells[cur.cells.length-1]; last.detail = (last.detail? last.detail+"\n\n":"") + c.s; }
+        else if(cur){ lead = (lead? lead+"\n\n":"") + c.s; }
       }
     });
     return sections;
