@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>SQL Mistake Drill — Commonplace</title>
+<style>
+  /* ===========================================================
+     DOJO PAPER — design tokens
+     =========================================================== */
+  :root {
+    --cream:    #f7f1e3;
+    --cream-2:  #efe6d2;   /* recessed panels */
+    --cream-3:  #e7dcc2;   /* chips / wells */
+    --vermill:  #b8412e;
+    --vermill-d:#9a3526;
+    --sumi:     #1a1a1a;
+    --sumi-soft:#4a463f;
+    --sumi-faint:#867f72;
+    --jade:     #4f7355;   /* "remembered" / success ink */
+    --paper-line: rgba(26,26,26,0.12);
+
+    --sans: "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+    --shadow: 4px 4px 0 var(--sumi);
+    --shadow-sm: 3px 3px 0 var(--sumi);
+    --shadow-press: 2px 2px 0 var(--sumi);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: #2b2520;
+    /* faint diagonal threads on the dark mat */
+    background-image:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0 2px, transparent 2px 7px);
+    font-family: var(--sans);
+    color: var(--sumi);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* phone frame */
+  .phone {
+    width: 390px;
+    max-width: 100vw;
+    min-height: 100vh;
+    background-color: var(--cream);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 18px 50px -10px rgba(0,0,0,0.6);
+    /* paper grain — CSS micro-dots (capture-friendly) */
+    background-image:
+      radial-gradient(rgba(26,26,26,0.022) 0.5px, transparent 0.6px),
+      radial-gradient(rgba(26,26,26,0.018) 0.5px, transparent 0.6px);
+    background-size: 5px 5px, 7px 7px;
+    background-position: 0 0, 2px 3px;
+  }
+
+  /* ===========================================================
+     Screen scaffold
+     =========================================================== */
+  .screen { display: none; flex-direction: column; min-height: 100vh; }
+  .screen.active { display: flex; animation: fade .22s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .pad { padding: 20px 18px; }
+  .grow { flex: 1 1 auto; }
+
+  /* ---- app bar ---- */
+  .bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px 14px;
+    border-bottom: 2px solid var(--sumi);
+    background: var(--cream);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .enso { width: 34px; height: 34px; flex: 0 0 auto; }
+  .bar__brand { display: flex; flex-direction: column; line-height: 1.05; }
+  .bar__brand .k { font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--vermill); font-weight: 700; }
+  .bar__brand .t { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .bar__back {
+    margin-left: auto; font-family: var(--mono); font-size: 12px; font-weight: 700;
+    background: none; border: none; color: var(--sumi); cursor: pointer; padding: 6px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .bar__back:active { color: var(--vermill); }
+
+  /* ---- buttons ---- */
+  .btn {
+    font-family: var(--sans); font-weight: 700; font-size: 16px;
+    border: 2.5px solid var(--sumi); background: var(--cream);
+    color: var(--sumi); padding: 14px 18px; cursor: pointer;
+    box-shadow: var(--shadow); transition: transform .08s ease, box-shadow .08s ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    width: 100%; border-radius: 2px;
+  }
+  .btn:active { transform: translate(2px, 2px); box-shadow: var(--shadow-press); }
+  .btn--primary { background: var(--vermill); color: #fff; border-color: var(--sumi); }
+  .btn--ghost { box-shadow: none; background: transparent; border-width: 2px; }
+  .btn--ghost:active { box-shadow: none; transform: translate(1px,1px); }
+  .btn--sm { font-size: 13px; padding: 10px 14px; box-shadow: var(--shadow-sm); width: auto; }
+  .btn--sm:active { box-shadow: var(--shadow-press); }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { width: auto; flex: 1 1 0; }
+
+  /* ===========================================================
+     HOME — Mistake Bank
+     =========================================================== */
+  .hero { padding: 22px 18px 8px; }
+  .hero__count {
+    display: inline-flex; align-items: baseline; gap: 8px;
+    font-family: var(--mono); margin-bottom: 6px;
+  }
+  .hero__count .n {
+    font-size: 40px; font-weight: 800; color: var(--vermill); line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .hero__count .l { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--sumi-soft); }
+  .hero__sub { font-size: 14px; color: var(--sumi-soft); margin: 4px 0 0; max-width: 30ch; line-height: 1.45; }
+
+  .section-k {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--sumi-faint); margin: 22px 18px 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-k::after { content: ""; flex: 1; height: 2px; background: var(--paper-line); }
+
+  .cards { display: flex; flex-direction: column; gap: 13px; padding: 0 18px; }
+
+  .card {
+    background: var(--cream); border: 2.5px solid var(--sumi);
+    box-shadow: var(--shadow); border-radius: 2px; padding: 14px 15px;
+    cursor: pointer; transition: transform .08s ease, box-shadow .08s ease;
+  }
+  .card:active { transform: translate(2px,2px); box-shadow: var(--shadow-press); }
+  .card__top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 11px; }
+  .badge {
+    font-family: var(--mono); font-weight: 800; font-size: 13px;
+    background: var(--sumi); color: var(--cream); padding: 3px 9px; border-radius: 2px;
+    flex: 0 0 auto; letter-spacing: 0.03em; margin-top: 1px;
+  }
+  .card__title { font-weight: 700; font-size: 15.5px; letter-spacing: -0.01em; line-height: 1.3; flex: 1 1 auto; min-width: 0; }
+  .card__ago { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--sumi-faint); flex: 0 0 auto; white-space: nowrap; padding-top: 2px; }
+  .reason {
+    display: inline-flex; align-items: flex-start; gap: 7px;
+    font-size: 12.5px; font-weight: 600; color: var(--vermill-d);
+    background: var(--cream-3); border: 1.5px solid rgba(184,65,46,0.35);
+    padding: 5px 10px; border-radius: 2px; font-family: var(--mono); line-height: 1.35;
+  }
+  .reason .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--vermill); flex: 0 0 auto; margin-top: 4px; }
+  .card__peek {
+    margin-top: 11px; font-family: var(--mono); font-size: 11.5px; color: var(--sumi-faint);
+    background: var(--cream-2); border-left: 3px solid var(--paper-line); padding: 7px 10px;
+    border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* sticky action dock */
+  .dock {
+    position: sticky; bottom: 0; margin-top: 18px;
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--cream) 72%, rgba(247,241,227,0));
+  }
+
+  /* mode toggle (segmented, stamped) */
+  .toggle {
+    display: flex; border: 2.5px solid var(--sumi); border-radius: 2px;
+    background: var(--cream-2); margin-bottom: 12px; box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .toggle button {
+    flex: 1; font-family: var(--sans); font-weight: 700; font-size: 13px;
+    padding: 11px 8px; background: none; border: none; cursor: pointer; color: var(--sumi-soft);
+    position: relative;
+  }
+  .toggle button + button { border-left: 2.5px solid var(--sumi); }
+  .toggle button.on { background: var(--sumi); color: var(--cream); }
+  .toggle button .hint { display: block; font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.06em; opacity: 0.75; margin-top: 2px; text-transform: uppercase; }
+
+  .linkish {
+    display: block; text-align: center; margin: 12px 0 4px;
+    font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--sumi-soft);
+    cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+    text-decoration-thickness: 2px; text-decoration-color: var(--vermill);
+    background: none; border: none; width: 100%;
+  }
+  .linkish:active { color: var(--vermill); }
+
+  /* ===========================================================
+     DRILL
+     =========================================================== */
+  .progress-strip {
+    display: flex; align-items: center; gap: 8px; padding: 12px 18px 4px;
+    font-family: var(--mono); font-size: 11px; color: var(--sumi-faint); font-weight: 700;
+  }
+  .pips { display: flex; gap: 5px; margin-left: auto; }
+  .pip { width: 9px; height: 9px; border: 2px solid var(--sumi); border-radius: 50%; }
+  .pip.done { background: var(--jade); border-color: var(--jade); }
+  .pip.cur { background: var(--vermill); border-color: var(--vermill); }
+
+  .modechip {
+    font-family: var(--mono); font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 3px 8px; border: 2px solid var(--sumi); border-radius: 2px;
+    background: var(--cream);
+  }
+  .modechip.spot { background: var(--vermill); color: #fff; border-color: var(--sumi); }
+
+  .prompt-block { padding: 6px 18px 4px; }
+  .prompt-block .q-k { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--vermill); }
+  .prompt-block .q {
+    font-size: 19px; font-weight: 700; line-height: 1.3; margin: 7px 0 0; letter-spacing: -0.01em;
+    text-wrap: pretty;
+  }
+  .prompt-block .qbadge { display: inline-block; }
+
+  /* the flagged "you wrote this" block */
+  .flagged { margin: 16px 18px 0; }
+  .flagged__tag {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--vermill-d);
+    margin-bottom: 7px;
+  }
+  .flagged__tag .x {
+    width: 18px; height: 18px; flex: 0 0 auto; background: var(--vermill); color: #fff;
+    border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800;
+  }
+  .codeblock {
+    font-family: var(--mono); font-size: 13px; line-height: 1.55;
+    background: #211d18; color: #e9dfcb; border: 2.5px solid var(--sumi);
+    border-radius: 2px; padding: 13px 14px; white-space: pre-wrap; word-break: break-word;
+    box-shadow: var(--shadow-sm); position: relative;
+  }
+  .codeblock.wrong { border-color: var(--vermill); box-shadow: 4px 4px 0 var(--vermill-d); }
+  .codeblock .kw { color: #e0915f; font-weight: 600; }
+  .codeblock .er { color: #ff8e7a; text-decoration: wavy underline; text-underline-offset: 3px; }
+  .codeblock .strike { opacity: 0.55; }
+
+  /* editor */
+  .editor-wrap { margin: 16px 18px 0; }
+  .editor-k {
+    font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--sumi-faint); margin-bottom: 7px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .editor-k .brush { width: 14px; height: 14px; }
+  textarea.editor {
+    width: 100%; min-height: 120px; resize: vertical;
+    font-family: var(--mono); font-size: 14px; line-height: 1.6;
+    background: var(--cream-2); color: var(--sumi);
+    border: 2.5px solid var(--sumi); border-radius: 2px; padding: 13px 14px;
+    box-shadow: var(--shadow-sm); outline: none;
+  }
+  textarea.editor:focus { box-shadow: 4px 4px 0 var(--vermill-d); border-color: var(--vermill); }
+
+  /* feedback */
+  .feedback { margin: 14px 18px 0; }
+  .note {
+    border: 2.5px solid var(--sumi); border-radius: 2px; padding: 12px 14px;
+    font-size: 13.5px; line-height: 1.5; box-shadow: var(--shadow-sm);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .note .ico { flex: 0 0 auto; font-family: var(--mono); font-weight: 800; }
+  .note--fail { background: #fbeae3; border-color: var(--vermill); }
+  .note--fail .ico { color: var(--vermill); }
+  .note--hint { background: var(--cream-3); }
+  .note--hint .ico { color: var(--sumi-soft); }
+  .note--reveal { background: #211d18; color: #e9dfcb; border-color: var(--sumi); }
+  .note--reveal .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #b9a98a; display: block; margin-bottom: 6px; }
+  .note--reveal code { font-family: var(--mono); font-size: 13px; color: #bfe3c4; }
+
+  .drill-actions { padding: 16px 18px calc(20px + env(safe-area-inset-bottom)); }
+  .drill-actions .btn-row { margin-top: 10px; }
+
+  /* ===========================================================
+     SUCCESS
+     =========================================================== */
+  .success { align-items: center; justify-content: center; text-align: center; padding: 30px 24px; }
+  .stamp {
+    font-family: var(--mono); font-weight: 800; font-size: 15px; letter-spacing: 0.12em;
+    color: var(--jade); border: 3px solid var(--jade); border-radius: 4px;
+    padding: 9px 16px; transform: rotate(-7deg); display: inline-block;
+    text-transform: uppercase; box-shadow: 3px 3px 0 rgba(79,115,85,0.4);
+    margin: 6px 0 22px;
+  }
+  .success h2 { font-size: 25px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .success p.sub { color: var(--sumi-soft); font-size: 14px; margin: 0 0 22px; max-width: 28ch; line-height: 1.45; }
+  .success .codeblock { text-align: left; width: 100%; }
+  .success .got-label { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--jade); margin: 0 0 8px; align-self: flex-start; display: flex; gap: 7px; align-items: center; }
+  .success__inner { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .nextline { font-family: var(--mono); font-size: 12px; color: var(--sumi-faint); margin: 18px 0 14px; }
+
+  .complete .enso-big { width: 96px; height: 96px; margin-bottom: 8px; }
+
+  /* ===========================================================
+     TOAST DEMO (normal exercise screen w/ toast)
+     =========================================================== */
+  .demo-note { font-family: var(--mono); font-size: 11px; color: var(--sumi-faint); padding: 12px 18px 0; line-height: 1.5; }
+  .mock-ex { padding: 8px 18px 0; opacity: 0.95; }
+  .mock-ex .q { font-size: 18px; font-weight: 700; margin: 6px 0 12px; }
+  .mock-ex .codeblock { font-size: 12.5px; }
+  .mock-ex .btn-row { margin-top: 12px; }
+  .mock-result {
+    margin: 14px 18px 0; font-family: var(--mono); font-size: 12.5px;
+    background: #fbeae3; border: 2.5px solid var(--vermill); border-radius: 2px;
+    padding: 11px 13px; color: var(--vermill-d); box-shadow: var(--shadow-sm);
+  }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(120%);
+    width: 354px; max-width: calc(100vw - 36px);
+    background: var(--sumi); color: var(--cream);
+    border-radius: 3px; padding: 13px 15px; z-index: 50;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 5px 5px 0 var(--vermill-d);
+    transition: transform .4s cubic-bezier(.2,.8,.2,1);
+    cursor: pointer;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast .brush { width: 26px; height: 26px; flex: 0 0 auto; }
+  .toast__txt { font-size: 13.5px; font-weight: 700; line-height: 1.25; }
+  .toast__txt .s { display: block; font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: #c9a99a; margin-top: 2px; }
+  .toast__go { margin-left: auto; color: var(--vermill); font-size: 20px; font-weight: 800; flex: 0 0 auto; }
+
+  .center-dim { text-align: center; color: var(--sumi-faint); font-family: var(--mono); font-size: 11px; padding: 10px; }
+</style>
+</head>
+<body>
+<div class="phone" id="app"></div>
+
+<script src="sqlzoo-exercises.js"></script>
+<script>
+/* =============================================================
+   MOCK DATA — kept only as a dead reference; the real bank is
+   built below from your actual attempts (see buildMistakes()).
+   ============================================================= */
+const MOCK_MISTAKES_UNUSED = [
+  {
+    exercise: "W5",
+    title: "Population per continent",
+    prompt: "For each continent, show the continent and its total population.",
+    wrong: "SELECT continent, population\nFROM world;",
+    correct: "SELECT continent, SUM(population)\nFROM world\nGROUP BY continent;",
+    reason: "Wrong result: missing GROUP BY",
+    hint: "You're selecting a raw column alongside what should be a total. To collapse rows per continent you need an aggregate (SUM) and a GROUP BY.",
+    wroteOn: "May 30",
+    ago: "3 weeks ago",
+    resolved: false
+  },
+  {
+    exercise: "W3",
+    title: "Countries over 200 million",
+    prompt: "Show the name and population of countries with a population above 200 million.",
+    wrong: "SELECT name, continant\nFROM world\nWHERE population > 200000000;",
+    correct: "SELECT name, population\nFROM world\nWHERE population > 200000000;",
+    reason: "SQL error: column 'continant' does not exist",
+    hint: "Read the error literally — a column name is misspelled. Check 'continant' against the schema.",
+    wroteOn: "Jun 2",
+    ago: "2 weeks ago",
+    resolved: false
+  },
+  {
+    exercise: "W7",
+    title: "High average-GDP continents",
+    prompt: "List continents whose average GDP is greater than 1 trillion.",
+    wrong: "SELECT continent, AVG(gdp)\nFROM world\nGROUP BY continent\nWHERE AVG(gdp) > 1000000000000;",
+    correct: "SELECT continent, AVG(gdp)\nFROM world\nGROUP BY continent\nHAVING AVG(gdp) > 1000000000000;",
+    reason: "Used WHERE on an aggregate (should be HAVING)",
+    hint: "WHERE filters rows before grouping, so it can't see AVG(). To filter on an aggregate, use HAVING after GROUP BY.",
+    wroteOn: "Jun 5",
+    ago: "2 weeks ago",
+    resolved: false
+  },
+  {
+    exercise: "W8",
+    title: "Names beginning with B",
+    prompt: "Find the names of all countries that begin with the letter 'B'.",
+    wrong: "SELECT name\nFROM world\nWHERE name = 'B%';",
+    correct: "SELECT name\nFROM world\nWHERE name LIKE 'B%';",
+    reason: "Wrong operator: = instead of LIKE",
+    hint: "The % wildcard only works with pattern matching. Swap = for LIKE.",
+    wroteOn: "Jun 9",
+    ago: "12 days ago",
+    resolved: false
+  },
+  {
+    exercise: "W14",
+    title: "Distinct continents",
+    prompt: "List every continent once, with no duplicates.",
+    wrong: "SELECT continent\nFROM world;",
+    correct: "SELECT DISTINCT continent\nFROM world;",
+    reason: "Wrong result: duplicates not removed",
+    hint: "Every country row repeats its continent. Add DISTINCT to collapse repeats.",
+    wroteOn: "Jun 12",
+    ago: "10 days ago",
+    resolved: false
+  },
+  {
+    exercise: "W2",
+    title: "Large countries by area",
+    prompt: "Show the name and area of countries with an area of at least 3,000,000.",
+    wrong: "SELECT name, area\nFROM world;",
+    correct: "SELECT name, area\nFROM world\nWHERE area >= 3000000;",
+    reason: "Wrong result: forgot the area filter",
+    hint: "You returned every country. Add a WHERE clause to keep only the large ones.",
+    wroteOn: "Jun 15",
+    ago: "1 week ago",
+    resolved: false
+  },
+  {
+    exercise: "W9",
+    title: "Five most populous",
+    prompt: "Show the five most populous countries, largest first.",
+    wrong: "SELECT name, population\nFROM world\nORDER BY population\nLIMIT 5;",
+    correct: "SELECT name, population\nFROM world\nORDER BY population DESC\nLIMIT 5;",
+    reason: "Wrong result: sorted ascending",
+    hint: "ORDER BY defaults to ascending, so you got the five smallest. Add DESC.",
+    wroteOn: "Jun 18",
+    ago: "4 days ago",
+    resolved: false
+  }
+];
+
+/* =============================================================
+   LIVE DATA — the bank is built from your REAL wrong attempts.
+   Source: localStorage "commonplace_sqlzoo_attempts" (written by
+   sql-practice-plus.js on the practice page), joined with the
+   prompts/answers in window.SQLZOO_EXERCISES. Solved drills are
+   remembered in "commonplace_sqlzoo_mistakes_resolved".
+   ============================================================= */
+const ATT_KEY = "commonplace_sqlzoo_attempts";
+const RESOLVED_KEY = "commonplace_sqlzoo_mistakes_resolved";
+
+function loadJSON(k, fb){ try { return JSON.parse(localStorage.getItem(k)) || fb; } catch(e){ return fb; } }
+function saveJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+let RESOLVED = loadJSON(RESOLVED_KEY, []);
+function isResolved(id){ return RESOLVED.indexOf(id) >= 0; }
+function markResolved(id){ if(!isResolved(id)){ RESOLVED.push(id); saveJSON(RESOLVED_KEY, RESOLVED); } }
+
+function relAgo(ts){
+  const d = Math.max(0, Math.round((Date.now()-ts)/86400000));
+  if(d===0) return "today";
+  if(d===1) return "yesterday";
+  if(d<14) return d+" days ago";
+  if(d<60) return Math.round(d/7)+" weeks ago";
+  return new Date(ts).toLocaleDateString(undefined,{month:"short",day:"numeric"});
+}
+function shortDate(ts){ return new Date(ts).toLocaleDateString(undefined,{month:"short",day:"numeric"}); }
+
+// Build the live bank: every exercise that has a wrong attempt on record.
+function buildMistakes(){
+  const attempts = loadJSON(ATT_KEY, {});
+  const byId = {};
+  (window.SQLZOO_EXERCISES || []).forEach(function(e){ byId[e.id] = e; });
+  const out = [];
+  Object.keys(attempts).forEach(function(id){
+    const wrong = (attempts[id]||[]).filter(function(a){ return !a.ok; });
+    if(!wrong.length) return;             // nothing wrong → nothing to drill
+    const ex = byId[id];
+    if(!ex) return;                        // exercise not found in the set
+    const latest = wrong[wrong.length-1];
+    out.push({
+      exercise: id.toUpperCase(), exId: id,
+      title: ex.title, prompt: ex.prompt,
+      wrong: latest.q, correct: ex.sol,
+      reason: latest.msg || "Wrong result",
+      hint: ex.hint || "Re-read the question and compare it with what your query returns.",
+      wroteOn: shortDate(latest.t), ago: relAgo(latest.t),
+      tries: wrong.length, t: latest.t,
+      get resolved(){ return isResolved(this.exId); },
+      set resolved(v){ if(v) markResolved(this.exId); }
+    });
+  });
+  out.sort(function(a,b){ return b.t - a.t; });   // most-recent mistake first
+  return out;
+}
+
+let MISTAKES = buildMistakes();
+
+/* =============================================================
+   STATE
+   ============================================================= */
+const state = {
+  screen: "home",
+  mode: "spot",        // "spot" | "blank"
+  index: 0,            // index into the active drill queue
+  queue: [],           // ids (array indices) for this drill run
+  revealed: false,
+  hinted: false,
+  failed: false
+};
+
+/* =============================================================
+   SVG bits — sumi brush motifs
+   ============================================================= */
+function enso(size, color) {
+  color = color || "var(--sumi)";
+  return `<svg class="enso" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">
+    <path d="M72 26 C58 14 34 16 24 34 C13 54 23 80 47 84 C69 88 86 72 84 52 C83 42 78 35 70 31"
+      fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"
+      style="stroke-dasharray:1.5 0" />
+    <path d="M72 26 c-3 2 -6 5 -8 9" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  </svg>`;
+}
+function brush(size, color) {
+  color = color || "var(--vermill)";
+  return `<svg class="brush" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">
+    <path d="M4 19 C8 17 9 12 13 8 C15 6 18 4 20 4 C20 7 18 10 16 12 C12 16 7 17 5 20"
+      fill="${color}" opacity="0.92"/>
+    <circle cx="5.2" cy="19.5" r="1.7" fill="${color}"/>
+  </svg>`;
+}
+
+/* =============================================================
+   tiny SQL pretty-printer for the dark code blocks
+   ============================================================= */
+const KW = /\b(SELECT|DISTINCT|FROM|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|AND|OR|NOT|LIKE|DESC|ASC|SUM|AVG|COUNT|MIN|MAX|AS|IN|BETWEEN)\b/g;
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmt(sql){ return esc(sql).replace(KW, '<span class="kw">$1</span>'); }
+// highlight a specific wrong fragment
+function fmtWrong(sql, errFrag){
+  let h = fmt(sql);
+  if(errFrag){
+    const e = esc(errFrag);
+    h = h.replace(e, '<span class="er">'+e+'</span>');
+  }
+  return h;
+}
+
+/* =============================================================
+   RENDER
+   ============================================================= */
+const app = document.getElementById("app");
+
+function reviewCount(){ return MISTAKES.filter(m => !m.resolved).length; }
+
+function go(screen){ state.screen = screen; render(); window.scrollTo(0,0); app.scrollTop = 0; }
+
+function startDrill(){
+  state.queue = MISTAKES.map((m,i)=>i).filter(i => !MISTAKES[i].resolved);
+  state.index = 0;
+  resetDrillFlags();
+  if(state.queue.length === 0){ go("complete"); return; }
+  go("drill");
+}
+function resetDrillFlags(){ state.revealed = false; state.hinted = false; state.failed = false; }
+
+function currentMistake(){ return MISTAKES[state.queue[state.index]]; }
+
+function render(){
+  if(state.screen === "home") return renderHome();
+  if(state.screen === "drill") return renderDrill();
+  if(state.screen === "success") return renderSuccess();
+  if(state.screen === "complete") return renderComplete();
+  if(state.screen === "toast") return renderToast();
+}
+
+/* ---------------- HOME ---------------- */
+function renderHome(){
+  const n = reviewCount();
+  const cards = MISTAKES.filter(m=>!m.resolved).map((m)=>`
+    <div class="card" data-screen-label="${m.exercise}" onclick="openOne('${m.exercise}')">
+      <div class="card__top">
+        <span class="badge">${m.exercise}</span>
+        <span class="card__title">${m.title}</span>
+        <span class="card__ago">${m.ago}</span>
+      </div>
+      <span class="reason"><span class="dot"></span>${m.reason}</span>
+      <div class="card__peek">${m.wrong.replace(/\n/g,' ')}</div>
+    </div>`).join("");
+
+  const emptyBank = `
+    <div class="card" style="cursor:default;text-align:center;padding:30px 18px">
+      <div style="font-size:30px;margin-bottom:8px">${enso(48)}</div>
+      <div class="card__title" style="font-size:17px;margin-bottom:6px">Bank's empty — nice.</div>
+      <p style="color:var(--sumi-soft);font-size:13.5px;margin:0;line-height:1.5">
+        Wrong answers you make on the practice page land here automatically.
+        Come back after a few have had time to fade.
+      </p>
+    </div>`;
+
+  app.innerHTML = `
+  <div class="screen active" data-screen-label="Mistake Bank">
+    <div class="bar">
+      ${enso(34)}
+      <div class="bar__brand">
+        <span class="k">Commonplace</span>
+        <span class="t">Mistake Drill</span>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="hero__count"><span class="n">${n}</span><span class="l">to review</span></div>
+      <p class="hero__sub">Your own wrong SQL, served back to you after it's had time to fade. Fix it again and it sticks.</p>
+    </div>
+
+    <div class="section-k">The bank</div>
+    <div class="cards">${ n===0 ? emptyBank : cards }</div>
+
+    <div class="grow"></div>
+
+    <div class="dock">
+      ${ n===0 ? `
+      <a class="btn btn--primary" href="sqlzoo.html" style="text-decoration:none">
+        ${brush(18,'#fff')} Go practice →
+      </a>` : `
+      <div class="toggle" role="tablist" aria-label="Drill mode">
+        <button class="${state.mode==='spot'?'on':''}" onclick="setMode('spot')">
+          Spot the bug <span class="hint">see your query</span>
+        </button>
+        <button class="${state.mode==='blank'?'on':''}" onclick="setMode('blank')">
+          Blank redo <span class="hint">from scratch</span>
+        </button>
+      </div>
+      <button class="btn btn--primary" onclick="startDrill()">
+        ${brush(18,'#fff')} Start drill · ${n}
+      </button>` }
+      <a class="linkish" href="sqlzoo.html" style="text-decoration:none;display:block">‹ Back to practice</a>
+    </div>
+  </div>`;
+}
+
+function setMode(m){ state.mode = m; renderHome(); }
+
+// opening a single card starts a one-item drill
+function openOne(code){
+  const idx = MISTAKES.findIndex(m=>m.exercise===code);
+  state.queue = [idx];
+  state.index = 0;
+  resetDrillFlags();
+  go("drill");
+}
+
+/* ---------------- DRILL ---------------- */
+function renderDrill(){
+  const m = currentMistake();
+  const total = state.queue.length;
+  const pos = state.index + 1;
+  const spot = state.mode === "spot";
+
+  const pips = state.queue.map((_,i)=>{
+    let cls = "pip";
+    if(i < state.index) cls += " done";
+    else if(i === state.index) cls += " cur";
+    return `<span class="${cls}"></span>`;
+  }).join("");
+
+  const errFrag = m.exercise === "W3" ? "continant"
+                 : m.exercise === "W7" ? "WHERE"
+                 : m.exercise === "W8" ? "=" : null;
+
+  const flagged = spot ? `
+    <div class="flagged">
+      <div class="flagged__tag"><span class="x">✕</span> You wrote this on ${m.wroteOn}</div>
+      <div class="codeblock wrong">${fmtWrong(m.wrong, errFrag)}</div>
+    </div>` : `
+    <div class="flagged">
+      <div class="flagged__tag" style="color:var(--sumi-soft)">${brush(15,'var(--sumi-soft)')} From memory — your past attempt is hidden</div>
+    </div>`;
+
+  const prefill = spot ? m.wrong : "";
+
+  app.innerHTML = `
+  <div class="screen active" data-screen-label="Drill ${m.exercise}">
+    <div class="bar">
+      <button class="bar__back" onclick="go('home')">‹ Bank</button>
+      <span class="modechip ${spot?'spot':''}">${spot?'Spot the bug':'Blank redo'}</span>
+    </div>
+
+    <div class="progress-strip">
+      <span>${pos} / ${total}</span>
+      <div class="pips">${pips}</div>
+    </div>
+
+    <div class="prompt-block">
+      <span class="q-k"><span class="badge" style="font-size:11px;padding:2px 7px;margin-right:6px">${m.exercise}</span>Question</span>
+      <p class="q">${m.prompt}</p>
+    </div>
+
+    ${flagged}
+
+    <div class="editor-wrap">
+      <div class="editor-k">${brush(14)} ${spot?'Fix it in place':'Write your query'}</div>
+      <textarea class="editor" id="ed" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off">${esc(prefill)}</textarea>
+    </div>
+
+    <div class="feedback" id="fb"></div>
+
+    <div class="drill-actions">
+      <button class="btn btn--primary" onclick="runCheck()">${brush(18,'#fff')} Run &amp; Check</button>
+      <div class="btn-row">
+        <button class="btn btn--ghost btn--sm" onclick="showHint()">Hint</button>
+        <button class="btn btn--ghost btn--sm" onclick="reveal()">Reveal answer</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function normSQL(s){
+  return s.toLowerCase()
+    .replace(/\s+/g," ")
+    .replace(/\s*,\s*/g,",")
+    .replace(/\s*;\s*$/,"")
+    .replace(/\s*\(\s*/g,"(")
+    .replace(/\s*\)\s*/g,")")
+    .trim();
+}
+
+function runCheck(){
+  const m = currentMistake();
+  const val = document.getElementById("ed").value;
+  const fb = document.getElementById("fb");
+  if(normSQL(val) === normSQL(m.correct)){
+    go("success");
+    return;
+  }
+  state.failed = true;
+  fb.innerHTML = `<div class="note note--fail">
+    <span class="ico">✕</span>
+    <div><b>Not quite.</b> ${m.reason}. ${m.exercise==='W3'?'Fix the column name and re-run.':'Adjust the query and run it again — or tap Hint.'}</div>
+  </div>`;
+  fb.scrollIntoView({block:"nearest"});
+}
+
+function showHint(){
+  const m = currentMistake();
+  document.getElementById("fb").innerHTML = `<div class="note note--hint">
+    <span class="ico">${'※'}</span>
+    <div><b>Hint.</b> ${m.hint}</div>
+  </div>`;
+}
+
+function reveal(){
+  const m = currentMistake();
+  document.getElementById("fb").innerHTML = `<div class="note note--reveal">
+    <div style="flex:1">
+      <span class="lbl">The correct query</span>
+      <code>${fmt(m.correct).replace(/\n/g,'<br>')}</code>
+    </div>
+  </div>`;
+  // also drop it into the editor so they can run it through
+  document.getElementById("ed").value = m.correct;
+}
+
+/* ---------------- SUCCESS ---------------- */
+function renderSuccess(){
+  const m = currentMistake();
+  m.resolved = true;
+  const more = state.index + 1 < state.queue.length;
+  const remaining = reviewCount();
+
+  app.innerHTML = `
+  <div class="screen active success" data-screen-label="Remembered ${m.exercise}">
+    <div class="success__inner">
+      ${enso(72, 'var(--jade)')}
+      <span class="stamp">Remembered ✓</span>
+      <h2>That one's stuck.</h2>
+      <p class="sub">You rewrote <b>${m.exercise}</b> correctly. It's out of the bank.</p>
+
+      <p class="got-label">${brush(14,'var(--jade)')} Your corrected query</p>
+      <div class="codeblock">${fmt(m.correct)}</div>
+
+      <p class="nextline">${more ? 'Next mistake queued…' : 'Bank cleared for now.'} · ${remaining} left</p>
+
+      ${ more
+        ? `<button class="btn btn--primary" onclick="nextDrill()">Next mistake →</button>`
+        : `<button class="btn btn--primary" onclick="go('complete')">Finish ▸</button>` }
+      <button class="linkish" onclick="go('home')">Back to the bank</button>
+    </div>
+  </div>`;
+
+  // gentle auto-advance for the primary loop (train-friendly, one-handed)
+  if(more){
+    clearTimeout(window.__adv);
+    window.__adv = setTimeout(()=>{ if(state.screen==='success') nextDrill(); }, 2600);
+  }
+}
+function nextDrill(){ clearTimeout(window.__adv); state.index++; resetDrillFlags(); go("drill"); }
+
+/* ---------------- COMPLETE ---------------- */
+function renderComplete(){
+  const remaining = reviewCount();
+  app.innerHTML = `
+  <div class="screen active success complete" data-screen-label="Drill complete">
+    <div class="success__inner">
+      ${enso(96,'var(--sumi)')}
+      <span class="stamp">Dojo cleared</span>
+      <h2>${remaining===0?'Bank empty.':'Session done.'}</h2>
+      <p class="sub">${remaining===0
+        ? 'Nothing left to review. New mistakes will land here as you practise.'
+        : remaining+' mistake'+(remaining===1?'':'s')+' still waiting — come back when they have had time to fade.'}</p>
+      <button class="btn btn--primary" onclick="go('home')">Back to the bank</button>
+    </div>
+  </div>`;
+}
+
+/* ---------------- TOAST DEMO ---------------- */
+function renderToast(){
+  app.innerHTML = `
+  <div class="screen active" data-screen-label="New-mistake toast demo">
+    <div class="bar">
+      <button class="bar__back" onclick="go('home')">‹ Bank</button>
+      <span class="modechip">Live exercise</span>
+    </div>
+
+    <p class="demo-note">↓ This is the normal SQLZoo exercise screen. When a fresh attempt fails, this is the toast that quietly banks it.</p>
+
+    <div class="mock-ex" data-screen-label="Mock exercise W12">
+      <span class="q-k" style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--vermill)">
+        <span class="badge" style="font-size:11px;padding:2px 7px;margin-right:6px">W12</span>Question
+      </span>
+      <p class="q">Show the name and capital of countries where the capital and name are the same length.</p>
+      <div class="codeblock wrong">${fmtWrong("SELECT name, capital\nFROM world\nWHERE LEN(name) = LEN(capital);","LEN")}</div>
+    </div>
+
+    <div class="mock-result">✕ SQL error: no such function: LEN  — did you mean LENGTH()?</div>
+
+    <div style="padding:16px 18px 0">
+      <button class="btn btn--primary" onclick="fireToast()">${brush(18,'#fff')} Run &amp; Check (will fail)</button>
+      <p class="center-dim">Tap to replay the toast</p>
+    </div>
+    <div class="grow"></div>
+  </div>
+
+  <div class="toast" id="toast" onclick="go('home')">
+    ${brush(26,'var(--vermill)')}
+    <div class="toast__txt">Saved to your mistake bank
+      <span class="s">W12 · we'll re-test you in a few weeks</span>
+    </div>
+    <span class="toast__go">→</span>
+  </div>`;
+  setTimeout(fireToast, 650);
+}
+function fireToast(){
+  const t = document.getElementById("toast");
+  if(!t) return;
+  t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+  clearTimeout(window.__toast);
+  window.__toast = setTimeout(()=> t && t.classList.remove("show"), 4200);
+}
+
+/* boot */
+render();
+</script>
+</body>
+</html>

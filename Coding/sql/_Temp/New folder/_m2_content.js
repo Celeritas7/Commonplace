@@ -1,0 +1,125 @@
+/* Module + lesson content for the SQL study page.
+   Module 2 — Filtering & Sorting */
+window.SQLContent = {
+  modules: [
+    { n: 1, slug: "retrieving-data", title: "Retrieving Data", done: false },
+    { n: 2, slug: "filtering-sorting", title: "Filtering & Sorting", done: false, active: true },
+    { n: 3, slug: "aggregating", title: "Aggregating Data", done: false },
+    { n: 4, slug: "joins", title: "JOINs", done: false },
+    { n: 5, slug: "advanced", title: "Advanced SQL", done: false },
+    { n: 6, slug: "creating-tables", title: "Creating & Modifying Tables", done: false },
+    { n: 7, slug: "views", title: "Conditional Expressions & Views", done: false },
+    { n: 8, slug: "import-export", title: "Importing & Exporting", done: false },
+    { n: 9, slug: "psql-python", title: "PostgreSQL with Python", done: false },
+    { n: 10, slug: "capstone", title: "Capstone & Review", done: false },
+  ],
+
+  module: {
+    n: 2,
+    of: 10,
+    title: "Filtering & Sorting",
+    stand: "Narrow the rows you retrieve, decide what order they come back in, and cap how many you see. Three knobs that turn “fetch some data” into “answer a question”.",
+    estTime: "60–90 min",
+    prereq: "Module 1 (SELECT, DISTINCT, COUNT)",
+    lessonsCount: 3,
+    queriesCount: 9,
+
+    covers: {
+      lead: "After Module 1 you can pull columns out of a table. This module gives you three operators that turn a raw column dump into a focused answer — keep the rows you want, sort them, and show only the top few.",
+      items: [
+        { kw: "WHERE", desc: "Keep only the rows that match a condition. Equality, ranges, set membership, pattern matching — every filter you'll ever write lives here." },
+        { kw: "ORDER BY", desc: "Sort the result by one or more columns, ascending or descending. The query's shape is decided before this; ORDER BY just lays the rows out." },
+        { kw: "LIMIT", desc: "Cap the result at <b>N</b> rows. Cheap insurance against runaway queries and the natural partner of ORDER BY when you want “top 5 by anything”." },
+      ],
+    },
+
+    funnel: {
+      intro: "Every query is written in the same fixed order, top to bottom, and each clause narrows the result further than the one above it. This module lives squarely in the middle three layers — WHERE, ORDER BY, and LIMIT — but the order never changes.",
+      note: "Notice that ORDER BY runs <em>after</em> grouping but <em>before</em> LIMIT — you sort the final shape, then cut it to size. Reversing the two would change what survives.",
+      clauses: [
+        { clause: "SELECT", role: "columns (AS aliases)", color: "#6f9a47", req: true,
+          desc: "Choose which columns come back, and rename them with AS. The only clause required in every query — but this module barely touches it.",
+          snippet: "SELECT title, rating, length\nFROM film\nLIMIT 6;" },
+        { clause: "FROM", role: "the source table", color: "#3a7a60", req: true,
+          desc: "Name the table the rows are drawn from. SELECT and FROM together are the irreducible core of a query.",
+          snippet: "SELECT *\nFROM category;" },
+        { clause: "WHERE", role: "row filter", color: "#46719f",
+          desc: "Keep only the rows that satisfy a condition. Runs before grouping, on the raw rows. The most-used filter in SQL.",
+          snippet: "SELECT title, length\nFROM film\nWHERE length > 150;" },
+        { clause: "GROUP BY", role: "collapse into groups", color: "#6e4d93",
+          desc: "Fold rows that share a value into a single bucket. We touch it lightly in this module; full coverage is Module 3.",
+          snippet: "SELECT rating, COUNT(*) AS films\nFROM film\nGROUP BY rating;" },
+        { clause: "HAVING", role: "filter the groups", color: "#a85084",
+          desc: "Like WHERE, but it filters the groups after aggregation rather than the rows before it. Module 3 territory.",
+          snippet: "SELECT rating, COUNT(*) AS films\nFROM film\nGROUP BY rating\nHAVING COUNT(*) > 4;" },
+        { clause: "ORDER BY", role: "sort the result", color: "#bd7a2c",
+          desc: "Sort the final rows by a column, ascending or descending. Sorting is the last shaping step before LIMIT.",
+          snippet: "SELECT title, length\nFROM film\nORDER BY length DESC\nLIMIT 6;" },
+        { clause: "LIMIT", role: "cap the rows", color: "#586a79",
+          desc: "Return at most N rows. The natural partner of ORDER BY when you want “top 5 by anything”.",
+          snippet: "SELECT title\nFROM film\nORDER BY length DESC\nLIMIT 5;" },
+      ],
+    },
+
+    lessons: [
+      {
+        id: "where",
+        no: "2.1",
+        title: "WHERE",
+        body: [
+          "<b>WHERE</b> keeps only the rows that satisfy a condition, dropping the rest before anything else happens. It runs on the raw rows fresh from FROM, so every later clause sees only what survived this filter.",
+          "Comparison operators are the obvious starters: <code>=</code>, <code>!=</code> (or <code>&lt;&gt;</code>), <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>. Combine them with <code>AND</code> and <code>OR</code> for multi-condition filters. For sets of allowed values, <code>IN</code> beats a chain of ORs; for ranges, write the two-sided inequality directly. Pattern matching is <code>LIKE</code> with <code>%</code> as the wildcard.",
+          "NULL is the one trap. NULL never equals anything — not even another NULL — so <code>WHERE email = NULL</code> matches no rows. Use <code>IS NULL</code> and <code>IS NOT NULL</code> instead. Once you remember that, the rest is mechanical.",
+        ],
+        callout: "Rule of thumb: if your filter touches a column that can be NULL, decide deliberately whether you want NULLs in or out. NULLs silently disappear from any condition you write with <code>=</code> or <code>!=</code> — that's how unexplained “missing rows” bugs start.",
+        query: "SELECT title, rating, length\nFROM film\nWHERE rating = 'PG'\nORDER BY length DESC;",
+        chips: [
+          { label: "exact match", sql: "SELECT title, rating\nFROM film\nWHERE rating = 'PG';" },
+          { label: "range", sql: "SELECT title, length\nFROM film\nWHERE length >= 120 AND length <= 150\nORDER BY length;" },
+          { label: "set membership", sql: "SELECT title, rating\nFROM film\nWHERE rating IN ('G', 'PG')\nORDER BY rating, title;" },
+          { label: "pattern match", sql: "SELECT title\nFROM film\nWHERE title LIKE 'A%'\nORDER BY title;" },
+          { label: "is null", sql: "SELECT first_name, last_name, email\nFROM customer\nWHERE email IS NULL;" },
+          { label: "and / or", sql: "SELECT title, rating, length\nFROM film\nWHERE length > 150\n  AND rating = 'R';" },
+        ],
+      },
+      {
+        id: "order-by",
+        no: "2.2",
+        title: "ORDER BY",
+        body: [
+          "<b>ORDER BY</b> sorts the result. List one or more columns; each gets an optional <code>ASC</code> (default) or <code>DESC</code>. The first column sorts the rows; the second only breaks ties among rows that share the first; and so on.",
+          "Sorting happens <em>after</em> WHERE and any grouping but <em>before</em> LIMIT. That ordering matters: <code>ORDER BY length DESC LIMIT 5</code> gives the five longest films, while reversing them would sort an arbitrary five rows.",
+          "ORDER BY can sort by an expression or a column alias, not just a raw column name — useful when you want “sort by length per dollar” or similar derived ordering.",
+        ],
+        callout: "Sorting is not free. On large tables it costs roughly N·log N — fine for thousands of rows, expensive for millions. Sort the smallest meaningful slice (filter first, sort second).",
+        query: "SELECT title, length\nFROM film\nORDER BY length DESC;",
+        chips: [
+          { label: "longest first", sql: "SELECT title, length\nFROM film\nORDER BY length DESC;" },
+          { label: "shortest first", sql: "SELECT title, length\nFROM film\nORDER BY length ASC;" },
+          { label: "two columns", sql: "SELECT title, rating, length\nFROM film\nORDER BY rating, length DESC;" },
+          { label: "alphabetical", sql: "SELECT title\nFROM film\nORDER BY title;" },
+          { label: "by rental rate", sql: "SELECT title, rental_rate\nFROM film\nORDER BY rental_rate DESC, title;" },
+        ],
+      },
+      {
+        id: "limit",
+        no: "2.3",
+        title: "LIMIT",
+        body: [
+          "<b>LIMIT N</b> caps the result at <em>at most</em> N rows. It's the last step in the query — every filter, sort, and group runs first; then LIMIT trims the survivors.",
+          "On its own LIMIT just samples — useful when exploring an unfamiliar table. Paired with ORDER BY it does the real work: “the top 5 longest films”, “the 3 most recent payments”, “the 10 cheapest rentals”. The shape of the answer is decided by ORDER BY; LIMIT just stops you reading past the first N.",
+          "If you LIMIT without ORDER BY, the database is free to return whatever rows it sees first — fine for a quick peek, dangerous if you expected a particular subset.",
+        ],
+        callout: "Habit worth forming: never LIMIT a result you'll act on without an explicit ORDER BY. The five films you see today may not be the five you see tomorrow.",
+        query: "SELECT title, length\nFROM film\nORDER BY length DESC\nLIMIT 5;",
+        chips: [
+          { label: "top 5 longest", sql: "SELECT title, length\nFROM film\nORDER BY length DESC\nLIMIT 5;" },
+          { label: "5 shortest", sql: "SELECT title, length\nFROM film\nORDER BY length ASC\nLIMIT 5;" },
+          { label: "first three", sql: "SELECT title, rating\nFROM film\nLIMIT 3;" },
+          { label: "cheapest rentals", sql: "SELECT title, rental_rate\nFROM film\nORDER BY rental_rate, title\nLIMIT 5;" },
+          { label: "top spenders", sql: "SELECT customer_id, COUNT(*) AS payments\nFROM payment\nGROUP BY customer_id\nORDER BY payments DESC\nLIMIT 5;" },
+        ],
+      },
+    ],
+  },
+};

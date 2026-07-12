@@ -141,8 +141,6 @@
   .today-date { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-soft); margin-left: auto; }
   .today-sub { font-family: "EB Garamond", serif; font-style: italic; font-size: 15px; color: var(--ink-soft); margin: 7px 0 0; }
   .today-cards { display: flex; gap: 11px; flex-wrap: wrap; margin-top: 15px; }
-  .today-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 11px; margin-top: 15px; }
-  .today-board .today-card { min-width: 0; }
   .today-card { display: flex; align-items: center; gap: 13px; border: 1px solid var(--line); border-radius: 11px; padding: 13px 16px; cursor: pointer; background: var(--card); min-width: 210px; transition: border-color 0.15s, box-shadow 0.15s; }
   .today-card:hover { border-color: var(--green); box-shadow: 0 2px 0 var(--sage); }
   .today-card .tc-label { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 21px; line-height: 1; color: var(--ink); }
@@ -1008,14 +1006,6 @@ sb.auth.getSession().then(function(res){
 
   function sectionFor(find){ var el=document.querySelector(find); return el ? el.closest("section.sec") : null; }
 
-  // open one section, tuck the rest away (exclusive accordion — keeps the page compact)
-  function openExclusive(pane, sec){
-    Array.prototype.forEach.call(pane.querySelectorAll("section.sec.prac-sec"), function(s){
-      if(s!==sec) s.classList.add("collapsed");
-    });
-    sec.classList.remove("collapsed");
-  }
-
   function setupPracticeRotation(){
     var pane=document.querySelector('.mode-pane[data-pane="practice"]');
     if(!pane) return;
@@ -1029,46 +1019,37 @@ sb.auth.getSession().then(function(res){
       var head=sec.querySelector(".sec-head");
       if(head && !head.querySelector(".sec-caret")){
         var car=document.createElement("span"); car.className="sec-caret"; car.textContent="\u25BE"; head.appendChild(car);
-        head.addEventListener("click",function(e){ if(e.target.closest("button")||e.target.closest("a")) return;
-          if(sec.classList.contains("collapsed")){ openExclusive(pane, sec); window.scrollTo({ top: sec.getBoundingClientRect().top+window.scrollY-12, behavior:"smooth" }); }
-          else { sec.classList.add("collapsed"); } });
+        head.addEventListener("click",function(e){ if(e.target.closest("button")||e.target.closest("a")) return; sec.classList.toggle("collapsed"); });
       }
       sec.classList.add("collapsed");
     });
-    // badge today's featured, and open the first one
+    // open today's featured + badge them
     featured.forEach(function(f){
       var sec=secByKey[f.key]; if(!sec) return;
+      sec.classList.remove("collapsed");
       var head=sec.querySelector(".sec-head");
       if(head && !head.querySelector(".sec-today-badge")){
         var b=document.createElement("span"); b.className="sec-today-badge"; b.textContent="Today";
         var cnt=head.querySelector(".count"); if(cnt) cnt.after(b); else head.querySelector("h2").after(b);
       }
     });
-    var firstFeat=secByKey[featured[0] && featured[0].key]; if(firstFeat) openExclusive(pane, firstFeat);
 
     // build the “Today’s rotation” strip at the very top of the practice pane
     var strip=document.createElement("div"); strip.className="today-strip";
     var d=new Date();
     var dateStr=d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
-    var board = ROT.map(function(r){ return {key:r.key, label:r.label, sec:secByKey[r.key]}; });
-    if(histSec) board.push({key:"hist", label:"Imported History", sec:histSec});
-    var boardMap={}; board.forEach(function(b){ if(b.sec) boardMap[b.key]=b.sec; });
-    var cards=board.map(function(b){
-      if(!b.sec) return "";
-      var cnt=b.sec.querySelector(".sec-head .count"); var num=cnt?cnt.textContent.trim():"";
-      var isFeat=featKeys.indexOf(b.key)>=0;
-      return '<div class="today-card board-card" data-key="'+b.key+'"><div><div class="tc-label">'+b.label+'</div>'
-        +'<div class="tc-meta">'+(num?num+" \u00b7 ":"")+'open \u2192</div></div>'
-        +(isFeat?'<span class="sec-today-badge">Today</span>':'')+'</div>';
+    var cards=featured.map(function(f){
+      return '<div class="today-card" data-key="'+f.key+'"><div><div class="tc-label">'+f.label+'</div><div class="tc-meta">tap to jump in</div></div><span class="tc-go">Start \u2192</span></div>';
     }).join("");
-    strip.innerHTML='<div class="today-top"><span class="today-kick">Practice sections</span><span class="today-date">'+dateStr+'</span></div>'
-      +'<p class="today-sub">Pick a section to focus \u2014 it opens on its own and the rest stay tucked. Two are featured today.</p>'
-      +'<div class="today-cards today-board">'+cards+'</div>';
+    strip.innerHTML='<div class="today-top"><span class="today-kick">Today\u2019s rotation</span><span class="today-date">'+dateStr+'</span></div>'
+      +'<p class="today-sub">Two sections surface each day so you\u2019re not always grinding the same one. The rest are folded below \u2014 tap any header to open it.</p>'
+      +'<div class="today-cards">'+cards+'</div>';
     pane.insertBefore(strip, pane.firstChild);
     strip.addEventListener("click",function(e){
       var c=e.target.closest(".today-card"); if(!c) return;
-      var sec=boardMap[c.getAttribute("data-key")]; if(!sec) return;
-      openExclusive(pane, sec);
+      var f=ROT.filter(function(x){return x.key===c.getAttribute("data-key");})[0]; if(!f) return;
+      var sec=secByKey[f.key]; if(!sec) return;
+      sec.classList.remove("collapsed");
       window.scrollTo({ top: sec.getBoundingClientRect().top+window.scrollY-12, behavior:"smooth" });
     });
   }
@@ -1088,38 +1069,32 @@ sb.auth.getSession().then(function(res){
       var head=d.sec.querySelector(".sec-head");
       if(head && !head.querySelector(".sec-caret")){
         var car=document.createElement("span"); car.className="sec-caret"; car.textContent="\u25BE"; head.appendChild(car);
-        head.addEventListener("click",function(e){ if(e.target.closest("a")||e.target.closest("button")) return;
-          if(d.sec.classList.contains("collapsed")){ openExclusive(pane, d.sec); window.scrollTo({ top: d.sec.getBoundingClientRect().top+window.scrollY-12, behavior:"smooth" }); }
-          else { d.sec.classList.add("collapsed"); } });
+        head.addEventListener("click",function(e){ if(e.target.closest("a")||e.target.closest("button")) return; d.sec.classList.toggle("collapsed"); });
       }
       d.sec.classList.add("collapsed");
     });
     feat.forEach(function(f){
+      f.sec.classList.remove("collapsed");
       var head=f.sec.querySelector(".sec-head");
       if(head && !head.querySelector(".sec-today-badge")){
         var b=document.createElement("span"); b.className="sec-today-badge"; b.textContent="Today";
         var cnt=head.querySelector(".count"); if(cnt) cnt.after(b); else head.querySelector("h2").after(b);
       }
     });
-    if(feat[0]) openExclusive(pane, feat[0].sec);
     var strip=document.createElement("div"); strip.className="today-strip";
     var d=new Date();
     var dateStr=d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
-    var cards=defs.map(function(f){
-      var cnt=f.sec.querySelector(".sec-head .count"); var num=cnt?cnt.textContent.trim():"";
-      var isFeat=feat.indexOf(f)>=0;
-      return '<div class="today-card board-card" data-i="'+defs.indexOf(f)+'"><div><div class="tc-label">'+f.label+'</div>'
-        +'<div class="tc-meta">'+(num?num+" \u00b7 ":"")+'open \u2192</div></div>'
-        +(isFeat?'<span class="sec-today-badge">Today</span>':'')+'</div>';
+    var cards=feat.map(function(f){
+      return '<div class="today-card" data-i="'+defs.indexOf(f)+'"><div><div class="tc-label">'+f.label+'</div><div class="tc-meta">tap to open</div></div><span class="tc-go">Open \u2192</span></div>';
     }).join("");
-    strip.innerHTML='<div class="today-top"><span class="today-kick">Syntax sections</span><span class="today-date">'+dateStr+'</span></div>'
-      +'<p class="today-sub">Pick a topic to focus \u2014 it opens on its own and the rest stay tucked. Two are featured today.</p>'
-      +'<div class="today-cards today-board">'+cards+'</div>';
+    strip.innerHTML='<div class="today-top"><span class="today-kick">Today\u2019s rotation</span><span class="today-date">'+dateStr+'</span></div>'
+      +'<p class="today-sub">Two topics surface each day to read and run \u2014 so you keep moving instead of re-reading the basics. The rest are folded below; tap any header to open it.</p>'
+      +'<div class="today-cards">'+cards+'</div>';
     pane.insertBefore(strip, pane.firstChild);
     strip.addEventListener("click",function(e){
       var c=e.target.closest(".today-card"); if(!c) return;
       var f=defs[parseInt(c.getAttribute("data-i"),10)]; if(!f) return;
-      openExclusive(pane, f.sec);
+      f.sec.classList.remove("collapsed");
       window.scrollTo({ top: f.sec.getBoundingClientRect().top+window.scrollY-12, behavior:"smooth" });
     });
   }

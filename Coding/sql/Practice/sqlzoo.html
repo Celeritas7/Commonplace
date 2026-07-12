@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL — SQLZoo Practice · Commonplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<script src="sqlzoo-seed.js"></script>
+<script src="sqlzoo-exercises.js"></script>
+<style>
+  :root {
+    --paper:#efe7d6; --paper-2:#f6f0e2; --paper-3:#fbf7ec;
+    --ink:#211b13; --ink-soft:#564b3a; --ink-mute:#8a7c63;
+    --rule:#cdbfa3; --rule-soft:#ddd1b8;
+    --oxblood:#8a2f22; --oxblood-2:#6f2317;
+    --term-bg:#0e1116; --term-bg-2:#161b22; --term-bg-3:#1c2230;
+    --term-green:#6ee29a; --term-cyan:#56b6c2; --term-amber:#e3b341;
+    --term-dim:#6b7689; --term-w:#c9d4e3;
+    --ok:#2f8f5b; --err:#c2502f;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: "EB Garamond", Georgia, serif; color: var(--ink);
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(circle at 16% 10%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 38%),
+      radial-gradient(circle at 86% 80%, rgba(160,138,96,0.10) 0%, rgba(160,138,96,0) 44%);
+    line-height: 1.6; font-size: 18px; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 30px 32px 96px; }
+  a { color: var(--oxblood); }
+
+  .crumb {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--ink-mute); margin-bottom: 30px;
+  }
+  .crumb a { color: var(--ink-mute); text-decoration: none; }
+  .crumb a:hover { color: var(--oxblood); }
+  .crumb .sep { color: var(--rule); }
+  .crumb .here { color: var(--ink); }
+  .quicknav { margin-left: auto; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .quicknav a {
+    font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--ink-mute); text-decoration: none; padding: 6px 11px; border-radius: 20px; border: 1px solid transparent;
+  }
+  .quicknav a:hover { color: var(--oxblood); border-color: var(--rule); }
+
+  h1 { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 44px; line-height: 1.06; margin: 0 0 8px; }
+  .lede { font-size: 19px; color: var(--ink-soft); max-width: 64ch; margin: 0 0 18px; }
+  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 8px; }
+
+  /* status */
+  .status { display: flex; align-items: center; gap: 9px; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-mute); margin: 4px 0 26px; }
+  #led { width: 9px; height: 9px; border-radius: 50%; background: var(--term-amber); box-shadow: 0 0 0 3px rgba(227,179,65,0.2); }
+  #led.ready { background: var(--ok); box-shadow: 0 0 0 3px rgba(47,143,91,0.18); }
+  #led.err { background: var(--err); box-shadow: 0 0 0 3px rgba(194,80,47,0.18); }
+
+  section { margin-top: 40px; }
+  .sec-title { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 30px; margin: 0 0 4px; }
+  .sec-sub { color: var(--ink-soft); margin: 0 0 18px; }
+
+  /* lab layout */
+  .lab { display: grid; grid-template-columns: 230px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 760px) { .lab { grid-template-columns: 1fr; } }
+
+  .schema { background: var(--paper-3); border: 1px solid var(--rule-soft); border-radius: 10px; padding: 12px; }
+  .schema .eyebrow { margin-bottom: 10px; }
+  .tbl { margin-bottom: 4px; }
+  .tbl-row { width: 100%; display: flex; align-items: center; gap: 7px; background: none; border: 0; cursor: pointer;
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--ink); padding: 5px 6px; border-radius: 6px; text-align: left; }
+  .tbl-row:hover { background: var(--paper-2); }
+  .tbl-row .car { font-size: 9px; color: var(--ink-mute); transition: transform 0.15s; }
+  .tbl.open .tbl-row .car { transform: rotate(90deg); }
+  .tbl-row .nm { font-weight: 600; flex: 1; }
+  .tbl-row .ct { color: var(--ink-mute); font-size: 11px; }
+  .cols { display: none; padding: 2px 0 8px 16px; }
+  .tbl.open .cols { display: block; }
+  .col { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: 0; cursor: pointer;
+    font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--ink-soft); padding: 3px 6px; border-radius: 5px; text-align: left; }
+  .col:hover { background: var(--paper-2); color: var(--oxblood); }
+  .col .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--rule); }
+
+  .console { background: var(--term-bg); border: 1px solid #2a2f3a; border-radius: 10px; overflow: hidden; }
+  .console .bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: var(--term-bg-2); border-bottom: 1px solid #2a2f3a; }
+  .console .bar .dotrow { display: flex; gap: 6px; }
+  .console .bar .d { width: 10px; height: 10px; border-radius: 50%; }
+  .d.r { background: #ff5f56; } .d.y { background: #ffbd2e; } .d.g { background: #27c93f; }
+  .console .bar .lbl { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--term-dim); margin-left: 4px; }
+  #editor { width: 100%; min-height: 150px; resize: vertical; border: 0; outline: none; background: var(--term-bg);
+    color: var(--term-w); font-family: "JetBrains Mono", monospace; font-size: 13.5px; line-height: 1.6; padding: 14px; display: block; }
+  .console .foot { display: flex; gap: 8px; align-items: center; padding: 10px 12px; background: var(--term-bg-2); border-top: 1px solid #2a2f3a; flex-wrap: wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 0; }
+  .chip { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-soft); background: var(--paper-3);
+    border: 1px solid var(--rule-soft); border-radius: 16px; padding: 5px 11px; cursor: pointer; }
+  .chip:hover { border-color: var(--oxblood); color: var(--oxblood); }
+
+  .btn { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600; letter-spacing: 0.4px;
+    border-radius: 7px; padding: 8px 15px; cursor: pointer; border: 1px solid transparent; }
+  .btn.run { background: var(--term-green); color: #08130b; }
+  .btn.run:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--term-dim); border-color: #333a47; }
+  .btn.ghost:hover { color: var(--term-w); border-color: #4a5366; }
+  .foot .grow { flex: 1; }
+  .foot .hint-k { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--term-dim); }
+
+  .results { margin-top: 14px; background: var(--paper-3); border: 1px solid var(--rule-soft); border-radius: 10px; padding: 4px; min-height: 60px; overflow: auto; }
+  .res-msg { font-family: "JetBrains Mono", monospace; font-size: 12.5px; padding: 16px; }
+  .res-msg.empty { color: var(--ink-mute); }
+  .res-msg.ok { color: var(--ok); }
+  .res-msg.err { color: var(--err); white-space: pre-wrap; }
+  table.grid { border-collapse: collapse; width: 100%; font-family: "JetBrains Mono", monospace; font-size: 12.5px; }
+  table.grid th { text-align: left; background: var(--paper-2); color: var(--ink); border-bottom: 2px solid var(--rule); padding: 7px 11px; position: sticky; top: 0; }
+  table.grid td { border-bottom: 1px solid var(--rule-soft); padding: 6px 11px; color: var(--ink-soft); }
+  table.grid td.num { text-align: right; }
+  table.grid td.null { color: var(--ink-mute); font-style: italic; }
+  .res-foot { display: flex; gap: 14px; padding: 8px 12px; font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-mute); }
+
+  /* progress */
+  .progwrap { display: flex; align-items: center; gap: 14px; margin: 6px 0 22px; }
+  .progbar { flex: 1; height: 9px; background: var(--paper-3); border: 1px solid var(--rule-soft); border-radius: 6px; overflow: hidden; }
+  #prog-fill { height: 100%; width: 0; background: var(--oxblood); transition: width 0.3s; }
+  #prog-text { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+
+  /* exercises */
+  .ex-group { margin-bottom: 30px; }
+  .ex-group-head { display: flex; align-items: baseline; gap: 12px; border-bottom: 1px solid var(--rule); padding-bottom: 7px; margin-bottom: 16px; }
+  .ex-group-head h3 { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 24px; margin: 0; }
+  .ex-group-blurb { color: var(--ink-mute); font-size: 14px; }
+  .ex-cards { display: flex; flex-direction: column; gap: 14px; }
+  .ex-card { background: var(--paper-3); border: 1px solid var(--rule-soft); border-radius: 11px; padding: 16px 18px; }
+  .ex-card.done { border-color: var(--ok); box-shadow: inset 3px 0 0 var(--ok); }
+  .ex-head { display: flex; align-items: center; gap: 10px; }
+  .ex-id { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; color: #fff; background: var(--ink-mute); border-radius: 5px; padding: 2px 7px; }
+  .ex-card.done .ex-id { background: var(--ok); }
+  .ex-title { font-weight: 600; font-size: 18px; flex: 1; }
+  .diff { display: inline-flex; gap: 3px; }
+  .diff .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rule); }
+  .diff .dot.on { background: var(--oxblood); }
+  .ex-check { color: var(--ok); font-weight: 700; opacity: 0; transition: opacity 0.2s; }
+  .ex-card.done .ex-check { opacity: 1; }
+  .ex-prompt { margin: 10px 0 12px; color: var(--ink-soft); }
+  .ex-prompt b { color: var(--ink); }
+  .ex-editor { width: 100%; min-height: 78px; resize: vertical; background: var(--term-bg); color: var(--term-w);
+    border: 1px solid #2a2f3a; border-radius: 8px; font-family: "JetBrains Mono", monospace; font-size: 13px; line-height: 1.55; padding: 11px; outline: none; }
+  .ex-editor:focus { border-color: #3a6ea5; }
+  .ex-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .ex-actions .btn.run { background: var(--oxblood); color: #fff; }
+  .ex-actions .btn.run:hover { background: var(--oxblood-2); }
+  .ex-actions .btn.ghost { color: var(--ink-mute); border-color: var(--rule-soft); }
+  .ex-actions .btn.ghost:hover { color: var(--oxblood); border-color: var(--rule); }
+  .ex-hint, .ex-reveal { display: none; margin-top: 12px; }
+  .ex-hint.open, .ex-reveal.open { display: block; }
+  .ex-hint { font-size: 14.5px; color: #7a5a17; background: #faf3df; border: 1px solid #e7d6a8; border-radius: 8px; padding: 9px 12px; }
+  .ex-reveal pre { background: var(--term-bg); color: var(--term-cyan); font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+    padding: 12px; border-radius: 8px; overflow: auto; margin: 6px 0 0; }
+  .ex-feedback { display: none; margin-top: 11px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; padding: 9px 12px; border-radius: 8px; }
+  .ex-feedback.show { display: block; }
+  .ex-feedback.ok { color: var(--ok); background: #e9f5ee; border: 1px solid #b6dcc4; }
+  .ex-feedback.err { color: var(--err); background: #f8ebe6; border: 1px solid #e7c3b4; }
+  .ex-out { margin-top: 10px; overflow: auto; }
+  .ex-out table.grid { font-size: 12px; }
+
+  footer { margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-mute); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="crumb">
+    <a href="../../../index.html">Commonplace</a><span class="sep">/</span>
+    <a href="../index.html">SQL</a><span class="sep">/</span>
+    <span class="here">SQLZoo Practice</span>
+    <span class="quicknav">
+      <a href="../index.html">The Lab</a>
+      <a href="exercises.html">Module Challenges</a>
+    </span>
+  </nav>
+
+  <div class="eyebrow">Self-directed practice</div>
+  <h1>SQLZoo-style Practice</h1>
+  <p class="lede">Three classic teaching datasets — <b>world</b>, <b>nobel</b>, and a sample <b>football</b> tournament — running live in your browser on SQLite. Explore them freely, or work the graded exercises and have your answers checked instantly.</p>
+  <div class="status"><span id="led"></span><span id="led-text">loading SQL engine…</span></div>
+
+  <!-- FREE SANDBOX -->
+  <section>
+    <h2 class="sec-title">Free query</h2>
+    <p class="sec-sub">Run anything. Click a table to peek at it, click a column to drop its name into the editor. This sandbox is yours — you can even <code>INSERT</code> / <code>UPDATE</code>; hit <b>Reset data</b> to restore.</p>
+    <div class="lab">
+      <aside class="schema">
+        <div class="eyebrow">Tables</div>
+        <div id="schema-tables"></div>
+      </aside>
+      <div>
+        <div class="console">
+          <div class="bar"><span class="dotrow"><span class="d r"></span><span class="d y"></span><span class="d g"></span></span><span class="lbl">query editor — ⌘/Ctrl + Enter to run</span></div>
+          <textarea id="editor" spellcheck="false">SELECT name, continent, population
+FROM world
+WHERE continent = 'Europe'
+ORDER BY population DESC;</textarea>
+          <div class="foot">
+            <button class="btn run" id="run-btn">▶ Run</button>
+            <button class="btn ghost" id="clear-btn">Clear</button>
+            <button class="btn ghost" id="reset-btn">Reset data</button>
+            <span class="grow"></span>
+            <span class="hint-k">last statement's rows are shown</span>
+          </div>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="results" id="results"><div class="res-msg empty">Loading…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXERCISES -->
+  <section>
+    <h2 class="sec-title">Graded exercises</h2>
+    <p class="sec-sub">Write a query, hit <b>Run &amp; Check</b>. Your result is compared against a reference answer — order is checked only where the question asks for it. Progress is saved on this device.</p>
+    <style>
+      .sqlzoo-auth { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 16px;
+        font-family: "JetBrains Mono", monospace; font-size: 12px; }
+      .sqlzoo-auth input { font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 8px 11px;
+        border: 1px solid var(--rule); border-radius: 7px; background: var(--paper-3); color: var(--ink); min-width: 210px; }
+      .sqlzoo-auth .who { color: var(--ink-soft); }
+      .sqlzoo-auth .who b { color: var(--ink); }
+      .sqlzoo-auth.reveal { outline: 2px solid var(--oxblood); outline-offset: 5px; border-radius: 4px; }
+    </style>
+    <div id="sqlzoo-auth" class="sqlzoo-auth"></div>
+    <div class="progwrap">
+      <div class="progbar"><div id="prog-fill"></div></div>
+      <span id="prog-text">0 / 0 solved</span>
+    </div>
+    <div id="ex-list"></div>
+  </section>
+
+  <footer>
+    Datasets are original/representative reconstructions modelled on the classic SQLZoo tutorial schemas — not copied from SQLZoo. Engine: sql.js (SQLite WASM), running entirely in your browser.
+  </footer>
+
+</div>
+<script src="sqlzoo-key-palette.js"></script>
+<script src="sqlzoo-lab.js"></script>
+<script src="../lib/sql-highlight.js"></script>
+<!-- Supabase client + magic-link login, mirroring cpp_playground.html / the Python pages -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ---------- config (same project as cpp_playground.html / Python pages) ---------- */
+var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
+var SUPABASE_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
+
+var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+window.sb = sb;
+var currentUser = null;
+window.currentUser = null;
+
+function sqlzooEsc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ---------- auth UI: sign-in form when signed out, status line when signed in ---------- */
+function renderAuth(){
+  var el = document.getElementById("sqlzoo-auth");
+  if(!el) return;
+  if(currentUser){
+    el.classList.remove("reveal");
+    el.innerHTML = '<span class="who">Signed in as <b>'+sqlzooEsc(currentUser.email)+'</b></span> ' +
+      '<button class="btn ghost" id="sqlzoo-signout">Sign out</button>';
+    document.getElementById("sqlzoo-signout").onclick = function(){ sb.auth.signOut(); };
+  } else {
+    el.innerHTML =
+      '<input type="email" id="sqlzoo-email" placeholder="you@email.com" autocomplete="email">' +
+      '<button class="btn run" id="sqlzoo-magic">Email me a link</button>';
+    document.getElementById("sqlzoo-magic").onclick = sendMagicLink;
+    var inp = document.getElementById("sqlzoo-email");
+    if(inp){ inp.addEventListener("keydown", function(e){ if(e.key==="Enter") sendMagicLink(); }); }
+  }
+}
+function sendMagicLink(){
+  var email = (document.getElementById("sqlzoo-email").value||"").trim();
+  if(!email){ alert("Enter your email first"); return; }
+  var m = document.getElementById("sqlzoo-magic"); m.disabled = true; m.textContent = "Sending…";
+  sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href.split('#')[0] } })
+    .then(function(res){
+      if(res.error){ alert("Error: "+res.error.message); }
+      else { alert("Check your inbox for the sign-in link ✉️"); }
+    })
+    .catch(function(e){ alert("Error: "+e.message); })
+    .finally(function(){ var m=document.getElementById("sqlzoo-magic"); if(m){ m.disabled=false; m.textContent="Email me a link"; } });
+}
+
+/* Called by sql-practice-plus.js when a "Save to bank" tap has no session. */
+window.sqlzooRevealSignIn = function(){
+  var el = document.getElementById("sqlzoo-auth");
+  if(el){ el.classList.add("reveal"); var i = document.getElementById("sqlzoo-email"); if(i) i.focus(); }
+};
+
+sb.auth.onAuthStateChange(function(_event, session){
+  currentUser = session ? session.user : null;
+  window.currentUser = currentUser;
+  renderAuth();
+});
+sb.auth.getSession().then(function(res){
+  currentUser = res.data.session ? res.data.session.user : null;
+  window.currentUser = currentUser;
+  renderAuth();
+});
+</script>
+<script src="sql-practice-plus.js"></script>
+</body>
+</html>
