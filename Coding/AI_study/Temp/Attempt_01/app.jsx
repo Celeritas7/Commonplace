@@ -13,7 +13,7 @@ const GROUP_COLORS = {
 };
 const SPECTRUM_VARS = ["var(--cyan)", "var(--blue)", "var(--violet)", "var(--magenta)", "var(--solar)"];
 const ACCENTS = window.AI_ACCENTS || {};
-const NB_BASE = "./reader.html?nb=";   // Observatory chapter reader (Jupyter link inside)
+const NB_BASE = "./html/";   // standalone nbconvert HTML (open directly, no server)
 const PROGRESS_KEY = "aistudy.progress.v1";
 const ROUTE_KEY = "aistudy.route.v1";
 
@@ -70,9 +70,8 @@ function Motif({ type, seed, hero, accent, className }) {
 /* =============================================================== CARD */
 function Card({ ch, status, onOpen, onMark }) {
   const cls = "card" + (status === "done" ? " is-done" : status === "revisit" ? " is-rev" : "");
-  const nbUrl = NB_BASE + encodeURIComponent(ch.file);
   return (
-    <a className={cls} style={{ "--acc": ACCENTS[ch.id] }} href={nbUrl}>
+    <div className={cls} style={{ "--acc": ACCENTS[ch.id] }} onClick={() => onOpen(ch.id)}>
       <div className="plate">
         <Motif type={ch.motif} seed={ch.seed} accent={ACCENTS[ch.id]} />
         <span className="pno mono">{ch.id}</span>
@@ -91,22 +90,21 @@ function Card({ ch, status, onOpen, onMark }) {
         <div className="foot">
           <div className="meta">
             <span>~{ch.time} min</span>
-            <span className="status" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+            <span className="status" onClick={(e) => e.stopPropagation()}>
               <span
                 className={"smark" + (status === "done" ? " on-done" : "")}
                 title="Mark understood"
-                onClick={(e) => { e.preventDefault(); onMark(ch.id, "done"); }}>✓</span>
+                onClick={() => onMark(ch.id, "done")}>✓</span>
               <span
                 className={"smark" + (status === "revisit" ? " on-rev" : "")}
                 title="Mark to revisit"
-                onClick={(e) => { e.preventDefault(); onMark(ch.id, "revisit"); }}>↻</span>
+                onClick={() => onMark(ch.id, "revisit")}>↻</span>
             </span>
           </div>
-          <span className="open mono">Open notebook <span className="arr">→</span></span>
+          <span className="open mono">Open cover <span className="arr">→</span></span>
         </div>
-        <span className="detail mono" role="button" tabIndex={0} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpen(ch.id); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onOpen(ch.id); } }}>Preview chapter →</span>
       </div>
-    </a>
+    </div>
   );
 }
 
@@ -234,7 +232,7 @@ function Contents({ prog, setMark, onOpen }) {
 function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
   const prev = idx > 0 ? CHAPTERS[idx - 1] : null;
   const next = idx < CHAPTERS.length - 1 ? CHAPTERS[idx + 1] : null;
-  const nbUrl = NB_BASE + encodeURIComponent(ch.file);
+  const nbUrl = NB_BASE + ch.file.replace(/\.ipynb$/, ".html");
 
   return (
     <div className="cover" style={{ "--acc": ACCENTS[ch.id] }}>
@@ -294,7 +292,7 @@ function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
             <div className="side-row"><span className="k">Status</span><span className="v" style={{ whiteSpace: "nowrap", color: status === "done" ? "var(--done)" : status === "revisit" ? "var(--coral)" : "var(--ink-mute)" }}>{status === "done" ? "Understood" : status === "revisit" ? "To revisit" : "Not started"}</span></div>
 
             <div className="cta-row">
-              <a className="btn primary" href={nbUrl}>Open the live notebook <span className="arr">→</span></a>
+              <a className="btn primary" href={nbUrl}>Open the notebook <span className="arr">→</span></a>
             </div>
             <div className="mark-row">
               <button className={"mark-btn" + (status === "done" ? " on-done" : "")} onClick={() => setMark(ch.id, "done")}>✓ Understood</button>
