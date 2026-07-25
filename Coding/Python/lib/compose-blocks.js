@@ -528,5 +528,5 @@
     return api;
   }
 
-  window.ComposeBlocks={ enabled:true, makeEditor:makeEditor };
+  window.ComposeBlocks={ enabled:true, makeEditor:makeEditor, version:"dyn-palette-1" };
 })();
