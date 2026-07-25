@@ -24,27 +24,6 @@
   var PY_KW=["def ","for ","while ","if ","elif ","else:","in ","range(","return ","import ","not ","and ","or ","True","False","None"];
   var PY_BI=["print(","input(","len(","int(","str(","sum(","sorted(","enumerate("];
   var PY_PUNCT=["\":\"",")","[]","{}","\"  \""];
-  /* names to exclude from the dynamic "yours" row (already on the palette / reserved) */
-  var PY_STOP=["def","for","while","if","elif","else","in","range","return","import","from","not","and","or","True","False","None","print","input","len","int","str","sum","sorted","enumerate","float","list","dict","set","tuple","break","continue","pass","class","try","except","finally","with","as","lambda","global","nonlocal","yield","del","is","raise","assert","abs","min","max","round","type","open","zip","map","filter"];
-
-  /* scan assembled code for the learner's own tokens: string literals,
-   * def/class names (as callables), assignment targets, for-vars, params */
-  function scanUserTokens(code){
-    var seen={}, toks=[], m;
-    function add(t){ if(t && !seen[t]){ seen[t]=1; toks.push(t); } }
-    var reStr=/(['"])((?:\\.|(?!\1).)*?)\1/g;
-    while((m=reStr.exec(code))){ if(m[2].length>0 && m[2].length<=18) add(m[0]); }
-    var reDef=/(?:^|\n)\s*(?:def|class)\s+([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?/g;
-    while((m=reDef.exec(code))){
-      add(m[1]+"(");
-      (m[2]||"").split(",").forEach(function(p){ p=p.trim().split("=")[0].trim(); if(/^[A-Za-z_]\w*$/.test(p)) add(p); });
-    }
-    var reAsn=/(?:^|\n)\s*([A-Za-z_]\w*)\s*(?:=[^=]|[+\-*\/]=)/g;
-    while((m=reAsn.exec(code))) add(m[1]);
-    var reFor=/\bfor\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s+in\b/g;
-    while((m=reFor.exec(code))) m[1].split(",").forEach(function(v){ add(v.trim()); });
-    return toks.filter(function(t){ return PY_STOP.indexOf(t.replace(/\($/,""))===-1; }).slice(0,14);
-  }
 
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
@@ -70,9 +49,6 @@
 ".cb-pill{flex:0 0 auto;display:inline-flex;align-items:center;height:38px;padding:0 13px;border:1px solid "+LINE+";border-radius:10px;box-shadow:0 1px 0 rgba(20,40,30,.12);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:"+INK+";cursor:pointer}"+
 ".cb-pill:active{transform:translateY(1px)}"+
 ".cb-pill-kw{background:"+KW_BG+"}.cb-pill-bi{background:"+FN_BG+"}"+
-".cb-pill-dyn{background:#fff;border:1px dashed "+SAGE+"}"+
-".cb-pillrow-dyn{align-items:center;border-top:1px dashed "+LINE+";margin-top:7px;padding-top:8px}"+
-".cb-dyn-tag{flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(26,40,32,.45)}"+
 /* stack + block cards */
 ".cb-stack{display:flex;flex-direction:column;gap:12px}"+
 ".cb-card{background:"+PAPER+";border:1px solid "+LINE+";border-radius:12px;box-shadow:0 10px 22px -16px rgba(20,40,30,.5);overflow:hidden}"+
@@ -227,21 +203,10 @@
       countEl.textContent="№ "+blocks.length+" BLOCK"+(blocks.length===1?"":"S");
       if(onCodeChange) onCodeChange(a.text);
       if(!isDrill){ try{ localStorage.setItem(storeKey,JSON.stringify(blocks)); }catch(e){} }
-      refreshDyn();
     }
 
     /* --- key palette --- */
-    var keysOpen=true, dynRowEl=null;
-    function refreshDyn(){
-      if(!dynRowEl || !keysOpen) return;
-      var toks=scanUserTokens(ta.value);
-      dynRowEl.innerHTML="";
-      if(!toks.length){ dynRowEl.style.display="none"; return; }
-      dynRowEl.style.display="";
-      var tag=document.createElement("span"); tag.className="cb-dyn-tag"; tag.textContent="YOURS";
-      dynRowEl.appendChild(tag);
-      toks.forEach(function(t){ dynRowEl.appendChild(pillBtn(t,"dyn")); });
-    }
+    var keysOpen=true;
     function pillBtn(t,kind){
       var b=document.createElement("button"); b.type="button"; b.className="cb-pill cb-pill-"+kind;
       b.textContent = t==='"  "' ? '" "' : t.trim();
@@ -275,9 +240,7 @@
       PY_KW.forEach(function(t){ r1.appendChild(pillBtn(t,"kw")); });
       PY_BI.forEach(function(t){ r2.appendChild(pillBtn(t,"bi")); });
       PY_PUNCT.forEach(function(t){ r3.appendChild(pillBtn(t,"bi")); });
-      var r4=document.createElement("div"); r4.className="cb-pillrow cb-pillrow-dyn";
-      palEl.appendChild(r1); palEl.appendChild(r2); palEl.appendChild(r3); palEl.appendChild(r4);
-      dynRowEl=r4; refreshDyn();
+      palEl.appendChild(r1); palEl.appendChild(r2); palEl.appendChild(r3);
     }
 
     /* --- block cards --- */
