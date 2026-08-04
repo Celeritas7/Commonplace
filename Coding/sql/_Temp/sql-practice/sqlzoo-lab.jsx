@@ -34,7 +34,7 @@ function useZooDb() {
   React.useEffect(() => {
     let cancelled = false;
     if (typeof window.initSqlJs !== "function") { setState("nodb"); return; }
-    window.initSqlJs({ locateFile: (f) => "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f })
+    window.initSqlJs({ locateFile: (f) => (function(){var s=document.querySelector('script[src*="sql-wasm"]');return s?s.src.slice(0,s.src.lastIndexOf("/")+1):"";})() + f })
       .then((SQL) => {
         if (cancelled) return;
         const d = new SQL.Database();

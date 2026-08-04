@@ -10,7 +10,7 @@
   var ledText = document.getElementById("led-text");
 
   // ---------- boot the engine ----------
-  initSqlJs({ locateFile: function (f) { return "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/" + f; } })
+  initSqlJs({ locateFile: function (f) { return (function(){var s=document.querySelector('script[src*="sql-wasm"]');return s?s.src.slice(0,s.src.lastIndexOf("/")+1):"";})() + f; } })
     .then(function (SQL) {
       db = new SQL.Database();
       db.run(window.SQL_LAB_SEED);

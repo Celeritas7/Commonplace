@@ -4,485 +4,88 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Engine Systems · Commonplace</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  :root{
-    --h:14;
-    --c:hsl(14 72% 52%);
-    --c-deep:hsl(14 70% 42%);
-    --c-soft:hsl(14 72% 96%);
-    --c-tint:hsl(14 72% 50% / .08);
-    --bg:#f6f7f9; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
-    --border:#e5e7eb;
-    --dash:#0c0e13; --dash-2:#151926; --dash-line:rgba(255,255,255,0.07);
-    --green:#22c55e; --amber:#f59e0b;
-    --mono:"Chakra Petch", ui-monospace, "SFMono-Regular", Menlo, monospace;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  :root {
+    --bg:#fafafa; --paper:#fff; --text:#1f2937; --text-soft:#4b5563; --text-mute:#6b7280;
+    --border:#e5e7eb; --accent:#4f46e5; --accent-2:#7c3aed; --accent-soft:#ede9fe;
   }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:var(--sans);color:var(--text);background:var(--bg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+    color: var(--text); background: var(--bg); line-height: 1.65; font-size: 16px;
+  }
+  .topnav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.92); backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .topnav .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; color: var(--text); text-decoration: none; }
+  .topnav .brand .dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    border-radius: 2px; margin-right: 8px; transform: translateY(-1px);
+  }
+  .topnav .crumb { color: var(--text-mute); font-size: 13px; }
+  .topnav .crumb a { color: var(--text-mute); text-decoration: none; }
+  .topnav .crumb a:hover { color: var(--accent); }
+  .topnav .crumb .sep { margin: 0 6px; opacity: 0.5; }
 
-  /* blueprint backdrop */
-  .blueprint{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
-    background-image:
-      linear-gradient(rgba(30,41,59,0.04) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(30,41,59,0.04) 1px,transparent 1px),
-      linear-gradient(rgba(30,41,59,0.022) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(30,41,59,0.022) 1px,transparent 1px);
-    background-size:120px 120px,120px 120px,24px 24px,24px 24px;}
-  .blueprint .cog{position:absolute;border-radius:50%;
-    background:repeating-conic-gradient(hsl(14 70% 50% / .09) 0deg 5deg,transparent 5deg 11deg);
-    -webkit-mask:radial-gradient(closest-side,transparent 60%,#000 61%,#000 73%,transparent 74%);
-    mask:radial-gradient(closest-side,transparent 60%,#000 61%,#000 73%,transparent 74%);
-    animation:spin 90s linear infinite}
-  .blueprint .cog.rev{animation-direction:reverse;animation-duration:120s}
-  .blueprint .ring{position:absolute;border-radius:50%;border:1.5px dashed hsl(14 70% 50% / .13)}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  @media (prefers-reduced-motion:reduce){.blueprint .cog{animation:none}}
-
-  /* top nav */
-  .topnav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.92);backdrop-filter:saturate(180%) blur(8px);
-    border-bottom:1px solid var(--border);padding:12px 28px;display:flex;align-items:center;gap:16px}
-  .topnav .brand{font-weight:700;font-size:15px;letter-spacing:-0.2px;color:var(--text);text-decoration:none;display:flex;align-items:center}
-  .topnav .brand .dot{width:8px;height:8px;background:linear-gradient(135deg,var(--c),var(--c-deep));border-radius:2px;margin-right:8px}
-  .topnav .crumb{color:var(--text-mute);font-size:13px}
-  .topnav .crumb a{color:var(--text-mute);text-decoration:none}
-  .topnav .crumb a:hover{color:var(--c)}
-  .topnav .crumb .sep{margin:0 6px;opacity:.5}
-  .topnav .crumb .here{color:var(--text-soft);font-weight:600}
-
-  .wrap{max-width:1040px;margin:0 auto;padding:30px 28px 80px;position:relative;z-index:1}
-
-  /* ============ instrument-panel hero ============ */
-  .panel{position:relative;overflow:hidden;border-radius:20px;color:#fff;padding:32px 34px;margin-bottom:24px;
-    background:
-      radial-gradient(120% 130% at 82% -10%, hsl(14 80% 55% / .42) 0%, hsl(14 80% 55% / 0) 56%),
-      radial-gradient(90% 120% at 8% 115%, hsl(14 75% 45% / .34) 0%, hsl(14 75% 45% / 0) 60%),
-      linear-gradient(160deg,var(--dash-2) 0%,var(--dash) 72%);
-    border:1px solid rgba(255,255,255,0.08);
-    box-shadow:0 22px 50px rgba(10,12,20,0.28),inset 0 1px 0 rgba(255,255,255,0.06)}
-  .panel::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
-    background-image:linear-gradient(var(--dash-line) 1px,transparent 1px),linear-gradient(90deg,var(--dash-line) 1px,transparent 1px);
-    background-size:34px 34px;-webkit-mask-image:radial-gradient(120% 100% at 50% 0%,#000 30%,transparent 90%);mask-image:radial-gradient(120% 100% at 50% 0%,#000 30%,transparent 90%)}
-  .panel-inner{position:relative;z-index:1;display:grid;grid-template-columns:1fr 168px;align-items:center;gap:28px}
-  .kicker{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:hsl(14 85% 72%);margin-bottom:10px}
-  .panel h1{margin:0;font-family:var(--mono);font-weight:700;font-size:40px;line-height:1.04;letter-spacing:-0.5px}
-  .panel .sub{font-size:14.5px;color:rgba(255,255,255,0.74);max-width:520px;margin:12px 0 0;line-height:1.55}
-
-  .readout{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:flex-end}
-  .odo{background:rgba(0,0,0,0.34);border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:7px 13px 6px;min-width:74px;box-shadow:inset 0 2px 8px rgba(0,0,0,0.45)}
-  .odo .ol{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.5);text-transform:uppercase}
-  .odo .ov{font-family:var(--mono);font-weight:700;font-size:24px;line-height:1.1;color:#fff;font-variant-numeric:tabular-nums}
-  .odo .ov.read{color:var(--green)}
-  .progwrap{flex:1 1 180px;min-width:160px}
-  .progwrap .pl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:6px}
-  .progbar{height:8px;border-radius:5px;background:rgba(0,0,0,0.4);overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.6)}
-  .progbar>i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,var(--c-deep),hsl(14 85% 62%));transition:width .8s cubic-bezier(.2,.7,.2,1)}
-
-  /* emblem gauge bezel */
-  .emblem{justify-self:center;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;position:relative;
-    background:radial-gradient(circle at 38% 32%, #20242f, #0b0d12 72%);
-    border:1px solid rgba(255,255,255,0.10);box-shadow:inset 0 2px 14px rgba(0,0,0,0.6),0 8px 20px rgba(0,0,0,0.4)}
-  .emblem::before{content:"";position:absolute;inset:9px;border-radius:50%;border:1px dashed hsl(14 70% 60% / .35)}
-  .emblem svg{width:78px;height:78px;filter:drop-shadow(0 5px 10px rgba(0,0,0,0.5))}
-  /* cold-only emblem treatment (AC) */
-  .panel.cold::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(100% 70% at 50% -8%, rgba(206,240,255,.18), transparent 66%)}
-  .emblem.cold{box-shadow:inset 0 2px 14px rgba(0,0,0,0.6),0 8px 20px rgba(0,0,0,0.4),0 0 30px hsl(196 90% 60% / .28)}
-  .emblem.cold::before{border-color:hsl(196 95% 72% / .55)}
-  .emblem.cold svg{filter:drop-shadow(0 0 8px hsl(198 95% 70% / .55))}
-  .snow{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;border-radius:20px}
-  .snow i{position:absolute;top:-12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,#bce6ff);opacity:0;box-shadow:0 0 5px rgba(180,230,255,.7)}
-  @keyframes snowfall{0%{transform:translateY(-12px) translateX(0);opacity:0}14%{opacity:.9}100%{transform:translateY(280px) translateX(var(--dx,8px));opacity:0}}
-
-  /* ===== themed page wash (hue-driven, every section) ===== */
-  body.themed{background:radial-gradient(120% 80% at 50% -10%, hsl(var(--h) 80% 97.5%) 0%, transparent 55%), linear-gradient(180deg, hsl(var(--h) 52% 97.5%) 0%, hsl(var(--h) 40% 93.5%) 100%)}
-  body.themed .blueprint{background-image:
-    linear-gradient(hsl(var(--h) 55% 42% / .06) 1px,transparent 1px),
-    linear-gradient(90deg,hsl(var(--h) 55% 42% / .06) 1px,transparent 1px),
-    linear-gradient(hsl(var(--h) 55% 42% / .035) 1px,transparent 1px),
-    linear-gradient(90deg,hsl(var(--h) 55% 42% / .035) 1px,transparent 1px)}
-  body.themed .topnav{background:hsl(var(--h) 45% 97% / .9)}
-  body.themed .search input{background:rgba(255,255,255,0.96);border-color:hsl(var(--h) 40% 86%)}
-  body.themed .chip{background:rgba(255,255,255,0.9);border-color:hsl(var(--h) 40% 86%)}
-  body.themed h2.sec-h{color:hsl(var(--h) 30% 42%)}
-  body.themed .card{background:linear-gradient(180deg,#ffffff,hsl(var(--h) 55% 97%));border-color:hsl(var(--h) 40% 88%)}
-  body.themed .card:hover{border-color:var(--c);box-shadow:0 12px 30px hsl(var(--h) 70% 50% / .2)}
-  body.themed .card>*:not(.wm){position:relative;z-index:1}
-
-  /* background ghost motifs */
-  .ghost{position:absolute;color:hsl(var(--h) 70% 58%);opacity:.085;pointer-events:none}
-  .ghost svg{width:100%;height:100%}
-  .frostbig{position:absolute;color:#8fcdee;opacity:.10;pointer-events:none}
-  .frostbig svg{width:100%;height:100%}
-
-  /* per-card corner motif */
-  .wm{position:absolute;right:-12px;bottom:-14px;width:104px;height:104px;color:hsl(var(--h) 72% 56%);opacity:.12;pointer-events:none;z-index:0;transform:rotate(-6deg);transition:opacity .25s ease,transform .45s ease}
-  .card:hover .wm{opacity:.22;transform:rotate(0) scale(1.07)}
-
-  /* ===== ambient FX layers ===== */
-  .snowbg,.emberbg,.driftbg,.streakbg,.scanbg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-  .snowbg i{position:absolute;top:-16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffffff,#9ed6f2);opacity:0;box-shadow:0 0 3px rgba(110,170,210,.75),0 0 1px rgba(70,130,180,.5)}
-  @keyframes snowfallbg{0%{transform:translateY(-16px) translateX(0);opacity:0}10%{opacity:var(--op,.7)}90%{opacity:var(--op,.7)}100%{transform:translateY(102vh) translateX(var(--dx,20px));opacity:0}}
-  .emberbg i{position:absolute;bottom:-16px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff,currentColor);opacity:0;box-shadow:0 0 6px currentColor}
-  @keyframes emberrise{0%{transform:translateY(0) translateX(0);opacity:0}12%{opacity:var(--op,.7)}85%{opacity:var(--op,.5)}100%{transform:translateY(-102vh) translateX(var(--dx,16px));opacity:0}}
-  .driftbg i{position:absolute;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff,currentColor);opacity:0;box-shadow:0 0 5px currentColor}
-  @keyframes driftfloat{0%{transform:translateY(8px) translateX(0) scale(.7);opacity:0}25%{opacity:var(--op,.6)}75%{opacity:var(--op,.6)}100%{transform:translateY(-22px) translateX(var(--dx,12px)) scale(1);opacity:0}}
-  .streakbg i{position:absolute;left:-140px;width:var(--len,80px);height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,currentColor);opacity:0;transform:rotate(-8deg)}
-  @keyframes streakmove{0%{transform:translateX(0) rotate(-8deg);opacity:0}10%{opacity:var(--op,.3)}90%{opacity:var(--op,.3)}100%{transform:translateX(116vw) rotate(-8deg);opacity:0}}
-  .scanbg .scanbar{position:absolute;left:0;right:0;height:120px;background:linear-gradient(180deg,transparent,hsl(var(--h) 80% 65% / .12),transparent)}
-  .scanbg .scangrid{position:absolute;inset:0;background-image:linear-gradient(hsl(var(--h) 60% 55% / .05) 1px,transparent 1px);background-size:100% 30px}
-  @keyframes scansweep{0%{transform:translateY(-140px)}100%{transform:translateY(102vh)}}
-  .ghost.gspin svg{animation:spin360 36s linear infinite;transform-origin:50% 50%}
-
-  /* ============ controls ============ */
-  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 22px}
-  .search{position:relative;flex:1 1 280px;min-width:220px}
-  .search input{width:100%;font-size:14px;font-family:inherit;color:var(--text);padding:11px 14px 11px 40px;border-radius:10px;border:1px solid var(--border);background:var(--paper);outline:none;transition:border-color .15s,box-shadow .15s}
-  .search input:focus{border-color:var(--c);box-shadow:0 0 0 3px hsl(14 72% 52% / .16)}
-  .search .ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;opacity:.5}
-  .chips{display:flex;gap:8px}
-  .chip{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.5px;padding:9px 14px;border-radius:999px;border:1px solid var(--border);background:var(--paper);color:var(--text-soft);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:7px}
-  .chip:hover{border-color:var(--c);color:var(--c)}
-  .chip[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
-  .chip .ct{font-variant-numeric:tabular-nums;opacity:.7}
-
-  /* ============ grids ============ */
-  h2.sec-h{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:3px;color:var(--text-mute);margin:26px 0 14px;display:flex;align-items:center;gap:10px}
-  h2.sec-h .sh-ct{font-size:11px;color:var(--c);background:var(--c-soft);border-radius:6px;padding:2px 8px}
-  h2.sec-h::after{content:"";flex:1;height:1px;background:var(--border)}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-
-  .card{position:relative;overflow:hidden;background:var(--paper);border:1px solid var(--border);border-radius:14px;
-    padding:18px 20px 14px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:9px;min-height:158px;
-    transition:border-color .18s,transform .18s,box-shadow .18s}
-  .card:hover{border-color:var(--c);transform:translateY(-3px);box-shadow:0 12px 30px hsl(14 70% 50% / .16)}
-  .card .scan{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,hsl(14 75% 58% / .12),transparent);transform:skewX(-18deg);transition:left .5s ease;pointer-events:none}
-  .card:hover .scan{left:130%}
-  .card.read{border-color:hsl(142 60% 45% / .5)}
-  .card.read::after{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--green)}
-
-  .card-top{display:flex;align-items:center;gap:9px}
-  .badge{flex:none;font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--c),var(--c-deep));border-radius:7px;padding:4px 8px;min-width:30px;text-align:center;box-shadow:0 2px 6px hsl(14 70% 45% / .35)}
-  .card.submod .badge{background:none;color:var(--c);border:1px dashed var(--c);box-shadow:none}
-  .lbl{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-mute)}
-  .lamp{margin-left:auto;flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:#fff;cursor:pointer;position:relative;transition:all .15s;z-index:2}
-  .lamp::after{content:"";position:absolute;inset:5px;border-radius:50%;background:#d6dae1;transition:all .15s}
-  .lamp:hover{border-color:var(--amber)}
-  .lamp:hover::after{background:var(--amber);box-shadow:0 0 7px var(--amber)}
-  .card.read .lamp{border-color:var(--green)}
-  .card.read .lamp::after{background:var(--green);box-shadow:0 0 8px var(--green)}
-
-  .card .title{font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-0.2px;line-height:1.28}
-  .card:hover .title{color:var(--c-deep)}
-  .card .summary{font-size:12.5px;color:var(--text-mute);line-height:1.5;flex:1;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-  .card .foot{display:flex;justify-content:flex-end;margin-top:2px}
-  .enter{font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--c);display:flex;align-items:center;gap:5px;opacity:0;transform:translateX(-4px);transition:all .18s}
-  .card:hover .enter{opacity:1;transform:none}
-
-  .empty{text-align:center;color:var(--text-mute);font-size:14px;padding:46px 0;display:none}
-  .empty.show{display:block}
-  .footnote{margin-top:28px;font-size:12.5px;color:var(--text-mute);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .footnote .reset{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-mute);background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;cursor:pointer;transition:all .15s}
-  .footnote .reset:hover{border-color:#ef4444;color:#ef4444}
-  .backbtn{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-mute);text-decoration:none;border:1px solid var(--border);border-radius:8px;padding:7px 12px;transition:all .15s;margin-right:auto}
-  .backbtn:hover{border-color:var(--c);color:var(--c)}
-
-  @keyframes panelIn{from{opacity:0;transform:translateY(16px) scale(.99)}to{opacity:1;transform:none}}
-  @keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  @keyframes spin360{to{transform:rotate(360deg)}}
-  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}
-  @media (prefers-reduced-motion:no-preference){
-    html.intro .panel{animation:panelIn .7s cubic-bezier(.2,.7,.2,1) both}
-    html.intro .kicker{animation:riseIn .6s ease .12s both}
-    html.intro .panel h1{animation:riseIn .6s ease .2s both}
-    html.intro .panel .sub{animation:riseIn .6s ease .3s both}
-    html.intro .readout{animation:riseIn .6s ease .4s both}
-    html.intro .emblem{animation:riseIn .7s ease .25s both}
-    .emblem.spin svg{animation:spin360 22s linear infinite;transform-origin:50% 50%}
-    .emblem.bob svg{animation:bob 3.4s ease-in-out infinite}
-    .emblem.pulse svg{animation:pulse 3s ease-in-out infinite;transform-origin:50% 50%}
-    html.intro .card{opacity:0;transform:translateY(14px);animation:riseIn .5s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--i,0)*55ms + .35s)}
-    .snow i{animation-name:snowfall;animation-timing-function:linear;animation-iteration-count:infinite}
-    .snowbg i{animation-name:snowfallbg;animation-timing-function:linear;animation-iteration-count:infinite}
-    .emberbg i{animation-name:emberrise;animation-timing-function:linear;animation-iteration-count:infinite}
-    .driftbg i{animation-name:driftfloat;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
-    .streakbg i{animation-name:streakmove;animation-timing-function:linear;animation-iteration-count:infinite}
-    .scanbg .scanbar{animation:scansweep 6s linear infinite}
+  .wrap { max-width: 980px; margin: 0 auto; padding: 60px 28px 80px; }
+  .hero {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 44px 40px; margin-bottom: 36px;
+    box-shadow: 0 12px 32px rgba(79,70,229,0.18); position: relative; overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
+  }
+  .hero .kicker { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.88); margin-bottom: 12px; }
+  .hero h1 { margin: 0; font-size: 38px; font-weight: 800; letter-spacing: -0.5px; }
+  .hero p { font-size: 16px; color: rgba(255,255,255,0.94); max-width: 620px; margin-top: 14px; }
+  .hero .badge {
+    display: inline-block; margin-top: 18px;
+    background: rgba(255,255,255,0.18); color: #fff; font-size: 11px;
+    font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 999px;
   }
 
-  @media (max-width:760px){
-    .panel-inner{grid-template-columns:1fr;justify-items:start}
-    .emblem{justify-self:start;width:108px;height:108px}.emblem svg{width:56px;height:56px}
-    .panel h1{font-size:30px}
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: var(--text-mute); margin: 0 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 36px; }
+  .card {
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 24px; text-decoration: none; color: inherit;
+    transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    display: flex; flex-direction: column;
   }
-  @media (max-width:520px){.wrap{padding:22px 15px 60px}.chips{width:100%}}
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,70,229,0.12); }
+  .card .label { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase; }
+  .card .title { font-size: 18px; font-weight: 700; margin: 6px 0 8px; color: #0f172a; }
+  .card .summary { font-size: 13.5px; color: var(--text-mute); line-height: 1.55; }
+
+  @media (max-width: 700px) {
+    .wrap { padding: 32px 16px 60px; }
+    .hero { padding: 28px 22px; }
+    .hero h1 { font-size: 28px; }
+  }
 </style>
-<script>document.documentElement.className="intro";setTimeout(function(){document.documentElement.classList.remove("intro");},2200);</script>
 </head>
-<body class="themed">
-  <div class="blueprint" aria-hidden="true">
-    <div class="cog" style="width:340px;height:340px;left:-110px;top:160px"></div>
-    <div class="cog rev" style="width:520px;height:520px;right:-180px;bottom:-150px"></div>
-    <div class="ring" style="width:210px;height:210px;right:6%;top:18%"></div>
-    <div class="ring" style="width:120px;height:120px;left:8%;bottom:14%"></div>
-    <div class="ghost" style="right:4%;top:11%;width:240px;height:240px;transform:rotate(7deg)"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></div><div class="ghost" style="left:2%;bottom:9%;width:180px;height:180px;transform:rotate(-13deg)"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></div><div class="ghost" style="left:42%;top:48%;width:130px;height:130px;transform:rotate(19deg)"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></div>
-  </div>
-  <div class="emberbg" aria-hidden="true" style="color:hsl(14 85% 60%)"><i style="left:29.7%;--dx:18px;--op:0.50;width:5.0px;height:5.0px;animation-duration:8.6s;animation-delay:5.1s"></i><i style="left:72.0%;--dx:9px;--op:0.84;width:5.5px;height:5.5px;animation-duration:7.9s;animation-delay:7.3s"></i><i style="left:53.0%;--dx:0px;--op:0.61;width:4.0px;height:4.0px;animation-duration:13.6s;animation-delay:4.9s"></i><i style="left:20.7%;--dx:19px;--op:0.69;width:2.2px;height:2.2px;animation-duration:7.3s;animation-delay:0.2s"></i><i style="left:55.0%;--dx:7px;--op:0.44;width:2.9px;height:2.9px;animation-duration:9.7s;animation-delay:9.6s"></i><i style="left:40.0%;--dx:-20px;--op:0.72;width:3.5px;height:3.5px;animation-duration:12.0s;animation-delay:8.2s"></i><i style="left:78.2%;--dx:-25px;--op:0.81;width:2.3px;height:2.3px;animation-duration:8.7s;animation-delay:4.8s"></i><i style="left:44.5%;--dx:-11px;--op:0.86;width:2.4px;height:2.4px;animation-duration:12.9s;animation-delay:9.2s"></i><i style="left:6.3%;--dx:-11px;--op:0.53;width:4.6px;height:4.6px;animation-duration:10.9s;animation-delay:3.3s"></i><i style="left:41.2%;--dx:-6px;--op:0.62;width:4.8px;height:4.8px;animation-duration:12.8s;animation-delay:6.9s"></i><i style="left:7.0%;--dx:20px;--op:0.80;width:4.9px;height:4.9px;animation-duration:12.5s;animation-delay:7.5s"></i><i style="left:66.3%;--dx:7px;--op:0.81;width:2.5px;height:2.5px;animation-duration:9.5s;animation-delay:0.9s"></i><i style="left:61.6%;--dx:12px;--op:0.58;width:5.3px;height:5.3px;animation-duration:13.7s;animation-delay:8.5s"></i><i style="left:20.1%;--dx:8px;--op:0.83;width:3.2px;height:3.2px;animation-duration:11.3s;animation-delay:4.9s"></i><i style="left:21.3%;--dx:10px;--op:0.48;width:2.4px;height:2.4px;animation-duration:11.0s;animation-delay:6.8s"></i><i style="left:27.7%;--dx:-1px;--op:0.75;width:5.0px;height:5.0px;animation-duration:10.0s;animation-delay:3.9s"></i><i style="left:96.7%;--dx:-21px;--op:0.64;width:4.3px;height:4.3px;animation-duration:10.3s;animation-delay:2.7s"></i><i style="left:16.8%;--dx:24px;--op:0.79;width:5.5px;height:5.5px;animation-duration:12.9s;animation-delay:9.8s"></i><i style="left:35.0%;--dx:6px;--op:0.78;width:3.0px;height:3.0px;animation-duration:7.6s;animation-delay:5.2s"></i><i style="left:55.7%;--dx:-16px;--op:0.58;width:2.8px;height:2.8px;animation-duration:7.6s;animation-delay:0.5s"></i><i style="left:10.1%;--dx:3px;--op:0.61;width:5.4px;height:5.4px;animation-duration:8.2s;animation-delay:2.3s"></i><i style="left:14.6%;--dx:19px;--op:0.49;width:2.5px;height:2.5px;animation-duration:9.8s;animation-delay:4.0s"></i><i style="left:54.3%;--dx:19px;--op:0.52;width:3.4px;height:3.4px;animation-duration:11.5s;animation-delay:8.3s"></i><i style="left:79.5%;--dx:-6px;--op:0.72;width:2.2px;height:2.2px;animation-duration:12.4s;animation-delay:9.9s"></i><i style="left:27.8%;--dx:2px;--op:0.76;width:4.3px;height:4.3px;animation-duration:12.4s;animation-delay:8.6s"></i><i style="left:40.7%;--dx:10px;--op:0.71;width:3.6px;height:3.6px;animation-duration:7.3s;animation-delay:3.3s"></i><i style="left:34.9%;--dx:13px;--op:0.59;width:4.6px;height:4.6px;animation-duration:12.5s;animation-delay:7.2s"></i><i style="left:36.1%;--dx:-16px;--op:0.71;width:3.1px;height:3.1px;animation-duration:9.0s;animation-delay:8.0s"></i><i style="left:64.0%;--dx:-23px;--op:0.72;width:3.7px;height:3.7px;animation-duration:11.1s;animation-delay:5.0s"></i><i style="left:59.7%;--dx:22px;--op:0.77;width:4.8px;height:4.8px;animation-duration:13.1s;animation-delay:5.7s"></i><i style="left:51.6%;--dx:-23px;--op:0.83;width:4.4px;height:4.4px;animation-duration:8.8s;animation-delay:8.2s"></i><i style="left:43.7%;--dx:6px;--op:0.50;width:5.2px;height:5.2px;animation-duration:9.0s;animation-delay:3.2s"></i><i style="left:92.0%;--dx:-2px;--op:0.90;width:3.8px;height:3.8px;animation-duration:7.6s;animation-delay:3.2s"></i><i style="left:21.5%;--dx:-17px;--op:0.56;width:3.6px;height:3.6px;animation-duration:12.4s;animation-delay:10.0s"></i><i style="left:41.7%;--dx:9px;--op:0.50;width:3.3px;height:3.3px;animation-duration:12.9s;animation-delay:0.5s"></i><i style="left:44.1%;--dx:-16px;--op:0.67;width:5.5px;height:5.5px;animation-duration:11.1s;animation-delay:5.6s"></i><i style="left:22.5%;--dx:9px;--op:0.55;width:2.7px;height:2.7px;animation-duration:11.9s;animation-delay:1.6s"></i><i style="left:89.4%;--dx:-5px;--op:0.77;width:4.3px;height:4.3px;animation-duration:13.8s;animation-delay:8.1s"></i><i style="left:69.9%;--dx:-12px;--op:0.86;width:3.9px;height:3.9px;animation-duration:11.5s;animation-delay:8.6s"></i><i style="left:85.4%;--dx:22px;--op:0.77;width:4.7px;height:4.7px;animation-duration:9.5s;animation-delay:4.7s"></i><i style="left:74.5%;--dx:12px;--op:0.41;width:4.6px;height:4.6px;animation-duration:8.3s;animation-delay:8.0s"></i><i style="left:33.2%;--dx:7px;--op:0.68;width:2.0px;height:2.0px;animation-duration:9.7s;animation-delay:1.5s"></i></div>
-
+<body>
   <nav class="topnav">
     <a class="brand" href="../../../index.html"><span class="dot"></span>Commonplace</a>
-    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Mechanical</a><span class="sep">›</span><a href="../index.html">Automobile</a><span class="sep">›</span><span class="here">Engine Systems</span></div>
+    <div class="crumb"><a href="../../../index.html">Commonplace</a><span class="sep">›</span><a href="../../index.html">Mechanical</a><span class="sep">›</span><a href="../index.html">Automobile Mechanisms</a></div>
   </nav>
-
   <div class="wrap">
-    <section class="panel">
-      <div class="panel-inner">
-        <div>
-          <div class="kicker">Automobile · Powertrain module</div>
-          <h1>Engine Systems</h1>
-          <p class="sub">Hierarchy, fundamentals, camshafts, cooling, lubrication, N42, fuel &amp; exhaust.</p>
-          <div class="readout">
-            <div class="odo"><div class="ol">Topics</div><div class="ov" id="odoTopics">5</div></div>
-            <div class="odo"><div class="ol">Read</div><div class="ov read" id="odoRead">0</div></div>
-            <div class="progwrap">
-              <div class="pl"><span>Progress</span><span id="pctTxt">0%</span></div>
-              <div class="progbar"><i id="progFill"></i></div>
-            </div>
-          </div>
-        </div>
-        <div class="emblem bob"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mywle0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0f2f5"/><stop offset="0.55" stop-color="#c0c7d0"/><stop offset="1" stop-color="#828b96"/></linearGradient></defs><circle cx="24" cy="36" r="4.5" fill="url(#mywle0)" stroke="#79818c" stroke-width="0.7"/><circle cx="24" cy="36" r="1.5" fill="rgba(0,0,0,0.4)"/><path d="M21.4 19 H26.6 L27.6 33 H20.4 Z" fill="url(#mywle0)" stroke="#79818c" stroke-width="0.7" stroke-linejoin="round"/><rect x="15.5" y="7" width="17" height="14" rx="3" fill="url(#mywle0)" stroke="#79818c" stroke-width="0.7"/><line x1="16.5" y1="10.5" x2="31.5" y2="10.5" stroke="rgba(0,0,0,0.22)" stroke-width="1.1"/><line x1="16.5" y1="12.6" x2="31.5" y2="12.6" stroke="rgba(0,0,0,0.22)" stroke-width="1.1"/><circle cx="24" cy="17.5" r="2.3" fill="#5a626c"/></svg></div>
-      </div>
+    <div class="hero">
+      <div class="kicker">Automobile Mechanisms</div>
+      <h1>Engine Systems</h1>
+      <p>Notes in the Engine Systems section.</p>
       
-    </section>
-
-    <div class="controls">
-      <label class="search">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="search" type="text" placeholder="Search topics…" autocomplete="off" />
-      </label>
-      <div class="chips" role="group" aria-label="Filter">
-        <button class="chip" data-filter="all" aria-pressed="true">All <span class="ct" id="ctAll">0</span></button>
-        <button class="chip" data-filter="unread" aria-pressed="false">Unread <span class="ct" id="ctUnread">0</span></button>
-        <button class="chip" data-filter="read" aria-pressed="false">Read <span class="ct" id="ctRead">0</span></button>
-      </div>
     </div>
 
-    <h2 class="sec-h">Sub-modules<span class="sh-ct">5</span></h2>
-    <div class="grid">
-      <a class="card submod" href="Exhaust_system/index.html" data-href="Exhaust_system/index.html" data-text="exhaust system exhaust system — overview; oxygen sensor &amp; lambda (air–fuel ratio control); pollutants &amp; catalytic converter">
-        <span class="scan"></span>
-        <div class="card-top">
-          <span class="badge">▸</span>
-          <span class="lbl">Section · 4 topics</span>
-          
-        </div>
-        <div class="title">Exhaust System</div>
-        <div class="summary">Exhaust System — Overview; Oxygen Sensor &amp; Lambda (Air–Fuel Ratio Control); Pollutants &amp; Catalytic Converter</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card submod" href="Fuel_system/index.html" data-href="Fuel_system/index.html" data-text="fuel system fuel system — overview (petrol / mpfi); ignition system; firing order (4, 6, 8, 12 cylinder)">
-        <span class="scan"></span>
-        <div class="card-top">
-          <span class="badge">▸</span>
-          <span class="lbl">Section · 4 topics</span>
-          
-        </div>
-        <div class="title">Fuel System</div>
-        <div class="summary">Fuel System — Overview (Petrol / MPFI); Ignition System; Firing Order (4, 6, 8, 12 Cylinder)</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card submod" href="Material/index.html" data-href="Material/index.html" data-text="materials engine materials — mg/al alloys, galvanic corrosion, thermal expansion">
-        <span class="scan"></span>
-        <div class="card-top">
-          <span class="badge">▸</span>
-          <span class="lbl">Section · 1 topic</span>
-          
-        </div>
-        <div class="title">Materials</div>
-        <div class="summary">Engine Materials — Mg/Al Alloys, Galvanic Corrosion, Thermal Expansion</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card submod" href="N42/index.html" data-href="N42/index.html" data-text="n42 engine n42 — overview, innovations, advantages; n42 — four key features &amp; air routing; disa &amp; crankcase ventilation">
-        <span class="scan"></span>
-        <div class="card-top">
-          <span class="badge">▸</span>
-          <span class="lbl">Section · 10 topics</span>
-          
-        </div>
-        <div class="title">N42 Engine</div>
-        <div class="summary">N42 — Overview, Innovations, Advantages; N42 — Four Key Features &amp; Air Routing; DISA &amp; Crankcase Ventilation</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card submod" href="Petrol_deisel/index.html" data-href="Petrol_deisel/index.html" data-text="petrol &amp; diesel diesel vs petrol — comparison; diesel combustion cycle &amp; phases">
-        <span class="scan"></span>
-        <div class="card-top">
-          <span class="badge">▸</span>
-          <span class="lbl">Section · 2 topics</span>
-          
-        </div>
-        <div class="title">Petrol &amp; Diesel</div>
-        <div class="summary">Diesel vs Petrol — Comparison; Diesel Combustion Cycle &amp; Phases</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-    </div>
-
-    <h2 class="sec-h">Topics<span class="sh-ct">5</span></h2>
-    <div class="grid">
-      <a class="card" href="01-vehicle-systems-hierarchy.html" data-href="01-vehicle-systems-hierarchy.html" data-text="vehicle systems — hierarchy a complete top-down breakdown of every major system on the vehicle, used as the master map for the rest of the notebook. the trainer organised the entire car under 14 numbered systems, with the engine itself further decomposed into 7…">
-        <span class="scan"></span>
-        <span class="wm"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></span>
-        <div class="card-top">
-          <span class="badge">T01</span>
-          <span class="lbl">Topic 01</span>
-          <button class="lamp" title="Mark as read" aria-label="Mark as read"></button>
-        </div>
-        <div class="title">Vehicle Systems — Hierarchy</div>
-        <div class="summary">A complete top-down breakdown of every major system on the vehicle, used as the master map for the rest of the notebook. The trainer organised the entire car under 14 numbered systems, with the engine itself further decomposed into 7…</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card" href="02-engine-fundamentals.html" data-href="02-engine-fundamentals.html" data-text="engine fundamentals — power, compression ratio, flash point a single dense page that defines five foundational engine concepts: the three &quot;horse powers&quot; (indicated, frictional, brake), the compression ratio with its tdc/bdc volume sketch, the typical petrol-vs-diesel compression ratio range, and…">
-        <span class="scan"></span>
-        <span class="wm"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></span>
-        <div class="card-top">
-          <span class="badge">T02</span>
-          <span class="lbl">Topic 02</span>
-          <button class="lamp" title="Mark as read" aria-label="Mark as read"></button>
-        </div>
-        <div class="title">Engine Fundamentals — Power, Compression Ratio, Flash Point</div>
-        <div class="summary">A single dense page that defines five foundational engine concepts: the three &quot;horse powers&quot; (indicated, frictional, brake), the compression ratio with its TDC/BDC volume sketch, the typical petrol-vs-diesel compression ratio range, and…</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card" href="03-cylinder-head-camshaft.html" data-href="03-cylinder-head-camshaft.html" data-text="cylinder head — camshaft layouts (ohv / ohc / sohc / dohc) a taxonomy of how the camshaft can be arranged relative to the cylinder head, with the four standard layouts (ohv, ohc, sohc, dohc) and one line of pros/cons each. this is the basis for understanding why modern bmw engines (n42/n52/n62)…">
-        <span class="scan"></span>
-        <span class="wm"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></span>
-        <div class="card-top">
-          <span class="badge">T03</span>
-          <span class="lbl">Topic 03</span>
-          <button class="lamp" title="Mark as read" aria-label="Mark as read"></button>
-        </div>
-        <div class="title">Cylinder Head — Camshaft Layouts (OHV / OHC / SOHC / DOHC)</div>
-        <div class="summary">A taxonomy of how the camshaft can be arranged relative to the cylinder head, with the four standard layouts (OHV, OHC, SOHC, DOHC) and one line of pros/cons each. This is the basis for understanding why modern BMW engines (N42/N52/N62)…</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card" href="04-cooling-system.html" data-href="04-cooling-system.html" data-text="cooling system the engine cooling system carries waste combustion heat from the cylinder walls and head out to the atmosphere via the radiator, holds the coolant at a controlled temperature with a thermostat, raises the coolant boiling point with…">
-        <span class="scan"></span>
-        <span class="wm"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></span>
-        <div class="card-top">
-          <span class="badge">T04</span>
-          <span class="lbl">Topic 04</span>
-          <button class="lamp" title="Mark as read" aria-label="Mark as read"></button>
-        </div>
-        <div class="title">Cooling System</div>
-        <div class="summary">The engine cooling system carries waste combustion heat from the cylinder walls and head out to the atmosphere via the radiator, holds the coolant at a controlled temperature with a thermostat, raises the coolant boiling point with…</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-      <a class="card" href="05-lubrication-system.html" data-href="05-lubrication-system.html" data-text="lubrication system the lubrication system pumps oil from the sump, through a strainer and filter, then up to every moving interface inside the engine — bearings, camshaft, cylinder walls, valvetrain — and back down to the sump under gravity. beyond reducing…">
-        <span class="scan"></span>
-        <span class="wm"><svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="15" y="7" width="18" height="13" rx="2.5"/><line x1="16.5" y1="11" x2="31.5" y2="11"/><line x1="16.5" y1="13.5" x2="31.5" y2="13.5"/><path d="M21 20 L20 33 M27 20 L28 33"/><circle cx="24" cy="37" r="5"/><circle cx="24" cy="37" r="1.5" fill="currentColor" stroke="none"/></svg></span>
-        <div class="card-top">
-          <span class="badge">T05</span>
-          <span class="lbl">Topic 05</span>
-          <button class="lamp" title="Mark as read" aria-label="Mark as read"></button>
-        </div>
-        <div class="title">Lubrication System</div>
-        <div class="summary">The lubrication system pumps oil from the sump, through a strainer and filter, then up to every moving interface inside the engine — bearings, camshaft, cylinder walls, valvetrain — and back down to the sump under gravity. Beyond reducing…</div>
-        <div class="foot"><span class="enter">Open <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-      </a>
-    </div>
-
-    <div class="empty" id="empty">No topics match — try a different search.</div>
-
-    <div class="footnote">
-      <a class="backbtn" href="../index.html"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M11 18l-6-6 6-6"/></svg> All modules</a>
-      <span>Tap a topic's lamp to mark it read — progress saves on this device.</span>
-      <button class="reset" id="reset">Reset</button>
-    </div>
+    <h2>Sections</h2><div class="grid"><a class="card" href="Exhaust_system/index.html">  <span class="label">Section · 4 topics</span>  <div class="title">Exhaust System</div>  <div class="summary">Exhaust System — Overview; Oxygen Sensor &amp; Lambda (Air–Fuel Ratio Control); Pollutants &amp; Catalytic Converter</div></a><a class="card" href="Fuel_system/index.html">  <span class="label">Section · 4 topics</span>  <div class="title">Fuel System</div>  <div class="summary">Fuel System — Overview (Petrol / MPFI); Ignition System; Firing Order (4, 6, 8, 12 Cylinder)</div></a><a class="card" href="Material/index.html">  <span class="label">Section · 1 topic</span>  <div class="title">Materials</div>  <div class="summary">Engine Materials — Mg/Al Alloys, Galvanic Corrosion, Thermal Expansion</div></a><a class="card" href="N42/index.html">  <span class="label">Section · 10 topics</span>  <div class="title">N42 Engine</div>  <div class="summary">N42 — Overview, Innovations, Advantages; N42 — Four Key Features &amp; Air Routing; DISA &amp; Crankcase Ventilation</div></a><a class="card" href="Petrol_deisel/index.html">  <span class="label">Section · 2 topics</span>  <div class="title">Petrol &amp; Diesel</div>  <div class="summary">Diesel vs Petrol — Comparison; Diesel Combustion Cycle &amp; Phases</div></a></div><h2>Topics</h2><div class="grid"><a class="card" href="01-vehicle-systems-hierarchy.html">  <span class="label">Topic 01</span>  <div class="title">Vehicle Systems — Hierarchy</div>  <div class="summary">A complete top-down breakdown of every major system on the vehicle, used as the master map for the rest of the notebook. The trainer organised the entire car under 14 numbered systems, with the engine itself further decomposed into 7…</div></a><a class="card" href="02-engine-fundamentals.html">  <span class="label">Topic 02</span>  <div class="title">Engine Fundamentals — Power, Compression Ratio, Flash Point</div>  <div class="summary">A single dense page that defines five foundational engine concepts: the three &quot;horse powers&quot; (indicated, frictional, brake), the compression ratio with its TDC/BDC volume sketch, the typical petrol-vs-diesel compression ratio range, and…</div></a><a class="card" href="03-cylinder-head-camshaft.html">  <span class="label">Topic 03</span>  <div class="title">Cylinder Head — Camshaft Layouts (OHV / OHC / SOHC / DOHC)</div>  <div class="summary">A taxonomy of how the camshaft can be arranged relative to the cylinder head, with the four standard layouts (OHV, OHC, SOHC, DOHC) and one line of pros/cons each. This is the basis for understanding why modern BMW engines (N42/N52/N62)…</div></a><a class="card" href="04-cooling-system.html">  <span class="label">Topic 04</span>  <div class="title">Cooling System</div>  <div class="summary">The engine cooling system carries waste combustion heat from the cylinder walls and head out to the atmosphere via the radiator, holds the coolant at a controlled temperature with a thermostat, raises the coolant boiling point with…</div></a><a class="card" href="05-lubrication-system.html">  <span class="label">Topic 05</span>  <div class="title">Lubrication System</div>  <div class="summary">The lubrication system pumps oil from the sump, through a strainer and filter, then up to every moving interface inside the engine — bearings, camshaft, cylinder walls, valvetrain — and back down to the sump under gravity. Beyond reducing…</div></a></div>
   </div>
-
-<script>
-(function(){
-  "use strict";
-  var KEY="commonplace_auto_Engine_systems_read_v1";
-  var read={}; try{read=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
-  var topicCards=[].slice.call(document.querySelectorAll('.card')).filter(function(c){return c.querySelector('.lamp')});
-  var total=topicCards.length;
-
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(read))}catch(e){}}
-  function countRead(){return topicCards.filter(function(c){return read[c.dataset.href]}).length}
-  function refresh(){
-    var r=countRead();
-    document.getElementById('odoRead').textContent=r;
-    var pct=total?Math.round(r/total*100):0;
-    document.getElementById('pctTxt').textContent=pct+'%';
-    document.getElementById('progFill').style.width=pct+'%';
-    var all=document.getElementById('ctAll'),un=document.getElementById('ctUnread'),rd=document.getElementById('ctRead');
-    if(all)all.textContent=total; if(un)un.textContent=total-r; if(rd)rd.textContent=r;
-  }
-  // apply saved state + stagger index
-  topicCards.forEach(function(c,i){
-    c.style.setProperty('--i',i);
-    if(read[c.dataset.href])c.classList.add('read');
-    var lamp=c.querySelector('.lamp');
-    lamp.addEventListener('click',function(e){
-      e.preventDefault();e.stopPropagation();
-      var h=c.dataset.href;
-      if(read[h]){delete read[h];c.classList.remove('read');}else{read[h]=1;c.classList.add('read');}
-      save();refresh();applyFilter();
-    });
-  });
-  // index all cards (incl sub-modules) for stagger
-  [].slice.call(document.querySelectorAll('.card')).forEach(function(c,i){c.style.setProperty('--i',i);});
-
-  // search + filter
-  var curFilter='all', q='';
-  var search=document.getElementById('search');
-  function applyFilter(){
-    var shown=0;
-    [].slice.call(document.querySelectorAll('.card')).forEach(function(c){
-      var isTopic=!!c.querySelector('.lamp');
-      var txt=c.dataset.text||'';
-      var okQ=!q||txt.indexOf(q)>=0||(c.querySelector('.title').textContent.toLowerCase().indexOf(q)>=0);
-      var okF=true;
-      if(isTopic){
-        if(curFilter==='read')okF=!!read[c.dataset.href];
-        else if(curFilter==='unread')okF=!read[c.dataset.href];
-      }else{ okF = (curFilter==='all'); } // sub-modules only in "all"
-      var vis=okQ&&okF;
-      c.style.display=vis?'':'none';
-      if(vis)shown++;
-    });
-    // hide empty group headings
-    [].slice.call(document.querySelectorAll('.grid')).forEach(function(g){
-      var any=[].slice.call(g.querySelectorAll('.card')).some(function(c){return c.style.display!=='none'});
-      g.style.display=any?'':'none';
-      var h=g.previousElementSibling;
-      if(h&&h.classList.contains('sec-h'))h.style.display=any?'':'none';
-    });
-    document.getElementById('empty').classList.toggle('show',shown===0);
-  }
-  if(search)search.addEventListener('input',function(){q=this.value.trim().toLowerCase();applyFilter();});
-  [].slice.call(document.querySelectorAll('.chip')).forEach(function(ch){
-    ch.addEventListener('click',function(){
-      [].slice.call(document.querySelectorAll('.chip')).forEach(function(x){x.setAttribute('aria-pressed',x===ch)});
-      curFilter=ch.dataset.filter;applyFilter();
-    });
-  });
-  document.addEventListener('keydown',function(e){
-    if(e.key==='/'&&document.activeElement!==search&&search){e.preventDefault();search.focus();}
-  });
-  var reset=document.getElementById('reset');
-  if(reset)reset.addEventListener('click',function(){
-    if(!confirm('Reset read progress for this module?'))return;
-    read={};save();
-    topicCards.forEach(function(c){c.classList.remove('read')});
-    refresh();applyFilter();
-  });
-
-  refresh();
-})();
-</script>
 </body>
 </html>
