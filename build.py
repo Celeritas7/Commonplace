@@ -54,6 +54,42 @@ CONFIG = {
     # These are NOT generated from the markdown content tree.
     "related_links": [
         {
+            "label": "External app · 22 chapters",
+            "title": "CMTI Machine Tool Design Handbook",
+            "summary": "Interactive scan of the Central Machine Tool Institute handbook — bearings, gearing, spindles, guideways, oil hydraulics, fits, threads, springs, and steels.",
+            "href": "CMTI/index.html",
+        },
+        {
+            "label": "External app · drawing reader",
+            "title": "GD&T · Drawing Reader Pro",
+            "summary": "Learn to read any engineering drawing — all 14 geometric characteristics, feature control frames, datums, material modifiers, bonus tolerance, and thread callouts.",
+            "href": "GD&T/index.html",
+        },
+        {
+            "label": "External app · 29 topics",
+            "title": "Harness · Wiring & Interconnects",
+            "summary": "Wiring practice from wire construction and AWG sizing through crimped terminals, Deutsch DT connectors, circuit protection, ISO symbols, and drawing check-lists.",
+            "href": "Harness/index.html",
+        },
+        {
+            "label": "External app · 13 calculators",
+            "title": "Machine Design Calculators",
+            "summary": "ISO fits, 1-D tolerance stack-ups, beam stress and deflection, springs, bolt preload, spur gears, bearing L₁₀ life, shaft sizing, buckling, V-belts, and wall stresses.",
+            "href": "Machine_Design/index.html",
+        },
+        {
+            "label": "External app · 10 tools",
+            "title": "Manufacturing & DFM",
+            "summary": "Press force, deep drawing, sheet-metal and casting DFM checks, speeds and feeds, die cost and maintenance planning, workholding design, and OEE waste walks.",
+            "href": "Manufacturing/index.html",
+        },
+        {
+            "label": "External app · beams & linkages",
+            "title": "Motion Lab",
+            "summary": "Statics and kinematics sandbox — beam reactions and deflection under point and distributed loads, Grashof four-bar, slider-crank stroke, and gear ratios, all animated.",
+            "href": "Motion_lab/index.html",
+        },
+        {
             "label": "External app · 507 movements",
             "title": "Brown's 507 Mechanical Movements",
             "summary": "Interactive study app for Henry T. Brown's 1868 classic — searchable diagrams, Wikimedia animations, notes, bookmarks, and dark mode.",
