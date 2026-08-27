@@ -3,9 +3,9 @@
 Adds bookmarks, highlights, "concept unclear" marks, and annotations to your Commonplace app — **without changing any of your note files**. A small local server injects the study script into each page as it serves it.
 
 ## Run
-1. Install Python if you don't have it (python.org — check "Add to PATH").
-2. Double-click `run-commonplace-study.bat` (or drag your `Mechanical` folder onto it).
-3. Browse at http://localhost:8137/ — keep the black window open.
+1. Needs Python **or** Node.js — either one (your original launcher used Node's `npx serve`, so you likely have Node already).
+2. Put this folder anywhere and double-click `run-commonplace-study.bat` — or drag your **Commonplace root folder** (the one with the main index.html) onto it. Tip: dropping this folder INSIDE your Commonplace root also works; it serves the parent automatically.
+3. Browse at http://localhost:8137/ — keep the black window open. **The ★ / ☰ buttons only appear on pages served this way** — your original plain-server .bat does not add them.
 
 ## Use
 - **★ button** (bottom-right): bookmark the current page. Bookmarks appear at the top of the home screen and in the ☰ panel on every page.
