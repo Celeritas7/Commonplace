@@ -166,9 +166,9 @@
     var block=document.createElement("div"); block.className="cb-wrap";
     block.innerHTML=
       '<div class="cb-kickrow"><span class="cb-kick">COMPOSE · PYTHON</span><span class="cb-kick cb-count"></span></div>'+
+      '<div class="cb-pal"></div>'+
       '<div class="cb-stack"></div>'+
       '<button type="button" class="cb-add">+ Add block</button>'+
-      '<div class="cb-pal"></div>'+
       '<div class="cb-actions">'+
         '<button type="button" class="cb-run">▶&nbsp; Assemble &amp; run</button>'+
         '<button type="button" class="cb-fs">⤢ Fullscreen</button>'+
@@ -392,12 +392,9 @@
 
     /* --- add block --- */
     addBtn.addEventListener("click",function(){
-      /* insert ABOVE main (imports/functions go first; main stays last) */
-      var mi=-1; for(var i=blocks.length-1;i>=0;i--){ if((blocks[i].n||"").trim().toLowerCase()==="main"){ mi=i; break; } }
-      var nb={ n:"block "+(blocks.length+1), c:"", col:false, auto:true }, ni;
-      if(mi>=0){ blocks.splice(mi,0,nb); ni=mi; } else { blocks.push(nb); ni=blocks.length-1; }
+      blocks.push({ n:"block "+(blocks.length+1), c:"", col:false, auto:true });
       errBlockIdx=-1; sync(); renderStack();
-      var last=stackEl.querySelector('[data-i="'+ni+'"] .cb-ta');
+      var last=stackEl.querySelector('[data-i="'+(blocks.length-1)+'"] .cb-ta');
       if(last) last.focus();
     });
 
@@ -419,12 +416,7 @@
         if(ex&&ex.prompt){ var q=document.createElement("div"); q.className="cb-full-q"; q.innerHTML='<span class="cb-full-qkick">PROBLEM</span><p>'+ex.prompt+'</p>'; overlay.appendChild(head); overlay.appendChild(q); overlay.appendChild(body); }
         else { overlay.appendChild(head); overlay.appendChild(body); }
         document.body.appendChild(overlay);
-        /* capture the card BEFORE moving block out of it */
-        var card=block.closest ? block.closest(".pmb-card") : null;
-        relocate(block,body);
-        if(card){ [".pmb-hr",".pmb-hint",".pmb-reveal"].forEach(function(sel){ var n=card.querySelector(sel); if(n) relocate(n,body); }); }
-        relocate(fb,body); relocate(out,body);
-        if(card){ var nw=card.querySelector(".pmb-next-wrap"); if(nw) relocate(nw,body); }
+        relocate(block,body); relocate(fb,body); relocate(out,body);
         document.body.style.overflow="hidden"; fsBtn.textContent="✕ Exit"; api.isFull=true;
       } else {
         restoreAll(); if(overlay){ overlay.parentNode.removeChild(overlay); overlay=null; }
@@ -497,7 +489,7 @@
       out.style.display=""; out.innerHTML=html;
     }
 
-    var api={ block:block, ta:ta, fb:fb, out:out, isFull:false, setFull:setFull,
+    var api={ block:block, ta:ta, fb:fb, out:out, isFull:false,
               setRunning:setRunning, showFeedback:showFeedback, showOutput:showOutput };
 
     /* --- boot --- */

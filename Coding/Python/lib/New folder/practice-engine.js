@@ -243,13 +243,7 @@ window.CommonplacePractice = (function () {
     var drillMode="list", drillQueue=[], drillIdx=0;
 
     function computeAllDone(){ allDone=EX.every(function(e){return !!store.solved[e.id];}); return allDone; }
-    function makeNextBtn(){ var b=document.createElement("button"); b.type="button"; b.className="pmb-next"; b.textContent="Next →"; b.addEventListener("click",function(){
-      var prev=els.card?els.card.querySelector(".pmb-card"):null;
-      var wasFull=!!(prev&&prev._ed&&prev._ed.isFull);
-      if(wasFull&&prev._ed.setFull) prev._ed.setFull(false);
-      advance();
-      if(wasFull){ var nc=els.card?els.card.querySelector(".pmb-card"):null; if(nc&&nc._ed&&nc._ed.setFull) nc._ed.setFull(true); }
-    }); return b; }
+    function makeNextBtn(){ var b=document.createElement("button"); b.type="button"; b.className="pmb-next"; b.textContent="Next →"; b.addEventListener("click",advance); return b; }
 
     function renderCard(){
       var ex=EX.filter(function(e){return e.id===activeId;})[0]||EX[0];

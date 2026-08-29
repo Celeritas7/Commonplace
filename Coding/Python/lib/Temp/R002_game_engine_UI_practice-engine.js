@@ -128,7 +128,6 @@ window.CommonplacePractice = (function () {
     }
     var block=document.createElement("div"); block.className="pmb-edblock";
     var ta=document.createElement("textarea");
-    ta.spellcheck=false; ta.setAttribute("autocapitalize","off"); ta.setAttribute("autocorrect","off"); ta.setAttribute("autocomplete","off");
     function tokBtn(t,kind){
       var b=document.createElement("button"); b.type="button"; b.className="pmb-tok pmb-tok-"+kind;
       b.textContent = t==='"  "' ? '" "' : t.trim();
@@ -223,7 +222,7 @@ window.CommonplacePractice = (function () {
       markSolved:function(id){ this.solved[id]=true; this.persist(); },
       bankAttempt:function(ex,a){ a.saved=true; this.saveAtt(); var key=ex.id+":"+a.t; this.bank[key]={key:key,exId:ex.id,sec:ex.sec,title:ex.title,reason:cap(a.msg||"wrong output"),resolved:false,t:a.t}; this.persist(); },
       bankByKey:function(key){ return this.bank[key]; },
-      resolveMistake:function(key){ if(this.bank[key]&&!this.bank[key].resolved){ this.bank[key].resolved=true; this.persist(); if(window.GameLayer) window.GameLayer.onMistakeFixed(); } },
+      resolveMistake:function(key){ if(this.bank[key]){ this.bank[key].resolved=true; this.persist(); } },
       bankedList:function(){ var o=this.bank,a=[]; for(var k in o) if(o.hasOwnProperty(k)) a.push(o[k]); return a.sort(function(x,y){return x.t-y.t;}); }
     };
   }
@@ -243,13 +242,7 @@ window.CommonplacePractice = (function () {
     var drillMode="list", drillQueue=[], drillIdx=0;
 
     function computeAllDone(){ allDone=EX.every(function(e){return !!store.solved[e.id];}); return allDone; }
-    function makeNextBtn(){ var b=document.createElement("button"); b.type="button"; b.className="pmb-next"; b.textContent="Next →"; b.addEventListener("click",function(){
-      var prev=els.card?els.card.querySelector(".pmb-card"):null;
-      var wasFull=!!(prev&&prev._ed&&prev._ed.isFull);
-      if(wasFull&&prev._ed.setFull) prev._ed.setFull(false);
-      advance();
-      if(wasFull){ var nc=els.card?els.card.querySelector(".pmb-card"):null; if(nc&&nc._ed&&nc._ed.setFull) nc._ed.setFull(true); }
-    }); return b; }
+    function makeNextBtn(){ var b=document.createElement("button"); b.type="button"; b.className="pmb-next"; b.textContent="Next →"; b.addEventListener("click",advance); return b; }
 
     function renderCard(){
       var ex=EX.filter(function(e){return e.id===activeId;})[0]||EX[0];
@@ -312,7 +305,6 @@ window.CommonplacePractice = (function () {
       grade(ex,q).then(function(res){
         ed.setRunning(false); ed.showOutput(res.output); ed.showFeedback(res.ok,res.fbMsg);
         store.logAttempt(ex,q,res.ok,res.reason);
-        if(window.GameLayer) window.GameLayer.onRun(cfg.storePrefix, ex.id, res.ok);
         if(res.ok && !store.solved[ex.id]){
           store.markSolved(ex.id);
           card.classList.add("pmb-done");

@@ -24,6 +24,27 @@
   var PY_KW=["def ","for ","while ","if ","elif ","else:","in ","range(","return ","import ","not ","and ","or ","True","False","None"];
   var PY_BI=["print(","input(","len(","int(","str(","sum(","sorted(","enumerate("];
   var PY_PUNCT=["\":\"",")","[]","{}","\"  \""];
+  /* names to exclude from the dynamic "yours" row (already on the palette / reserved) */
+  var PY_STOP=["def","for","while","if","elif","else","in","range","return","import","from","not","and","or","True","False","None","print","input","len","int","str","sum","sorted","enumerate","float","list","dict","set","tuple","break","continue","pass","class","try","except","finally","with","as","lambda","global","nonlocal","yield","del","is","raise","assert","abs","min","max","round","type","open","zip","map","filter"];
+
+  /* scan assembled code for the learner's own tokens: string literals,
+   * def/class names (as callables), assignment targets, for-vars, params */
+  function scanUserTokens(code){
+    var seen={}, toks=[], m;
+    function add(t){ if(t && !seen[t]){ seen[t]=1; toks.push(t); } }
+    var reStr=/(['"])((?:\\.|(?!\1).)*?)\1/g;
+    while((m=reStr.exec(code))){ if(m[2].length>0 && m[2].length<=18) add(m[0]); }
+    var reDef=/(?:^|\n)\s*(?:def|class)\s+([A-Za-z_]\w*)\s*(?:\(([^)]*)\))?/g;
+    while((m=reDef.exec(code))){
+      add(m[1]+"(");
+      (m[2]||"").split(",").forEach(function(p){ p=p.trim().split("=")[0].trim(); if(/^[A-Za-z_]\w*$/.test(p)) add(p); });
+    }
+    var reAsn=/(?:^|\n)\s*([A-Za-z_]\w*)\s*(?:=[^=]|[+\-*\/]=)/g;
+    while((m=reAsn.exec(code))) add(m[1]);
+    var reFor=/\bfor\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s+in\b/g;
+    while((m=reFor.exec(code))) m[1].split(",").forEach(function(v){ add(v.trim()); });
+    return toks.filter(function(t){ return PY_STOP.indexOf(t.replace(/\($/,""))===-1; }).slice(0,14);
+  }
 
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
@@ -49,6 +70,9 @@
 ".cb-pill{flex:0 0 auto;display:inline-flex;align-items:center;height:38px;padding:0 13px;border:1px solid "+LINE+";border-radius:10px;box-shadow:0 1px 0 rgba(20,40,30,.12);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:"+INK+";cursor:pointer}"+
 ".cb-pill:active{transform:translateY(1px)}"+
 ".cb-pill-kw{background:"+KW_BG+"}.cb-pill-bi{background:"+FN_BG+"}"+
+".cb-pill-dyn{background:#fff;border:1px dashed "+SAGE+"}"+
+".cb-pillrow-dyn{align-items:center;border-top:1px dashed "+LINE+";margin-top:7px;padding-top:8px}"+
+".cb-dyn-tag{flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1.5px;color:rgba(26,40,32,.45)}"+
 /* stack + block cards */
 ".cb-stack{display:flex;flex-direction:column;gap:12px}"+
 ".cb-card{background:"+PAPER+";border:1px solid "+LINE+";border-radius:12px;box-shadow:0 10px 22px -16px rgba(20,40,30,.5);overflow:hidden}"+
@@ -115,10 +139,6 @@
 /* fullscreen */
 ".cb-full{position:fixed;inset:0;z-index:1000;background:"+CREAM+";overflow:auto;padding:18px;box-sizing:border-box}"+
 ".cb-full-head{display:flex;align-items:center;justify-content:space-between;max-width:760px;margin:0 auto 14px}"+
-".cb-full-q{max-width:760px;margin:0 auto 14px;background:#f4f5ec;border:1px solid #d2dacb;border-radius:8px;padding:10px 14px}"+
-".cb-full-q p{margin:4px 0 0;font-family:'EB Garamond',serif;font-size:16px;line-height:1.5;color:#41564a}"+
-".cb-full-q code{font-family:'JetBrains Mono',monospace;font-size:.92em}"+
-".cb-full-qkick{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#6c7f70}"+
 ".cb-full-body{max-width:760px;margin:0 auto}";
     document.head.appendChild(st);
   }
@@ -166,9 +186,9 @@
     var block=document.createElement("div"); block.className="cb-wrap";
     block.innerHTML=
       '<div class="cb-kickrow"><span class="cb-kick">COMPOSE · PYTHON</span><span class="cb-kick cb-count"></span></div>'+
+      '<div class="cb-pal"></div>'+
       '<div class="cb-stack"></div>'+
       '<button type="button" class="cb-add">+ Add block</button>'+
-      '<div class="cb-pal"></div>'+
       '<div class="cb-actions">'+
         '<button type="button" class="cb-run">▶&nbsp; Assemble &amp; run</button>'+
         '<button type="button" class="cb-fs">⤢ Fullscreen</button>'+
@@ -207,10 +227,21 @@
       countEl.textContent="№ "+blocks.length+" BLOCK"+(blocks.length===1?"":"S");
       if(onCodeChange) onCodeChange(a.text);
       if(!isDrill){ try{ localStorage.setItem(storeKey,JSON.stringify(blocks)); }catch(e){} }
+      refreshDyn();
     }
 
     /* --- key palette --- */
-    var keysOpen=true;
+    var keysOpen=true, dynRowEl=null;
+    function refreshDyn(){
+      if(!dynRowEl || !keysOpen) return;
+      var toks=scanUserTokens(ta.value);
+      dynRowEl.innerHTML="";
+      if(!toks.length){ dynRowEl.style.display="none"; return; }
+      dynRowEl.style.display="";
+      var tag=document.createElement("span"); tag.className="cb-dyn-tag"; tag.textContent="YOURS";
+      dynRowEl.appendChild(tag);
+      toks.forEach(function(t){ dynRowEl.appendChild(pillBtn(t,"dyn")); });
+    }
     function pillBtn(t,kind){
       var b=document.createElement("button"); b.type="button"; b.className="cb-pill cb-pill-"+kind;
       b.textContent = t==='"  "' ? '" "' : t.trim();
@@ -244,7 +275,9 @@
       PY_KW.forEach(function(t){ r1.appendChild(pillBtn(t,"kw")); });
       PY_BI.forEach(function(t){ r2.appendChild(pillBtn(t,"bi")); });
       PY_PUNCT.forEach(function(t){ r3.appendChild(pillBtn(t,"bi")); });
-      palEl.appendChild(r1); palEl.appendChild(r2); palEl.appendChild(r3);
+      var r4=document.createElement("div"); r4.className="cb-pillrow cb-pillrow-dyn";
+      palEl.appendChild(r1); palEl.appendChild(r2); palEl.appendChild(r3); palEl.appendChild(r4);
+      dynRowEl=r4; refreshDyn();
     }
 
     /* --- block cards --- */
@@ -290,7 +323,6 @@
         var body=document.createElement("div"); body.className="cb-body";
         var pre=document.createElement("pre"); pre.className="cb-hl"; pre.setAttribute("aria-hidden","true");
         var bta=document.createElement("textarea"); bta.className="cb-ta"; bta.spellcheck=false; bta.value=b.c||"";
-        bta.setAttribute("autocapitalize","off"); bta.setAttribute("autocorrect","off"); bta.setAttribute("autocomplete","off");
         bta.wrap="off";
         function paint(){
           pre.innerHTML = (b.c ? hl(b.c)+"\n" : '<span class="cb-ph">'+esc(i===0&&blocks.length===1?(placeholder||"Write your Python here…"):"…")+'</span>');
@@ -392,12 +424,9 @@
 
     /* --- add block --- */
     addBtn.addEventListener("click",function(){
-      /* insert ABOVE main (imports/functions go first; main stays last) */
-      var mi=-1; for(var i=blocks.length-1;i>=0;i--){ if((blocks[i].n||"").trim().toLowerCase()==="main"){ mi=i; break; } }
-      var nb={ n:"block "+(blocks.length+1), c:"", col:false, auto:true }, ni;
-      if(mi>=0){ blocks.splice(mi,0,nb); ni=mi; } else { blocks.push(nb); ni=blocks.length-1; }
+      blocks.push({ n:"block "+(blocks.length+1), c:"", col:false, auto:true });
       errBlockIdx=-1; sync(); renderStack();
-      var last=stackEl.querySelector('[data-i="'+ni+'"] .cb-ta');
+      var last=stackEl.querySelector('[data-i="'+(blocks.length-1)+'"] .cb-ta');
       if(last) last.focus();
     });
 
@@ -416,15 +445,9 @@
         var exit=document.createElement("button"); exit.type="button"; exit.className="cb-keysbtn"; exit.textContent="✕ Exit (Esc)";
         exit.addEventListener("click",function(){ setFull(false); }); head.appendChild(exit);
         var body=document.createElement("div"); body.className="cb-full-body";
-        if(ex&&ex.prompt){ var q=document.createElement("div"); q.className="cb-full-q"; q.innerHTML='<span class="cb-full-qkick">PROBLEM</span><p>'+ex.prompt+'</p>'; overlay.appendChild(head); overlay.appendChild(q); overlay.appendChild(body); }
-        else { overlay.appendChild(head); overlay.appendChild(body); }
+        overlay.appendChild(head); overlay.appendChild(body);
         document.body.appendChild(overlay);
-        /* capture the card BEFORE moving block out of it */
-        var card=block.closest ? block.closest(".pmb-card") : null;
-        relocate(block,body);
-        if(card){ [".pmb-hr",".pmb-hint",".pmb-reveal"].forEach(function(sel){ var n=card.querySelector(sel); if(n) relocate(n,body); }); }
-        relocate(fb,body); relocate(out,body);
-        if(card){ var nw=card.querySelector(".pmb-next-wrap"); if(nw) relocate(nw,body); }
+        relocate(block,body); relocate(fb,body); relocate(out,body);
         document.body.style.overflow="hidden"; fsBtn.textContent="✕ Exit"; api.isFull=true;
       } else {
         restoreAll(); if(overlay){ overlay.parentNode.removeChild(overlay); overlay=null; }
@@ -497,7 +520,7 @@
       out.style.display=""; out.innerHTML=html;
     }
 
-    var api={ block:block, ta:ta, fb:fb, out:out, isFull:false, setFull:setFull,
+    var api={ block:block, ta:ta, fb:fb, out:out, isFull:false,
               setRunning:setRunning, showFeedback:showFeedback, showOutput:showOutput };
 
     /* --- boot --- */
@@ -505,5 +528,5 @@
     return api;
   }
 
-  window.ComposeBlocks={ enabled:true, makeEditor:makeEditor };
+  window.ComposeBlocks={ enabled:true, makeEditor:makeEditor, version:"dyn-palette-1" };
 })();
