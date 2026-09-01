@@ -14,21 +14,21 @@ Part 0 (Before You Code) is complete for both books — **10 lessons** total. Ea
 
 | # | Title | What's inside |
 |---|---|---|
-| [0.1](samples/C_Book_Lesson_0_1_v3.html) | What is a program? | Programming as a way to talk to computers; drag-sort game |
-| [0.2](samples/C_Book_Lesson_0_2.html) | What computers actually do | CPU + memory at cartoon level; step-through CPU simulator |
-| [0.3](samples/C_Book_Lesson_0_3.html) | Why C? Where C lives today | Day-in-your-life timeline showing C running everywhere |
-| [0.4](samples/C_Book_Lesson_0_4.html) | Thinking like a programmer | User brain vs programmer brain; decomposition tree |
-| [0.5](samples/C_Book_Lesson_0_5.html) | Read, write, run, fix, repeat | The five activities of programming; scene classifier game |
+| [0.1](lessons/C_Book_Lesson_0_1_v3.html) | What is a program? | Programming as a way to talk to computers; drag-sort game |
+| [0.2](lessons/C_Book_Lesson_0_2.html) | What computers actually do | CPU + memory at cartoon level; step-through CPU simulator |
+| [0.3](lessons/C_Book_Lesson_0_3.html) | Why C? Where C lives today | Day-in-your-life timeline showing C running everywhere |
+| [0.4](lessons/C_Book_Lesson_0_4.html) | Thinking like a programmer | User brain vs programmer brain; decomposition tree |
+| [0.5](lessons/C_Book_Lesson_0_5.html) | Read, write, run, fix, repeat | The five activities of programming; scene classifier game |
 
 ### The C++ Book — guided by Pixel, the modern robot 🟣
 
 | # | Title | What's inside |
 |---|---|---|
-| [0.1](samples/Cpp_Book_Lesson_0_1_v3.html) | What is a program? | Python vs C++ vs Java side-by-side comparison |
-| [0.2](samples/Cpp_Book_Lesson_0_2.html) | What computers actually do | CPU + memory cartoon-level; step-through simulator |
-| [0.3](samples/Cpp_Book_Lesson_0_3.html) | Why C++? Where it lives today | Chrome, games, finance, AI — all C++ underneath |
-| [0.4](samples/Cpp_Book_Lesson_0_4.html) | Thinking like a programmer | Decomposition tree mapped to functions, classes, namespaces |
-| [0.5](samples/Cpp_Book_Lesson_0_5.html) | Read, write, run, fix, repeat | The five activities, with real C++ error scenarios |
+| [0.1](lessons/Cpp_Book_Lesson_0_1_v3.html) | What is a program? | Python vs C++ vs Java side-by-side comparison |
+| [0.2](lessons/Cpp_Book_Lesson_0_2.html) | What computers actually do | CPU + memory cartoon-level; step-through simulator |
+| [0.3](lessons/Cpp_Book_Lesson_0_3.html) | Why C++? Where it lives today | Chrome, games, finance, AI — all C++ underneath |
+| [0.4](lessons/Cpp_Book_Lesson_0_4.html) | Thinking like a programmer | Decomposition tree mapped to functions, classes, namespaces |
+| [0.5](lessons/Cpp_Book_Lesson_0_5.html) | Read, write, run, fix, repeat | The five activities, with real C++ error scenarios |
 
 ---
 

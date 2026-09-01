@@ -9,28 +9,8 @@
 <link rel="stylesheet" href="../../../_lib/codemirror/codemirror.min.css">
 <script src="../../../_lib/codemirror/codemirror.min.js"></script>
 <script src="../../../_lib/codemirror/mode/python/python.min.js"></script>
+<script src="../../../_lib/pyodide/pyodide.js"></script>
 <script src="../../../_lib/supabase.js"></script>
-<script>
-/* Self-hosted _lib is preferred. If any of it is unreachable (offline mirror missing,
-   iPad Safari blocking the path), pull the same library from a CDN so the page still works. */
-(function(){
-  var CDN = [
-    { has:function(){ return !!window.marked; },     src:"https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" },
-    { has:function(){ return !!window.CodeMirror; }, css:"https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css",
-      src:"https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.js",
-      then:"https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.js" },
-    { has:function(){ return typeof window.loadPyodide==="function"; }, src:"https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" },
-    { has:function(){ return !!window.supabase; },   src:"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" }
-  ];
-  function js(src, cb){ var s=document.createElement("script"); s.src=src; s.onload=cb||null; s.onerror=cb||null; document.head.appendChild(s); }
-  function css(href){ var l=document.createElement("link"); l.rel="stylesheet"; l.href=href; document.head.appendChild(l); }
-  CDN.forEach(function(m){
-    if(m.has()) return;
-    if(m.css) css(m.css);
-    js(m.src, m.then ? function(){ if(window.CodeMirror) js(m.then); } : null);
-  });
-})();
-</script>
 <style>
   :root {
     --paper:#eceee4; --paper-2:#f4f5ec; --card:#fbfcf6;
@@ -162,39 +142,35 @@
   .task .ic { font-style:normal; color:#6fce9a; background:var(--green-deep); font-family:"JetBrains Mono",monospace; font-weight:700; font-size:12px; padding:3px 8px; border-radius:5px; letter-spacing:0; }
 
   /* editor */
-  .ed-top { display:flex; align-items:center; gap:9px; padding:11px 14px; background:#f4f5ec; color:rgba(26,40,32,.55); border:1px solid #d2dacb; border-bottom:none; border-radius:12px 12px 0 0; font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; }
-  .ed-top .dots { display:none; }
+  .ed-top { display:flex; align-items:center; gap:9px; padding:9px 14px; background:var(--green-deep); color:#bccdc0; font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:0.5px; }
+  .ed-top .dots { display:flex; gap:6px; margin-right:3px; }
   .ed-top .dots i { width:11px; height:11px; border-radius:50%; display:inline-block; }
   .ed-top .dots .r{ background:#ec6a5e; } .ed-top .dots .y{ background:#f4bf4f; } .ed-top .dots .g{ background:#61c554; }
-  .ed-top .lbl { letter-spacing:2px; }
-  .ed-top .fname { flex:1; text-transform:none; letter-spacing:0.5px; font-weight:400; color:rgba(26,40,32,.4); font-size:11px; }
-  .runbtn { font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; border:none; border-radius:8px; padding:7px 16px; cursor:pointer; background:#234f3b; color:#f4f5ec; }
-  .runbtn:hover { background:#2f6b4f; } .runbtn:disabled { opacity:0.45; cursor:default; }
-  .minibtn { font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:0; text-transform:none; border:1px solid #d2dacb; background:#fbfcf6; color:#41564a; border-radius:7px; padding:6px 11px; cursor:pointer; }
-  .minibtn:hover { border-color:#2f6b4f; color:#1a2820; }
-  .CodeMirror { height:auto; min-height:52px; font-family:"JetBrains Mono",monospace; font-size:13.5px; background:#fbfcf6; color:#1a2820; border-left:1px solid #d2dacb; border-right:1px solid #d2dacb; padding:6px 0; }
-  .CodeMirror-gutters { background:#f4f5ec; border-right:1px solid #e2e6da; }
-  .CodeMirror-linenumber { color:rgba(26,40,32,.35); }
-  .CodeMirror-cursor { border-left:1.5px solid #2f6b4f; }
-  .CodeMirror-selected { background:rgba(47,107,79,0.14) !important; }
-  .cm-keyword { color:#8a3d6b; font-weight:600; } .cm-builtin { color:#1f6f63; } .cm-number { color:#8a6a1f; }
-  .cm-string { color:#2f6b4f; } .cm-comment { color:#8a938a; font-style:italic; }
-  .cm-def { color:#234f3b; font-weight:600; } .cm-variable,.cm-property { color:#1a2820; } .cm-operator { color:#5a6b5f; } .cm-meta { color:#1f6f63; }
-  textarea.fallback-ta { width:100%; box-sizing:border-box; border:1px solid #d2dacb; border-top:none; border-bottom:none; outline:none; resize:vertical; min-height:90px; padding:12px 14px; background:#fbfcf6; color:#1a2820;
+  .ed-top .lbl { flex:1; }
+  .runbtn { font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:700; border:none; border-radius:7px; padding:6px 15px; cursor:pointer; background:#6fce9a; color:#0e2117; }
+  .runbtn:hover { background:#84e0ac; } .runbtn:disabled { opacity:0.5; cursor:default; }
+  .minibtn { font-family:"JetBrains Mono",monospace; font-size:11px; border:1px solid rgba(255,255,255,0.18); background:transparent; color:#bccdc0; border-radius:6px; padding:5px 10px; cursor:pointer; }
+  .minibtn:hover { border-color:#6fce9a; color:#bff0cf; }
+  .CodeMirror { height:auto; min-height:52px; font-family:"JetBrains Mono",monospace; font-size:13.5px; background:var(--code-bg); color:var(--w); padding:4px 0; }
+  .CodeMirror-gutters { background:#11201a; border-right:1px solid rgba(255,255,255,0.06); }
+  .CodeMirror-linenumber { color:#46604f; }
+  .CodeMirror-cursor { border-left:1.5px solid #6fce9a; }
+  .CodeMirror-selected { background:rgba(111,206,154,0.16) !important; }
+  .cm-keyword { color:#e2a3cb; } .cm-builtin { color:#8fcabc; } .cm-number { color:#cdbd84; }
+  .cm-string { color:#a9d6b6; } .cm-comment { color:#6f8378; font-style:italic; }
+  .cm-def { color:#bfe6cd; } .cm-variable,.cm-property { color:var(--w); } .cm-operator { color:#c9d8cd; } .cm-meta { color:#8fcabc; }
+  textarea.fallback-ta { width:100%; border:none; outline:none; resize:vertical; min-height:90px; padding:12px 14px; background:var(--code-bg); color:var(--w);
     font-family:"JetBrains Mono",monospace; font-size:13.5px; line-height:1.6; tab-size:4; }
 
-  .out.show::before { content:"\203a\203a\203a output"; display:block; color:rgba(26,40,32,.5); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
-  .out.show.waiting::before { content:"\203a\203a\203a working"; color:#8a6a1f; }
-  .out.show.noout::before { content:"\203a\203a\203a no output"; }
-  .out.waiting, .out.noout { color:rgba(26,40,32,.55); font-style:italic; }
-  .out.err.show::before { content:"\203a\203a\203a traceback"; color:#a23b2b; }
-  .out { margin:0; max-height:0; overflow:auto; transition:max-height .15s, padding .15s; background:#f4f5ec; color:#1a2820; border-left:1px solid #d2dacb; border-right:1px solid #d2dacb;
+  .out.show::before { content:"\203a\203a\203a output"; display:block; color:#5f7568; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+  .out.err.show::before { content:"\203a\203a\203a traceback"; color:#b5635a; }
+  .out { margin:0; max-height:0; overflow:auto; transition:max-height .15s, padding .15s; background:#0f1d17; color:var(--w);
     font-family:"JetBrains Mono",monospace; font-size:12.5px; line-height:1.6; white-space:pre-wrap; border-top:1px solid transparent; }
-  .out.show { max-height:420px; min-height:52px; padding:13px 16px; border-top:1px solid #d2dacb; }
-  .out.err { color:#a23b2b; }
-  .out img { max-width:100%; background:#fff; border:1px solid #d2dacb; border-radius:6px; margin:8px 0; display:block; }
+  .out.show { max-height:420px; padding:13px 16px; border-top:1px solid rgba(255,255,255,0.08); }
+  .out.err { color:var(--err); }
+  .out img { max-width:100%; background:#fff; border-radius:6px; margin:8px 0; display:block; }
 
-  .ed-actions { display:flex; align-items:center; gap:8px; padding:10px 14px; background:#f4f5ec; border:1px solid #d2dacb; border-top:none; border-radius:0 0 12px 12px; flex-wrap:wrap; }
+  .ed-actions { display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--paper-2); flex-wrap:wrap; }
   .ed-actions .savebtn { font-family:"JetBrains Mono",monospace; font-size:11.5px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); border-radius:7px; padding:6px 12px; cursor:pointer; }
   .ed-actions .savebtn:hover { border-color:var(--sage); color:var(--green); }
   .ed-actions .grow { flex:1; }
@@ -283,7 +259,7 @@
     <span class="wdots"><i class="r"></i><i class="y"></i><i class="g"></i></span>
     <div class="k">Fundamentals · 01</div>
     <h1>Python <code>random</code></h1>
-    <p class="sub">Practice the <code>random</code> module hands-on — a fresh set of basics each visit. Real problems live in the Practice tab.</p>
+    <p class="sub">Practice the <code>random</code> module hands-on — a fresh set of basics each visit, then real problems that put them to work.</p>
     <div class="repl"><span class="pr">&gt;&gt;&gt;</span> <span class="kw">import</span> <span class="mod">random</span><span class="cur"></span></div>
     <div class="sync" id="sync"></div>
   </header>
@@ -293,44 +269,19 @@
     <span class="tnum">§ I</span>
     <h2>Basics</h2>
     <span class="ln"></span>
-        <button class="reroll" id="preload-toggle"><span class="ico">▸</span> <span id="preload-lbl">Syntax preloaded</span></button><button class="reroll" id="reroll"><span class="ico">⟳</span> New set</button>
+    <button class="reroll" id="reroll"><span class="ico">⟳</span> New set</button>
   </div>
   <p class="tiercap" id="basics-cap">— one-liners · tagged basic · rotates each visit</p>
-<style>
-.carou{margin:0 0 26px}
-.carou-rail{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:12px;background:rgba(247,246,239,.94);backdrop-filter:blur(8px);border-top:1px solid var(--ac,#2f6b4f);border-bottom:1px solid #ded7c6;padding:0 2px;margin-bottom:14px}
-.carou-rail-lbl{flex:0 0 auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#6b5f49}
-.carou-track{display:flex;gap:8px;overflow-x:auto;padding:9px 0;scrollbar-width:thin}
-.carou-pill{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;max-width:260px;padding:8px 13px;border-radius:20px;cursor:pointer;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;background:#fbfaf4;border:1px solid #ded7c6;color:#3c3a33}
-.carou-pill:hover{border-color:var(--ac,#2f6b4f)}
-.carou-pill .pn{font-size:11px;font-weight:700;color:var(--ac,#2f6b4f);flex:0 0 auto}
-.carou-pill .pt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.carou-pill .pk{font-size:11px;color:#2f8f5b}
-.carou-pill.active{background:#211b13;border-color:#211b13;color:#efe7d6}
-.carou-pill.active .pn{color:#fff}
-.carou-pill.active .pk{color:#8fe0b0}
-.carou-nav{display:flex;align-items:center;gap:14px;margin-bottom:12px}
-.carou-nav .grow{flex:1}
-.carou-pos{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:#6b5f49;text-align:center}
-.carou-pos b{color:#211b13;font-weight:600}
-.carou-btn{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;padding:9px 16px;border-radius:8px;border:1px solid #ded7c6;background:#fbfaf4;color:#3c3a33;cursor:pointer}
-.carou-btn:hover:not(:disabled){border-color:var(--ac,#2f6b4f);color:#211b13}
-.carou-btn:disabled{opacity:.4;cursor:default}
-.carou-stage>.sec{display:none}
-.carou-stage>.sec.showing{display:block}
-.carou-stage>.sec .chev{display:none}
-.carou-stage>.sec.collapsed .panel{display:block}
-.carou-reset{flex:0 0 auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;padding:6px 11px;border-radius:7px;border:1px solid #ded7c6;background:#fbfaf4;color:#6b5f49;cursor:pointer}
-.carou-reset:hover:not(:disabled){border-color:var(--ac,#2f6b4f);color:#211b13}
-.carou-reset:disabled{opacity:.35;cursor:default}
-.carou-studied{margin-left:8px;padding:2px 8px;border-radius:20px;background:#e6eadd;color:#41564a;font-size:11px}
-.carou-stage.carou-empty{min-height:0}
-.donebtn{margin-left:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;font-weight:700;border:1px solid #d2dacb;border-radius:8px;padding:7px 15px;cursor:pointer;background:#fbfcf6;color:rgba(26,40,32,.4);opacity:.55}
-.donebtn.ready{background:#234f3b;border-color:#234f3b;color:#f4f5ec;opacity:1}
-.donebtn.ready:hover{background:#2f6b4f}
-@media(max-width:680px){.carou-rail-lbl{display:none}}
-</style>
-  <div class="carou" id="basics-carou" style="--ac:#2f6b4f"><div class="carou-rail" id="basics-rail"></div><div class="carou-nav" id="basics-nav"></div><div class="carou-stage" id="basics"></div></div>
+  <div id="basics"></div>
+
+  <!-- TIER II — real problems -->
+  <div class="tier" style="--ac:#b0612f">
+    <span class="tnum">§ II</span>
+    <h2>Real Problems</h2>
+    <span class="ln"></span>
+  </div>
+  <p class="tiercap">— combine the basics into something bigger · tagged challenge</p>
+  <div id="problems"></div>
 
   <div class="note">First run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection. All cards share one Python session. Your code &amp; progress save on this device; sign in above to sync across devices. The Basics rotate — hit <b>New set</b> any time for fresh ones.</div>
 
@@ -368,14 +319,20 @@
  {"id":"normalvariate","title":"Normal variate","concept":"`normalvariate(mu, sigma)` is another draw from the normal distribution (thread-safe variant of `gauss`).","uses":["Statistics","Sampling","Simulation"],"solution":"import random\nrandom.normalvariate(50, 10)","expected":"57.21"}
 ]</script>
 
+<!-- ===== REAL PROBLEMS (tagged "challenge") ===== -->
+<script type="application/json" id="problem-bank">[
+ {"id":"dice_sim","title":"Dice-roll simulator","brief":"Roll two six-sided dice 1000 times. Tally how often each total (2–12) comes up, then print every total with its count.","reqs":["Roll each die with random.randint(1, 6)","Loop 1000 times and sum the two dice","Count each total in a dict","Print totals 2 through 12 with their counts"],"starter":"import random\n\nrolls = 1000\ncounts = {}\n\n# roll two dice `rolls` times and tally each sum\n\n# print totals 2..12 with their counts\n","solution":"import random\n\nrolls = 1000\ncounts = {}\nfor _ in range(rolls):\n    total = random.randint(1, 6) + random.randint(1, 6)\n    counts[total] = counts.get(total, 0) + 1\n\nfor s in range(2, 13):\n    print(s, counts.get(s, 0))","expected":"2 27\n3 56\n4 81\n5 110\n6 139\n7 168\n8 138\n9 112\n10 83\n11 55\n12 31","hint":"Each die is `random.randint(1, 6)`; sum two of them, then `counts[total] = counts.get(total, 0) + 1`. Loop `range(2, 13)` to print in order."},
+ {"id":"password_gen","title":"Password generator","brief":"Generate a random 12-character password with at least one lowercase letter, one uppercase, one digit and one symbol — then print it.","reqs":["Use the `string` module for character pools","Guarantee one character from each required class","Fill the rest from the combined pool","Shuffle so the guaranteed chars aren't always first"],"starter":"import random, string\n\nlength = 12\n# pools: lowercase, uppercase, digits, symbols\n\n# 1) one from each pool  2) fill the rest  3) shuffle  4) join & print\n","solution":"import random, string\n\nlength = 12\npools = [string.ascii_lowercase, string.ascii_uppercase, string.digits, '!@#$%^&*']\n\npw = [random.choice(p) for p in pools]          # one of each\nall_chars = ''.join(pools)\npw += [random.choice(all_chars) for _ in range(length - len(pw))]\nrandom.shuffle(pw)                               # mix them up\n\nprint(''.join(pw))","expected":"aQ3!kPz9w#mR","hint":"Take one `random.choice` from each pool first so every class is present, fill the remaining slots from the combined string, then `random.shuffle` the list before `''.join`."},
+ {"id":"shuffle_deck","title":"Shuffle &amp; deal a deck","brief":"Build a standard 52-card deck (ranks A,2–10,J,Q,K across four suits), shuffle it, and deal a 5-card hand. Print the hand.","reqs":["Build the deck with a comprehension over ranks × suits","random.shuffle the whole deck","Deal the top 5 cards","Print the hand"],"starter":"import random\n\nranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']\nsuits = ['\u2660','\u2665','\u2666','\u2663']\n\n# build the 52-card deck, shuffle, deal 5, print\n","solution":"import random\n\nranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']\nsuits = ['\u2660','\u2665','\u2666','\u2663']\n\ndeck = [r + s for s in suits for r in ranks]\nrandom.shuffle(deck)\nhand = deck[:5]\n\nprint(hand)","expected":"['Q\u2665', '7\u2663', 'A\u2660', '10\u2666', '4\u2663']","hint":"`deck = [r + s for s in suits for r in ranks]` builds all 52, then `random.shuffle(deck)` and slice `deck[:5]` for the hand."},
+ {"id":"monte_carlo_pi","title":"Estimate \u03c0 (Monte-Carlo)","brief":"Estimate \u03c0 by dropping 10,000 random points in the unit square and counting how many land inside the quarter-circle of radius 1. \u03c0 \u2248 4 \u00d7 inside / total.","reqs":["Generate x, y in [0, 1) with random.random()","A point is inside when x*x + y*y <= 1","Count hits over 10,000 trials","Print 4 * inside / total"],"starter":"import random\n\ntotal = 10000\ninside = 0\n\n# drop `total` random points; count those inside the quarter circle\n\n# print the estimate of pi\n","solution":"import random\n\ntotal = 10000\ninside = 0\nfor _ in range(total):\n    x, y = random.random(), random.random()\n    if x*x + y*y <= 1:\n        inside += 1\n\nprint(4 * inside / total)","expected":"3.1416","hint":"A random point (x, y) is inside the quarter circle when `x*x + y*y <= 1`. The fraction inside approximates \u03c0/4, so multiply by 4."},
+ {"id":"random_walk","title":"1-D random walk","brief":"Simulate a 1-D random walk of 1000 steps starting at 0; each step is +1 or −1 with equal chance. Print the final position and the farthest distance from the origin reached.","reqs":["Each step is random.choice([-1, 1])","Update the position across 1000 steps","Track the maximum abs(position)","Print final position and max distance"],"starter":"import random\n\npos = 0\nmax_dist = 0\n\n# take 1000 steps of +1 / -1; track position and farthest distance\n\n# print final position and max distance\n","solution":"import random\n\npos = 0\nmax_dist = 0\nfor _ in range(1000):\n    pos += random.choice([-1, 1])\n    max_dist = max(max_dist, abs(pos))\n\nprint('final:', pos)\nprint('max distance:', max_dist)","expected":"final: -18\nmax distance: 47","hint":"Add `random.choice([-1, 1])` to `pos` each step, and after each step keep `max_dist = max(max_dist, abs(pos))`."}
+]</script>
 
 <script>
 (function(){
   "use strict";
   var BASIC = JSON.parse(document.getElementById("basic-bank").textContent);
-  /* Real Problems moved to 02 Practice → Random Module → "Real Problems", where they are
-     graded. Kept as an empty list so progress, titles and counters need no special-casing. */
-  var PROBLEMS = [];
+  var PROBLEMS = JSON.parse(document.getElementById("problem-bank").textContent);
   var PAGE_ID = (location.pathname.split("/").pop() || "module").replace(/\.html?$/,"");
   var LS = function(k){ return "pystudy_" + PAGE_ID + "_" + k; };
   var SHOW_BASICS = 5;
@@ -409,16 +366,6 @@
   function getCode(id){ try{ return localStorage.getItem(codeKey(id)); }catch(e){ return null; } }
   function setCode(id,v){ try{ localStorage.setItem(codeKey(id), v); }catch(e){} }
 
-  function ranMap(){ try{ return JSON.parse(localStorage.getItem(LS("ran"))||"{}"); }catch(e){ return {}; } }
-  function hasRun(id){ return !!ranMap()[id]; }
-  function setRan(id){ var m=ranMap(); if(m[id]) return; m[id]=1; try{ localStorage.setItem(LS("ran"), JSON.stringify(m)); }catch(e){} }
-  function studiedMap(){ try{ return JSON.parse(localStorage.getItem(LS("studied"))||"{}"); }catch(e){ return {}; } }
-  function isStudied(id){ return !!studiedMap()[id]; }
-  function setStudied(id){ var m=studiedMap(); m[id]=Date.now(); try{ localStorage.setItem(LS("studied"), JSON.stringify(m)); }catch(e){} }
-  function clearStudied(ids){ var m=studiedMap(); ids.forEach(function(id){ delete m[id]; }); try{ localStorage.setItem(LS("studied"), JSON.stringify(m)); }catch(e){} }
-  function savePos(key,id){ try{ localStorage.setItem(LS("pos_"+key), id||""); }catch(e){} }
-  function loadPos(key){ try{ return localStorage.getItem(LS("pos_"+key))||""; }catch(e){ return ""; } }
-
   // ---------- rotation: unseen first, then least-recently-seen ----------
   function chooseBasics(){
     var seen = seenMap();
@@ -439,22 +386,6 @@
 
   // ---------- shared state ----------
   var editors = [];      // {id, get, set, original, solution, out, run}
-  var BLANK = "# Write your code here\n";
-  var PRELOAD = (function(){ try{ return localStorage.getItem("rand_preload_syntax") !== "0"; }catch(e){ return true; } })();
-  (function(){
-    var b = document.getElementById("preload-toggle"); if(!b) return;
-    function paint(){
-      b.querySelector("#preload-lbl").textContent = PRELOAD ? "Syntax preloaded" : "Blank editors";
-      b.querySelector(".ico").textContent = PRELOAD ? "\u25b8" : "\u25cb";
-      b.title = PRELOAD ? "Cells open with the syntax already in them \u2014 just press Run. Click to switch to blank editors." : "Cells open empty so you type it yourself. Click to preload the syntax.";
-    }
-    paint();
-    b.onclick = function(){
-      PRELOAD = !PRELOAD;
-      try{ localStorage.setItem("rand_preload_syntax", PRELOAD ? "1" : "0"); }catch(e){}
-      location.reload();
-    };
-  })();
   var cardEls = {};      // id -> wrap element
   var allCM = [];
   var visibleIds = [];   // ids currently rendered (for progress)
@@ -509,23 +440,23 @@
     var task = document.createElement("div"); task.className="task";
     task.innerHTML = '<span class="ic">&gt;&gt;&gt;</span> '+
       (opts.kind==="basic"
-        ? (PRELOAD ? "The syntax is loaded below \u2014 hit Run to see the output, then edit it and run again." : "Write the code yourself, run it \u2014 then reveal the answer to check.")
+        ? "Write the code yourself, run it \u2014 then reveal the answer to check."
         : "Solve it in the editor, run it \u2014 reveal the model solution only after you\u2019ve tried.");
     panel.appendChild(task);
 
     // editor
     var top = document.createElement("div"); top.className="ed-top";
-    top.innerHTML = '<span class="lbl">Compose \u00b7 Python</span><span class="fname">your_attempt.py</span>';
+    top.innerHTML = '<span class="dots"><i class="r"></i><i class="y"></i><i class="g"></i></span><span class="lbl">your_attempt.py</span>';
     var resetMini = document.createElement("button"); resetMini.className="minibtn"; resetMini.textContent="Reset";
     var runB = document.createElement("button"); runB.className="runbtn"; runB.textContent="\u25b6 Run";
     top.appendChild(resetMini); top.appendChild(runB);
     panel.appendChild(top);
 
-    var ORIGINAL = (opts.kind==="challenge") ? (item.starter || "# Write your code here\n") : (PRELOAD ? (item.solution || "# Write your code here\n") : "# Write your code here\n");
+    var ORIGINAL = (opts.kind==="challenge" && item.starter) ? item.starter : "# Write your code here\n";
     var host = document.createElement("div");
     var ta = document.createElement("textarea"); ta.className="fallback-ta";
     var saved = getCode(item.id);
-    ta.value = (saved!=null && saved!=="" && saved!==BLANK) ? saved : ORIGINAL;
+    ta.value = (saved!=null && saved!=="") ? saved : ORIGINAL;
     host.appendChild(ta); panel.appendChild(host);
 
     var out = document.createElement("pre"); out.className="out"; panel.appendChild(out);
@@ -555,13 +486,7 @@
     var expandB = document.createElement("button"); expandB.className="savebtn"; expandB.textContent="\u2922 Expand";
     var grow = document.createElement("span"); grow.className="grow";
     var note = document.createElement("span"); note.className="savednote";
-    var doneB = document.createElement("button"); doneB.className="donebtn"; doneB.type="button";
-    doneB.innerHTML = "\u2713 Studied \u2014 next \u203a";
-    doneB.title = "Mark this one studied and move on. It drops out of the rail until you reset.";
-    doneB.onclick = function(){ markStudied(item.id); };
-    rec.doneBtn = doneB;
-    acts.appendChild(saveB); acts.appendChild(hintB); acts.appendChild(expandB); acts.appendChild(grow); acts.appendChild(note); acts.appendChild(doneB);
-    if(hasRun(item.id)) doneB.classList.add("ready");
+    acts.appendChild(saveB); acts.appendChild(hintB); acts.appendChild(expandB); acts.appendChild(grow); acts.appendChild(note);
     panel.appendChild(acts);
 
     var hintP = document.createElement("div"); hintP.className="hintpanel";
@@ -592,146 +517,38 @@
     rb.onclick = function(){ exp.classList.add("open"); rb.style.display="none"; };
     rev.appendChild(rb); rev.appendChild(exp); panel.appendChild(rev);
     exp.querySelector(".loadsol").onclick = function(){ rec.set(item.solution); persist(rec); };
-    exp.querySelector(".got").onclick = function(){ setStatus(item.id,"solved"); showToast("Marked solved \u2713"); advanceCarou(item.id); };
+    exp.querySelector(".got").onclick = function(){ setStatus(item.id,"solved"); showToast("Marked solved \u2713"); };
     exp.querySelector(".rev").onclick = function(){ setStatus(item.id,"review"); showToast("Flagged to review \u21bb"); };
 
     wrap.appendChild(panel);
     return wrap;
   }
 
-  // ---------- horizontal carousel: one card on stage, rail + Prev/Next ----------
-  var CAROU = {};
-  function mountCarousel(key, items, opts){
-    var stage = document.getElementById(key);
-    var rail  = document.getElementById(key+"-rail");
-    var nav   = document.getElementById(key+"-nav");
-    if(!stage||!rail||!nav) return;
-    stage.innerHTML=""; rail.innerHTML=""; nav.innerHTML="";
-    var c = CAROU[key] = { all:items, items:items.slice(), idx:0, stage:stage, rail:rail, nav:nav, opts:opts };
-    items.forEach(function(it, i){
-      var wrap = buildCard(it, { kind:opts.kind, num:i+1, palette:opts.palette(i), collapsed:false });
-      wrap.setAttribute("data-ex", it.id);
-      stage.appendChild(wrap);
-    });
-    rail.innerHTML = '<span class="carou-rail-lbl">'+opts.railLabel+'</span><div class="carou-track"></div>'
-      + '<button type="button" class="carou-reset" title="Bring the studied ones back into the rail">\u21ba Reset studied</button>';
-    rail.querySelector(".carou-reset").onclick = function(){ resetStudied(key); };
-    nav.innerHTML = '<button type="button" class="carou-btn prev">\u2039 Prev</button><span class="grow"></span>'
-      + '<span class="carou-pos"></span><span class="grow"></span><button type="button" class="carou-btn next">Next \u203a</button>';
-    nav.querySelector(".prev").onclick = function(){ goCarou(key, c.idx-1); };
-    nav.querySelector(".next").onclick = function(){ goCarou(key, c.idx+1); };
-    refilterCarou(key, loadPos(key));
-  }
-
-  /* which cards are still in play: everything not marked studied */
-  function refilterCarou(key, preferId){
-    var c = CAROU[key]; if(!c) return;
-    c.items = c.all.filter(function(it){ return !isStudied(it.id); });
-    var want = preferId && c.items.some(function(it){ return it.id===preferId; }) ? preferId : (c.items[0] && c.items[0].id);
-    var at = -1; c.items.forEach(function(it,i){ if(it.id===want) at=i; });
-    c.idx = Math.max(0, at);
-    paintCarou(key);
-  }
-  function markStudied(id){
-    setStudied(id);
-    Object.keys(CAROU).forEach(function(key){
-      var c = CAROU[key];
-      if(!c.all.some(function(it){ return it.id===id; })) return;
-      var at = -1; c.items.forEach(function(it,i){ if(it.id===id) at=i; });
-      var nxt = c.items[at+1] || c.items[at-1];
-      var keepY = window.scrollY;
-      refilterCarou(key, nxt && nxt.id);
-      window.scrollTo(0, keepY);
-    });
-    setStatus(id, "solved");
-    showToast("Studied \u2713 \u00b7 hidden until reset");
-  }
-  function resetStudied(key){
-    var c = CAROU[key]; if(!c) return;
-    clearStudied(c.all.map(function(it){ return it.id; }));
-    var keepY = window.scrollY;
-    refilterCarou(key, c.all[0] && c.all[0].id);
-    window.scrollTo(0, keepY);
-    showToast("Rail reset \u00b7 all "+c.all.length+" back");
-  }
-  function paintCarou(key){
-    var c = CAROU[key]; if(!c) return;
-    var m = statusMap();
-    var track = c.rail.querySelector(".carou-track");
-    track.innerHTML = c.items.map(function(it,i){
-      var st = m[it.id];
-      var mark = st==="solved" ? "\u2713" : (st==="review" ? "\u21bb" : (st ? "\u25cf" : ""));
-      return '<button type="button" class="carou-pill'+(i===c.idx?" active":"")+'" data-i="'+i+'">'
-        + '<span class="pn">'+String(i+1).padStart(2,"0")+'</span><span class="pt">'+esc(it.title)+'</span>'
-        + (mark?'<span class="pk">'+mark+'</span>':"")+'</button>';
-    }).join("");
-    Array.prototype.forEach.call(track.querySelectorAll(".carou-pill"), function(b){
-      b.onclick = function(){ goCarou(key, parseInt(b.getAttribute("data-i"),10)); };
-    });
-    var cur0 = c.items[c.idx];
-    var cards = c.stage.children;
-    for(var i=0;i<cards.length;i++){
-      cards[i].classList.toggle("showing", !!cur0 && cards[i].getAttribute("data-ex")===cur0.id);
-      cards[i].classList.remove("collapsed");
-    }
-    c.stage.classList.toggle("carou-empty", c.items.length===0);
-    if(cur0) savePos(key, cur0.id);
-    var cur = c.items[c.idx];
-    var studiedN = c.all.length - c.items.length;
-    c.nav.querySelector(".carou-pos").innerHTML = c.items.length
-      ? c.opts.railLabel+" \u00b7 <b>"+esc(cur?cur.title:"")+"</b> \u00b7 "+(c.idx+1)+" / "+c.items.length+(studiedN?' <span class="carou-studied">'+studiedN+" studied</span>":"")
-      : c.opts.railLabel+' \u00b7 <b>all '+c.all.length+" studied</b> \u2014 hit Reset studied to go again";
-    c.rail.querySelector(".carou-reset").disabled = studiedN===0;
-    c.nav.querySelector(".prev").disabled = c.idx<=0;
-    c.nav.querySelector(".next").disabled = c.idx>=c.items.length-1;
-    var act = track.querySelector(".carou-pill.active");
-    if(act) track.scrollLeft = Math.max(0, act.offsetLeft - track.clientWidth/2 + act.offsetWidth/2);
-    setTimeout(refreshAllCM, 0);
-  }
-  function repaintRailMarks(){
-    var m = statusMap();
-    Object.keys(CAROU).forEach(function(key){
-      var c = CAROU[key];
-      var pills = c.rail.querySelectorAll(".carou-pill");
-      for(var i=0;i<pills.length;i++){
-        var it = c.items[i]; if(!it) continue;
-        var st = m[it.id];
-        var mark = st==="solved" ? "\u2713" : (st==="review" ? "\u21bb" : (st ? "\u25cf" : ""));
-        var k = pills[i].querySelector(".pk");
-        if(mark && !k){ k = document.createElement("span"); k.className="pk"; pills[i].appendChild(k); }
-        if(k) k.textContent = mark;
-      }
-    });
-  }
-  function carouEmptyNote(){}
-  function goCarou(key, i){
-    var c = CAROU[key]; if(!c) return;
-    if(i<0||i>=c.items.length) return;
-    var keepY = window.scrollY;               // screen stays put
-    c.idx = i; paintCarou(key);
-    window.scrollTo(0, keepY);
-    var it = c.items[i]; if(it) markExplored(it.id);
-  }
-  function advanceCarou(id){            // after a solve, slide to the next one
-    Object.keys(CAROU).forEach(function(key){
-      var c = CAROU[key];
-      var at = -1; c.items.forEach(function(it,i){ if(it.id===id) at=i; });
-      if(at>=0 && at<c.items.length-1) goCarou(key, at+1);
-    });
-  }
   // ---------- render tiers ----------
   var shownBasics = [];
   function renderBasics(){
+    var mount = document.getElementById("basics");
+    mount.innerHTML = "";
     // drop old basic editors from the shared list
     editors = editors.filter(function(r){ return PROBLEMS.some(function(p){return p.id===r.id;}); });
     shownBasics = chooseBasics();
-    mountCarousel("basics", shownBasics, { kind:"basic", railLabel:"\u00a7 I Basics", palette:function(i){ return PALETTE[i % PALETTE.length]; } });
+    shownBasics.forEach(function(ex, idx){
+      var wrap = buildCard(ex, { kind:"basic", num:idx+1, palette:PALETTE[idx % PALETTE.length], collapsed: idx!==0 });
+      mount.appendChild(wrap);
+    });
     markSeen(shownBasics);
     document.getElementById("basics-cap").textContent =
-      "\u2014 showing "+shownBasics.length+" of "+BASIC.length+" \u00b7 tagged basic \u00b7 one at a time \u00b7 rotates each visit";
+      "\u2014 showing "+shownBasics.length+" of "+BASIC.length+" \u00b7 tagged basic \u00b7 rotates each visit";
     recomputeVisible();
     paintProgress();
     setTimeout(refreshAllCM, 0);
+  }
+  function renderProblems(){
+    var mount = document.getElementById("problems");
+    PROBLEMS.forEach(function(pr, idx){
+      var wrap = buildCard(pr, { kind:"challenge", num:idx+1, palette:PALETTE[5], collapsed:true });
+      mount.appendChild(wrap);
+    });
   }
 
   function recomputeVisible(){
@@ -760,7 +577,6 @@
     });
     document.getElementById("pfill").style.width = (n? Math.round(explored/n*100):0)+"%";
     document.getElementById("ppc").textContent = (solved?solved+" solved \u00b7 ":"")+explored+" / "+n+" explored";
-    repaintRailMarks();
     if(n>0 && solved===n && !paintProgress._cheer){ paintProgress._cheer=true; confetti(); showToast("\ud83c\udf8a All "+n+" solved \u2014 mastered!"); }
   }
   function refreshAllCM(){ allCM.forEach(function(cm){ try{ cm.refresh(); }catch(e){} }); }
@@ -810,101 +626,11 @@
   var pyodide=null, pyReady=false, pyLoading=null;
   var led=document.getElementById("pyled"), ledT=document.getElementById("pyled-t");
   function setLed(t,c){ led.className="pyled "+(c||""); ledT.textContent=t; }
-  /* Bare loadPyodide() is what breaks on iPadOS Safari ("Can't find variable: loadPyodide")
-     and what hangs when the self-hosted copy 404s. Poll for the global, pass an explicit
-     indexURL, and fall through a list of mirrors. */
-  /* CDN first, deliberately. The self-hosted _lib mirror is often partial (pyodide.js
-     present but wheels/wasm missing), and a partial mirror is worse than none: it satisfies
-     the probe, then stalls the wasm download with no way back. practice-engine.js has always
-     been CDN-first and has always worked locally — this now matches it. */
-  var PY_BASES = [
-    "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-    "https://fastly.jsdelivr.net/pyodide/v0.26.4/full/",
-    "https://unpkg.com/pyodide@0.26.4/"
-  ];
-  function pyLoadScript(src){
-    return new Promise(function(res, rej){
-      var el = document.createElement("script");
-      el.src = src; el.async = true;
-      var done=false, t=setTimeout(function(){ if(!done){ done=true; rej(new Error("timeout")); } }, 30000);
-      el.onload  = function(){ if(done) return; done=true; clearTimeout(t); res(); };
-      el.onerror = function(){ if(done) return; done=true; clearTimeout(t); rej(new Error("404")); };
-      document.head.appendChild(el);
-    });
-  }
-  function pyWaitGlobal(ms){
-    return new Promise(function(res, rej){
-      var t0 = Date.now();
-      (function poll(){
-        if(typeof window.loadPyodide === "function") return res();
-        if(Date.now()-t0 > ms) return rej(new Error("loadPyodide never appeared"));
-        setTimeout(poll, 60);
-      })();
-    });
-  }
-  /* A base is only usable if its runtime files are REALLY there. Two traps this closes:
-     (1) a static server that answers missing files with a 200 + HTML fallback page, which
-     makes a bare res.ok probe pass and then feeds HTML to the wasm loader; so parse the
-     lock file and demand real JSON. (2) loadPyodide itself stalling mid-download with no
-     way out — so race it against a timeout and fall through to the next mirror. */
-  var PY_BOOT_MS = 75000;
-  function pyTimeout(promise, ms, label){
-    return new Promise(function(res, rej){
-      var done=false;
-      var t=setTimeout(function(){ if(!done){ done=true; rej(new Error(label+" timed out after "+Math.round(ms/1000)+"s")); } }, ms);
-      promise.then(function(v){ if(done) return; done=true; clearTimeout(t); res(v); },
-                   function(e){ if(done) return; done=true; clearTimeout(t); rej(e); });
-    });
-  }
-  async function pyBaseLive(base){
-    try{
-      var r = await pyTimeout(fetch(base + "pyodide-lock.json", { method: "GET" }), 8000, "probe");
-      if(!r.ok) return false;
-      var txt = await r.text();
-      var lock = JSON.parse(txt);            // HTML fallback pages die here, as intended
-      return !!(lock && (lock.packages || lock.info));
-    }catch(e){ return false; }
-  }
-  function pyDropGlobal(){
-    try{ delete window.loadPyodide; }catch(_){ window.loadPyodide = undefined; }
-    window.__pyBase = null;
-  }
-  window.__pyTrace = [];
-  async function bootPyodide(){
-    var last = null;
-    window.__pyTrace = [];
-    for(var i=0; i<PY_BASES.length; i++){
-      var base = PY_BASES[i];
-      var label = /^https?:/.test(base) ? base.replace(/^https?:\/\//,"").split("/")[0] : "local _lib";
-      setLed("loading Python\u2026 (" + label + ")", "");
-      if(!(await pyBaseLive(base))){
-        window.__pyTrace.push(base + " \u2014 no usable runtime (missing or not JSON)");
-        last = new Error("no runtime at " + base);
-        continue;
-      }
-      try{
-        if(typeof window.loadPyodide !== "function" || window.__pyBase !== base){
-          pyDropGlobal();
-          await pyLoadScript(base + "pyodide.js");
-          await pyWaitGlobal(8000);
-          window.__pyBase = base;
-        }
-        var py = await pyTimeout(window.loadPyodide({ indexURL: base }), PY_BOOT_MS, "runtime download from " + label);
-        window.__pyTrace.push(base + " \u2014 ok");
-        return py;
-      }catch(e){
-        window.__pyTrace.push(base + " \u2014 " + (e && e.message || e));
-        last = e;
-        pyDropGlobal();
-      }
-    }
-    throw new Error("Python runtime could not load. Tried:\n  " + window.__pyTrace.join("\n  "));
-  }
   async function ensurePy(){
     if(pyReady) return pyodide; if(pyLoading) return pyLoading;
     setLed("loading Python…","");
     pyLoading = (async function(){
-      pyodide = await bootPyodide();
+      pyodide = await loadPyodide();
       pyodide.globals.set("__js_input", function(p){ var r=window.prompt(p||""); return r===null?"":r; });
       await pyodide.runPythonAsync(
         "import builtins, os\n"+
@@ -916,7 +642,6 @@
         "builtins.input=__input\n");
       pyReady=true; setLed("Python ready","ready"); return pyodide;
     })();
-    pyLoading.catch(function(){ pyLoading = null; setLed("Python failed — press Run to retry","err"); });
     return pyLoading;
   }
   var FIGCODE =
@@ -930,18 +655,11 @@
     "        out.append(base64.b64encode(b.getvalue()).decode())\n"+
     "    plt.close('all'); return out\n"+
     "__nbx_capture_figs()\n";
-  var __pyUp=false;
-  function pyReadyFlag(){ return __pyUp; }
   async function runCell(rec){
     var out=rec.out; out.className="out show"; out.textContent=""; rec.run.disabled=true;
-    var runLabel = rec.run.innerHTML;
-    out.classList.add("waiting");
-    out.textContent = pyReadyFlag() ? "running\u2026" : "loading Python\u2026 first run downloads ~10 MB, this takes a moment";
-    rec.run.innerHTML = "\u25cf Running\u2026";
-    var buf="";
-    function append(s){ buf+=s; out.classList.remove("waiting"); out.textContent=buf; }
+    var buf=""; function append(s){ buf+=s; out.textContent=buf; }
     try{
-      var py=await ensurePy(); __pyUp=true;
+      var py=await ensurePy();
       py.setStdout({batched:append}); py.setStderr({batched:append});
       await py.loadPackagesFromImports(rec.get());
       var res=await py.runPythonAsync(rec.get());
@@ -952,17 +670,9 @@
       }
       var figsProxy=await py.runPythonAsync(FIGCODE); var figs=figsProxy.toJs(); figsProxy.destroy();
       figs.forEach(function(b64){ var img=new Image(); img.src="data:image/png;base64,"+b64; out.appendChild(img); });
-      if(!buf && !figs.length){
-        out.classList.add("noout");
-        append("ran cleanly \u2014 this cell produced no output. Wrap the last line in print() to see a value.");
-      }
+      if(!buf && !figs.length) append("(ran \u2014 no output)");
     }catch(e){ out.classList.add("err"); append((buf?buf+"\n":"")+(e&&e.message?e.message:String(e))); }
-    finally{
-      rec.run.disabled=false; rec.run.innerHTML = runLabel;
-      out.classList.remove("waiting");
-      setRan(rec.id);                                   // Run never advances — it just unlocks "Studied"
-      if(rec.doneBtn) rec.doneBtn.classList.add("ready");
-    }
+    finally{ rec.run.disabled=false; }
   }
   document.getElementById("runall").onclick = async function(){ for(var i=0;i<editors.length;i++){ await runCell(editors[i]); markExplored(editors[i].id); } };
   document.getElementById("resetall").onclick = function(){
@@ -1028,6 +738,7 @@
   else renderSync();
 
   // ---------- go ----------
+  renderProblems();
   renderBasics();
   window.addEventListener("load", function(){ setTimeout(refreshAllCM, 50); });
   if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ setTimeout(refreshAllCM, 0); }); }

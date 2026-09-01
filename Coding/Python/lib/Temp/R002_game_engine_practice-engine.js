@@ -49,8 +49,7 @@ window.CommonplacePractice = (function () {
   var C={ brass:"#a98a4b", ok:"#2f8f5b", err:"#b3261e" };
 
   /* ===================== shared Pyodide engine ===================== */
-  var PY_BASES=["https://cdn.jsdelivr.net/pyodide/v0.26.4/full/","https://fastly.jsdelivr.net/pyodide/v0.26.4/full/","https://unpkg.com/pyodide@0.26.4/"];
-  var PY_BASE=PY_BASES[0];
+  var PY_BASE="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
   var py=null, pyState="idle", pyPromise=null, enginePills=[], engineSubs=[];
   var ENGINE_MAP={ idle:[C.brass,"CPython idle"], boot:[C.brass,"loading CPython…"], ready:[C.ok,"CPython ready"],
                    nodb:[C.err,"offline — connect to load Python"], err:[C.err,"engine failed to load"] };
@@ -62,27 +61,12 @@ window.CommonplacePractice = (function () {
   }
   function setEngine(state){ pyState=state; enginePills.forEach(function(p){ applyPill(p,state); }); engineSubs.forEach(function(cb){ try{ cb(state); }catch(e){} }); }
   function registerPill(id){ if(!id) return; var p=document.getElementById(id); if(p && enginePills.indexOf(p)<0){ enginePills.push(p); applyPill(p,pyState); } }
-  var __sc={};
   function loadScript(src){
-    if(__sc[src]) return __sc[src];
-    __sc[src]=new Promise(function(res,rej){
-      var s=document.createElement("script"); s.src=src; s.async=true; s.crossOrigin="anonymous"; s.setAttribute("data-pmb",src);
-      var done=false, t=setTimeout(function(){ if(!done){done=true;rej(new Error("timeout"));} },45000);
-      s.onload=function(){ if(done)return; done=true; clearTimeout(t); res(); };
-      s.onerror=function(){ if(done)return; done=true; clearTimeout(t); rej(new Error("load fail")); };
-      document.head.appendChild(s);
-    });
-    __sc[src].catch(function(){ delete __sc[src]; });
-    return __sc[src];
-  }
-  function waitForGlobal(ms){
     return new Promise(function(res,rej){
-      var t0=Date.now();
-      (function poll(){
-        if(typeof window.loadPyodide==="function") return res();
-        if(Date.now()-t0>ms) return rej(new Error("loadPyodide missing"));
-        setTimeout(poll,60);
-      })();
+      if(document.querySelector('script[data-pmb="'+src+'"]')) return res();
+      var s=document.createElement("script"); s.src=src; s.setAttribute("data-pmb",src);
+      s.onload=res; s.onerror=function(){ rej(new Error("load fail")); };
+      document.head.appendChild(s);
     });
   }
   function ensurePy(){
@@ -90,17 +74,13 @@ window.CommonplacePractice = (function () {
     if(pyPromise) return pyPromise;
     setEngine("boot");
     pyPromise=(async function(){
-      var lastErr=null;
-      for(var i=0;i<PY_BASES.length;i++){
-        var base=PY_BASES[i];
-        try{
-          if(typeof window.loadPyodide!=="function"){ await loadScript(base+"pyodide.js"); await waitForGlobal(8000); }
-          py=await window.loadPyodide({ indexURL: base });
-          PY_BASE=base; setEngine("ready"); return py;
-        }catch(e){ lastErr=e; try{ delete window.loadPyodide; }catch(_){ window.loadPyodide=undefined; } }
+      try{
+        if(typeof window.loadPyodide!=="function") await loadScript(PY_BASE+"pyodide.js");
+        py=await window.loadPyodide({ indexURL: PY_BASE });
+        setEngine("ready"); return py;
+      }catch(e){
+        setEngine(navigator.onLine===false?"nodb":"err"); pyPromise=null; throw e;
       }
-      setEngine(navigator.onLine===false?"nodb":"err"); pyPromise=null;
-      throw new Error("Python runtime could not load — check your connection and reload. ("+(lastErr&&lastErr.message||"unknown")+")");
     })();
     return pyPromise;
   }
@@ -259,7 +239,7 @@ window.CommonplacePractice = (function () {
     PANELS = PANELS.filter(function(p){ return p.storePrefix !== cfg.storePrefix; });
     PANELS.push({ label: cfg.label || cfg.storePrefix, storePrefix: cfg.storePrefix, exercises: EX, store: store });
     var els={};
-    var activeId=null, allDone=false, secFilter="all";
+    var activeId=null, allDone=false;
     var drillMode="list", drillQueue=[], drillIdx=0;
 
     function computeAllDone(){ allDone=EX.every(function(e){return !!store.solved[e.id];}); return allDone; }
@@ -283,14 +263,8 @@ window.CommonplacePractice = (function () {
         +'<span class="pmb-dots">'+dots(ex.diff)+'</span>'+(solved?'<span class="pmb-chk">✓</span>':'');
       card.appendChild(head);
       var prompt=document.createElement("p"); prompt.className="pmb-prompt"; prompt.innerHTML=ex.prompt; card.appendChild(prompt);
-      /* Real Problems carry a requirements checklist; syntax drills do not. */
-      if(ex.reqs && ex.reqs.length){
-        var rq=document.createElement("div"); rq.className="pmb-reqs";
-        rq.innerHTML='<span class="pmb-reqs-kick">REQUIREMENTS</span><ul>'+ex.reqs.map(function(r){ return "<li>"+r+"</li>"; }).join("")+"</ul>";
-        card.appendChild(rq);
-      }
 
-      var ed=makeEditor(ex, store.code[ex.id]||ex.starter||"",
+      var ed=makeEditor(ex, store.code[ex.id]||"",
         function(v){ store.code[ex.id]=v; store.saveCode(); },
         function(){ check(ex,card,ed); }, "Write your Python here…  ⌘/Ctrl + Enter to run");
       card.appendChild(ed.block);
@@ -317,8 +291,7 @@ window.CommonplacePractice = (function () {
 
     function advance(){
       var idx=-1,i; for(i=0;i<EX.length;i++) if(EX[i].id===activeId){ idx=i; break; }
-      for(var k=1;k<=EX.length;k++){ var e=EX[(idx+k)%EX.length]; if(store.solved[e.id]) continue; if(secFilter!=="all" && (e.sec||"Other")!==secFilter) continue; activeId=e.id; renderCard(); renderTabs(true); scrollToTabs(); return; }
-      if(secFilter!=="all"){ secFilter="all"; for(var j=1;j<=EX.length;j++){ var e2=EX[(idx+j)%EX.length]; if(!store.solved[e2.id]){ activeId=e2.id; renderCard(); renderTabs(true); scrollToTabs(); return; } } }
+      for(var k=1;k<=EX.length;k++){ var e=EX[(idx+k)%EX.length]; if(!store.solved[e.id]){ activeId=e.id; renderCard(); renderTabs(true); scrollToTabs(); return; } }
       renderCard(); renderTabs();
     }
 
@@ -380,49 +353,14 @@ window.CommonplacePractice = (function () {
       });
     }
 
-    function secOrder(){
-      var seen=[]; EX.forEach(function(e){ var s=e.sec||"Other"; if(seen.indexOf(s)<0) seen.push(s); }); return seen;
-    }
     function renderTabs(scroll){
       var host=els.tabs; computeAllDone();
-      var order=secOrder();
-      if(secFilter!=="all" && order.indexOf(secFilter)<0) secFilter="all";
-      var pool= allDone ? EX : EX.filter(function(e){ return !store.solved[e.id] || e.id===activeId; });
-      // group by module, keeping each module's problems together and in order
-      var byS={}; pool.forEach(function(e){ var s=e.sec||"Other"; (byS[s]=byS[s]||[]).push(e); });
-      var groups=order.filter(function(s){ return byS[s] && (secFilter==="all"||s===secFilter); });
-      // A separator per tab is noise: only label groups when grouping actually buys something.
-      var worthGrouping = order.length>1 && order.length<EX.length && groups.some(function(s){ return byS[s].length>1; });
-
-      var chips=['<button type="button" class="pmb-mod'+(secFilter==="all"?" active":"")+'" data-sec="all">All <span class="pmb-mod-n">'+pool.length+'</span></button>'];
-      order.forEach(function(s){
-        var left=(byS[s]||[]).length, total=EX.filter(function(e){return (e.sec||"Other")===s;}).length;
-        var doneAll=left===0;
-        chips.push('<button type="button" class="pmb-mod'+(secFilter===s?" active":"")+(doneAll?" done":"")+'" data-sec="'+esc(s)+'">'+esc(s)+'<span class="pmb-mod-n">'+(doneAll?"✓":left+"/"+total)+'</span></button>');
-      });
-
-      var track=groups.map(function(s){
-        var inner=byS[s].map(function(e){
-          var isA=e.id===activeId, isD=!!store.solved[e.id];
-          return '<button class="pmb-tab'+(isA?" active":"")+'" data-id="'+esc(e.id)+'"><span class="pmb-tab-id">'+esc(e.id.toUpperCase())+'</span><span class="pmb-tab-t">'+esc(e.title)+'</span>'+(isD?'<span class="pmb-tab-chk">✓</span>':'')+'</button>';
-        }).join("");
-        var sep=(secFilter==="all" && worthGrouping)?'<span class="pmb-tab-sep">'+esc(s)+'</span>':'';
-        return sep+inner;
+      var tabs= allDone ? EX : EX.filter(function(e){ return !store.solved[e.id] || e.id===activeId; });
+      var track=tabs.map(function(e){
+        var isA=e.id===activeId, isD=!!store.solved[e.id];
+        return '<button class="pmb-tab'+(isA?" active":"")+'" data-id="'+esc(e.id)+'"><span class="pmb-tab-id">'+esc(e.id.toUpperCase())+'</span><span class="pmb-tab-t">'+esc(e.title)+'</span>'+(isD?'<span class="pmb-tab-chk">✓</span>':'')+'</button>';
       }).join("");
-
-      host.innerHTML=(worthGrouping?'<div class="pmb-mods">'+chips.join("")+'</div>':'')
-        +'<div class="pmb-tabs-row"><span class="pmb-tabs-label">'+(allDone?"all solved":"remaining")+'</span><div class="pmb-tabs-track">'+(track||'<span class="pmb-tab-sep">nothing left in this module</span>')+'</div></div>';
-      Array.prototype.forEach.call(host.querySelectorAll(".pmb-mod"),function(b){
-        b.addEventListener("click",function(){
-          secFilter=b.getAttribute("data-sec");
-          if(secFilter!=="all"){
-            var first=EX.filter(function(e){ return (e.sec||"Other")===secFilter && (allDone||!store.solved[e.id]); })[0]
-                   || EX.filter(function(e){ return (e.sec||"Other")===secFilter; })[0];
-            if(first){ activeId=first.id; renderCard(); }
-          }
-          renderTabs(true);
-        });
-      });
+      host.innerHTML='<span class="pmb-tabs-label">'+(allDone?"all solved":"remaining")+'</span><div class="pmb-tabs-track">'+track+'</div>';
       Array.prototype.forEach.call(host.querySelectorAll(".pmb-tab"),function(b){
         b.addEventListener("click",function(){ activeId=b.getAttribute("data-id"); renderCard(); renderTabs(true); });
       });
@@ -637,16 +575,6 @@ window.CommonplacePractice = (function () {
 ".pmb-progfill{height:100%;background:#2f6b4f;transition:width .3s;}",
 ".pmb-progtext{font-family:'JetBrains Mono',monospace;font-size:12px;color:#41564a;white-space:nowrap;}",
 ".pmb-tabs{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;background:rgba(236,238,228,.92);backdrop-filter:blur(8px);border-top:1px solid #cdbfa3;border-bottom:1px solid #cdbfa3;margin:0 0 18px;}",
-".pmb-tabs{flex-direction:column;align-items:stretch;gap:0;}",
-".pmb-tabs-row{display:flex;align-items:center;gap:12px;}",
-".pmb-mods{display:flex;flex-wrap:wrap;gap:6px;padding:9px 0 7px;border-bottom:1px dashed #d9cdb4;}",
-".pmb-mod{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.4px;color:#41564a;background:#f3f2e7;border:1px solid #d9cdb4;}",
-".pmb-mod:hover{border-color:#2f6b4f;}",
-".pmb-mod .pmb-mod-n{font-size:10px;color:#7a8c80;}",
-".pmb-mod.done{opacity:.55;}.pmb-mod.done .pmb-mod-n{color:#2f8f5b;}",
-".pmb-mod.active{background:#211b13;border-color:#211b13;color:#efe7d6;}.pmb-mod.active .pmb-mod-n{color:#8fe0b0;}",
-".pmb-tab-sep{flex:0 0 auto;align-self:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#6b5f49;padding:0 4px 0 8px;border-left:1px solid #d9cdb4;white-space:nowrap;}",
-".pmb-tabs-track>.pmb-tab-sep:first-child{border-left:0;padding-left:0;}",
 ".pmb-tabs-label{flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#7a8c80;}",
 ".pmb-tabs-track{display:flex;gap:8px;overflow-x:auto;padding:9px 0;}",
 ".pmb-tab{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:20px;cursor:pointer;max-width:240px;font-family:'JetBrains Mono',monospace;border:1px solid #cdbfa3;background:#fbfcf6;}",
@@ -664,12 +592,6 @@ window.CommonplacePractice = (function () {
 ".pmb-dots{display:inline-flex;gap:3px;}.pmb-dot{width:6px;height:6px;border-radius:50%;background:#cdbfa3;}.pmb-dot.on{background:#2f6b4f;}",
 ".pmb-chk{color:#2f8f5b;font-weight:700;margin-left:4px;}",
 ".pmb-prompt{margin:10px 0 12px;color:#41564a;font-family:'EB Garamond',serif;font-size:16px;}.pmb-prompt code{font-family:'JetBrains Mono',monospace;font-size:.92em;}",
-".pmb-reqs{margin:0 0 12px;padding:10px 14px;background:#f4f5ec;border:1px solid #e0e3d4;border-left:3px solid #b0612f;border-radius:4px;}",
-".pmb-reqs-kick{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#8a7a5c;margin-bottom:6px;}",
-".pmb-reqs ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;}",
-".pmb-reqs li{font-family:'EB Garamond',serif;font-size:15px;color:#41564a;padding-left:14px;position:relative;}",
-".pmb-reqs li:before{content:'\\203A';position:absolute;left:0;color:#b0612f;}",
-".pmb-reqs code{font-family:'JetBrains Mono',monospace;font-size:.9em;}",
 ".pmb-tray{margin:10px 0 0;}",
 ".pmb-keys-toggle{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#41564a;background:#f4f5ec;border:1px solid #d2dacb;border-radius:8px;padding:8px 13px;cursor:pointer;min-height:38px;}",
 ".pmb-tray.open .pmb-keys-toggle{border-color:#2f6b4f;}.pmb-caret{color:#7a8c80;font-size:11px;}",

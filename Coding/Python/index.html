@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Python" />
+<meta name="theme-color" content="#234f3b" />
+<link rel="manifest" href="pwa/manifest.json" />
+<link rel="apple-touch-icon" href="pwa/icon-180.png" />
+<style>body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}</style>
 <title>Python · Commonplace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -493,6 +501,18 @@ body.cc-focus-lock{overflow:hidden;}
     <section class="sec">
       <div class="sec-head">
         <span class="n">§ II</span>
+        <h2>Random Module</h2>
+        <span class="count" id="rand-count">—</span>
+        <span class="pmb-engine" id="rand-engine"><span class="pmb-led"></span><span class="pmb-led-txt">CPython idle</span></span>
+        <span class="ln"></span>
+      </div>
+      <p class="sec-desc">The same ground as the <b>Random Module</b> learn tab, as gradeable practice — seeded or property-checked so the expected output is exact every run. Filter by topic with the chips below.</p>
+      <div id="rand-root"></div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <span class="n">§ III</span>
         <h2>Data Libraries</h2>
         <span class="count" id="lib-count">—</span>
         <span class="pmb-engine" id="lib-engine"><span class="pmb-led"></span><span class="pmb-led-txt">CPython idle</span></span>
@@ -504,7 +524,7 @@ body.cc-focus-lock{overflow:hidden;}
 
     <section class="sec">
       <div class="sec-head">
-        <span class="n">§ III</span>
+        <span class="n">§ IV</span>
         <h2>100 Days (Angela Yu)</h2>
         <span class="count" id="days-count">—</span>
         <span class="pmb-engine" id="days-engine"><span class="pmb-led"></span><span class="pmb-led-txt">CPython idle</span></span>
@@ -516,7 +536,7 @@ body.cc-focus-lock{overflow:hidden;}
 
     <section class="sec">
       <div class="sec-head">
-        <span class="n">§ IV</span>
+        <span class="n">§ V</span>
         <h2>Warm-ups</h2>
         <span class="count" id="pmb-count">—</span>
         <span class="pmb-engine" id="pmb-engine"><span class="pmb-led"></span><span class="pmb-led-txt">CPython idle</span></span>
@@ -528,7 +548,7 @@ body.cc-focus-lock{overflow:hidden;}
 
     <section class="sec" id="hundred-days">
       <div class="sec-head">
-        <span class="n">§ V</span>
+        <span class="n">§ VI</span>
         <h2>Imported History</h2>
         <span class="count" id="hd-count">—</span>
         <span class="ln"></span>
@@ -574,22 +594,59 @@ body.cc-focus-lock{overflow:hidden;}
   function setBtn(b,txt,dis){ if(b){ b.innerHTML=txt; b.disabled=dis; } }
   // Pyodide is lazy-loaded on first Run (not at startup) to keep page load fast.
   var PY_VERSION = "v0.26.4";
-  var PY_BASE = "https://cdn.jsdelivr.net/pyodide/" + PY_VERSION + "/full/";
+  var PY_BASES = [
+    "https://cdn.jsdelivr.net/pyodide/" + PY_VERSION + "/full/",
+    "https://fastly.jsdelivr.net/pyodide/" + PY_VERSION + "/full/",
+    "https://unpkg.com/pyodide@" + PY_VERSION.slice(1) + "/"
+  ];
+  var PY_BASE = PY_BASES[0];
+  var __scriptCache={};
   function loadScript(src){
-    return new Promise(function(resolve, reject){
-      if(document.querySelector('script[src="'+src+'"]')) return resolve();
+    if(__scriptCache[src]) return __scriptCache[src];
+    __scriptCache[src]=new Promise(function(resolve, reject){
       var s=document.createElement("script");
-      s.src=src; s.onload=resolve;
-      s.onerror=function(){ reject(new Error("Failed to load "+src)); };
+      s.src=src; s.async=true; s.crossOrigin="anonymous";
+      var done=false;
+      var timer=setTimeout(function(){ if(!done){ done=true; reject(new Error("timeout "+src)); } }, 45000);
+      s.onload=function(){ if(done) return; done=true; clearTimeout(timer); resolve(); };
+      s.onerror=function(){ if(done) return; done=true; clearTimeout(timer); reject(new Error("Failed to load "+src)); };
       document.head.appendChild(s);
     });
+    __scriptCache[src].catch(function(){ delete __scriptCache[src]; });
+    return __scriptCache[src];
+  }
+  // iPadOS Safari: onload can fire before the global is attached, and a blocked
+  // CDN leaves it undefined -> "Can't find variable: loadPyodide". Poll, then fall back.
+  function waitForGlobal(ms){
+    return new Promise(function(resolve, reject){
+      var t0=Date.now();
+      (function poll(){
+        if(typeof window.loadPyodide==="function") return resolve(window.loadPyodide);
+        if(Date.now()-t0>ms) return reject(new Error("loadPyodide missing"));
+        setTimeout(poll, 60);
+      })();
+    });
+  }
+  async function bootPyodide(){
+    var lastErr=null;
+    for(var i=0;i<PY_BASES.length;i++){
+      var base=PY_BASES[i];
+      try{
+        if(typeof window.loadPyodide!=="function"){
+          await loadScript(base + "pyodide.js");
+          await waitForGlobal(8000);
+        }
+        var p=await window.loadPyodide({ indexURL: base });
+        PY_BASE=base; return p;
+      }catch(e){ lastErr=e; try{ delete window.loadPyodide; }catch(_){ window.loadPyodide=undefined; } }
+    }
+    throw new Error("Python runtime could not load. Check your connection and reload. ("+(lastErr&&lastErr.message||"unknown")+")");
   }
   async function ensurePy(){
     if(pyReady) return pyodide;
     if(pyLoading) return pyLoading;
     pyLoading=(async function(){
-      await loadScript(PY_BASE + "pyodide.js");   // defines loadPyodide FIRST
-      pyodide=await loadPyodide({ indexURL: PY_BASE });
+      pyodide=await bootPyodide();
       window.__inq=[];
       pyodide.globals.set("__js_input", function(p){
         if(window.__inq && window.__inq.length){ var v=window.__inq.shift(); return v==null?'':String(v); }
@@ -598,6 +655,7 @@ body.cc-focus-lock{overflow:hidden;}
       await pyodide.runPythonAsync("import builtins\ndef __input(prompt=''):\n    r=__js_input(str(prompt))\n    print(str(prompt)+str(r))\n    return str(r)\nbuiltins.input=__input\n");
       pyReady=true; return pyodide;
     })();
+    pyLoading.catch(function(){ pyLoading=null; });
     return pyLoading;
   }
   window.__runPanel=async function(key, btn){
@@ -993,6 +1051,7 @@ sb.auth.getSession().then(function(res){
     }
   }
   panel("fund-root", window.FUND_PRACTICE_EX, "commonplace_practice_fund", "fund-engine", "fund-count", "Fundamentals");
+  panel("rand-root", window.RANDOM_PRACTICE_EX, "commonplace_practice_rand", "rand-engine", "rand-count", "Random Module");
   panel("lib-root",  window.LIB_PRACTICE_EX,  "commonplace_practice_lib",  "lib-engine",  "lib-count",  "Data Libraries");
   panel("days-root", window.DAYS_PRACTICE_EX, "commonplace_practice_days", "days-engine", "days-count", "100 Days (Angela Yu)");
   panel("pmb-root",  window.PY_PRACTICE_EX,   "commonplace_pypractice",    "pmb-engine",  "pmb-count",  "Warm-ups");
@@ -1005,6 +1064,7 @@ sb.auth.getSession().then(function(res){
   // Practice sections in rotation order. History (§V) is collapsible but never auto-featured.
   var ROT = [
     { key:"fund", prefix:"commonplace_practice_fund", label:"Fundamentals",        find:"#fund-root" },
+    { key:"rand", prefix:"commonplace_practice_rand", label:"Random Module",      find:"#rand-root" },
     { key:"lib",  prefix:"commonplace_practice_lib",  label:"Data Libraries",      find:"#lib-root"  },
     { key:"days", prefix:"commonplace_practice_days", label:"100 Days (Angela Yu)", find:"#days-root" },
     { key:"pmb",  prefix:"commonplace_pypractice",    label:"Warm-ups",            find:"#pmb-root"  }
@@ -1099,7 +1159,7 @@ sb.auth.getSession().then(function(res){
       sb: (typeof sb!=="undefined"?sb:null),
       getUser: function(){ return (typeof currentUser!=="undefined")?currentUser:null; },
       sections: ROT.map(function(r){
-        var exMap={fund:window.FUND_PRACTICE_EX, lib:window.LIB_PRACTICE_EX, days:window.DAYS_PRACTICE_EX, pmb:window.PY_PRACTICE_EX};
+        var exMap={fund:window.FUND_PRACTICE_EX, rand:window.RANDOM_PRACTICE_EX, lib:window.LIB_PRACTICE_EX, days:window.DAYS_PRACTICE_EX, pmb:window.PY_PRACTICE_EX};
         return { key:r.key, prefix:r.prefix, label:r.label, exercises:exMap[r.key]||[], sec:sectionFor(r.find) };
       }),
       openSection: function(sec){ if(glPane&&sec){ openExclusive(glPane,sec); window.scrollTo({ top: sec.getBoundingClientRect().top+window.scrollY-12, behavior:"smooth" }); } },

@@ -177,7 +177,12 @@
     Array.prototype.forEach.call(wrap.querySelectorAll(".cpx2-pill"), function (b) {
       b.addEventListener("click", function () {
         var ex = (window.exercises || []).filter(function (e) { return e.id === b.getAttribute("data-ex"); })[0];
-        if (ex && window.loadIntoEditor) window.loadIntoEditor(ex);
+        if (!ex || !window.loadIntoEditor) return;
+        /* park the in-progress draft under the item we're leaving before the swap;
+           loadIntoEditor restores this problem's own draft on arrival, so the pill
+           strip can be walked freely without a confirm and without losing edits */
+        if (window.__draftFlush) window.__draftFlush();
+        window.loadIntoEditor(ex);
       });
     });
   }

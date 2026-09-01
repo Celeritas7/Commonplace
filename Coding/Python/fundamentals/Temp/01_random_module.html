@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="../../../_lib/codemirror/codemirror.min.css">
 <script src="../../../_lib/codemirror/codemirror.min.js"></script>
 <script src="../../../_lib/codemirror/mode/python/python.min.js"></script>
+<script src="../../../_lib/pyodide/pyodide.js"></script>
 <script src="../../../_lib/supabase.js"></script>
 <script>
 /* Self-hosted _lib is preferred. If any of it is unreachable (offline mirror missing,
@@ -283,7 +284,7 @@
     <span class="wdots"><i class="r"></i><i class="y"></i><i class="g"></i></span>
     <div class="k">Fundamentals · 01</div>
     <h1>Python <code>random</code></h1>
-    <p class="sub">Practice the <code>random</code> module hands-on — a fresh set of basics each visit. Real problems live in the Practice tab.</p>
+    <p class="sub">Practice the <code>random</code> module hands-on — a fresh set of basics each visit, then real problems that put them to work.</p>
     <div class="repl"><span class="pr">&gt;&gt;&gt;</span> <span class="kw">import</span> <span class="mod">random</span><span class="cur"></span></div>
     <div class="sync" id="sync"></div>
   </header>
@@ -332,6 +333,15 @@
 </style>
   <div class="carou" id="basics-carou" style="--ac:#2f6b4f"><div class="carou-rail" id="basics-rail"></div><div class="carou-nav" id="basics-nav"></div><div class="carou-stage" id="basics"></div></div>
 
+  <!-- TIER II — real problems -->
+  <div class="tier" style="--ac:#b0612f">
+    <span class="tnum">§ II</span>
+    <h2>Real Problems</h2>
+    <span class="ln"></span>
+  </div>
+  <p class="tiercap">— combine the basics into something bigger · tagged challenge</p>
+  <div class="carou" id="problems-carou" style="--ac:#b0612f"><div class="carou-rail" id="problems-rail"></div><div class="carou-nav" id="problems-nav"></div><div class="carou-stage" id="problems"></div></div>
+
   <div class="note">First run downloads Python (~10&nbsp;MB) from a CDN, so it needs an internet connection. All cards share one Python session. Your code &amp; progress save on this device; sign in above to sync across devices. The Basics rotate — hit <b>New set</b> any time for fresh ones.</div>
 
   <footer class="colophon">
@@ -368,14 +378,20 @@
  {"id":"normalvariate","title":"Normal variate","concept":"`normalvariate(mu, sigma)` is another draw from the normal distribution (thread-safe variant of `gauss`).","uses":["Statistics","Sampling","Simulation"],"solution":"import random\nrandom.normalvariate(50, 10)","expected":"57.21"}
 ]</script>
 
+<!-- ===== REAL PROBLEMS (tagged "challenge") ===== -->
+<script type="application/json" id="problem-bank">[
+ {"id":"dice_sim","title":"Dice-roll simulator","brief":"Roll two six-sided dice 1000 times. Tally how often each total (2–12) comes up, then print every total with its count.","reqs":["Roll each die with random.randint(1, 6)","Loop 1000 times and sum the two dice","Count each total in a dict","Print totals 2 through 12 with their counts"],"starter":"import random\n\nrolls = 1000\ncounts = {}\n\n# roll two dice `rolls` times and tally each sum\n\n# print totals 2..12 with their counts\n","solution":"import random\n\nrolls = 1000\ncounts = {}\nfor _ in range(rolls):\n    total = random.randint(1, 6) + random.randint(1, 6)\n    counts[total] = counts.get(total, 0) + 1\n\nfor s in range(2, 13):\n    print(s, counts.get(s, 0))","expected":"2 27\n3 56\n4 81\n5 110\n6 139\n7 168\n8 138\n9 112\n10 83\n11 55\n12 31","hint":"Each die is `random.randint(1, 6)`; sum two of them, then `counts[total] = counts.get(total, 0) + 1`. Loop `range(2, 13)` to print in order."},
+ {"id":"password_gen","title":"Password generator","brief":"Generate a random 12-character password with at least one lowercase letter, one uppercase, one digit and one symbol — then print it.","reqs":["Use the `string` module for character pools","Guarantee one character from each required class","Fill the rest from the combined pool","Shuffle so the guaranteed chars aren't always first"],"starter":"import random, string\n\nlength = 12\n# pools: lowercase, uppercase, digits, symbols\n\n# 1) one from each pool  2) fill the rest  3) shuffle  4) join & print\n","solution":"import random, string\n\nlength = 12\npools = [string.ascii_lowercase, string.ascii_uppercase, string.digits, '!@#$%^&*']\n\npw = [random.choice(p) for p in pools]          # one of each\nall_chars = ''.join(pools)\npw += [random.choice(all_chars) for _ in range(length - len(pw))]\nrandom.shuffle(pw)                               # mix them up\n\nprint(''.join(pw))","expected":"aQ3!kPz9w#mR","hint":"Take one `random.choice` from each pool first so every class is present, fill the remaining slots from the combined string, then `random.shuffle` the list before `''.join`."},
+ {"id":"shuffle_deck","title":"Shuffle &amp; deal a deck","brief":"Build a standard 52-card deck (ranks A,2–10,J,Q,K across four suits), shuffle it, and deal a 5-card hand. Print the hand.","reqs":["Build the deck with a comprehension over ranks × suits","random.shuffle the whole deck","Deal the top 5 cards","Print the hand"],"starter":"import random\n\nranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']\nsuits = ['\u2660','\u2665','\u2666','\u2663']\n\n# build the 52-card deck, shuffle, deal 5, print\n","solution":"import random\n\nranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']\nsuits = ['\u2660','\u2665','\u2666','\u2663']\n\ndeck = [r + s for s in suits for r in ranks]\nrandom.shuffle(deck)\nhand = deck[:5]\n\nprint(hand)","expected":"['Q\u2665', '7\u2663', 'A\u2660', '10\u2666', '4\u2663']","hint":"`deck = [r + s for s in suits for r in ranks]` builds all 52, then `random.shuffle(deck)` and slice `deck[:5]` for the hand."},
+ {"id":"monte_carlo_pi","title":"Estimate \u03c0 (Monte-Carlo)","brief":"Estimate \u03c0 by dropping 10,000 random points in the unit square and counting how many land inside the quarter-circle of radius 1. \u03c0 \u2248 4 \u00d7 inside / total.","reqs":["Generate x, y in [0, 1) with random.random()","A point is inside when x*x + y*y <= 1","Count hits over 10,000 trials","Print 4 * inside / total"],"starter":"import random\n\ntotal = 10000\ninside = 0\n\n# drop `total` random points; count those inside the quarter circle\n\n# print the estimate of pi\n","solution":"import random\n\ntotal = 10000\ninside = 0\nfor _ in range(total):\n    x, y = random.random(), random.random()\n    if x*x + y*y <= 1:\n        inside += 1\n\nprint(4 * inside / total)","expected":"3.1416","hint":"A random point (x, y) is inside the quarter circle when `x*x + y*y <= 1`. The fraction inside approximates \u03c0/4, so multiply by 4."},
+ {"id":"random_walk","title":"1-D random walk","brief":"Simulate a 1-D random walk of 1000 steps starting at 0; each step is +1 or −1 with equal chance. Print the final position and the farthest distance from the origin reached.","reqs":["Each step is random.choice([-1, 1])","Update the position across 1000 steps","Track the maximum abs(position)","Print final position and max distance"],"starter":"import random\n\npos = 0\nmax_dist = 0\n\n# take 1000 steps of +1 / -1; track position and farthest distance\n\n# print final position and max distance\n","solution":"import random\n\npos = 0\nmax_dist = 0\nfor _ in range(1000):\n    pos += random.choice([-1, 1])\n    max_dist = max(max_dist, abs(pos))\n\nprint('final:', pos)\nprint('max distance:', max_dist)","expected":"final: -18\nmax distance: 47","hint":"Add `random.choice([-1, 1])` to `pos` each step, and after each step keep `max_dist = max(max_dist, abs(pos))`."}
+]</script>
 
 <script>
 (function(){
   "use strict";
   var BASIC = JSON.parse(document.getElementById("basic-bank").textContent);
-  /* Real Problems moved to 02 Practice → Random Module → "Real Problems", where they are
-     graded. Kept as an empty list so progress, titles and counters need no special-casing. */
-  var PROBLEMS = [];
+  var PROBLEMS = JSON.parse(document.getElementById("problem-bank").textContent);
   var PAGE_ID = (location.pathname.split("/").pop() || "module").replace(/\.html?$/,"");
   var LS = function(k){ return "pystudy_" + PAGE_ID + "_" + k; };
   var SHOW_BASICS = 5;
@@ -733,6 +749,9 @@
     paintProgress();
     setTimeout(refreshAllCM, 0);
   }
+  function renderProblems(){
+    mountCarousel("problems", PROBLEMS, { kind:"challenge", railLabel:"\u00a7 II Real Problems", palette:function(){ return PALETTE[5]; } });
+  }
 
   function recomputeVisible(){
     visibleIds = shownBasics.map(function(e){return e.id;}).concat(PROBLEMS.map(function(p){return p.id;}));
@@ -813,11 +832,8 @@
   /* Bare loadPyodide() is what breaks on iPadOS Safari ("Can't find variable: loadPyodide")
      and what hangs when the self-hosted copy 404s. Poll for the global, pass an explicit
      indexURL, and fall through a list of mirrors. */
-  /* CDN first, deliberately. The self-hosted _lib mirror is often partial (pyodide.js
-     present but wheels/wasm missing), and a partial mirror is worse than none: it satisfies
-     the probe, then stalls the wasm download with no way back. practice-engine.js has always
-     been CDN-first and has always worked locally — this now matches it. */
   var PY_BASES = [
+    "../../../_lib/pyodide/",
     "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
     "https://fastly.jsdelivr.net/pyodide/v0.26.4/full/",
     "https://unpkg.com/pyodide@0.26.4/"
@@ -842,46 +858,23 @@
       })();
     });
   }
-  /* A base is only usable if its runtime files are REALLY there. Two traps this closes:
-     (1) a static server that answers missing files with a 200 + HTML fallback page, which
-     makes a bare res.ok probe pass and then feeds HTML to the wasm loader; so parse the
-     lock file and demand real JSON. (2) loadPyodide itself stalling mid-download with no
-     way out — so race it against a timeout and fall through to the next mirror. */
-  var PY_BOOT_MS = 75000;
-  function pyTimeout(promise, ms, label){
-    return new Promise(function(res, rej){
-      var done=false;
-      var t=setTimeout(function(){ if(!done){ done=true; rej(new Error(label+" timed out after "+Math.round(ms/1000)+"s")); } }, ms);
-      promise.then(function(v){ if(done) return; done=true; clearTimeout(t); res(v); },
-                   function(e){ if(done) return; done=true; clearTimeout(t); rej(e); });
-    });
-  }
+  /* A base is only usable if its runtime files are actually there. Probe first: a missing
+     self-hosted mirror is skipped in milliseconds instead of hanging loadPyodide on a dead
+     indexURL. Remember which base supplied the global so indexURL always matches it. */
   async function pyBaseLive(base){
-    try{
-      var r = await pyTimeout(fetch(base + "pyodide-lock.json", { method: "GET" }), 8000, "probe");
-      if(!r.ok) return false;
-      var txt = await r.text();
-      var lock = JSON.parse(txt);            // HTML fallback pages die here, as intended
-      return !!(lock && (lock.packages || lock.info));
-    }catch(e){ return false; }
+    try{ var r = await fetch(base + "pyodide-lock.json", { method: "GET" }); return r.ok; }
+    catch(e){ return false; }
   }
   function pyDropGlobal(){
     try{ delete window.loadPyodide; }catch(_){ window.loadPyodide = undefined; }
     window.__pyBase = null;
   }
-  window.__pyTrace = [];
   async function bootPyodide(){
     var last = null;
-    window.__pyTrace = [];
     for(var i=0; i<PY_BASES.length; i++){
       var base = PY_BASES[i];
-      var label = /^https?:/.test(base) ? base.replace(/^https?:\/\//,"").split("/")[0] : "local _lib";
-      setLed("loading Python\u2026 (" + label + ")", "");
-      if(!(await pyBaseLive(base))){
-        window.__pyTrace.push(base + " \u2014 no usable runtime (missing or not JSON)");
-        last = new Error("no runtime at " + base);
-        continue;
-      }
+      setLed(i === 0 ? "loading Python\u2026" : "loading Python\u2026 (mirror " + (i+1) + ")", "");
+      if(!(await pyBaseLive(base))){ last = new Error("no runtime at " + base); continue; }
       try{
         if(typeof window.loadPyodide !== "function" || window.__pyBase !== base){
           pyDropGlobal();
@@ -889,16 +882,13 @@
           await pyWaitGlobal(8000);
           window.__pyBase = base;
         }
-        var py = await pyTimeout(window.loadPyodide({ indexURL: base }), PY_BOOT_MS, "runtime download from " + label);
-        window.__pyTrace.push(base + " \u2014 ok");
-        return py;
+        return await window.loadPyodide({ indexURL: base });
       }catch(e){
-        window.__pyTrace.push(base + " \u2014 " + (e && e.message || e));
         last = e;
         pyDropGlobal();
       }
     }
-    throw new Error("Python runtime could not load. Tried:\n  " + window.__pyTrace.join("\n  "));
+    throw new Error("Python runtime could not load — check your connection and press Run again. (" + (last && last.message || "unknown") + ")");
   }
   async function ensurePy(){
     if(pyReady) return pyodide; if(pyLoading) return pyLoading;
@@ -1028,6 +1018,7 @@
   else renderSync();
 
   // ---------- go ----------
+  renderProblems();
   renderBasics();
   window.addEventListener("load", function(){ setTimeout(refreshAllCM, 50); });
   if(document.fonts && document.fonts.ready){ document.fonts.ready.then(function(){ setTimeout(refreshAllCM, 0); }); }
