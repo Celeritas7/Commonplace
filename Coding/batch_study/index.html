@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Batch Scripts — The Console · Commonplace</title>
+<link href="../../_lib/fonts/gf-135340b0.css" rel="stylesheet" />
+<style>
+  :root{
+    --void:#0d1017; --panel:#141922; --panel-2:#1b2230; --panel-3:#222a3a;
+    --edge:#28313f; --edge-soft:#1e2531;
+    --txt:#d7dee9; --txt-soft:#9aa7b8; --txt-mute:#66748a;
+    --amber:#e8b64c; --amber-2:#f5cd77; --amber-dim:#8a6d2c;
+    --green:#6ee29a; --cyan:#56b6c2; --blue:#79b8ff; --pink:#e06c9f; --red:#e5674b;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --serif:"EB Garamond",Georgia,serif;
+    --display:"Cormorant Garamond",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--void); color:var(--txt);
+    font-family:var(--serif); font-size:18px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(circle at 14% 6%, rgba(232,182,76,0.055) 0%, rgba(232,182,76,0) 42%),
+      radial-gradient(circle at 88% 88%, rgba(110,226,154,0.04) 0%, rgba(110,226,154,0) 46%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 3px);
+  }
+  .wrap{max-width:1020px;margin:0 auto;padding:26px 30px 90px}
+  a{color:var(--amber)}
+
+  /* breadcrumb */
+  .crumb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);
+    font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt-mute);margin-bottom:30px}
+  .crumb a{color:var(--txt-mute);text-decoration:none}
+  .crumb a:hover{color:var(--amber)}
+  .crumb .sep{color:var(--edge)}
+  .crumb .here{color:var(--txt)}
+
+  /* ── console masthead ── */
+  .cmd{border:1px solid var(--edge);border-radius:8px;overflow:hidden;background:var(--panel);
+    box-shadow:0 26px 60px -34px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.03)}
+  .cmd .bar{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--panel-2);
+    border-bottom:1px solid var(--edge)}
+  .cmd .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .dot.r{background:#e5674b}.dot.y{background:#e8b64c}.dot.g{background:#6ee29a}
+  .cmd .bar .path{margin-left:8px;font-family:var(--mono);font-size:11px;color:var(--txt-mute);
+    letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cmd .screen{padding:26px 28px 30px;font-family:var(--mono)}
+  .cmd .line{font-size:12.5px;color:var(--txt-soft);margin-bottom:4px}
+  .cmd .line .pr{color:var(--green)}
+  .cmd .line .rem{color:var(--txt-mute)}
+  .banner{font-family:var(--mono);font-size:clamp(9px,2.05vw,15px);line-height:1.16;color:var(--amber);
+    white-space:pre;margin:20px 0 6px;overflow-x:auto;text-shadow:0 0 22px rgba(232,182,76,0.28)}
+  .cmd h1{font-family:var(--display);font-weight:600;font-size:clamp(38px,7vw,62px);line-height:1;
+    letter-spacing:-0.5px;margin:16px 0 0;color:#f2f6fb;display:none}
+  .tagline{font-family:var(--serif);font-style:italic;font-size:19px;color:var(--txt-soft);
+    margin:16px 0 0;max-width:52ch}
+  .cursor{display:inline-block;width:9px;height:15px;background:var(--amber);
+    transform:translateY(2px);animation:bl 1.05s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+
+  /* stats strip */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--edge);
+    border:1px solid var(--edge);border-radius:6px;overflow:hidden;margin:22px 0 0}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--panel);padding:14px 16px}
+  .stat .n{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--amber);line-height:1}
+  .stat .l{font-family:var(--mono);font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--txt-mute);margin-top:7px}
+
+  /* section head */
+  .shead{display:flex;align-items:baseline;gap:15px;margin:52px 0 18px}
+  .shead .n{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--amber)}
+  .shead h2{font-family:var(--display);font-weight:600;font-size:32px;line-height:1;margin:0;
+    color:#eef3f9;white-space:nowrap}
+  .shead .ln{flex:1;height:1px;background:var(--edge);transform:translateY(-4px)}
+  .shead .note{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--txt-mute);white-space:nowrap}
+
+  /* dir listing */
+  .dir{border:1px solid var(--edge);border-radius:8px;overflow:hidden;background:var(--panel)}
+  .dir .head{padding:11px 16px;border-bottom:1px solid var(--edge);background:var(--panel-2);
+    font-family:var(--mono);font-size:11px;color:var(--txt-mute);letter-spacing:1px}
+  .row{display:grid;grid-template-columns:64px 1fr auto;gap:16px;align-items:center;
+    padding:16px 18px;border-bottom:1px solid var(--edge-soft);text-decoration:none;color:inherit;
+    transition:background .14s}
+  .row:last-child{border-bottom:none}
+  .row.live:hover{background:var(--panel-2)}
+  .row .idx{font-family:var(--mono);font-size:12px;color:var(--txt-mute);letter-spacing:0.5px}
+  .row.live .idx{color:var(--amber)}
+  .row h3{font-family:var(--mono);font-size:15px;font-weight:600;margin:0 0 5px;color:#eaf0f7;letter-spacing:-0.2px}
+  .row .sub{font-family:var(--serif);font-size:15.5px;color:var(--txt-soft);line-height:1.45}
+  .row .src{font-family:var(--mono);font-size:10.5px;color:var(--txt-mute);margin-top:6px;letter-spacing:0.4px}
+  .row .rt{text-align:right;white-space:nowrap}
+  .badge{font-family:var(--mono);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;
+    padding:4px 9px;border-radius:3px;border:1px solid;display:inline-block}
+  .badge.live{color:var(--green);border-color:rgba(110,226,154,0.4);background:rgba(110,226,154,0.08)}
+  .badge.soon{color:var(--txt-mute);border-color:var(--edge);background:transparent}
+  .row .arr{display:block;font-family:var(--mono);font-size:12px;color:var(--amber);margin-top:9px}
+  .row.locked{opacity:0.5}
+  .row.locked h3{color:var(--txt-soft)}
+
+  /* source card */
+  .srcbox{border:1px solid var(--edge);border-left:2px solid var(--amber);border-radius:6px;
+    background:var(--panel);padding:18px 22px;margin-top:18px}
+  .srcbox .k{font-family:var(--mono);font-size:10px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--amber);margin-bottom:9px}
+  .srcbox p{margin:0 0 12px;font-size:16.5px;color:var(--txt-soft)}
+  .srcbox p:last-child{margin-bottom:0}
+  .files{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .files code{font-family:var(--mono);font-size:11px;background:var(--panel-2);color:var(--cyan);
+    padding:4px 8px;border-radius:3px;border:1px solid var(--edge)}
+
+  .colophon{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+    margin-top:64px;padding-top:20px;border-top:1px solid var(--edge);
+    font-family:var(--mono);font-size:11px;color:var(--txt-mute);letter-spacing:0.6px}
+  .colophon .motto{font-family:var(--serif);font-style:italic;font-size:16px;letter-spacing:0}
+  .colophon a{color:var(--txt-mute);text-decoration:none}
+  .colophon a:hover{color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="crumb">
+    <a href="../../index.html">Commonplace</a>
+    <span class="sep">/</span>
+    <a href="../index.html">Coding</a>
+    <span class="sep">/</span>
+    <span class="here">Batch Scripts</span>
+  </div>
+
+  <div class="cmd">
+    <div class="bar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="path">C:\WINDOWS\system32\cmd.exe — Commonplace\Coding\batch_study</span>
+    </div>
+    <div class="screen">
+      <div class="line"><span class="pr">C:\Commonplace\Coding&gt;</span> batch_study.bat</div>
+      <div class="line"><span class="rem">REM &nbsp;the lecturer's scripts, taken apart line by line</span></div>
+      <div class="banner">██████╗  █████╗ ████████╗
+██╔══██╗██╔══██╗╚══██╔══╝
+██████╔╝███████║   ██║
+██╔══██╗██╔══██║   ██║
+██████╔╝██║  ██║   ██║
+╚═════╝ ╚═╝  ╚═╝   ╚═╝</div>
+      <h1>Batch Scripts</h1>
+      <p class="tagline">Automation that ships with Windows. A plain text file, a <code style="font-family:var(--mono);font-size:15px;color:var(--cyan)">.bat</code> extension, and a list of commands the machine runs without you.</p>
+      <div class="line" style="margin-top:18px"><span class="pr">C:\Commonplace\Coding&gt;</span> <span class="cursor"></span></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">1</div><div class="l">Module live</div></div>
+    <div class="stat"><div class="n">8</div><div class="l">Guided steps</div></div>
+    <div class="stat"><div class="n">11</div><div class="l">Challenges</div></div>
+    <div class="stat"><div class="n">11</div><div class="l">Commands</div></div>
+  </div>
+
+  <div class="shead">
+    <span class="n">§</span>
+    <h2>The Modules</h2>
+    <span class="ln"></span>
+    <span class="note">1 of 7 authored</span>
+  </div>
+
+  <div class="dir">
+    <div class="head">Directory of C:\Commonplace\Coding\batch_study\The Modules</div>
+
+    <a class="row live" href="The%20Modules/Module%2001%20%C2%B7%20Foundations%20-%20Folders.dc.html">
+      <span class="idx">01</span>
+      <div>
+        <h3>Foundations — Your First Commands</h3>
+        <div class="sub">@ECHO OFF, ECHO, REM, PAUSE, CD, CLS, COPY, DEL, MOVE, ATTRIB, FIND, REN. Everything a batch file does to files, and the four lines that appear in every one of them.</div>
+        <div class="src">source · 8 lecturer scripts (files 6–23)</div>
+      </div>
+      <div class="rt">
+        <span class="badge live">● Live</span>
+        <span class="arr">Open →</span>
+      </div>
+    </a>
+
+    <div class="row locked">
+      <span class="idx">02</span>
+      <div>
+        <h3>Variables &amp; Arguments</h3>
+        <div class="sub">SET, %1 %2 command-line arguments, SETLOCAL, environment variables.</div>
+        <div class="src">source · files 30–37 · not authored yet</div>
+      </div>
+      <div class="rt"><span class="badge soon">Planned</span></div>
+    </div>
+
+    <div class="row locked">
+      <span class="idx">03</span>
+      <div>
+        <h3>Decision Making</h3>
+        <div class="sub">IF, IF/ELSE, nested IF, DEFINED, EXIST.</div>
+        <div class="src">source · files 44–58 · not authored yet</div>
+      </div>
+      <div class="rt"><span class="badge soon">Planned</span></div>
+    </div>
+
+    <div class="row locked">
+      <span class="idx">04</span>
+      <div>
+        <h3>Strings</h3>
+        <div class="sub">Create, concatenate, extract, remove, replace.</div>
+        <div class="src">source · files 65–75, 80 · not authored yet</div>
+      </div>
+      <div class="rt"><span class="badge soon">Planned</span></div>
+    </div>
+
+    <div class="row locked">
+      <span class="idx">05</span>
+      <div>
+        <h3>Arrays</h3>
+        <div class="sub">Create, access, modify, iterate, length.</div>
+        <div class="src">source · files 81–94 · not authored yet</div>
+      </div>
+      <div class="rt"><span class="badge soon">Planned</span></div>
+    </div>
+
+    <div class="row locked">
+      <span class="idx">06</span>
+      <div>
+        <h3>Operators</h3>
+        <div class="sub">Arithmetic, relational, assignment, bitwise.</div>
+        <div class="src">source · files 96–113 · not authored yet</div>
+      </div>
+      <div class="rt"><span class="badge soon">Planned</span></div>
+    </div>
+
+    <div class="row locked">
+      <span class="idx">07</span>
+      <div>
+        <h3>Real Projects</h3>
+        <div class="sub">Calculator, guess game, services manager.</div>
+        <div class="src">source · files 120–162 · not authored yet</div>
+      </div>
+      <div class="rt"><span class="badge soon">Planned</span></div>
+    </div>
+  </div>
+
+  <div class="srcbox">
+    <div class="k">Where this comes from</div>
+    <p>Module 01 is built from eight of your lecturer's own <code style="font-family:var(--mono);font-size:14px;color:var(--cyan)">.bat</code> files — not from a generic tutorial. Every command it teaches was read out of these eight, and the walkthrough follows them in order:</p>
+    <div class="files">
+      <code>6_BASICCOMMAND.bat</code><code>11_COPY.bat</code><code>13_DELETE.bat</code><code>15_MOVE.bat</code>
+      <code>16_MOVE-DIR.bat</code><code>20_ATTRIB.bat</code><code>22_TEST.bat</code><code>23_TESTER.bat</code>
+    </div>
+  </div>
+
+  <footer class="colophon">
+    <span class="motto">“Write it once, and the machine does it ten thousand times.”</span>
+    <span><a href="../index.html">← All languages</a></span>
+  </footer>
+
+</div>
+<script src="../../_lib/progress-backup.js"></script>
+</body>
+</html>

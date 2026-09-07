@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Module 01 · Foundations — Batch Scripts · Commonplace</title>
+<link href="../../../_lib/fonts/gf-135340b0.css" rel="stylesheet" />
+<style>
+  :root{
+    --void:#0d1017; --panel:#141922; --panel-2:#1b2230; --panel-3:#222a3a;
+    --edge:#28313f; --edge-soft:#1e2531;
+    --txt:#d7dee9; --txt-soft:#9aa7b8; --txt-mute:#66748a;
+    --amber:#e8b64c; --amber-2:#f5cd77;
+    --green:#6ee29a; --cyan:#56b6c2; --blue:#79b8ff; --pink:#e06c9f; --red:#e5674b;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --serif:"EB Garamond",Georgia,serif;
+    --display:"Cormorant Garamond",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--void); color:var(--txt);
+    font-family:var(--serif); font-size:18px; line-height:1.68; -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(circle at 12% 4%, rgba(232,182,76,0.05) 0%, rgba(232,182,76,0) 40%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.013) 0px, rgba(255,255,255,0.013) 1px, transparent 1px, transparent 3px);
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:22px 30px 100px}
+  a{color:var(--amber)}
+  code{font-family:var(--mono);font-size:0.86em;background:var(--panel-2);color:var(--cyan);
+    padding:2px 6px;border-radius:3px;border:1px solid var(--edge-soft)}
+
+  /* ── sticky progress bar ── */
+  .topbar{position:sticky;top:0;z-index:40;background:rgba(13,16,23,0.93);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--edge);margin:0 -30px 26px;padding:11px 30px}
+  .topbar .in{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:16px}
+  .topbar .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;
+    color:var(--txt-mute);white-space:nowrap}
+  .track{flex:1;height:5px;background:var(--panel-2);border-radius:3px;overflow:hidden;border:1px solid var(--edge-soft)}
+  .track .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--green));
+    transition:width .35s ease}
+  .topbar .pct{font-family:var(--mono);font-size:11px;color:var(--amber);white-space:nowrap;min-width:38px;text-align:right}
+
+  .crumb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);
+    font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--txt-mute);margin-bottom:26px}
+  .crumb a{color:var(--txt-mute);text-decoration:none}
+  .crumb a:hover{color:var(--amber)}
+  .crumb .sep{color:var(--edge)}
+  .crumb .here{color:var(--txt)}
+
+  /* ── masthead ── */
+  .mast{border:1px solid var(--edge);border-radius:8px;background:var(--panel);overflow:hidden;
+    box-shadow:0 24px 55px -34px rgba(0,0,0,0.9)}
+  .mast .bar{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--panel-2);
+    border-bottom:1px solid var(--edge)}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .dot.r{background:#e5674b}.dot.y{background:#e8b64c}.dot.g{background:#6ee29a}
+  .mast .bar .path{margin-left:8px;font-family:var(--mono);font-size:11px;color:var(--txt-mute);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mast .inner{padding:28px 30px 30px}
+  .mast .kick{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:3px;
+    text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+  .mast h1{font-family:var(--display);font-weight:600;font-size:clamp(38px,7vw,58px);line-height:1.02;
+    letter-spacing:-0.6px;margin:0;color:#f2f6fb}
+  .mast .sub{font-family:var(--serif);font-style:italic;font-size:19px;color:var(--txt-soft);
+    margin:14px 0 0;max-width:54ch}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px}
+  .chip{font-family:var(--mono);font-size:11px;color:var(--txt-soft);background:var(--panel-2);
+    border:1px solid var(--edge);border-radius:3px;padding:5px 9px}
+
+  /* ── section heads ── */
+  .shead{display:flex;align-items:baseline;gap:15px;margin:58px 0 20px;scroll-margin-top:64px}
+  .shead .n{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--amber)}
+  .shead h2{font-family:var(--display);font-weight:600;font-size:32px;line-height:1;margin:0;
+    color:#eef3f9;white-space:nowrap}
+  .shead .ln{flex:1;height:1px;background:var(--edge);transform:translateY(-4px)}
+  .shead .note{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--txt-mute);white-space:nowrap}
+  @media(max-width:620px){.shead h2{white-space:normal;font-size:27px}.shead .note{display:none}}
+
+  /* ── briefing tabs ── */
+  .tabs{display:flex;gap:6px;margin-bottom:16px}
+  .tab{font-family:var(--mono);font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--txt-mute);background:none;border:1px solid var(--edge);border-radius:20px;
+    padding:7px 15px;cursor:pointer;transition:.15s}
+  .tab:hover{color:var(--txt)}
+  .tab.on{color:var(--void);background:var(--amber);border-color:var(--amber);font-weight:700}
+  .pane{display:none}
+  .pane.on{display:block}
+  .prose p{margin:0 0 15px}
+  .prose h4{font-family:var(--mono);font-size:12px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--amber);margin:32px 0 12px;font-weight:700}
+  .prose .cmdline{margin:0 0 14px;padding-left:15px;border-left:2px solid var(--edge)}
+  .prose .cmdline b{font-family:var(--mono);font-size:15px;color:var(--amber-2);font-weight:700}
+  .prose .cmdline .dash{color:var(--txt-mute);margin:0 6px}
+  .prose .ex{display:block;font-family:var(--mono);font-size:13.5px;color:var(--cyan);margin-top:6px}
+  .callout{border:1px solid var(--edge);border-left:2px solid var(--green);border-radius:6px;
+    background:var(--panel);padding:16px 20px;margin:26px 0 0}
+  .callout .k{font-family:var(--mono);font-size:10px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--green);margin-bottom:8px}
+  .callout p{margin:0;font-size:16.5px;color:var(--txt-soft)}
+
+  /* ── walkthrough ── */
+  .stepnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+  .sdot{width:34px;height:34px;border-radius:5px;border:1px solid var(--edge);background:var(--panel);
+    color:var(--txt-mute);font-family:var(--mono);font-size:12px;cursor:pointer;transition:.15s}
+  .sdot:hover{color:var(--txt);border-color:var(--txt-mute)}
+  .sdot.on{background:var(--amber);border-color:var(--amber);color:var(--void);font-weight:700}
+  .sdot.done{border-color:rgba(110,226,154,0.45);color:var(--green)}
+  .sdot.done.on{background:var(--green);border-color:var(--green);color:var(--void)}
+  .step{display:none;border:1px solid var(--edge);border-radius:8px;background:var(--panel);overflow:hidden}
+  .step.on{display:block}
+  .step .sh{padding:16px 22px;border-bottom:1px solid var(--edge-soft);display:flex;align-items:baseline;gap:13px}
+  .step .sh .sn{font-family:var(--mono);font-size:11px;letter-spacing:1.4px;color:var(--amber);font-weight:700}
+  .step .sh h3{font-family:var(--display);font-size:26px;font-weight:600;margin:0;color:#eef3f9;line-height:1.15}
+  .step .sb{padding:18px 22px 4px;font-size:17px;color:var(--txt-soft)}
+  .step .sb b{color:var(--txt);font-weight:600}
+  .step .sb em{color:var(--amber-2);font-style:italic}
+  pre.code{margin:0 22px 20px;background:#070a0f;border:1px solid var(--edge);border-radius:6px;
+    padding:15px 17px;font-family:var(--mono);font-size:13.5px;line-height:1.65;color:#e8eef7;
+    overflow-x:auto;white-space:pre}
+  pre.code .k{color:var(--amber-2)}
+  pre.code .s{color:var(--green)}
+  pre.code .c{color:var(--txt-mute)}
+  pre.code .f{color:var(--pink)}
+  .step .sf{display:flex;align-items:center;gap:10px;padding:0 22px 18px;flex-wrap:wrap}
+  .btn{font-family:var(--mono);font-size:11px;letter-spacing:1.1px;text-transform:uppercase;
+    padding:8px 15px;border-radius:4px;border:1px solid var(--edge);background:var(--panel-2);
+    color:var(--txt-soft);cursor:pointer;transition:.15s}
+  .btn:hover{color:var(--txt);border-color:var(--txt-mute)}
+  .btn.primary{background:var(--amber);border-color:var(--amber);color:var(--void);font-weight:700}
+  .btn.primary:hover{background:var(--amber-2);border-color:var(--amber-2);color:var(--void)}
+  .btn.ok{background:rgba(110,226,154,0.13);border-color:rgba(110,226,154,0.45);color:var(--green)}
+  .btn.spacer{margin-left:auto}
+
+  /* ── command reference ── */
+  .ref{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+  .rc{border:1px solid var(--edge);border-radius:6px;background:var(--panel);padding:0;overflow:hidden}
+  .rc button.rh{width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    padding:13px 16px;display:flex;align-items:center;gap:10px;font-family:inherit}
+  .rc button.rh:hover{background:var(--panel-2)}
+  .rc .cm{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--amber-2)}
+  .rc .one{font-family:var(--serif);font-size:15px;color:var(--txt-mute);margin-left:auto;text-align:right}
+  .rc .rd{display:none;padding:0 16px 14px;font-size:15.5px;color:var(--txt-soft);border-top:1px solid var(--edge-soft);padding-top:12px}
+  .rc.open .rd{display:block}
+  .rc .rd .syn{font-family:var(--mono);font-size:12.5px;color:var(--cyan);display:block;margin-top:8px}
+
+  /* ── challenges ── */
+  .q{border:1px solid var(--edge);border-radius:8px;background:var(--panel);padding:20px 22px;margin-bottom:12px}
+  .q.correct{border-color:rgba(110,226,154,0.45)}
+  .q.wrong{border-color:rgba(229,103,75,0.45)}
+  .qh{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+  .qh .qn{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--amber);letter-spacing:1px}
+  .qh .qt{font-family:var(--mono);font-size:9.5px;letter-spacing:1.3px;text-transform:uppercase;
+    color:var(--txt-mute);border:1px solid var(--edge);border-radius:3px;padding:3px 8px}
+  .qh .diff{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--txt-mute);letter-spacing:1px}
+  .qq{margin:0 0 14px;font-size:17.5px;color:var(--txt)}
+  .q pre.code{margin:0 0 14px}
+  .opts{display:flex;flex-direction:column;gap:7px}
+  .opt{text-align:left;font-family:var(--serif);font-size:16.5px;color:var(--txt-soft);
+    background:var(--panel-2);border:1px solid var(--edge);border-radius:5px;padding:11px 15px;
+    cursor:pointer;transition:.14s;line-height:1.45}
+  .opt:hover:not(:disabled){border-color:var(--txt-mute);color:var(--txt)}
+  .opt:disabled{cursor:default}
+  .opt.pick-ok{border-color:var(--green);background:rgba(110,226,154,0.11);color:var(--green)}
+  .opt.pick-no{border-color:var(--red);background:rgba(229,103,75,0.1);color:var(--red)}
+  .opt.show-ok{border-color:rgba(110,226,154,0.45);color:var(--green)}
+  textarea.ans{width:100%;min-height:82px;background:#070a0f;border:1px solid var(--edge);border-radius:6px;
+    color:#e8eef7;font-family:var(--mono);font-size:13.5px;line-height:1.6;padding:13px 15px;resize:vertical}
+  textarea.ans:focus{outline:none;border-color:var(--amber)}
+  .qbtns{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+  .sol{display:none;margin-top:14px;border-top:1px solid var(--edge-soft);padding-top:14px}
+  .sol.on{display:block}
+  .sol .sk{font-family:var(--mono);font-size:10px;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--green);margin-bottom:9px}
+  .fb{display:none;margin-top:13px;font-size:16.5px;color:var(--txt-soft);
+    border-left:2px solid var(--amber);padding-left:14px}
+  .fb.on{display:block}
+  .fb b{color:var(--txt)}
+  .mkrow{display:flex;align-items:center;gap:9px;margin-top:14px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--txt-mute)}
+
+  .nav{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:60px;
+    padding-top:20px;border-top:1px solid var(--edge)}
+  .nav a{font-family:var(--mono);font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
+    text-decoration:none;color:var(--txt-mute);border:1px solid var(--edge);border-radius:4px;padding:10px 16px}
+  .nav a:hover{color:var(--amber);border-color:var(--amber)}
+  .nav a.dim{opacity:0.45;pointer-events:none}
+  .colophon{margin-top:34px;font-family:var(--mono);font-size:11px;color:var(--txt-mute);letter-spacing:0.6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="in">
+      <span class="lbl">Module 01</span>
+      <div class="track"><div class="fill" id="pbar"></div></div>
+      <span class="pct" id="ppct">0%</span>
+    </div>
+  </div>
+
+  <div class="crumb">
+    <a href="../../../index.html">Commonplace</a>
+    <span class="sep">/</span>
+    <a href="../../index.html">Coding</a>
+    <span class="sep">/</span>
+    <a href="../index.html">Batch</a>
+    <span class="sep">/</span>
+    <span class="here">Module 01</span>
+  </div>
+
+  <div class="mast">
+    <div class="bar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="path">module-01.bat — Foundations</span>
+    </div>
+    <div class="inner">
+      <div class="kick">Module 01 · Foundations</div>
+      <h1>Your First Commands</h1>
+      <p class="sub">A batch file is a text file with a <code>.bat</code> extension. Inside it you write commands that Windows runs one by one — a to-do list for your computer.</p>
+      <div class="chips">
+        <span class="chip">8 guided steps</span>
+        <span class="chip">12 commands</span>
+        <span class="chip">11 challenges</span>
+        <span class="chip">files 6–23</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ 1 · THE BRIEFING ════════ -->
+  <div class="shead" id="sec-briefing">
+    <span class="n">01</span>
+    <h2>The Briefing</h2>
+    <span class="ln"></span>
+    <span class="note">read this first</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-pane="main">Technical</button>
+    <button class="tab" data-pane="alt">Plain English</button>
+  </div>
+
+  <div class="pane on prose" id="pane-main">
+    <p>Welcome to batch scripting. This is where your automation journey begins.</p>
+    <p>A batch file is just a text file with a <code>.bat</code> extension. Inside it, you write commands that Windows runs one by one — like a to-do list for your computer.</p>
+
+    <h4>The four commands in every single batch file</h4>
+
+    <div class="cmdline"><b>@ECHO OFF</b><span class="dash">—</span>Always the first line. Without it, Windows would show every command before running it, making the output messy. Think of it like telling a chef: “Just bring me the food, don't read the recipe out loud while cooking.”</div>
+    <div class="cmdline"><b>ECHO</b><span class="dash">—</span>Prints text to the screen. Whatever you write after ECHO appears in the terminal window.<span class="ex">ECHO HELLO WORLD&nbsp;&nbsp;→ shows "HELLO WORLD" on screen</span></div>
+    <div class="cmdline"><b>PAUSE</b><span class="dash">—</span>Stops the script and shows “Press any key to continue.” Without this, the terminal window would flash open and close instantly — too fast to read anything.</div>
+    <div class="cmdline"><b>REM</b><span class="dash">—</span>Short for “remark.” These are comments — notes for humans. The computer ignores them completely. Your lecturer used these to explain what each section does.</div>
+
+    <h4>The file operation commands</h4>
+
+    <div class="cmdline"><b>CD</b><span class="dash">—</span>Change Directory. Moves you to a different folder, like double-clicking a folder in File Explorer.<span class="ex">CD C:\Users\Desktop\Projects&nbsp;&nbsp;→ takes you there<br>CD&nbsp;&nbsp;(alone, no path)&nbsp;&nbsp;→ shows where you currently are</span></div>
+    <div class="cmdline"><b>CLS</b><span class="dash">—</span>Clears the screen. Wipes everything visible in the terminal window. Fresh start.</div>
+    <div class="cmdline"><b>COPY</b><span class="dash">—</span>Copies a file from one place to another. The original stays where it is.<span class="ex">COPY source.txt C:\Backup\&nbsp;&nbsp;→ makes a copy in Backup<br>COPY *.txt C:\Backup\&nbsp;&nbsp;→ copies ALL .txt files (* means "everything")<br>COPY "my file.txt" C:\Backup\&nbsp;&nbsp;→ names with spaces need quotes</span></div>
+    <div class="cmdline"><b>DEL</b><span class="dash">—</span>Deletes files. Be careful — this does <em>not</em> go to the Recycle Bin.<span class="ex">DEL file.txt&nbsp;&nbsp;→ deletes that one file<br>DEL /s *.txt&nbsp;&nbsp;→ deletes all .txt files including in subfolders<br>DEL /p *.txt&nbsp;&nbsp;→ asks permission before each delete. Much safer.</span></div>
+    <div class="cmdline"><b>MOVE</b><span class="dash">—</span>Like COPY but removes the original. Cut and paste, not copy and paste.<span class="ex">MOVE file.txt C:\NewFolder\&nbsp;&nbsp;→ moves the file<br>MOVE C:\OldFolder C:\NewFolder&nbsp;&nbsp;→ moves an entire folder</span>If the destination folder does not exist, Windows creates it automatically.</div>
+    <div class="cmdline"><b>ATTRIB</b><span class="dash">—</span>Changes file properties (attributes). Every file has hidden flags:<span class="ex">+r = make read-only (cannot edit)&nbsp;&nbsp;·&nbsp;&nbsp;-r = remove read-only<br>+h = make hidden&nbsp;&nbsp;·&nbsp;&nbsp;-h = unhide<br>+a = mark as "needs backup" (archive)</span>You can combine them: <code>ATTRIB -h +r file.txt</code> unhides <em>and</em> makes read-only.</div>
+    <div class="cmdline"><b>FIND</b><span class="dash">—</span>Searches for text inside a file.<span class="ex">FIND "hello" myfile.txt&nbsp;&nbsp;→ shows the lines containing "hello"</span></div>
+    <div class="cmdline"><b>REN</b><span class="dash">—</span>Renames a file.<span class="ex">REN "oldname.txt" "newname.txt"</span>Note: you only write the new filename, not the full path.</div>
+
+    <div class="callout">
+      <div class="k">Why this matters for you</div>
+      <p>Your Python automation scripts (image converter, PDF maker) use these exact same concepts — they copy files, move them, check if they exist. Understanding these bat commands helps you understand what your Python scripts do at the operating system level.</p>
+    </div>
+  </div>
+
+  <div class="pane prose" id="pane-alt">
+    <p>Forget computers for a moment. Imagine you are organizing a physical office.</p>
+    <div class="cmdline"><b>ECHO</b><span class="dash">=</span>Speaking out loud. “The report is ready!” You are announcing something.</div>
+    <div class="cmdline"><b>@ECHO OFF</b><span class="dash">=</span>Telling your assistant: “Just do the tasks silently, don't narrate every step.”</div>
+    <div class="cmdline"><b>PAUSE</b><span class="dash">=</span>Stopping to wait. “Hold on, let me check before you continue.”</div>
+    <div class="cmdline"><b>REM</b><span class="dash">=</span>A sticky note on your desk. Reminds <em>you</em> what to do, but your assistant ignores it.</div>
+    <div class="cmdline"><b>CD</b><span class="dash">=</span>Walking to a different room. <code>CD C:\Users\Desktop</code> means “Go to the Desktop room.”</div>
+    <div class="cmdline"><b>COPY</b><span class="dash">=</span>Photocopying a document. Original stays, you get a duplicate somewhere else.</div>
+    <div class="cmdline"><b>MOVE</b><span class="dash">=</span>Physically carrying a document to another room. It is no longer where it was.</div>
+    <div class="cmdline"><b>DEL</b><span class="dash">=</span>Shredding a document. Gone forever (no recycle bin!). The <code>/p</code> flag is like having someone ask “Are you sure?” before each shred.</div>
+    <div class="cmdline"><b>ATTRIB</b><span class="dash">=</span>Putting labels on a folder. “Read only” means nobody can edit it. “Hidden” means it is tucked away in a drawer.</div>
+    <div class="cmdline"><b>FIND</b><span class="dash">=</span>Searching through a stack of papers for a specific word.</div>
+    <div class="cmdline"><b>REN</b><span class="dash">=</span>Peeling off the old label and sticking a new name on the folder.</div>
+    <div class="callout">
+      <div class="k">The point</div>
+      <p>The beauty of batch files is that you write these instructions once, and the computer does them instantly — even if it is 10,000 files.</p>
+    </div>
+  </div>
+
+  <!-- ════════ 2 · THE WALKTHROUGH ════════ -->
+  <div class="shead" id="sec-walkthrough">
+    <span class="n">02</span>
+    <h2>The Walkthrough</h2>
+    <span class="ln"></span>
+    <span class="note">8 steps · mark each done</span>
+  </div>
+
+  <div class="stepnav" id="stepnav"></div>
+
+  <div class="steps" id="steps">
+
+    <div class="step on" data-step="1">
+      <div class="sh"><span class="sn">STEP 01</span><h3>Your First Batch File Line</h3></div>
+      <div class="sb"><p>Every batch file starts with <b>@ECHO OFF</b>. This hides the commands themselves from printing on screen — you only see the <em>output</em>. The <b>@</b> symbol hides even this line itself.</p></div>
+      <pre class="code"><span class="k">@ECHO OFF</span></pre>
+      <div class="sf"></div>
+    </div>
+
+    <div class="step" data-step="2">
+      <div class="sh"><span class="sn">STEP 02</span><h3>Printing and Comments</h3></div>
+      <div class="sb"><p><b>ECHO</b> prints text to the screen — anything you write after it appears exactly as typed. <b>REM</b> creates a comment; the computer ignores everything after it. Use comments to explain your code.</p></div>
+      <pre class="code"><span class="k">ECHO</span> HELLO WORLD!!
+<span class="c">REM This is a comment - totally ignored</span></pre>
+      <div class="sf"></div>
+    </div>
+
+    <div class="step" data-step="3">
+      <div class="sh"><span class="sn">STEP 03</span><h3>Navigation and Control</h3></div>
+      <div class="sb"><p><b>CD</b> changes your current directory (folder). Used alone, it shows <em>where you are</em>. <b>cls</b> clears the screen. <b>PAUSE</b> stops and waits for a keypress — keeps the window open so you can read output.</p></div>
+      <pre class="code"><span class="k">CD</span> C:\Users\VaishM\Desktop\ac
+<span class="k">CD</span>
+<span class="k">cls</span>
+<span class="k">PAUSE</span></pre>
+      <div class="sf"></div>
+    </div>
+
+    <div class="step" data-step="4">
+      <div class="sh"><span class="sn">STEP 04</span><h3>Copying Files</h3></div>
+      <div class="sb"><p><b>COPY source destination</b> copies files. Use <b>*</b> as a wildcard (e.g. <code>*.txt</code> = all text files). When paths have <b>spaces</b>, wrap them in <code>"quotes"</code> or Windows breaks the command.</p></div>
+      <pre class="code"><span class="k">COPY</span> <span class="s">"path\*.txt"</span> destination</pre>
+      <div class="sf"></div>
+    </div>
+
+    <div class="step" data-step="5">
+      <div class="sh"><span class="sn">STEP 05</span><h3>Deleting Files Safely</h3></div>
+      <div class="sb"><p><b>DEL</b> removes files. The <b>/s</b> flag searches subfolders. The <b>/p</b> flag asks for confirmation <em>before each delete</em> — combine them for safe bulk deletion.</p></div>
+      <pre class="code"><span class="k">DEL</span> <span class="f">/p /s</span> <span class="s">"path\*.txt"</span></pre>
+      <div class="sf"></div>
+    </div>
+
+    <div class="step" data-step="6">
+      <div class="sh"><span class="sn">STEP 06</span><h3>Moving and Renaming</h3></div>
+      <div class="sb"><p><b>MOVE source destination</b> moves files (originals disappear, unlike COPY). Without a destination, it <em>renames</em> in place. You can move entire folders — if the destination doesn't exist, Windows creates it.</p></div>
+      <pre class="code"><span class="k">MOVE</span> B CDE</pre>
+      <div class="sf"></div>
+    </div>
+
+    <div class="step" data-step="7">
+      <div class="sh"><span class="sn">STEP 07</span><h3>File Attributes</h3></div>
+      <div class="sb"><p><b>ATTRIB</b> changes file properties. <b>+r</b> makes read-only, <b>+h</b> hides the file, <b>-r</b> or <b>-h</b> removes them. Combine multiple: <code>ATTRIB -h +r "file"</code> unhides <em>and</em> protects in one command.</p></div>
+      <pre class="code"><span class="k">ATTRIB</span> <span class="f">+r</span> <span class="s">"filepath"</span>
+<span class="k">ATTRIB</span> <span class="f">-h +r</span> <span class="s">"filepath"</span></pre>
+      <div class="sf"></div>
+    </div>
+
+    <div class="step" data-step="8">
+      <div class="sh"><span class="sn">STEP 08</span><h3>Searching and Renaming</h3></div>
+      <div class="sb"><p><b>FIND "text" "filepath"</b> searches inside a file and prints matching lines — both arguments need quotes. <b>REN "full\path\old.txt" "new.txt"</b> renames: the first argument is the <em>full path</em>, the second is <em>only the new name</em> (no path).</p></div>
+      <pre class="code"><span class="k">FIND</span> <span class="s">"MAYANK"</span> <span class="s">"filepath"</span>
+<span class="k">REN</span> <span class="s">"full\path\oldname.txt"</span> <span class="s">"newname.txt"</span></pre>
+      <div class="sf"></div>
+    </div>
+
+  </div>
+
+  <!-- ════════ 3 · COMMAND REFERENCE ════════ -->
+  <div class="shead" id="sec-reference">
+    <span class="n">03</span>
+    <h2>Command Card</h2>
+    <span class="ln"></span>
+    <span class="note">tap to expand</span>
+  </div>
+
+  <div class="ref">
+    <div class="rc"><button class="rh"><span class="cm">@ECHO OFF</span><span class="one">quiet mode</span></button>
+      <div class="rd">Stops Windows echoing each command before it runs. The leading <code>@</code> hides this line too. Always line 1.<span class="syn">@ECHO OFF</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">ECHO</span><span class="one">print</span></button>
+      <div class="rd">Prints text to the screen, exactly as typed.<span class="syn">ECHO HELLO WORLD</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">REM</span><span class="one">comment</span></button>
+      <div class="rd">A remark. Everything after it is ignored by the machine — it's a note for humans.<span class="syn">REM backup step follows</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">PAUSE</span><span class="one">wait</span></button>
+      <div class="rd">Halts the script and prints “Press any key to continue...”. Without it the window closes too fast to read.<span class="syn">PAUSE</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">CD</span><span class="one">change dir</span></button>
+      <div class="rd">Moves to another folder. Alone, with no path, it prints where you currently are.<span class="syn">CD C:\Users\Desktop\ac<br>CD</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">CLS</span><span class="one">clear</span></button>
+      <div class="rd">Wipes the terminal window. Fresh screen, nothing else changes.<span class="syn">CLS</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">COPY</span><span class="one">duplicate</span></button>
+      <div class="rd">Copies a file; the original stays. <code>*</code> is a wildcard. Paths with spaces need quotes.<span class="syn">COPY "path\*.txt" destination</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">DEL</span><span class="one">delete</span></button>
+      <div class="rd">Deletes files — <b>not</b> to the Recycle Bin. <code>/s</code> includes subfolders, <code>/p</code> asks first.<span class="syn">DEL /p /s "path\*.txt"</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">MOVE</span><span class="one">cut &amp; paste</span></button>
+      <div class="rd">Moves files or whole folders; the original is gone. Creates the destination folder if missing.<span class="syn">MOVE file.txt C:\NewFolder\</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">ATTRIB</span><span class="one">flags</span></button>
+      <div class="rd"><code>+r</code>/<code>-r</code> read-only, <code>+h</code>/<code>-h</code> hidden, <code>+a</code> archive. Combine freely in one call.<span class="syn">ATTRIB -h +r "filepath"</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">FIND</span><span class="one">search text</span></button>
+      <div class="rd">Searches inside a file and prints the matching lines. Both arguments take quotes.<span class="syn">FIND "MAYANK" "filepath"</span></div></div>
+    <div class="rc"><button class="rh"><span class="cm">REN</span><span class="one">rename</span></button>
+      <div class="rd">Renames a file in place. First argument is the full path; the second is only the new name.<span class="syn">REN "full\path\old.txt" "new.txt"</span></div></div>
+  </div>
+
+  <!-- ════════ 4 · PRACTICE ════════ -->
+  <div class="shead" id="sec-practice">
+    <span class="n">04</span>
+    <h2>Practice</h2>
+    <span class="ln"></span>
+    <span class="note">6 challenges · answers shown</span>
+  </div>
+
+  <div class="q" data-q="p1" data-kind="free">
+    <div class="qh"><span class="qn">01</span><span class="qt">Predict the output</span><span class="diff">◆</span></div>
+    <p class="qq">What will this script show on screen?</p>
+    <pre class="code"><span class="k">@ECHO OFF</span>
+<span class="k">ECHO</span> Hello
+<span class="k">ECHO</span> World
+<span class="k">PAUSE</span></pre>
+    <textarea class="ans" placeholder="Type what you think appears…"></textarea>
+    <div class="qbtns"><button class="btn primary reveal">Reveal answer</button></div>
+    <div class="sol">
+      <div class="sk">Answer</div>
+      <pre class="code">Hello
+World
+Press any key to continue...</pre>
+      <div class="fb on">ECHO prints each text on a new line. <code>@ECHO OFF</code> hides the commands themselves. PAUSE shows “Press any key to continue...” So you see three lines of output.</div>
+      <div class="mkrow">How did you do? <button class="btn ok mk" data-mk="got">Got it</button><button class="btn mk" data-mk="miss">Missed it</button></div>
+    </div>
+  </div>
+
+  <div class="q" data-q="p2" data-kind="mc">
+    <div class="qh"><span class="qn">02</span><span class="qt">Multiple choice</span><span class="diff">◆</span></div>
+    <p class="qq">What does the <code>*</code> symbol mean in: <code>COPY "C:\Folder\*.txt" D:\Backup\</code></p>
+    <div class="opts">
+      <button class="opt">Only the file named *.txt</button>
+      <button class="opt">All files in the folder</button>
+      <button class="opt" data-ok="1">All files ending in .txt</button>
+      <button class="opt">The first file in the folder</button>
+    </div>
+    <div class="fb">The asterisk (<code>*</code>) is a wildcard that means “anything.” So <code>*.txt</code> means “any filename that ends with .txt.” This is one of the most powerful features in batch scripting.</div>
+  </div>
+
+  <div class="q" data-q="p3" data-kind="mc">
+    <div class="qh"><span class="qn">03</span><span class="qt">Multiple choice</span><span class="diff">◆</span></div>
+    <p class="qq">What is the difference between COPY and MOVE?</p>
+    <div class="opts">
+      <button class="opt">No difference</button>
+      <button class="opt" data-ok="1">COPY keeps the original, MOVE deletes it</button>
+      <button class="opt">MOVE is faster than COPY</button>
+      <button class="opt">COPY only works with folders</button>
+    </div>
+    <div class="fb">COPY = photocopy (original stays). MOVE = physically carry it (original is gone). Think of it like copy-paste vs cut-paste.</div>
+  </div>
+
+  <div class="q" data-q="p4" data-kind="free">
+    <div class="qh"><span class="qn">04</span><span class="qt">Modify the code</span><span class="diff">◆◆</span></div>
+    <p class="qq">Your lecturer's <code>13_DELETE.bat</code> uses <code>DEL /p /s</code> to delete .txt files with confirmation. How would you modify it to delete <b>all</b> file types (not just .txt) but <b>only</b> in the main folder (not subfolders)?</p>
+    <pre class="code"><span class="k">DEL</span> <span class="f">/p /s</span> <span class="s">"C:\Users\Desktop\DELETE\*.txt"</span></pre>
+    <textarea class="ans" placeholder="Write the modified command…"></textarea>
+    <div class="qbtns"><button class="btn primary reveal">Reveal answer</button></div>
+    <div class="sol">
+      <div class="sk">Answer</div>
+      <pre class="code"><span class="k">DEL</span> <span class="f">/p</span> <span class="s">"C:\Users\Desktop\DELETE\*.*"</span></pre>
+      <div class="fb on">Two changes: (1) Remove <code>/s</code> so it does not search subfolders. (2) Change <code>*.txt</code> to <code>*.*</code> which means “all files regardless of extension.” The <code>/p</code> stays so you still get confirmation for safety.</div>
+      <div class="mkrow">How did you do? <button class="btn ok mk" data-mk="got">Got it</button><button class="btn mk" data-mk="miss">Missed it</button></div>
+    </div>
+  </div>
+
+  <div class="q" data-q="p5" data-kind="free">
+    <div class="qh"><span class="qn">05</span><span class="qt">Predict the output</span><span class="diff">◆</span></div>
+    <p class="qq">What does <code>CD</code> do when used <b>without</b> any path after it?</p>
+    <pre class="code"><span class="k">@ECHO OFF</span>
+<span class="k">CD</span>
+<span class="k">PAUSE</span></pre>
+    <textarea class="ans" placeholder="Type your answer…"></textarea>
+    <div class="qbtns"><button class="btn primary reveal">Reveal answer</button></div>
+    <div class="sol">
+      <div class="sk">Answer</div>
+      <pre class="code">It prints the current directory path
+(e.g. C:\Users\YourName)</pre>
+      <div class="fb on">CD alone is like asking “where am I?” It displays your current working directory. This is useful for debugging — to verify you are in the right folder before running file operations.</div>
+      <div class="mkrow">How did you do? <button class="btn ok mk" data-mk="got">Got it</button><button class="btn mk" data-mk="miss">Missed it</button></div>
+    </div>
+  </div>
+
+  <div class="q" data-q="p6" data-kind="free">
+    <div class="qh"><span class="qn">06</span><span class="qt">Write the script</span><span class="diff">◆◆</span></div>
+    <p class="qq">Write a batch script that: (1) clears the screen, (2) prints “Organizing files...”, (3) copies all <code>.pdf</code> files from <code>Desktop\Inbox</code> to <code>Desktop\Archive</code>, (4) prints “Done!” and waits.</p>
+    <textarea class="ans" placeholder="Write the whole script…" style="min-height:130px"></textarea>
+    <div class="qbtns"><button class="btn primary reveal">Reveal answer</button></div>
+    <div class="sol">
+      <div class="sk">Answer</div>
+      <pre class="code"><span class="k">@ECHO OFF</span>
+<span class="k">CLS</span>
+<span class="k">ECHO</span> Organizing files...
+<span class="k">COPY</span> <span class="s">"C:\Users\YourName\Desktop\Inbox\*.pdf"</span> <span class="s">"C:\Users\YourName\Desktop\Archive"</span>
+<span class="k">ECHO</span> Done!
+<span class="k">PAUSE</span></pre>
+      <div class="fb on">This combines 5 commands you learned: <code>@ECHO OFF</code> (clean output), <code>CLS</code> (fresh screen), <code>ECHO</code> (status messages), <code>COPY</code> with a wildcard (bulk file operation), and <code>PAUSE</code> (keep the window open). This is essentially a simplified version of your real file automation.</div>
+      <div class="mkrow">How did you do? <button class="btn ok mk" data-mk="got">Got it</button><button class="btn mk" data-mk="miss">Missed it</button></div>
+    </div>
+  </div>
+
+  <!-- ════════ 5 · THE TEST ════════ -->
+  <div class="shead" id="sec-test">
+    <span class="n">05</span>
+    <h2>The Test</h2>
+    <span class="ln"></span>
+    <span class="note">5 challenges · no hints</span>
+  </div>
+
+  <div class="q" data-q="t1" data-kind="mc">
+    <div class="qh"><span class="qn">01</span><span class="qt">Multiple choice</span><span class="diff">◆</span></div>
+    <p class="qq">Why do we put <code>@ECHO OFF</code> as the first line of almost every batch file?</p>
+    <div class="opts">
+      <button class="opt">It makes the script run faster</button>
+      <button class="opt" data-ok="1">It prevents commands from being shown in the output</button>
+      <button class="opt">It hides error messages</button>
+      <button class="opt">It is required by Windows</button>
+    </div>
+    <div class="fb">Without <code>@ECHO OFF</code>, every command would be printed to the screen before its result. So instead of just seeing “Hello World”, you would see “ECHO Hello World” followed by “Hello World.” The <code>@</code> symbol also hides the ECHO OFF command itself.</div>
+  </div>
+
+  <div class="q" data-q="t2" data-kind="mc">
+    <div class="qh"><span class="qn">02</span><span class="qt">Multiple choice</span><span class="diff">◆</span></div>
+    <p class="qq">What does <code>DEL /s</code> do differently from plain <code>DEL</code>?</p>
+    <div class="opts">
+      <button class="opt">Deletes silently without output</button>
+      <button class="opt" data-ok="1">Deletes files in subfolders too</button>
+      <button class="opt">Deletes system files</button>
+      <button class="opt">Deletes securely (unrecoverable)</button>
+    </div>
+    <div class="fb"><code>/s</code> stands for “subdirectories.” Without it, DEL only looks at the one folder you specified. With <code>/s</code>, it searches every folder inside that folder, and their folders, and so on. Very powerful — and dangerous without <code>/p</code>.</div>
+  </div>
+
+  <div class="q" data-q="t3" data-kind="free">
+    <div class="qh"><span class="qn">03</span><span class="qt">Predict the output</span><span class="diff">◆◆</span></div>
+    <p class="qq">What happens when you run this command?</p>
+    <pre class="code"><span class="k">ATTRIB</span> <span class="f">+h +r</span> <span class="s">"C:\secret.txt"</span></pre>
+    <textarea class="ans" placeholder="Type your answer…"></textarea>
+    <div class="qbtns"><button class="btn primary reveal">Reveal answer</button></div>
+    <div class="sol">
+      <div class="sk">Answer</div>
+      <pre class="code">The file becomes both hidden AND read-only</pre>
+      <div class="fb on"><code>+h</code> makes the file hidden (invisible in File Explorer). <code>+r</code> makes it read-only (cannot be edited or deleted normally). You can combine multiple attribute changes in one command. To reverse it: <code>ATTRIB -h -r "C:\secret.txt"</code></div>
+      <div class="mkrow">How did you do? <button class="btn ok mk" data-mk="got">Got it</button><button class="btn mk" data-mk="miss">Missed it</button></div>
+    </div>
+  </div>
+
+  <div class="q" data-q="t4" data-kind="mc">
+    <div class="qh"><span class="qn">04</span><span class="qt">Multiple choice</span><span class="diff">◆</span></div>
+    <p class="qq">Why do filenames with spaces need to be wrapped in quotes?</p>
+    <div class="opts">
+      <button class="opt">Quotes make it run faster</button>
+      <button class="opt" data-ok="1">Windows treats spaces as separators between arguments</button>
+      <button class="opt">It is just a coding convention</button>
+      <button class="opt">Quotes prevent viruses</button>
+    </div>
+    <div class="fb">The command <code>COPY My File.txt D:\Backup</code> would confuse Windows — it thinks “My” is the source, “File.txt” is the destination, and “D:\Backup” is an error. Quotes tell Windows: everything inside these quotes is ONE path.</div>
+  </div>
+
+  <div class="q" data-q="t5" data-kind="free">
+    <div class="qh"><span class="qn">05</span><span class="qt">Write the command</span><span class="diff">◆◆</span></div>
+    <p class="qq">Write the ATTRIB command to make a file visible (unhide it) but keep it read-only. The file is currently hidden and read-only — <code>ATTRIB</code> shows: <code>H R C:\myfile.txt</code></p>
+    <textarea class="ans" placeholder="Write the command…"></textarea>
+    <div class="qbtns"><button class="btn primary reveal">Reveal answer</button></div>
+    <div class="sol">
+      <div class="sk">Answer</div>
+      <pre class="code"><span class="k">ATTRIB</span> <span class="f">-h +r</span> <span class="s">"C:\myfile.txt"</span></pre>
+      <div class="fb on">Use <code>-h</code> to remove hidden, and <code>+r</code> to keep (or add) read-only. The minus removes, the plus adds. You can do both in one command. If read-only is already set, <code>+r</code> just keeps it — no harm done.</div>
+      <div class="mkrow">How did you do? <button class="btn ok mk" data-mk="got">Got it</button><button class="btn mk" data-mk="miss">Missed it</button></div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <a href="../index.html">← Module list</a>
+    <a class="dim" href="#">Module 02 · not authored yet</a>
+  </div>
+
+  <div class="colophon">Source · 6_BASICCOMMAND.bat · 11_COPY.bat · 13_DELETE.bat · 15_MOVE.bat · 16_MOVE-DIR.bat · 20_ATTRIB.bat · 22_TEST.bat · 23_TESTER.bat</div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "commonplace_bat_m01";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch(e){ state = {}; }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+
+  var TOTAL = 19; // 8 steps + 11 challenges
+
+  function refresh(){
+    var done = 0, k;
+    for (k in state) { if (state[k] === "done" || state[k] === "got") done++; }
+    var pct = Math.min(100, Math.round(done / TOTAL * 100));
+    var f = document.getElementById("pbar"); if (f) f.style.width = pct + "%";
+    var p = document.getElementById("ppct"); if (p) p.textContent = pct + "%";
+  }
+
+  /* ── briefing tabs ── */
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
+    t.addEventListener("click", function(){
+      Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(x){ x.classList.remove("on"); });
+      Array.prototype.forEach.call(document.querySelectorAll(".pane"), function(x){ x.classList.remove("on"); });
+      t.classList.add("on");
+      var pane = document.getElementById("pane-" + t.getAttribute("data-pane"));
+      if (pane) pane.classList.add("on");
+    });
+  });
+
+  /* ── walkthrough ── */
+  var steps = Array.prototype.slice.call(document.querySelectorAll(".step"));
+  var nav = document.getElementById("stepnav");
+  var current = 1;
+
+  steps.forEach(function(st){
+    var n = st.getAttribute("data-step");
+    var b = document.createElement("button");
+    b.className = "sdot"; b.textContent = n; b.setAttribute("data-go", n);
+    b.addEventListener("click", function(){ show(parseInt(n, 10)); });
+    nav.appendChild(b);
+
+    var foot = st.querySelector(".sf");
+    var prev = document.createElement("button");
+    prev.className = "btn"; prev.textContent = "← Prev";
+    prev.addEventListener("click", function(){ show(current - 1); });
+    var mark = document.createElement("button");
+    mark.className = "btn"; mark.setAttribute("data-mark", n);
+    mark.addEventListener("click", function(){
+      var key = "step" + n;
+      if (state[key] === "done") { delete state[key]; } else { state[key] = "done"; }
+      save(); paintStepUI();
+    });
+    var next = document.createElement("button");
+    next.className = "btn primary spacer"; next.textContent = "Next →";
+    next.addEventListener("click", function(){ show(current + 1); });
+    foot.appendChild(prev); foot.appendChild(mark); foot.appendChild(next);
+    if (n === "1") prev.style.visibility = "hidden";
+    if (n === "8") { next.textContent = "To practice ↓"; }
+  });
+
+  function paintStepUI(){
+    steps.forEach(function(st){
+      var n = st.getAttribute("data-step");
+      var isDone = state["step" + n] === "done";
+      var dot = nav.querySelector('[data-go="' + n + '"]');
+      if (dot) dot.classList.toggle("done", isDone);
+      var mk = st.querySelector('[data-mark="' + n + '"]');
+      if (mk) {
+        mk.textContent = isDone ? "✓ Done" : "Mark done";
+        mk.classList.toggle("ok", isDone);
+      }
+    });
+    refresh();
+  }
+
+  function show(n){
+    if (n < 1) n = 1;
+    if (n > steps.length) {
+      var t = document.getElementById("sec-practice");
+      if (t) t.scrollIntoView({behavior:"smooth", block:"start"});
+      return;
+    }
+    current = n;
+    steps.forEach(function(st){ st.classList.toggle("on", st.getAttribute("data-step") === String(n)); });
+    Array.prototype.forEach.call(nav.children, function(b){
+      b.classList.toggle("on", b.getAttribute("data-go") === String(n));
+    });
+  }
+  show(1);
+  paintStepUI();
+
+  /* ── command reference ── */
+  Array.prototype.forEach.call(document.querySelectorAll(".rc .rh"), function(h){
+    h.addEventListener("click", function(){ h.parentNode.classList.toggle("open"); });
+  });
+
+  /* ── challenges ── */
+  Array.prototype.forEach.call(document.querySelectorAll(".q"), function(q){
+    var id = q.getAttribute("data-q");
+    var kind = q.getAttribute("data-kind");
+
+    if (kind === "mc") {
+      var opts = Array.prototype.slice.call(q.querySelectorAll(".opt"));
+      var fb = q.querySelector(".fb");
+      opts.forEach(function(o){
+        o.addEventListener("click", function(){
+          if (q.classList.contains("answered")) return;
+          q.classList.add("answered");
+          var ok = o.getAttribute("data-ok") === "1";
+          o.classList.add(ok ? "pick-ok" : "pick-no");
+          opts.forEach(function(x){
+            x.disabled = true;
+            if (!ok && x.getAttribute("data-ok") === "1") x.classList.add("show-ok");
+          });
+          q.classList.add(ok ? "correct" : "wrong");
+          if (fb) fb.classList.add("on");
+          state[id] = ok ? "got" : "miss";
+          save(); refresh();
+        });
+      });
+      if (state[id]) {
+        var was = state[id] === "got";
+        q.classList.add("answered", was ? "correct" : "wrong");
+        opts.forEach(function(x){
+          x.disabled = true;
+          if (x.getAttribute("data-ok") === "1") x.classList.add(was ? "pick-ok" : "show-ok");
+        });
+        if (fb) fb.classList.add("on");
+      }
+    } else {
+      var rev = q.querySelector(".reveal");
+      var sol = q.querySelector(".sol");
+      if (rev && sol) {
+        rev.addEventListener("click", function(){
+          sol.classList.add("on");
+          rev.style.display = "none";
+        });
+      }
+      Array.prototype.forEach.call(q.querySelectorAll(".mk"), function(m){
+        m.addEventListener("click", function(){
+          var v = m.getAttribute("data-mk");
+          state[id] = (v === "got") ? "got" : "miss";
+          save(); paintMark(q, id); refresh();
+        });
+      });
+      if (state[id]) { if (sol) sol.classList.add("on"); if (rev) rev.style.display = "none"; paintMark(q, id); }
+    }
+  });
+
+  function paintMark(q, id){
+    q.classList.toggle("correct", state[id] === "got");
+    q.classList.toggle("wrong", state[id] === "miss");
+    Array.prototype.forEach.call(q.querySelectorAll(".mk"), function(m){
+      var sel = m.getAttribute("data-mk") === state[id];
+      m.style.opacity = sel ? "1" : "0.4";
+    });
+  }
+
+  refresh();
+})();
+</script>
+
+<!-- Commonplace cloud reading-progress sync -->
+<script>window.READING_SYNC={resourceSet:"bat_module_01",mode:"toggle",items:"div.shead[id^=\u0027sec-\u0027]"};</script>
+<script src="../../../reading-sync.js"></script>
+<script src="../../../_lib/progress-backup.js"></script>
+</body>
+</html>
