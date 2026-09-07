@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Calc Console · Mechanical</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#ffffff; --panel2:#fafbfc; --ink:#0f1419; --ink2:#39424e;
+    --mute:#727d8c; --line:#e2e6eb; --line2:#eef1f4;
+    --accent:#4f46e5; --accent2:#7c3aed; --accent-soft:#eeecfd;
+    --good:#0c7a6d; --good-soft:#e4f2f0; --warn:#b45309; --warn-soft:#fdf2e3; --bad:#b42318; --bad-soft:#fdecea;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","IBM Plex Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,system-ui,sans-serif;
+    --rail:250px;
+  }
+  html[data-theme="dark"]{
+    --bg:#0d1117; --panel:#151a21; --panel2:#1b212a; --ink:#e8ecf1; --ink2:#b9c2cd;
+    --mute:#7f8b9a; --line:#252c37; --line2:#1e242d;
+    --accent:#8b85ff; --accent2:#b48bff; --accent-soft:#211f3a;
+    --good:#4fd1bd; --good-soft:#10302c; --warn:#e0a458; --warn-soft:#33260f; --bad:#f27c72; --bad-soft:#3a1a17;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  button,input,select,textarea{font:inherit;color:inherit}
+
+  /* ---------- shell ---------- */
+  .app{display:flex; flex-direction:column; height:100vh; overflow:hidden}
+  header.bar{
+    flex:0 0 auto; display:flex; align-items:center; gap:14px;
+    padding:0 16px; height:52px; background:var(--panel);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);flex:0 0 auto}
+  .brand .dot{width:9px;height:9px;border-radius:2px;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+  .brand b{font-size:14px;font-weight:700;letter-spacing:-.2px}
+  .brand span{font-size:12px;color:var(--mute)}
+  .searchwrap{flex:1 1 auto; max-width:460px; position:relative}
+  #q{
+    width:100%; padding:8px 74px 8px 32px; border-radius:8px;
+    border:1px solid var(--line); background:var(--panel2); font-size:13.5px;
+    outline:none; transition:border-color .12s, box-shadow .12s;
+  }
+  #q:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); background:var(--panel)}
+  .searchwrap .mag{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--mute);font-size:13px;pointer-events:none}
+  .searchwrap .kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;display:flex;gap:3px}
+  kbd{
+    font-family:var(--mono); font-size:10px; color:var(--mute);
+    border:1px solid var(--line); border-bottom-width:2px; border-radius:4px;
+    padding:1px 5px; background:var(--panel);
+  }
+  .spacer{flex:1 1 auto}
+  .iconbtn{
+    background:transparent;border:1px solid var(--line);border-radius:7px;
+    padding:5px 10px;font-size:12px;color:var(--ink2);cursor:pointer;transition:.12s;
+  }
+  .iconbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .body{flex:1 1 auto; display:flex; min-height:0}
+
+  /* ---------- rail ---------- */
+  nav.rail{
+    flex:0 0 var(--rail); width:var(--rail); overflow-y:auto; overflow-x:hidden;
+    background:var(--panel); border-right:1px solid var(--line); padding:10px 0 40px;
+  }
+  .grouphead{
+    font-size:10px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;
+    color:var(--mute); padding:14px 16px 6px;
+  }
+  .item{
+    display:flex; align-items:baseline; gap:8px; width:100%; text-align:left;
+    padding:6px 16px; border:0; background:transparent; cursor:pointer;
+    border-left:2px solid transparent; color:var(--ink2); font-size:13px; line-height:1.35;
+  }
+  .item:hover{background:var(--panel2); color:var(--ink)}
+  .item.sel{background:var(--accent-soft); border-left-color:var(--accent); color:var(--accent); font-weight:600}
+  .item .n{font-family:var(--mono); font-size:10px; color:var(--mute); flex:0 0 auto}
+  .item.sel .n{color:var(--accent)}
+  .empty{padding:24px 16px; color:var(--mute); font-size:12.5px}
+
+  /* ---------- work area ---------- */
+  main.work{flex:1 1 auto; overflow-y:auto; padding:22px 26px 80px; min-width:0}
+  .wrap{max-width:1080px; margin:0 auto}
+  .title{font-size:23px; font-weight:700; letter-spacing:-.4px; margin:0}
+  .sub{color:var(--mute); font-size:13px; margin:3px 0 0}
+  .eq{
+    display:inline-block; margin-top:12px; font-family:var(--mono); font-size:12.5px;
+    color:var(--ink2); background:var(--panel2); border:1px solid var(--line);
+    border-radius:7px; padding:6px 11px; white-space:pre-wrap;
+  }
+  .cols{display:grid; grid-template-columns:minmax(300px,1fr) minmax(300px,1.05fr); gap:18px; margin-top:20px; align-items:start}
+  @media(max-width:900px){ .cols{grid-template-columns:1fr} }
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  .card > h3{
+    margin:0; padding:10px 16px; font-size:10.5px; font-weight:700;
+    letter-spacing:1.4px; text-transform:uppercase; color:var(--mute);
+    border-bottom:1px solid var(--line2); background:var(--panel2);
+  }
+  .fields{padding:6px 16px 14px}
+  .f{display:flex; align-items:center; gap:12px; padding:8px 0; border-bottom:1px solid var(--line2)}
+  .f:last-child{border-bottom:0}
+  .f label{flex:1 1 auto; font-size:13px; color:var(--ink2); min-width:0}
+  .f label small{display:block; color:var(--mute); font-size:11px; line-height:1.3}
+  .f .ctl{flex:0 0 auto; display:flex; align-items:center; gap:6px}
+  .f input[type=number], .f select{
+    width:118px; padding:6px 8px; border:1px solid var(--line); border-radius:6px;
+    background:var(--panel2); font-family:var(--mono); font-size:13px; text-align:right; outline:none;
+  }
+  .f select{width:auto; max-width:230px; text-align:left; font-family:var(--sans); font-size:12.5px}
+  .f input[type=number]:focus, .f select:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); background:var(--panel)}
+  .f .unit{font-family:var(--mono); font-size:11.5px; color:var(--mute); width:44px}
+  .f.wide{display:block}
+  .f.wide label{margin-bottom:6px; display:block}
+  .f textarea{
+    width:100%; min-height:112px; resize:vertical; padding:9px 10px;
+    border:1px solid var(--line); border-radius:7px; background:var(--panel2);
+    font-family:var(--mono); font-size:12.5px; line-height:1.7; outline:none;
+  }
+  .f textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); background:var(--panel)}
+  .segs{display:flex; flex-wrap:wrap; gap:5px}
+  .seg{
+    padding:5px 10px; border:1px solid var(--line); border-radius:6px; background:var(--panel2);
+    font-size:12px; cursor:pointer; color:var(--ink2); transition:.12s;
+  }
+  .seg:hover{border-color:var(--accent)}
+  .seg.on{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
+
+  /* results */
+  .hero{padding:18px 16px 16px; border-bottom:1px solid var(--line2)}
+  .hero .lab{font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--mute); font-weight:700}
+  .hero .val{font-family:var(--mono); font-size:38px; font-weight:600; letter-spacing:-1.2px; line-height:1.15; margin-top:4px; word-break:break-word}
+  .hero .val u{text-decoration:none; font-size:17px; color:var(--mute); margin-left:6px; font-weight:400}
+  .rows{padding:4px 16px 12px}
+  .r{display:flex; align-items:baseline; gap:10px; padding:7px 0; border-bottom:1px solid var(--line2); font-size:13px}
+  .r:last-child{border-bottom:0}
+  .r .k{flex:1 1 auto; color:var(--ink2)}
+  .r .v{font-family:var(--mono); font-weight:600; text-align:right; white-space:nowrap}
+  .r .u{font-family:var(--mono); font-size:11px; color:var(--mute); width:44px; text-align:left}
+  .r.head{font-size:10px; letter-spacing:1.1px; text-transform:uppercase; color:var(--mute); font-weight:700; border-bottom-color:var(--line); padding-top:14px}
+  .r.head .v,.r.head .u{font-weight:700}
+  .note{margin:0; padding:12px 16px; font-size:12.5px; line-height:1.55; border-top:1px solid var(--line2); background:var(--panel2); color:var(--ink2)}
+  .note.good{background:var(--good-soft); color:var(--good)}
+  .note.warn{background:var(--warn-soft); color:var(--warn)}
+  .note.bad{background:var(--bad-soft); color:var(--bad)}
+  .pill{display:inline-block; font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.6px;
+    padding:2px 7px; border-radius:5px; background:var(--accent-soft); color:var(--accent); margin-left:8px; vertical-align:middle}
+  .foot{display:flex; gap:8px; align-items:center; margin-top:16px; flex-wrap:wrap}
+  .hint{color:var(--mute); font-size:11.5px; font-family:var(--mono)}
+  table.ref{width:100%; border-collapse:collapse; font-size:12.5px}
+  table.ref th{text-align:left; font-size:10px; letter-spacing:1.1px; text-transform:uppercase; color:var(--mute); padding:8px 16px; border-bottom:1px solid var(--line)}
+  table.ref td{padding:7px 16px; border-bottom:1px solid var(--line2); vertical-align:top}
+  table.ref tr:last-child td{border-bottom:0}
+  table.ref td.m{font-family:var(--mono)}
+  ul.rules{margin:0; padding:8px 16px 14px 32px}
+  ul.rules li{padding:5px 0; font-size:13px; color:var(--ink2)}
+  ul.rules li b{color:var(--ink); font-weight:600}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:6px; border:3px solid var(--panel)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <a class="brand" href="../index.html"><span class="dot"></span><b>Calc Console</b><span>· Mechanical</span></a>
+    <div class="searchwrap">
+      <span class="mag">⌕</span>
+      <input id="q" type="text" placeholder="Search — boring, DFM, bolt torque, L10…" autocomplete="off" spellcheck="false" />
+      <span class="kbd"><kbd>/</kbd><kbd>↑↓</kbd><kbd>⏎</kbd></span>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="theme">◐ Theme</button>
+  </header>
+  <div class="body">
+    <nav class="rail" id="rail"></nav>
+    <main class="work"><div class="wrap" id="work"></div></main>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================ shared data ============================ */
+const MATS = [
+  {name:'CRS 1008/1010',      cat:'Carbon steel', shear:310, tensile:365},
+  {name:'HSLA Gr. 50',        cat:'Carbon steel', shear:430, tensile:480},
+  {name:'Stainless 304',      cat:'Stainless',    shear:520, tensile:620},
+  {name:'Stainless 430',      cat:'Stainless',    shear:460, tensile:515},
+  {name:'Aluminium 5052-H32', cat:'Aluminium',    shear:138, tensile:228},
+  {name:'Aluminium 6061-T6',  cat:'Aluminium',    shear:207, tensile:310},
+  {name:'Brass C260 ½-hard',  cat:'Copper alloy', shear:250, tensile:415},
+  {name:'Copper C110',        cat:'Copper alloy', shear:165, tensile:220}
+];
+const MATOPT = MATS.map((m,i)=>[i, m.name+' — τ '+m.shear+' MPa']);
+const MATOPT_T = MATS.map((m,i)=>[i, m.name+' — UTS '+m.tensile+' MPa']);
+
+const CUT = [
+  ['Mild steel · HSS — Vc 30',        30,  2.5],
+  ['Mild steel · carbide — Vc 150',   150, 2.5],
+  ['Alloy steel · carbide — Vc 120',  120, 2.8],
+  ['Stainless · carbide — Vc 100',    100, 3.0],
+  ['Cast iron · carbide — Vc 120',    120, 1.5],
+  ['Aluminium · HSS — Vc 90',         90,  0.9],
+  ['Aluminium · carbide — Vc 300',    300, 0.9],
+  ['Brass/bronze · carbide — Vc 200', 200, 1.2]
+];
+const FITS = [
+  {hole:'H9', shaft:'d9', hg:40, sg:40, dev:'d', kind:'clearance',    use:'Free running — loose bearings, high temperature or dirty environments.'},
+  {hole:'H9', shaft:'e9', hg:40, sg:40, dev:'e', kind:'clearance',    use:'Easy running — widely spaced bearings, plummer blocks.'},
+  {hole:'H8', shaft:'f7', hg:25, sg:16, dev:'f', kind:'clearance',    use:'Close running — accurate machine-tool spindles and shafts.'},
+  {hole:'H7', shaft:'g6', hg:16, sg:10, dev:'g', kind:'clearance',    use:'Sliding — precise location, parts slide and turn freely.'},
+  {hole:'H7', shaft:'h6', hg:16, sg:10, dev:'h', kind:'clearance',    use:'Locational clearance — snug assembly, freely dismountable.'},
+  {hole:'H7', shaft:'k6', hg:16, sg:10, dev:'k', kind:'transition',   use:'Transition — accurate location, light press with keying.'},
+  {hole:'H7', shaft:'n6', hg:16, sg:10, dev:'n', kind:'transition',   use:'Transition/press — rigid location, assembly by press.'},
+  {hole:'H7', shaft:'p6', hg:16, sg:10, dev:'p', kind:'interference', use:'Light press — permanent location of gears and bushings.'},
+  {hole:'H7', shaft:'s6', hg:16, sg:10, dev:'s', kind:'interference', use:'Heavy press / shrink — permanent hubs, no keying needed.'}
+];
+const BOLTS = [
+  ['M6 × 1.0',6,20.1],['M8 × 1.25',8,36.6],['M10 × 1.5',10,58.0],['M12 × 1.75',12,84.3],
+  ['M16 × 2.0',16,157],['M20 × 2.5',20,245],['M24 × 3.0',24,353]
+];
+const BRGS = [
+  ['6204 — deep groove ball',20,13.5,0],['6205 — deep groove ball',25,14.8,0],['6206 — deep groove ball',30,20.3,0],
+  ['6207 — deep groove ball',35,27.0,0],['6208 — deep groove ball',40,32.5,0],['6210 — deep groove ball',50,35.1,0],
+  ['6306 — deep groove ball',30,29.6,0],['6308 — deep groove ball',40,42.3,0],['6310 — deep groove ball',50,61.8,0],
+  ['7206 B — angular contact',30,29.1,0],['7208 B — angular contact',40,44.9,0],['7310 B — angular contact',50,76.1,0],
+  ['NU 206 — cylindrical roller',30,44.0,1],['NU 208 — cylindrical roller',40,62.0,1],['NU 310 — cylindrical roller',50,110.0,1],
+  ['30206 — taper roller',30,47.5,1],['30208 — taper roller',40,70.4,1],['32210 — taper roller',50,106.0,1],
+  ['1206 — self-aligning ball',30,15.6,0],['1208 — self-aligning ball',40,19.0,0],
+  ['22208 E — spherical roller',40,106.0,1],['22210 E — spherical roller',50,122.0,1]
+];
+const KEYS = [[12,17,'5 × 5'],[17,22,'6 × 6'],[22,30,'8 × 7'],[30,38,'10 × 8'],[38,44,'12 × 8'],[44,50,'14 × 9'],
+  [50,58,'16 × 10'],[58,65,'18 × 11'],[65,75,'20 × 12'],[75,85,'22 × 14'],[85,95,'25 × 14'],[95,110,'28 × 16']];
+const SHAFT_STD = [20,25,30,35,40,45,50,55,60,70,80,90,100,110];
+const SVC = {steady:[1.5,1.0], light:[2.0,1.5], heavy:[2.5,2.0]};
+const BEAMS = {
+  ssP:  {pt:1, txt:'Simply supported · centre point load', f:'Mmax = PL/4    δ = PL³/48EI', c:(P,L,EI)=>({V:P/2, M:P*L/4,  d:P*L**3/(48*EI)})},
+  ssU:  {pt:0, txt:'Simply supported · UDL',              f:'Mmax = wL²/8   δ = 5wL⁴/384EI', c:(w,L,EI)=>({V:w*L/2, M:w*L*L/8, d:5*w*L**4/(384*EI)})},
+  cantP:{pt:1, txt:'Cantilever · end point load',         f:'Mmax = PL      δ = PL³/3EI',   c:(P,L,EI)=>({V:P, M:P*L, d:P*L**3/(3*EI)})},
+  cantU:{pt:0, txt:'Cantilever · UDL',                    f:'Mmax = wL²/2   δ = wL⁴/8EI',   c:(w,L,EI)=>({V:w*L, M:w*L*L/2, d:w*L**4/(8*EI)})},
+  ffP:  {pt:1, txt:'Fixed–fixed · centre point load',     f:'Mmax = PL/8    δ = PL³/192EI', c:(P,L,EI)=>({V:P/2, M:P*L/8, d:P*L**3/(192*EI)})}
+};
+
+/* ============================ helpers ============================ */
+const F = (n,d) => (isFinite(n) ? n : 0).toLocaleString('en-US',{minimumFractionDigits:d??0, maximumFractionDigits:d??0});
+const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+const N   = (l,v,u,d) => ({label:l, value:v, unit:u, d:d});
+const S   = (l,v,u)   => ({label:l, value:String(v), unit:u||''});
+const HEAD= (l)       => ({label:l, head:true});
+
+/* ============================ calculators ============================ */
+const CALCS = [
+
+/* ------------------------------ press & sheet metal ------------------------------ */
+{
+  id:'press', group:'Press & sheet metal', name:'Blanking / press force',
+  tags:'press force blank punch shear tonnage cut perimeter',
+  eq:'F = L · t · τ        press size ≈ 1.3 F',
+  sub:'Punch or blank tonnage from cut length, stock thickness and shear strength.',
+  inputs:[
+    {k:'L', label:'Total cut length', hint:'Perimeter of the blank plus every internal cut-out', unit:'mm', v:220, step:5},
+    {k:'t', label:'Stock thickness', unit:'mm', v:1.5, step:0.1},
+    {k:'m', label:'Material', type:'sel', opts:MATOPT, v:0}
+  ],
+  run(v){
+    const mat = MATS[v.m], Nn = v.L*v.t*mat.shear;
+    return {
+      hero:N('Blanking force', Nn/1000, 'kN', 1),
+      rows:[
+        N('Metric tons', Nn/9807, 't', 2),
+        N('Press capacity, +30 %', Nn/9807*1.3, 't', 2),
+        N('Stripping force ≈ 10 %', Nn/1000*0.1, 'kN', 1),
+        HEAD('Material'),
+        S('Grade', mat.name),
+        N('Shear strength τ', mat.shear, 'MPa', 0),
+        N('Cut area', v.L*v.t, 'mm²', 0)
+      ],
+      note:['Size the press on the +30 % figure, not the bare force — snap-through and misfeed spikes eat the difference.','']
+    };
+  }
+},
+{
+  id:'bend', group:'Press & sheet metal', name:'Bend allowance & deduction',
+  tags:'bend allowance deduction flat pattern k factor neutral axis springback',
+  eq:'BA = θ · (R + K·t)        BD = 2(R+t)·tan(θ/2) − BA',
+  sub:'Flat-pattern length for an air or bottom bend.',
+  inputs:[
+    {k:'t', label:'Stock thickness', unit:'mm', v:1.5, step:0.1},
+    {k:'R', label:'Inside bend radius', unit:'mm', v:1.5, step:0.5},
+    {k:'a', label:'Bend angle θ', hint:'Angle turned through, not the included angle', unit:'°', v:90, step:5},
+    {k:'kmode', label:'K-factor', type:'seg', opts:[['auto','Auto (R<2t → 0.33)'],['33','0.33'],['40','0.40'],['44','0.44'],['50','0.50']], v:'auto'}
+  ],
+  run(v){
+    const K = v.kmode==='auto' ? (v.R < 2*v.t ? 0.33 : 0.5) : parseFloat(v.kmode)/100;
+    const th = v.a*Math.PI/180;
+    const BA = th*(v.R + K*v.t);
+    const OSSB = (v.R+v.t)*Math.tan(th/2);
+    const BD = 2*OSSB - BA;
+    const bad = v.R < v.t;
+    return {
+      hero:N('Bend allowance', BA, 'mm', 2),
+      rows:[
+        N('Bend deduction', BD, 'mm', 2),
+        N('Outside setback', OSSB, 'mm', 2),
+        N('K-factor used', K, '', 2),
+        N('Neutral-axis offset', K*v.t, 'mm', 2),
+        HEAD('Checks'),
+        N('R / t ratio', v.R/v.t, '', 2),
+        N('Min flange (4t)', 4*v.t, 'mm', 1)
+      ],
+      note: bad
+        ? ['Inside radius below 1 × t — the outer fibre will crack in most steels. Open the radius to 1–2 × t.','bad']
+        : v.R > 8*v.t
+          ? ['Very generous radius — springback dominates; expect to over-bend several degrees to hold θ.','warn']
+          : ['Radius sits in the safe 1–8 × t band. Flat length = sum of flanges (outside) − bend deduction.','good']
+    };
+  }
+},
+{
+  id:'dfm', group:'Press & sheet metal', name:'Sheet-metal DFM check',
+  tags:'dfm design for manufacturing minimum feature hole edge web notch tab relief rules',
+  eq:'every minimum scaled from stock thickness t',
+  sub:'Minimum punchable features for one stock thickness — the numbers to put on the drawing.',
+  inputs:[
+    {k:'t', label:'Stock thickness', unit:'mm', v:1.5, step:0.1},
+    {k:'ss', label:'Stainless', hint:'Stainless needs a larger minimum hole', type:'seg', opts:[['0','No'],['1','Yes']], v:'0'}
+  ],
+  run(v){
+    const t=v.t, ss=v.ss==='1';
+    return {
+      hero:N('Min punched hole Ø', (ss?1.5:1.0)*t, 'mm', 2),
+      rows:[
+        HEAD('Spacing'),
+        N('Hole to edge (1.5 t)', 1.5*t, 'mm', 2),
+        N('Hole to hole (2 t)',   2*t,   'mm', 2),
+        N('Hole to bend tangent (2.5 t + R)', 2.5*t, 'mm + R', 2),
+        HEAD('Forming'),
+        N('Min inside bend radius (1 t)', t, 'mm', 2),
+        N('Min flange width (4 t)', 4*t, 'mm', 2),
+        N('Bend relief width (1 t)', t, 'mm', 2),
+        N('Bend relief depth (R + t)', t, 'mm + R', 2),
+        HEAD('Cut features'),
+        N('Min notch width (1.5 t)', 1.5*t, 'mm', 2),
+        N('Max notch depth (5 × width)', 7.5*t, 'mm', 2),
+        N('Min tab width (2 t)', 2*t, 'mm', 2),
+        S('Grain direction', 'Bend axis ⊥ rolling direction'),
+        S('Burr side', 'Call out on the drawing')
+      ],
+      note:['Punching below the minimum hole Ø snaps punches — go to drilling or laser instead of shrinking the punch.','']
+    };
+  }
+},
+{
+  id:'draw', group:'Press & sheet metal', name:'Deep-drawn cup',
+  tags:'deep draw blank diameter draw ratio beta cup redraw blank holder',
+  eq:'D = √(d² + 4dh)      β = D / d      F = π·d·t·UTS·(β − 0.7)',
+  sub:'Blank size, draw severity and draw force for a plain cylindrical cup.',
+  inputs:[
+    {k:'d', label:'Cup diameter d', unit:'mm', v:80, step:5},
+    {k:'h', label:'Cup height h', unit:'mm', v:40, step:5},
+    {k:'t', label:'Stock thickness t', unit:'mm', v:1.0, step:0.1},
+    {k:'m', label:'Material', type:'sel', opts:MATOPT_T, v:0}
+  ],
+  run(v){
+    const mat=MATS[v.m], d=Math.max(1,v.d);
+    const D = Math.sqrt(d*d + 4*d*v.h);
+    const beta = D/d;
+    let n=1, cur=D*0.55;
+    if (beta > 1.8){ while (cur > d && n < 6){ cur *= 0.78; n++; } }
+    const Fd = Math.PI*d*v.t*mat.tensile*Math.max(0, beta-0.7)/1000;
+    return {
+      hero:N('Blank diameter', D, 'mm', 1),
+      rows:[
+        N('Draw ratio β', beta, '', 2),
+        N('Draw operations', n, '×', 0),
+        N('Draw force', Fd, 'kN', 1),
+        N('Blank-holder force ≈ F/3', Fd/3, 'kN', 1),
+        HEAD('Tooling'),
+        N('Punch nose radius (4 t)', 4*v.t, 'mm', 1),
+        N('Die throat radius (8 t)', 8*v.t, 'mm', 1),
+        N('Punch–die clearance (1.1 t)', 1.1*v.t, 'mm', 2),
+        S('Material', mat.name)
+      ],
+      note: beta > 2.2
+        ? ['β above 2.2 exceeds practical single-material limits — reduce height, add a taper, or split into more draws with an interstage anneal.','bad']
+        : beta > 1.8
+          ? ['Moderate severity — needs '+n+' draws (first reduction ≤ 45–48 %, redraws ≤ ~22 %). Blank-holder required to stop wrinkling.','warn']
+          : ['Mild draw — achievable in a single operation with standard punch and die radii of 4–8 × t.','good']
+    };
+  }
+},
+{
+  id:'diecost', group:'Press & sheet metal', name:'Die cost & payback',
+  tags:'die cost tooling hours progressive compound single station volume amortise piece cost',
+  eq:'hours = base × complexity      cost = hours × rate × 1.35',
+  sub:'Order-of-magnitude tool build cost and the per-piece tooling burden.',
+  inputs:[
+    {k:'type', label:'Die type', type:'seg', opts:[['single','Single station'],['compound','Compound'],['prog','Progressive']], v:'prog'},
+    {k:'st', label:'Stations', hint:'Progressive dies only', unit:'', v:6, step:1},
+    {k:'cx', label:'Complexity factor', hint:'1.0 simple · 1.5 typical · 2.5 hard', unit:'×', v:1.5, step:0.1},
+    {k:'rate', label:'Toolroom rate', unit:'/h', v:65, step:5},
+    {k:'vol', label:'Annual volume', unit:'pcs', v:100000, step:10000}
+  ],
+  run(v){
+    const base = v.type==='single' ? 60 : v.type==='compound' ? 140 : 120 + 55*Math.max(1,v.st);
+    const hours = Math.round(base*v.cx);
+    const cost = hours*v.rate*1.35;
+    const vol = Math.max(1, v.vol);
+    return {
+      hero:N('Die cost', cost, '', 0),
+      rows:[
+        N('Build hours', hours, 'h', 0),
+        N('Material + outsourcing (35 %)', hours*v.rate*0.35, '', 0),
+        HEAD('Per piece'),
+        N('Tooling burden, year 1', cost/vol, '/pc', 4),
+        N('Amortised over 3 years', cost/(vol*3), '/pc', 4),
+        N('Break-even at 0.05/pc', cost/0.05, 'pcs', 0)
+      ],
+      note: vol < 10000
+        ? ['Low volume — a single-station die or soft tooling keeps cost proportionate. Progressive dies rarely pay back under 10 k pcs.','warn']
+        : vol < 100000
+          ? ['Mid volume — a compound die gives one-hit accuracy at moderate tooling cost. Go progressive only if the part needs several bends or forms.','']
+          : ['High volume — a progressive die amortises quickly and minimises piece cost. Budget for strip-layout optimisation and a maintenance schedule.','good']
+    };
+  }
+},
+{
+  id:'diemaint', group:'Press & sheet metal', name:'Die maintenance interval',
+  tags:'die maintenance regrind sharpen interval strokes punch life pm',
+  eq:'weeks between regrinds = interval ÷ monthly strokes × 4.33',
+  sub:'Turn a stroke-life figure into a date on the PM calendar.',
+  inputs:[
+    {k:'spm', label:'Strokes per month', unit:'', v:50000, step:5000},
+    {k:'iv',  label:'Regrind interval', hint:'Hits between sharpenings', unit:'hits', v:30000, step:5000}
+  ],
+  run(v){
+    const spm=Math.max(1,v.spm), iv=Math.max(1,v.iv);
+    return {
+      hero:N('Regrind every', iv/spm*4.33, 'weeks', 1),
+      rows:[
+        N('Regrinds per year', spm*12/iv, '/yr', 1),
+        N('Months between regrinds', iv*12/spm/12, 'mo', 2),
+        N('Hits per regrind', iv, 'hits', 0),
+        HEAD('Plan around it'),
+        S('Punch stock', Math.ceil(spm*12/iv/4)+' spare sets'),
+        S('Shut height', 'Re-shim after each grind'),
+        S('Record', 'Log hits at every die change')
+      ],
+      note:['Regrind on schedule, not on burr complaints — once the edge rolls over, the grind depth doubles and die life drops.','']
+    };
+  }
+},
+
+/* ------------------------------ machining ------------------------------ */
+{
+  id:'cut', group:'Machining', name:'Speeds, feeds, boring & drilling',
+  tags:'boring bore turning milling drilling speed feed rpm vc mrr power cutting conditions surface speed',
+  eq:'N = 1000·Vc / (π·D)        P = kc · MRR / 60',
+  sub:'Spindle speed, feed rate, metal-removal rate and cutting power for the four common operations.',
+  inputs:[
+    {k:'op', label:'Operation', type:'seg', opts:[['turn','Turning'],['bore','Boring'],['mill','Milling'],['drill','Drilling']], v:'bore'},
+    {k:'c',  label:'Material · tool', type:'sel', opts:CUT.map((c,i)=>[i,c[0]]), v:1},
+    {k:'D',  label:'Diameter', hint:'Bore Ø, workpiece Ø, cutter Ø or drill Ø', unit:'mm', v:50, step:5},
+    {k:'f',  label:'Feed per rev', unit:'mm/r', v:0.20, step:0.02, when:v=>v.op!=='mill'},
+    {k:'z',  label:'Teeth / flutes', unit:'', v:4, step:1, when:v=>v.op==='mill'},
+    {k:'fz', label:'Feed per tooth', unit:'mm/z', v:0.10, step:0.01, when:v=>v.op==='mill'},
+    {k:'ap', label:'Depth of cut ap', unit:'mm', v:3, step:0.5, when:v=>v.op!=='drill'},
+    {k:'ae', label:'Radial width ae', unit:'mm', v:25, step:5, when:v=>v.op==='mill'}
+  ],
+  run(v){
+    const c = CUT[v.c], vc = c[1], kc = c[2];
+    const D = Math.max(0.1, v.D);
+    const rpm = 1000*vc/(Math.PI*D);
+    let vf, mrr, extra=[];
+    if (v.op==='mill'){
+      vf = rpm*Math.max(1,v.z)*v.fz;
+      mrr = v.ap*v.ae*vf/1000;
+      extra=[N('Feed per tooth', v.fz,'mm/z',3), N('Engagement ae/D', v.ae/D*100,'%',0)];
+    } else if (v.op==='drill'){
+      vf = v.f*rpm;
+      mrr = Math.PI*D*D/4*v.f*rpm/1000;
+      extra=[N('Point travel per rev', v.f,'mm/r',3)];
+    } else { /* turn + bore share kinematics */
+      vf = v.f*rpm;
+      mrr = vc*v.ap*v.f;
+      extra=[N('Chip area', v.ap*v.f,'mm²',3), N('Passes for 5 mm stock', Math.ceil(5/Math.max(0.01,v.ap)),'',0)];
+    }
+    const kW = kc*mrr/60;
+    const opName = {turn:'Turning', bore:'Boring', mill:'Milling', drill:'Drilling'}[v.op];
+    return {
+      hero:N('Spindle speed', rpm, 'rpm', 0),
+      pill:opName,
+      rows:[
+        N('Feed rate', vf, 'mm/min', 0),
+        N('Cutting speed Vc', vc, 'm/min', 0),
+        N('Metal removal rate', mrr, 'cm³/min', 2),
+        N('Cutting power', kW, 'kW', 2),
+        N('Motor at 75 % eff.', kW/0.75, 'kW', 2),
+        N('Spindle torque', kW*9550/Math.max(1,rpm), 'N·m', 1),
+        HEAD(opName+' detail'),
+        ...extra,
+        N('Specific energy kc', kc, 'kJ/cm³', 1)
+      ],
+      note: v.op==='bore'
+        ? ['Boring bars are the limit, not the numbers — keep overhang under 4 × bar Ø for steel bars, 6–8 × for carbide, and halve ap beyond that.','']
+        : rpm > 6000
+          ? ['Over 6000 rpm — check the machine’s top speed and the toolholder balance grade before running this.','warn']
+          : ['Rates are starting values. Trim the feed 20–30 % on the first cut, then push it once chip colour and sound settle.','']
+    };
+  }
+},
+{
+  id:'ra', group:'Machining', name:'Surface roughness by process',
+  tags:'surface roughness ra finish turning milling grinding honing reaming lookup',
+  sub:'Achievable Ra bands — pick the process that reaches the callout without a finishing operation.',
+  ref:{
+    cols:['Process','Ra µm','Typical use'],
+    rows:[
+      ['Flame / plasma cut','25 – 50','Rough blanks, weld prep'],
+      ['Sawing','6.3 – 25','Stock cut-off'],
+      ['Drilling','1.6 – 6.3','Clearance and tapped holes'],
+      ['Milling','0.8 – 6.3','General machined faces'],
+      ['Turning','0.4 – 6.3','Shafts, spigots, bores'],
+      ['Boring','0.4 – 3.2','Located bores, bearing seats'],
+      ['Reaming','0.8 – 3.2','H7 holes, dowel holes'],
+      ['Broaching','0.8 – 3.2','Keyways, splines'],
+      ['Grinding','0.1 – 1.6','Bearing journals, gauge faces'],
+      ['Honing','0.025 – 0.4','Cylinder bores, hydraulic bores'],
+      ['Lapping / superfinish','0.012 – 0.2','Seal faces, gauge blocks']
+    ]
+  }
+},
+
+/* ------------------------------ fits & tolerances ------------------------------ */
+{
+  id:'fits', group:'Fits & tolerances', name:'ISO fits & limits',
+  tags:'fit limit tolerance iso h7 g6 clearance interference transition shaft hole bore it grade',
+  eq:'i = 0.45·∛D + 0.001·D        IT = n · i',
+  sub:'Hole and shaft deviations, and the clearance or interference they produce.',
+  inputs:[
+    {k:'D', label:'Nominal diameter', unit:'mm', v:40, step:5},
+    {k:'i', label:'Fit', type:'sel', opts:FITS.map((f,i)=>[i, f.hole+'/'+f.shaft+' — '+f.kind]), v:3}
+  ],
+  run(v){
+    const D=Math.max(1,v.D), f=FITS[v.i];
+    const i = 0.45*Math.cbrt(D) + 0.001*D;
+    const IT = {10:10*i, 16:16*i, 25:25*i, 40:40*i};
+    const holeES = IT[f.hg], sIT = IT[f.sg];
+    const devs = {d:-16*D**0.44, e:-11*D**0.41, f:-5.5*D**0.41, g:-2.5*D**0.34, h:0,
+                  k:0.6*Math.cbrt(D), n:5*D**0.34, p:5.6*D**0.41, s:IT[16] + 0.4*D};
+    const fd = devs[f.dev];
+    let es, ei;
+    if ('defgh'.includes(f.dev)){ es = fd; ei = fd - sIT; } else { ei = fd; es = fd + sIT; }
+    const cMax = holeES - ei, cMin = -es;
+    const mm = x => F(D + x/1000, 3);
+    const sgn = x => (x>=0?'+':'−')+F(Math.abs(x),0);
+    return {
+      hero:S('Ø'+F(D,0)+' '+f.hole+'/'+f.shaft, ''),
+      pill:f.kind.toUpperCase(),
+      rows:[
+        HEAD('Hole '+f.hole),
+        S('Upper limit', mm(holeES)+' mm'),
+        S('Lower limit', mm(0)+' mm'),
+        S('ES / EI', sgn(holeES)+' / +0 µm'),
+        HEAD('Shaft '+f.shaft),
+        S('Upper limit', mm(es)+' mm'),
+        S('Lower limit', mm(ei)+' mm'),
+        S('es / ei', sgn(es)+' / '+sgn(ei)+' µm'),
+        HEAD('Resulting fit'),
+        N('Max clearance', cMax, 'µm', 0),
+        N('Min clearance', cMin, 'µm', 0),
+        N('Tolerance grade unit i', i, 'µm', 2)
+      ],
+      note:[f.use + '  ' + (cMin >= 0
+        ? 'Guaranteed gap of '+F(cMin,0)+'–'+F(cMax,0)+' µm across the band.'
+        : cMax <= 0
+          ? F(-cMax,0)+'–'+F(-cMin,0)+' µm interference — assemble by press or thermal shrink.'
+          : 'May assemble with up to '+F(cMax,0)+' µm clearance or '+F(-cMin,0)+' µm interference.'), '']
+    };
+  }
+},
+{
+  id:'stack', group:'Fits & tolerances', name:'Tolerance stack-up',
+  tags:'tolerance stack up worst case rss chain gap assembly statistical',
+  eq:'worst case = Σ|tol|        RSS = √(Σ tol²)',
+  sub:'One dimension per line. Dimensions that open the gap are positive, those that close it are negative.',
+  inputs:[
+    {k:'rows', label:'Chain — name, nominal, ± tolerance', type:'text',
+     v:'Housing bore depth, 50, 0.15\nBearing width, -12, 0.06\nSpacer, -25, 0.10\nGear hub, -12.5, 0.08'}
+  ],
+  run(v){
+    const lines = String(v.rows).split('\n').map(s=>s.trim()).filter(Boolean);
+    const rows = lines.map(l=>{
+      const p = l.split(',');
+      return {name:(p[0]||'dim').trim(), nom:parseFloat(p[1])||0, tol:Math.abs(parseFloat(p[2])||0)};
+    });
+    const nom = rows.reduce((a,r)=>a+r.nom, 0);
+    const wc  = rows.reduce((a,r)=>a+r.tol, 0);
+    const rss = Math.sqrt(rows.reduce((a,r)=>a+r.tol*r.tol, 0));
+    const detail = rows.map(r=>S(r.name, (r.nom>=0?'+':'−')+F(Math.abs(r.nom),3)+'  ± '+F(r.tol,3)));
+    return {
+      hero:N('Nominal gap', nom, 'mm', 3),
+      rows:[
+        HEAD('Worst case'),
+        N('Gap max', nom+wc, 'mm', 3),
+        N('Gap min', nom-wc, 'mm', 3),
+        N('Total ± band', wc, 'mm', 3),
+        HEAD('RSS — statistical'),
+        N('Gap max', nom+rss, 'mm', 3),
+        N('Gap min', nom-rss, 'mm', 3),
+        N('± band', rss, 'mm', 3),
+        N('Tightening vs worst case', (1-rss/(wc||1))*100, '%', 0),
+        HEAD('Chain ('+rows.length+' dimensions)'),
+        ...detail
+      ],
+      note: (nom-wc < 0 && nom >= 0)
+        ? ['Worst-case gap goes negative ('+F(nom-wc,3)+' mm) — parts can interfere. RSS says a random build almost certainly clears; decide by criticality and volume.','warn']
+        : nom < 0
+          ? ['Nominal is negative — check the chain directions. Dimensions toward the gap are +, against it −.','bad']
+          : ['Worst-case gap stays positive — the chain closes even at tolerance extremes. The RSS band is what a production run will actually see.','good']
+    };
+  }
+},
+
+/* ------------------------------ structures ------------------------------ */
+{
+  id:'beam', group:'Structures', name:'Beam solver',
+  tags:'beam bending moment deflection shear cantilever simply supported udl stress',
+  sub:'Peak shear, moment, bending stress and deflection for five standard cases.',
+  inputs:[
+    {k:'cs', label:'Case', type:'sel', opts:Object.keys(BEAMS).map(k=>[k, BEAMS[k].txt]), v:'ssP'},
+    {k:'L',  label:'Span L', unit:'mm', v:1000, step:50},
+    {k:'P',  label:'Load', unit:'kN', v:5, step:0.5},
+    {k:'E',  label:'Young’s modulus', type:'sel', opts:[[200,'Steel — 200 GPa'],[70,'Aluminium — 70 GPa'],[110,'Bronze — 110 GPa'],[100,'Cast iron — 100 GPa'],[193,'Stainless — 193 GPa']], v:200},
+    {k:'sec',label:'Section', type:'seg', opts:[['rect','Rectangle'],['circ','Round'],['cust','Custom I']], v:'rect'},
+    {k:'b',  label:'Width b', unit:'mm', v:40, step:5, when:v=>v.sec==='rect'},
+    {k:'h',  label:'Depth h', unit:'mm', v:60, step:5, when:v=>v.sec==='rect'},
+    {k:'d',  label:'Diameter d', unit:'mm', v:50, step:5, when:v=>v.sec==='circ'},
+    {k:'I',  label:'Second moment I', unit:'cm⁴', v:80, step:10, when:v=>v.sec==='cust'},
+    {k:'c',  label:'Extreme fibre c', unit:'mm', v:30, step:5, when:v=>v.sec==='cust'}
+  ],
+  run(v){
+    const bc = BEAMS[v.cs], L = Math.max(1, v.L), E = v.E*1000;
+    let I, c;
+    if (v.sec==='rect'){ I = v.b*v.h**3/12; c = v.h/2; }
+    else if (v.sec==='circ'){ I = Math.PI*v.d**4/64; c = v.d/2; }
+    else { I = v.I*1e4; c = v.c; }
+    const load = bc.pt ? v.P*1000 : v.P;           // N, or N/mm for UDL
+    const r = bc.c(load, L, E*I);
+    const sigma = r.M*c/I;
+    const ratio = r.d > 0 ? Math.round(L/r.d) : 0;
+    return {
+      hero:N('Max deflection', r.d, 'mm', 3),
+      pill:'L/'+ratio,
+      rows:[
+        N('Max bending moment', r.M/1000, 'N·m', 1),
+        N('Max shear', r.V/1000, 'kN', 2),
+        N('Bending stress σ', sigma, 'MPa', 1),
+        HEAD('Section'),
+        N('Second moment I', I/1e4, 'cm⁴', 2),
+        N('Section modulus Z', I/c/1000, 'cm³', 2),
+        N('Extreme fibre c', c, 'mm', 1),
+        HEAD('Allowables'),
+        N('σ at FS 2 on 250 MPa yield', 125, 'MPa', 0),
+        S('Formula', bc.f)
+      ],
+      note: ratio && ratio < 250
+        ? ['Deflection is L/'+ratio+' — stiffer than L/250 is normal for machine structures, and L/500 to L/1000 for guideways and gear supports.', ratio<180?'bad':'warn']
+        : ['Deflection L/'+ratio+' clears the usual L/250 building limit comfortably. Check σ against the material’s allowable, not just the deflection.','good']
+    };
+  }
+},
+{
+  id:'buck', group:'Structures', name:'Column buckling',
+  tags:'column buckling euler johnson slenderness critical load strut pillar',
+  eq:'λ = K·L / r        Euler Pcr = π²EA / λ²',
+  sub:'Critical load with automatic switching between the Euler and Johnson regimes.',
+  inputs:[
+    {k:'L', label:'Length L', unit:'mm', v:1200, step:50},
+    {k:'end', label:'End fixity', type:'sel', opts:[['pp','Pinned–pinned  K = 1.0'],['ff','Fixed–fixed  K = 0.5'],['fp','Fixed–pinned  K = 0.7'],['fr','Fixed–free  K = 2.0']], v:'pp'},
+    {k:'sec', label:'Section', type:'seg', opts:[['circ','Round'],['rect','Rectangle']], v:'circ'},
+    {k:'d', label:'Diameter d', unit:'mm', v:30, step:2, when:v=>v.sec==='circ'},
+    {k:'b', label:'Width b', unit:'mm', v:40, step:5, when:v=>v.sec==='rect'},
+    {k:'h', label:'Depth h', unit:'mm', v:25, step:5, when:v=>v.sec==='rect'},
+    {k:'E', label:'Young’s modulus', unit:'GPa', v:200, step:10},
+    {k:'sy',label:'Yield strength', unit:'MPa', v:250, step:25},
+    {k:'fs',label:'Safety factor', unit:'×', v:3, step:0.5}
+  ],
+  run(v){
+    const K = {pp:1.0, ff:0.5, fp:0.7, fr:2.0}[v.end];
+    const L = Math.max(10, v.L), E = v.E*1000, sy = Math.max(1, v.sy);
+    let A, I;
+    if (v.sec==='circ'){ const d=Math.max(1,v.d); A=Math.PI*d*d/4; I=Math.PI*d**4/64; }
+    else { const b=Math.max(1,v.b), h=Math.max(1,v.h); const t1=Math.min(b,h), t2=Math.max(b,h); A=b*h; I=t2*t1**3/12; }
+    const r = Math.sqrt(I/A);
+    const lam = K*L/r;
+    const lam1 = Math.sqrt(2*Math.PI**2*E/sy);
+    const euler = lam >= lam1;
+    const Pcr = euler ? Math.PI**2*E*A/(lam*lam) : A*sy*(1 - sy*lam*lam/(4*Math.PI**2*E));
+    return {
+      hero:N('Safe load', Pcr/1000/Math.max(0.1,v.fs), 'kN', 1),
+      pill: euler ? 'EULER' : 'JOHNSON',
+      rows:[
+        N('Critical load Pcr', Pcr/1000, 'kN', 1),
+        N('Slenderness λ', lam, '', 0),
+        N('Transition λ₁', lam1, '', 0),
+        N('Radius of gyration r', r, 'mm', 2),
+        N('Effective length K·L', K*L, 'mm', 0),
+        HEAD('Section'),
+        N('Area A', A, 'mm²', 0),
+        N('Least I', I/1e4, 'cm⁴', 3),
+        N('Squash load A·σy', A*sy/1000, 'kN', 0)
+      ],
+      note: lam > 200
+        ? ['Slenderness over 200 — beyond what most codes allow for a load-bearing member. Shorten the column or deepen the section.','bad']
+        : euler
+          ? ['Elastic (Euler) buckling governs — stiffness decides, not strength. A stronger alloy would NOT raise this load; a bigger section would.','']
+          : ['Inelastic range — the Johnson parabola governs (λ '+F(lam,0)+' < λ₁ '+F(lam1,0)+'). Yield strength and section both matter here.','good']
+    };
+  }
+},
+{
+  id:'cyl', group:'Structures', name:'Pressure cylinder',
+  tags:'pressure vessel cylinder hoop stress longitudinal lame thin wall thick thickness',
+  eq:'thin: σθ = pD/2t      thick: Lamé at the bore',
+  sub:'Hoop and longitudinal stress, and the minimum wall the pressure needs.',
+  inputs:[
+    {k:'D', label:'Inside diameter', unit:'mm', v:300, step:10},
+    {k:'t', label:'Wall thickness', unit:'mm', v:10, step:0.5},
+    {k:'p', label:'Internal pressure', unit:'MPa', v:2, step:0.5},
+    {k:'sa',label:'Allowable stress', unit:'MPa', v:120, step:10}
+  ],
+  run(v){
+    const D=Math.max(10,v.D), t=Math.max(0.5,v.t), p=Math.max(0.01,v.p), sa=Math.max(1,v.sa);
+    const rat = D/t, ri = D/2, ro = ri+t, thin = rat >= 20;
+    const hoop = thin ? p*D/(2*t) : p*(ro*ro+ri*ri)/(ro*ro-ri*ri);
+    const lon = p*D/(4*t);
+    const treq = p*D/(2*sa - p);
+    const fs = sa/hoop;
+    return {
+      hero:N('Hoop stress σθ', hoop, 'MPa', 1),
+      pill: thin ? 'THIN WALL' : 'THICK · LAMÉ',
+      rows:[
+        N('Longitudinal σz', lon, 'MPa', 1),
+        N('Safety factor', fs, '×', 2),
+        N('D / t ratio', rat, '', 1),
+        HEAD('Sizing'),
+        N('Min wall at allowable', treq, 'mm', 2),
+        N('Plus 3 mm corrosion', treq+3, 'mm', 2),
+        N('Wall margin', t-treq, 'mm', 2),
+        HEAD('At the joint'),
+        N('Circumferential weld load', hoop*t, 'N/mm', 0),
+        N('Longitudinal weld load', lon*t, 'N/mm', 0)
+      ],
+      note: fs < 1
+        ? ['Hoop stress exceeds the allowable — the wall is undersized. Minimum thickness at this pressure is '+F(treq,1)+' mm before any corrosion allowance.','bad']
+        : fs < 1.5
+          ? ['Wall holds but the margin is thin (FS '+F(fs,2)+'). Pressure-vessel codes normally want more, plus a corrosion allowance.','warn']
+          : [(thin ? 'Thin-wall theory applies (D/t '+F(rat,1)+' ≥ 20); hoop stress governs at twice the longitudinal.' : 'Thick-wall regime (D/t '+F(rat,1)+' < 20) — the Lamé peak at the bore is shown.'),'good']
+    };
+  }
+},
+
+/* ------------------------------ machine elements ------------------------------ */
+{
+  id:'shaft', group:'Machine elements', name:'Shaft diameter & key',
+  tags:'shaft diameter torque bending equivalent asme key keyway spline size',
+  eq:'Te = √((Km·M)² + (Kt·T)²)      d = ∛(16·Te / π·τ)',
+  sub:'ASME-code shaft size under combined bending and torsion, with the matching parallel key.',
+  inputs:[
+    {k:'T', label:'Torque', unit:'N·m', v:120, step:10},
+    {k:'M', label:'Bending moment', unit:'N·m', v:180, step:10},
+    {k:'tau',label:'Allowable shear', unit:'MPa', v:55, step:5},
+    {k:'svc',label:'Service', type:'seg', opts:[['steady','Steady'],['light','Light shock'],['heavy','Heavy shock']], v:'light'},
+    {k:'kw', label:'Keyway factor', hint:'0.75 with a keyway, 1.0 without', unit:'×', v:0.75, step:0.05}
+  ],
+  run(v){
+    const svc = SVC[v.svc];
+    const tauAll = v.tau*v.kw;
+    const Te = Math.sqrt((svc[0]*v.M)**2 + (svc[1]*v.T)**2);
+    const dReq = Math.cbrt(16*Te*1000/(Math.PI*tauAll));
+    const dStd = SHAFT_STD.find(x=>x>=dReq) || 0;
+    const key = KEYS.find(k=>dStd>k[0] && dStd<=k[1]);
+    return {
+      hero:N('Required diameter', dReq, 'mm', 2),
+      pill: dStd ? 'Ø'+dStd+' STD' : 'OVER RANGE',
+      rows:[
+        S('Next standard shaft', dStd ? 'Ø'+dStd+' mm' : '—'),
+        S('Parallel key, DIN 6885', key ? key[2]+' mm' : '—'),
+        N('Equivalent twisting Te', Te, 'N·m', 1),
+        N('Allowable shear used', tauAll, 'MPa', 1),
+        HEAD('Service factors'),
+        N('Km — bending', svc[0], '×', 2),
+        N('Kt — torsion', svc[1], '×', 2),
+        HEAD('At the standard size'),
+        N('Polar modulus', dStd? Math.PI*dStd**3/16/1000 : 0, 'cm³', 2),
+        N('Actual shear stress', dStd? 16*Te*1000/(Math.PI*dStd**3) : 0, 'MPa', 1)
+      ],
+      note: dStd
+        ? ['Ø'+dStd+' mm with a '+(key?key[2]:'—')+' mm key. Check the deflection and the first critical speed separately — strength rarely governs a long shaft.','good']
+        : ['Required diameter exceeds '+SHAFT_STD[SHAFT_STD.length-1]+' mm — recheck the loads, or move to a hollow or alloy shaft.','bad']
+    };
+  }
+},
+{
+  id:'bolt', group:'Machine elements', name:'Bolt preload & torque',
+  tags:'bolt torque preload clamp thread fastener tightening class 8.8 10.9 12.9 nut factor',
+  eq:'Fi = f · Sp · At        T = K · Fi · d',
+  sub:'Target preload and the tightening torque that reaches it.',
+  inputs:[
+    {k:'b', label:'Bolt', type:'sel', opts:BOLTS.map((b,i)=>[i,b[0]]), v:3},
+    {k:'cls', label:'Property class', type:'sel', opts:[[600,'8.8 — Sp 600 MPa'],[830,'10.9 — Sp 830 MPa'],[970,'12.9 — Sp 970 MPa']], v:830},
+    {k:'f', label:'Preload fraction', hint:'0.75 permanent · 0.65 reused', unit:'×', v:0.75, step:0.05},
+    {k:'K', label:'Nut factor K', hint:'0.20 plain · 0.16 zinc · 0.12 lubricated', unit:'', v:0.20, step:0.01}
+  ],
+  run(v){
+    const b = BOLTS[v.b], At = b[2], d = b[1];
+    const Fi = v.f*v.cls*At;
+    const T = v.K*Fi*d/1000;
+    return {
+      hero:N('Tightening torque', T, 'N·m', 1),
+      pill:b[0],
+      rows:[
+        N('Preload Fi', Fi/1000, 'kN', 2),
+        N('Tensile stress area At', At, 'mm²', 1),
+        N('Preload stress', Fi/At, 'MPa', 0),
+        HEAD('Joint capacity'),
+        N('Slip resistance, µ 0.15', Fi*0.15/1000, 'kN', 2),
+        N('Slip resistance, µ 0.30', Fi*0.30/1000, 'kN', 2),
+        N('Shear capacity, 0.6 Sp', 0.6*v.cls*At/1000, 'kN', 2),
+        HEAD('Torque by class'),
+        ...[[600,'8.8'],[830,'10.9'],[970,'12.9']].map(c=>N('Class '+c[1], v.K*v.f*c[0]*At*d/1000, 'N·m', 0))
+      ],
+      note:['Torque control scatters ±25 % — K is the whole game. Lubricate and you overshoot; a rusty thread and you never reach preload. Angle or stretch control if the joint matters.','']
+    };
+  }
+},
+{
+  id:'spring', group:'Machine elements', name:'Compression spring',
+  tags:'spring rate stiffness wahl index shear stress coil wire helical compression',
+  eq:'k = G·d⁴ / (8·D³·n)        τ = Kw · 8·F·D / (π·d³)',
+  sub:'Rate, stress and spring index for a helical compression spring.',
+  inputs:[
+    {k:'d', label:'Wire diameter d', unit:'mm', v:4, step:0.2},
+    {k:'D', label:'Mean coil diameter D', unit:'mm', v:32, step:1},
+    {k:'n', label:'Active coils n', unit:'', v:8, step:0.5},
+    {k:'F', label:'Working load F', unit:'N', v:200, step:10},
+    {k:'G', label:'Shear modulus', type:'sel', opts:[[79300,'Music wire / spring steel — 79.3 GPa'],[69000,'Stainless 302 — 69 GPa'],[41400,'Phosphor bronze — 41.4 GPa']], v:79300}
+  ],
+  run(v){
+    const d=Math.max(0.1,v.d), D=Math.max(d,v.D), n=Math.max(0.5,v.n);
+    const C = D/d;
+    const Kw = (4*C-1)/(4*C-4) + 0.615/C;
+    const k = v.G*d**4/(8*D**3*n);
+    const tau = Kw*8*v.F*D/(Math.PI*d**3);
+    return {
+      hero:N('Spring rate k', k, 'N/mm', 2),
+      pill:'C = '+F(C,1),
+      rows:[
+        N('Shear stress τ', tau, 'MPa', 0),
+        N('Deflection at F', v.F/k, 'mm', 2),
+        N('Wahl factor Kw', Kw, '', 3),
+        HEAD('Geometry'),
+        N('Spring index C', C, '', 2),
+        N('Outside diameter', D+d, 'mm', 1),
+        N('Inside diameter', D-d, 'mm', 1),
+        N('Solid length (n+2)·d', (n+2)*d, 'mm', 1),
+        N('Energy stored', 0.5*v.F*v.F/k/1000, 'J', 3)
+      ],
+      note: C < 4
+        ? ['Index C below 4 — very stiff to wind and stress concentrates badly. Increase D or reduce d.','bad']
+        : C > 12
+          ? ['Index C above 12 — flimsy and prone to tangling and buckling. Reduce D or increase d.','warn']
+          : ['Index in the preferred 4–12 range. Keep τ below ~45 % of wire tensile for static service, ~30 % for fatigue.','good']
+    };
+  }
+},
+{
+  id:'gear', group:'Machine elements', name:'Spur gear pair',
+  tags:'gear spur module pitch teeth ratio centre distance lewis bending stress tangential force',
+  eq:'d = m·z        σ = Ft / (b·m·Y)',
+  sub:'Geometry, tangential load and Lewis bending stress for a spur pair.',
+  inputs:[
+    {k:'m', label:'Module m', unit:'mm', v:2, step:0.25},
+    {k:'z1',label:'Pinion teeth z₁', unit:'', v:20, step:1},
+    {k:'z2',label:'Wheel teeth z₂', unit:'', v:60, step:1},
+    {k:'b', label:'Face width b', unit:'mm', v:25, step:1},
+    {k:'P', label:'Power', unit:'kW', v:5, step:0.5},
+    {k:'n', label:'Pinion speed', unit:'rpm', v:1440, step:60}
+  ],
+  run(v){
+    const m=v.m, z1=Math.max(6,Math.round(v.z1)), z2=Math.max(6,Math.round(v.z2));
+    const b=Math.max(1,v.b), n=Math.max(1,v.n);
+    const d1=m*z1, d2=m*z2, a=(d1+d2)/2, i=z2/z1;
+    const V = Math.PI*d1*n/60000;
+    const Ft = V>0 ? v.P*1000/V : 0;
+    const Y = 0.484 - 2.87/z1;
+    const sig = Ft/(b*m*Y);
+    const bom = b/m;
+    return {
+      hero:N('Bending stress σ', sig, 'MPa', 1),
+      pill:'i = '+F(i,2),
+      rows:[
+        N('Centre distance a', a, 'mm', 1),
+        N('Pinion PCD d₁', d1, 'mm', 1),
+        N('Wheel PCD d₂', d2, 'mm', 1),
+        HEAD('Loads'),
+        N('Pitch-line velocity', V, 'm/s', 2),
+        N('Tangential force Ft', Ft, 'N', 0),
+        N('Radial force (20° PA)', Ft*Math.tan(20*Math.PI/180), 'N', 0),
+        N('Pinion torque', v.P*9550/n, 'N·m', 1),
+        HEAD('Proportions'),
+        N('Lewis form factor Y', Y, '', 3),
+        N('Face width ratio b/m', bom, '', 1),
+        N('Output speed', n/i, 'rpm', 0),
+        N('Addendum / dedendum', m, ' / '+F(1.25*m,2)+' mm', 2)
+      ],
+      note: sig > 140
+        ? ['Lewis bending stress above ~140 MPa — beyond typical through-hardened steel. Increase the module or face width, or move to an alloy steel.','bad']
+        : bom < 8
+          ? ['Stress is fine but the face is narrow (b/m '+F(bom,1)+') — aim for 8–12 for stable tooth contact.','warn']
+          : bom > 14
+            ? ['Stress is fine but the face is wide (b/m '+F(bom,1)+') — misalignment concentrates load. Aim for 8–12.','warn']
+            : ['Stress within typical steel capacity and b/m in the preferred 8–12 band.'+(V>12?' Pitch-line velocity is high — specify a finer accuracy grade or helical teeth for noise.':''),'good']
+    };
+  }
+},
+{
+  id:'brg', group:'Machine elements', name:'Bearing life L10',
+  tags:'bearing life l10 rating dynamic load hours ball roller basic',
+  eq:'L10 = (C/P)^p        L10h = 10⁶·L10 / (60·n)',
+  sub:'Basic rating life in millions of revolutions and in running hours.',
+  inputs:[
+    {k:'b', label:'Bearing', type:'sel', opts:BRGS.map((b,i)=>[i, b[0]+'  ·  Ø'+b[1]+'  ·  C '+b[2]+' kN']), v:2},
+    {k:'P', label:'Equivalent load P', unit:'kN', v:4, step:0.5},
+    {k:'n', label:'Speed', unit:'rpm', v:1500, step:100}
+  ],
+  run(v){
+    const b = BRGS[v.b], C = b[2], roller = b[3];
+    const P = Math.max(0.01, v.P), n = Math.max(1, v.n);
+    const p = roller ? 10/3 : 3;
+    const L10 = Math.pow(C/P, p);
+    const L10h = 1e6*L10/(60*n);
+    return {
+      hero:N('L10 life', L10h, 'h', 0),
+      pill:b[0].split(' — ')[0],
+      rows:[
+        N('L10 revolutions', L10, 'M rev', 1),
+        N('Years at 8 h/day', L10h/(8*250), 'yr', 1),
+        N('Years continuous', L10h/8760, 'yr', 2),
+        HEAD('Bearing'),
+        N('Dynamic rating C', C, 'kN', 1),
+        N('C / P ratio', C/P, '', 2),
+        N('Life exponent p', p, '', 2),
+        N('Bore', b[1], 'mm', 0),
+        HEAD('Load to hit a target'),
+        N('P for 20 000 h', C/Math.pow(20000*60*n/1e6, 1/p), 'kN', 2),
+        N('P for 40 000 h', C/Math.pow(40000*60*n/1e6, 1/p), 'kN', 2)
+      ],
+      note: L10h >= 40000
+        ? ['Over 40 000 h — suits continuously running plant: pumps, conveyors, line shafts.','good']
+        : L10h >= 20000
+          ? ['20 000–40 000 h — right for 8-hour machine duty such as gearboxes and machine tools.','good']
+          : L10h >= 8000
+            ? ['8 000–20 000 h — fine for intermittent or short-duty machines.','warn']
+            : ['Under 8 000 h — marginal for anything but occasional service. Pick a larger bearing or cut the load.','bad']
+    };
+  }
+},
+{
+  id:'belt', group:'Machine elements', name:'V-belt drive',
+  tags:'v belt drive pulley wrap angle length number of belts sheave section speed',
+  eq:'L = 2C + π(d₁+d₂)/2 + (d₂−d₁)²/4C',
+  sub:'Belt speed, wrap, pitch length and how many belts the drive needs.',
+  inputs:[
+    {k:'P', label:'Power', unit:'kW', v:4, step:0.5},
+    {k:'d1',label:'Driver pulley Ø', unit:'mm', v:125, step:5},
+    {k:'d2',label:'Driven pulley Ø', unit:'mm', v:315, step:5},
+    {k:'C', label:'Centre distance', unit:'mm', v:500, step:25},
+    {k:'n', label:'Driver speed', unit:'rpm', v:1440, step:60},
+    {k:'sf',label:'Service factor', unit:'×', v:1.2, step:0.1},
+    {k:'sec',label:'Belt section', type:'seg', opts:[['Z','Z'],['A','A'],['B','B'],['C','C']], v:'A'}
+  ],
+  run(v){
+    const VBS = {Z:0.10, A:0.26, B:0.45, C:0.80};
+    const P=Math.max(0.1,v.P), d1=Math.max(50,v.d1), d2=Math.max(d1,v.d2);
+    const C=Math.max((d2-d1)/2+30, v.C), n=Math.max(1,v.n);
+    const V = Math.PI*d1*n/60000;
+    const wrap = 180 - 2*Math.asin(clamp((d2-d1)/(2*C),-0.99,0.99))*180/Math.PI;
+    const L = 2*C + Math.PI*(d1+d2)/2 + (d2-d1)**2/(4*C);
+    const Kth = Math.max(0.6, 1 - 0.003*(180-wrap));
+    const Pb = VBS[v.sec]*V*Kth;
+    const nb = Math.max(1, Math.ceil(P*v.sf/Math.max(0.05, Pb)));
+    return {
+      hero:N('Belts required', nb, '', 0),
+      pill:'Section '+v.sec,
+      rows:[
+        N('Belt speed', V, 'm/s', 1),
+        N('Wrap angle, small pulley', wrap, '°', 0),
+        N('Pitch length', L, 'mm', 0),
+        N('Power per belt', Pb, 'kW', 2),
+        N('Design power', P*v.sf, 'kW', 1),
+        HEAD('Drive'),
+        N('Speed ratio', d2/d1, ':1', 2),
+        N('Driven speed', n*d1/d2, 'rpm', 0),
+        N('Arc-of-contact factor', Kth, '', 2),
+        N('Driver torque', P*9550/n, 'N·m', 1)
+      ],
+      note: V > 30
+        ? ['Belt speed over 30 m/s — centrifugal tension eats the rating. Slow the small pulley or move up a section size.','bad']
+        : V < 5
+          ? ['Belt speed under 5 m/s — V-belts transmit little here. Consider larger pulleys or a chain drive.','warn']
+          : wrap < 120
+            ? ['Wrap below 120° — belts will slip under shock load. Increase the centre distance or add an idler.','warn']
+            : ['Speed sits in the efficient 5–30 m/s band with healthy wrap. Per-belt rating is approximate — confirm against the manufacturer table before ordering.','good']
+    };
+  }
+},
+{
+  id:'vib', group:'Machine elements', name:'Vibration isolation',
+  tags:'vibration isolation mount natural frequency transmissibility resonance damping isolator',
+  eq:'fn = √(k/m)/2π        T = √(1+(2ζr)²) / √((1−r²)²+(2ζr)²)',
+  sub:'Natural frequency, transmissibility and isolation efficiency for a machine on mounts.',
+  inputs:[
+    {k:'m', label:'Machine mass', unit:'kg', v:500, step:50},
+    {k:'k', label:'Total mount stiffness', unit:'kN/m', v:500, step:50},
+    {k:'n', label:'Disturbing speed', unit:'rpm', v:1450, step:50},
+    {k:'z', label:'Damping ratio ζ', type:'sel', opts:[[0.02,'Steel spring — 0.02'],[0.05,'Cork / felt — 0.05'],[0.10,'Rubber — 0.10'],[0.20,'Elastomer, high damping — 0.20']], v:0.10}
+  ],
+  run(v){
+    const m=Math.max(1,v.m), k=Math.max(0.01,v.k), n=Math.max(1,v.n), z=v.z;
+    const fn = Math.sqrt(k*1000/m)/(2*Math.PI);
+    const f = n/60, r = f/fn;
+    const T = Math.sqrt(1+(2*z*r)**2) / Math.sqrt((1-r*r)**2 + (2*z*r)**2);
+    const iso = (1-T)*100;
+    const sag = m*9.81/k;
+    return {
+      hero:N('Isolation', iso, '%', 1),
+      pill:'r = '+F(r,2),
+      rows:[
+        N('Natural frequency fn', fn, 'Hz', 2),
+        N('Disturbing frequency', f, 'Hz', 2),
+        N('Transmissibility T', T, '', 3),
+        N('Static deflection', sag, 'mm', 1),
+        HEAD('To improve it'),
+        N('fn for 90 % isolation', f/Math.sqrt(11), 'Hz', 2),
+        N('k for 90 % isolation', m*(2*Math.PI*f/Math.sqrt(11))**2/1000, 'kN/m', 0),
+        N('Sag at that stiffness', m*9.81/(m*(2*Math.PI*f/Math.sqrt(11))**2/1000), 'mm', 1),
+        N('Damping ratio ζ', z, '', 2)
+      ],
+      note: (r < 1.2 && r > 0.8)
+        ? ['Running at '+F(r,2)+'× the natural frequency — near resonance, the mounts AMPLIFY vibration '+F(T,1)+'×. Soften the mounts substantially or stiffen them past it.','bad']
+        : r <= Math.SQRT2
+          ? ['Frequency ratio below √2 — the mounts transmit more than a rigid bolt-down would (T '+F(T,2)+'). Isolation needs r > √2; use softer mounts.','warn']
+          : iso >= 90
+            ? ['Good isolation — '+F(iso,0)+' % of the disturbing force is kept off the foundation. Check the '+F(sag,1)+' mm static sag is acceptable and that start-up passes resonance quickly.','good']
+            : ['Isolating, but only '+F(iso,0)+' % — machine-mount practice targets 90 %+. Softer springs push the ratio up.','warn']
+    };
+  }
+},
+
+/* ------------------------------ plant ------------------------------ */
+{
+  id:'oee', group:'Plant & process', name:'OEE',
+  tags:'oee overall equipment effectiveness availability performance quality downtime lean',
+  eq:'OEE = A × P × Q',
+  sub:'Availability, performance and quality from one shift’s numbers.',
+  inputs:[
+    {k:'pl', label:'Planned time', unit:'min', v:480, step:30},
+    {k:'dn', label:'Downtime', unit:'min', v:45, step:5},
+    {k:'ct', label:'Ideal cycle time', unit:'s', v:2.5, step:0.1},
+    {k:'tot',label:'Total pieces', unit:'pcs', v:9000, step:100},
+    {k:'def',label:'Defect pieces', unit:'pcs', v:120, step:10}
+  ],
+  run(v){
+    const pl=Math.max(1,v.pl), dn=Math.min(pl,v.dn), rt=pl-dn;
+    const tot=Math.max(0,v.tot), def=Math.min(tot,v.def);
+    const A = rt/pl;
+    const P = (rt>0 && tot>0) ? Math.min(1, v.ct*tot/(rt*60)) : 0;
+    const Q = tot>0 ? (tot-def)/tot : 0;
+    const oee = A*P*Q*100;
+    const worst = (A<=P && A<=Q) ? 'availability — attack changeover and unplanned stops (SMED)'
+                : (P<=Q) ? 'performance — find micro-stops and cycle losses at the machine'
+                : 'quality — trace defects to root cause and poka-yoke the tool';
+    return {
+      hero:N('OEE', oee, '%', 1),
+      rows:[
+        N('Availability A', A*100, '%', 1),
+        N('Performance P', P*100, '%', 1),
+        N('Quality Q', Q*100, '%', 1),
+        HEAD('Time'),
+        N('Run time', rt, 'min', 0),
+        N('Actual cycle', rt*60/Math.max(1,tot), 's/pc', 2),
+        N('Ideal cycle', v.ct, 's/pc', 2),
+        HEAD('Lost output'),
+        N('Pieces lost to downtime', dn*60/Math.max(0.01,v.ct), 'pcs', 0),
+        N('Pieces lost to scrap', def, 'pcs', 0),
+        N('Good pieces', tot-def, 'pcs', 0)
+      ],
+      note: oee >= 85
+        ? ['World-class territory — protect it with standard work and PM discipline.','good']
+        : oee >= 60
+          ? ['Typical for discrete manufacturing. Biggest lever: '+worst+'.','']
+          : ['Low — run a structured loss analysis before local fixes. Downtime and speed losses usually dominate.','warn']
+    };
+  }
+},
+{
+  id:'cast', group:'Plant & process', name:'Casting process selector',
+  tags:'casting sand permanent mold die casting investment wall draft tolerance dfm process comparison',
+  sub:'Minimum wall, draft, tolerance and finish by casting process — the DFM envelope before you design to it.',
+  ref:{
+    cols:['Process','Min wall','Draft','Tolerance','Ra µm','Tooling','Alloys'],
+    rows:[
+      ['Sand casting','3–5 mm','1–3°','±1.0 mm','12.5–25','Low','All — iron, steel, Al, bronze'],
+      ['Permanent mould','2.5–4 mm','1–3°','±0.4 mm','3.2–6.3','Medium','Al, Mg, Cu alloys'],
+      ['Die casting (HPDC)','1–2.5 mm','0.5–2°','±0.1 mm','0.8–3.2','Very high','Al, Zn, Mg — non-ferrous only'],
+      ['Investment','1.5–3 mm','0.5–1°','±0.1–0.3 mm','1.6–3.2','High','All incl. steel and superalloys']
+    ]
+  },
+  rules:[
+    ['Uniform sections','Avoid mass concentrations and hot spots; keep walls even.'],
+    ['Gradual transitions','Taper thick-to-thin sections; no abrupt steps.'],
+    ['Fillet inside corners','r ≈ t/3 to t on every internal corner.'],
+    ['Draft all vertical faces','Per process capability; more on internal faces and cores.'],
+    ['Ribs over bulk','Use ribs instead of thick sections; stagger rib junctions.'],
+    ['Directional solidification','Heavy sections must be feedable by risers.'],
+    ['Simple parting line','Flat parting where possible; critical dimensions in one mould half.'],
+    ['Machining allowance','1.5–3 mm on functional faces for sand casting.'],
+    ['Shrinkage allowance','Cast iron ~1 %, steel ~2 %, aluminium ~1.3 % on the pattern.']
+  ]
+},
+{
+  id:'jig', group:'Plant & process', name:'Jig & fixture rules',
+  tags:'jig fixture locating 3-2-1 clamping poka yoke workholding datum',
+  sub:'The checklist that catches most fixture faults before the first part is cut.',
+  rules:[
+    ['3-2-1 location','Six points, no more — over-location causes rocking and scrap.'],
+    ['Locate on qualified surfaces','Machined or datum surfaces before rough cast faces.'],
+    ['Clamp into locators','Direct clamp force at fixed locators, never mid-span.'],
+    ['Clamps clear the tool path','Quick-acting clamps where cycle time matters.'],
+    ['Foolproofing','Part loads only one way; block wrong orientation physically.'],
+    ['Swarf clearance','Chip space around locators; easy to clean between cycles.'],
+    ['Burr relief','Relieve locator edges where part burrs would seat.'],
+    ['Renewable wear parts','Hardened, replaceable locators and bushes.'],
+    ['Match the drawing datums','Fixture datums = drawing datums, or the stack-up moves.'],
+    ['Prove with a setting piece','A known-good master to re-zero after every teardown.']
+  ]
+}
+];
+
+/* ============================ state & rendering ============================ */
+const STORE = {};
+CALCS.forEach(c => { if (c.inputs){ const o={}; c.inputs.forEach(f=>o[f.k]=f.v); STORE[c.id]=o; } });
+
+let current = CALCS[0].id;
+let filtered = CALCS.slice();
+let cursor = 0;
+
+const $ = s => document.querySelector(s);
+const rail = $('#rail'), work = $('#work'), qEl = $('#q');
+
+function score(c, q){
+  if (!q) return 0;
+  const hay = (c.name+' '+c.group+' '+(c.tags||'')).toLowerCase();
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  let s = 0;
+  for (const t of terms){
+    const at = hay.indexOf(t);
+    if (at < 0) return -1;
+    s += (c.name.toLowerCase().indexOf(t) === 0) ? 100 : (c.name.toLowerCase().includes(t) ? 40 : 10);
+  }
+  return s;
+}
+function applyFilter(){
+  const q = qEl.value.trim();
+  if (!q){ filtered = CALCS.slice(); }
+  else {
+    filtered = CALCS.map(c=>({c, s:score(c,q)})).filter(x=>x.s >= 0)
+                    .sort((a,b)=>b.s-a.s).map(x=>x.c);
+  }
+  cursor = 0;
+  drawRail();
+}
+function drawRail(){
+  rail.innerHTML = '';
+  if (!filtered.length){ rail.innerHTML = '<div class="empty">Nothing matches. Try “bore”, “bolt”, “L10”, “DFM”, “OEE”.</div>'; return; }
+  let g = null;
+  filtered.forEach((c, idx) => {
+    if (c.group !== g){ g = c.group; const h = document.createElement('div'); h.className='grouphead'; h.textContent=g; rail.appendChild(h); }
+    const b = document.createElement('button');
+    b.className = 'item' + (c.id===current ? ' sel' : '') + (qEl.value && idx===cursor ? ' sel' : '');
+    b.innerHTML = '<span class="n">'+String(CALCS.indexOf(c)+1).padStart(2,'0')+'</span><span>'+c.name+'</span>';
+    b.onclick = () => { select(c.id); };
+    rail.appendChild(b);
+  });
+}
+function select(id){
+  current = id;
+  drawRail();
+  draw();
+  const f = work.querySelector('input,select,textarea,.seg');
+  if (f && f.focus) setTimeout(()=>f.focus(), 0);
+}
+
+function visibleInputs(c, v){ return (c.inputs||[]).filter(f => !f.when || f.when(v)); }
+
+function draw(){
+  const c = CALCS.find(x=>x.id===current);
+  if (!c) return;
+  const v = STORE[c.id];
+  let html = '<h1 class="title">'+c.name+'</h1>';
+  if (c.sub) html += '<p class="sub">'+c.sub+'</p>';
+  if (c.eq)  html += '<div class="eq">'+c.eq+'</div>';
+
+  if (c.ref || c.rules){
+    html += '<div class="cols" style="grid-template-columns:1fr">';
+    if (c.ref){
+      html += '<section class="card"><h3>Reference</h3><table class="ref"><thead><tr>'
+           +  c.ref.cols.map(h=>'<th>'+h+'</th>').join('') + '</tr></thead><tbody>'
+           +  c.ref.rows.map(r=>'<tr>'+r.map((cell,i)=>'<td'+(i?' class="m"':'')+'>'+cell+'</td>').join('')+'</tr>').join('')
+           +  '</tbody></table></section>';
+    }
+    if (c.rules){
+      html += '<section class="card"><h3>Design rules</h3><ul class="rules">'
+           +  c.rules.map(r=>'<li><b>'+r[0]+'</b> — '+r[1]+'</li>').join('')
+           +  '</ul></section>';
+    }
+    html += '</div>';
+    work.innerHTML = html;
+    return;
+  }
+
+  const fields = visibleInputs(c, v);
+  html += '<div class="cols"><section class="card"><h3>Inputs</h3><div class="fields">';
+  fields.forEach(f=>{
+    const val = v[f.k];
+    const lab = '<label for="in_'+f.k+'">'+f.label+(f.hint?'<small>'+f.hint+'</small>':'')+'</label>';
+    if (f.type==='sel'){
+      html += '<div class="f">'+lab+'<div class="ctl"><select id="in_'+f.k+'" data-k="'+f.k+'">'
+           + f.opts.map(o=>'<option value="'+o[0]+'"'+(String(o[0])===String(val)?' selected':'')+'>'+o[1]+'</option>').join('')
+           + '</select></div></div>';
+    } else if (f.type==='seg'){
+      html += '<div class="f">'+lab+'<div class="ctl"><div class="segs">'
+           + f.opts.map(o=>'<button type="button" class="seg'+(String(o[0])===String(val)?' on':'')+'" data-k="'+f.k+'" data-v="'+o[0]+'">'+o[1]+'</button>').join('')
+           + '</div></div></div>';
+    } else if (f.type==='text'){
+      html += '<div class="f wide">'+lab+'<textarea id="in_'+f.k+'" data-k="'+f.k+'" spellcheck="false">'
+           + String(val).replace(/</g,'&lt;') + '</textarea></div>';
+    } else {
+      html += '<div class="f">'+lab+'<div class="ctl"><input id="in_'+f.k+'" data-k="'+f.k+'" type="number" step="'+(f.step||1)+'" value="'+val+'" /><span class="unit">'+(f.unit||'')+'</span></div></div>';
+    }
+  });
+  html += '</div></section><section class="card" id="out"></section></div>';
+  html += '<div class="foot"><button class="iconbtn" id="copy">Copy result</button>'
+       +  '<button class="iconbtn" id="reset">Reset</button>'
+       +  '<span class="hint">/ search · ↑↓ step a value · Esc back to search</span></div>';
+  work.innerHTML = html;
+
+  work.querySelectorAll('input,select,textarea').forEach(el=>{
+    const ev = el.tagName==='SELECT' ? 'change' : 'input';
+    el.addEventListener(ev, e=>{
+      const k = e.target.dataset.k;
+      const f = c.inputs.find(x=>x.k===k);
+      let nv = e.target.value;
+      if (f.type!=='text' && f.type!=='seg'){
+        if (f.type==='sel'){ nv = isNaN(parseFloat(nv)) ? nv : (f.opts.some(o=>typeof o[0]==='number') ? parseFloat(nv) : nv); }
+        else nv = parseFloat(nv);
+        if (f.type!=='sel' && !isFinite(nv)) nv = 0;
+      }
+      STORE[c.id][k] = nv;
+      const before = fields.length;
+      const after = visibleInputs(c, STORE[c.id]).length;
+      if (before !== after || f.type==='sel' && c.inputs.some(x=>x.when)) { const p=document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.k : null; draw(); const nx = p && work.querySelector('[data-k="'+p+'"]'); if (nx) nx.focus(); }
+      else compute();
+      save();
+    });
+  });
+  work.querySelectorAll('.seg').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      STORE[c.id][b.dataset.k] = b.dataset.v;
+      draw(); save();
+    });
+  });
+  const cp = $('#copy'); if (cp) cp.onclick = copyResult;
+  const rs = $('#reset'); if (rs) rs.onclick = ()=>{ const o={}; c.inputs.forEach(f=>o[f.k]=f.v); STORE[c.id]=o; draw(); save(); };
+  compute();
+}
+
+let lastText = '';
+function compute(){
+  const c = CALCS.find(x=>x.id===current);
+  const out = $('#out');
+  if (!c || !c.run || !out) return;
+  let r;
+  try { r = c.run(STORE[c.id]); }
+  catch(err){ out.innerHTML = '<h3>Result</h3><p class="note bad">Check the inputs — '+err.message+'</p>'; return; }
+  const heroVal = (typeof r.hero.value === 'string') ? r.hero.value : F(r.hero.value, r.hero.d);
+  let html = '<h3>Result'+(r.pill?'<span class="pill">'+r.pill+'</span>':'')+'</h3>';
+  html += '<div class="hero"><div class="lab">'+r.hero.label+'</div><div class="val">'+heroVal
+       +  (r.hero.unit?'<u>'+r.hero.unit+'</u>':'')+'</div></div><div class="rows">';
+  const lines = [c.name+' — '+r.hero.label+': '+heroVal+' '+(r.hero.unit||'')];
+  r.rows.forEach(row=>{
+    if (row.head){ html += '<div class="r head"><span class="k">'+row.label+'</span></div>'; return; }
+    const val = (typeof row.value === 'string') ? row.value : F(row.value, row.d);
+    html += '<div class="r"><span class="k">'+row.label+'</span><span class="v">'+val+'</span><span class="u">'+(row.unit||'')+'</span></div>';
+    lines.push('  '+row.label+': '+val+' '+(row.unit||''));
+  });
+  html += '</div>';
+  if (r.note) html += '<p class="note '+(r.note[1]||'')+'">'+r.note[0]+'</p>';
+  out.innerHTML = html;
+  lastText = lines.join('\n');
+}
+function copyResult(){
+  const b = $('#copy'); if (!b) return;
+  const done = () => { const t=b.textContent; b.textContent='Copied'; setTimeout(()=>b.textContent=t, 1100); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(lastText).then(done, fallback);
+  else fallback();
+  function fallback(){
+    const ta = document.createElement('textarea');
+    ta.value = lastText; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch(e){}
+    document.body.removeChild(ta);
+  }
+}
+
+/* ---------------- persistence (best effort) ---------------- */
+function save(){ try{ localStorage.setItem('mechCalc', JSON.stringify({s:STORE, c:current})); }catch(e){} }
+function load(){
+  try{
+    const raw = localStorage.getItem('mechCalc'); if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d && d.s) Object.keys(STORE).forEach(k=>{ if (d.s[k]) Object.assign(STORE[k], d.s[k]); });
+    if (d && d.c && CALCS.some(x=>x.id===d.c)) current = d.c;
+  }catch(e){}
+}
+function theme(set){
+  const root = document.documentElement;
+  const next = set || (root.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+  root.setAttribute('data-theme', next);
+  try{ localStorage.setItem('mechCalcTheme', next); }catch(e){}
+}
+try{ const t = localStorage.getItem('mechCalcTheme'); if (t) document.documentElement.setAttribute('data-theme', t); }catch(e){}
+$('#theme').onclick = ()=>theme();
+
+/* ---------------- keyboard ---------------- */
+qEl.addEventListener('input', applyFilter);
+qEl.addEventListener('keydown', e=>{
+  if (e.key==='ArrowDown'){ e.preventDefault(); cursor = Math.min(filtered.length-1, cursor+1); drawRail(); }
+  else if (e.key==='ArrowUp'){ e.preventDefault(); cursor = Math.max(0, cursor-1); drawRail(); }
+  else if (e.key==='Enter'){ e.preventDefault(); if (filtered[cursor]) select(filtered[cursor].id); }
+  else if (e.key==='Escape'){ qEl.value=''; applyFilter(); qEl.blur(); }
+});
+document.addEventListener('keydown', e=>{
+  const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if ((e.key==='/' && !typing) || ((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k')){
+    e.preventDefault(); qEl.focus(); qEl.select();
+  } else if (e.key==='Escape' && typing && document.activeElement!==qEl){
+    document.activeElement.blur(); qEl.focus(); qEl.select();
+  }
+});
+
+load(); applyFilter(); draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1.6 — input() and conversion · The Python Book</title>
+<link href="../../../_lib/fonts/gf-135340b0.css" rel="stylesheet">
+<script src="../js/progress-adapter.js"></script>
+<style>
+  :root {
+    --paper:#eceee4; --paper-2:#f4f5ec; --card:#fbfcf6;
+    --ink:#1a2820; --ink-soft:#41564a; --ink-mute:#7a8c80;
+    --line:#d2dacb; --line-soft:#e0e6d8;
+    --green:#2f6b4f; --green-2:#3c8362; --green-dk:#234f3b; --green-deep:#16352a;
+    --sage:#7fa68b; --sage-soft:#dde7dd; --brass:#a98a4b;
+    --note:#b8952f; --note-bg:#faf3dc; --note-line:#e8d79a;
+    --nb:#2f6b4f;  --nb-bg:#e4efe6;  --nb-line:#b9d4c1;
+    --new:#2f6b7a; --new-bg:#e0eef1; --new-line:#a8ccd5;
+    --warn:#a5432f; --warn-bg:#f7e6e1;
+    --shadow-sm:0 1px 3px rgba(26,40,32,.07);
+    --shadow:0 4px 18px rgba(26,40,32,.10);
+    --shadow-lg:0 14px 36px rgba(26,40,32,.16);
+    --bouncy:cubic-bezier(.34,1.56,.64,1);
+    --serif:'EB Garamond',Georgia,serif;
+    --display:'Cormorant Garamond','EB Garamond',Georgia,serif;
+    --mono:'JetBrains Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--serif); font-size:18px; line-height:1.68; color:var(--ink);
+    background:
+      radial-gradient(at 8% 0%, #f2f4ea 0%, transparent 55%),
+      radial-gradient(at 92% 100%, #e6ebe0 0%, transparent 55%),
+      var(--paper);
+    background-attachment:fixed; min-height:100vh;
+  }
+
+  /* ===== top bar ===== */
+  .topbar{
+    position:sticky; top:0; z-index:60; backdrop-filter:blur(9px);
+    background:rgba(236,238,228,.88); border-bottom:1px solid var(--line);
+  }
+  .topbar-in{max-width:900px;margin:0 auto;padding:11px 22px;display:flex;align-items:center;gap:14px}
+  .crumb{font-family:var(--mono);font-size:11.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--ink-mute)}
+  .crumb a{color:var(--green);text-decoration:none}
+  .crumb a:hover{text-decoration:underline}
+  .crumb .sep{opacity:.45;margin:0 6px}
+  .progress-bar{flex:1;height:5px;background:var(--line-soft);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--sage),var(--green));transition:width .45s var(--bouncy)}
+  .pct{font-family:var(--mono);font-size:11.5px;color:var(--ink-mute);min-width:34px;text-align:right}
+
+  /* ===== XP HUD ===== */
+  .hud{
+    position:fixed;top:64px;right:18px;z-index:50;display:flex;align-items:center;gap:11px;
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:9px 14px;box-shadow:var(--shadow);
+  }
+  .hud-mascot{width:34px;height:34px;border-radius:50%;background:var(--sage-soft);
+    border:1.5px solid var(--sage);display:flex;align-items:center;justify-content:center;animation:bob 3s ease-in-out infinite}
+  .hud-mascot svg{width:24px;height:24px}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .hud-xp{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute);line-height:1.2}
+  .hud-xp strong{display:block;font-family:var(--display);font-size:20px;letter-spacing:0;text-transform:none;color:var(--green-dk);font-weight:600}
+  @media(max-width:900px){.hud{display:none}}
+
+  /* ===== page ===== */
+  .page{max-width:900px;margin:0 auto;padding:0 22px 140px}
+
+  /* ===== hero ===== */
+  .hero{padding:56px 0 30px;border-bottom:1px solid var(--line);margin-bottom:14px;position:relative}
+  .hero-tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin-bottom:14px}
+  .hero h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5.4vw,52px);line-height:1.1;margin:0 0 14px;letter-spacing:-.01em}
+  .hero-sub{font-size:20px;color:var(--ink-soft);max-width:60ch;margin:0}
+  .hero-meta{display:flex;gap:20px;margin-top:24px;font-family:var(--mono);font-size:11.5px;color:var(--ink-mute);letter-spacing:.06em;text-transform:uppercase;flex-wrap:wrap}
+
+  /* ===== sections ===== */
+  .lesson-section{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:30px 32px;margin:26px 0;box-shadow:var(--shadow-sm);
+    scroll-margin-top:78px;
+  }
+  .lesson-section.done{border-color:var(--sage)}
+  .step-label{display:flex;align-items:center;gap:13px;margin:0 0 20px}
+  .step-num{
+    width:31px;height:31px;flex:0 0 31px;border-radius:9px;
+    background:var(--green-deep);color:#eef2ea;
+    font-family:var(--mono);font-size:13px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .step-label h2{font-family:var(--display);font-size:27px;font-weight:600;margin:0;letter-spacing:-.005em}
+  .lesson-section p{margin:0 0 15px}
+  .lesson-section p:last-child{margin-bottom:0}
+  .lead{font-size:19.5px;color:var(--ink-soft)}
+  code{font-family:var(--mono);font-size:.87em;background:var(--sage-soft);
+    padding:1.5px 6px;border-radius:5px;color:var(--green-deep)}
+
+  /* ===== source callouts ===== */
+  .src{border-radius:12px;padding:16px 19px;margin:19px 0;border:1px solid;font-size:17px}
+  .src-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:8px}
+  .src p{margin:0}
+  .src.notes{background:var(--note-bg);border-color:var(--note-line)}
+  .src.notes .src-tag{color:var(--note)}
+  .src.nb{background:var(--nb-bg);border-color:var(--nb-line)}
+  .src.nb .src-tag{color:var(--nb)}
+  .src.fresh{background:var(--new-bg);border-color:var(--new-line)}
+  .src.fresh .src-tag{color:var(--new)}
+
+  /* ===== model diagram ===== */
+  .model{background:var(--paper-2);border:1px solid var(--line-soft);border-radius:14px;padding:26px;margin:22px 0}
+  .model svg{width:100%;height:auto;display:block}
+
+  /* ===== code walkthrough ===== */
+  .code{background:var(--green-deep);border-radius:13px;overflow:hidden;margin:20px 0;box-shadow:var(--shadow)}
+  .code-head{display:flex;align-items:center;gap:8px;padding:10px 15px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.09)}
+  .code-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.22)}
+  .code-name{font-family:var(--mono);font-size:11.5px;color:rgba(238,242,234,.6);margin-left:6px}
+  .code pre{margin:0;padding:19px 21px;overflow-x:auto;font-family:var(--mono);font-size:14.5px;line-height:1.85;color:#e5ece3}
+  .k{color:#93d5a8}.s{color:#e8c98a}.c{color:#7f9c88;font-style:italic}.f{color:#a6cfe0}.n{color:#ddb3d8}
+  .ann{display:grid;grid-template-columns:auto 1fr;gap:11px 15px;margin:19px 0 0;font-size:16.5px}
+  .ann .ln{font-family:var(--mono);font-size:12px;color:#fff;background:var(--sage);
+    border-radius:6px;padding:2px 8px;height:fit-content;white-space:nowrap}
+  .ann .tx{color:var(--ink-soft)}
+
+  /* ===== try it (matcher) ===== */
+  .try-grid{display:grid;gap:12px;margin:20px 0}
+  .try-row{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+  .eng{background:var(--paper-2);border:1px solid var(--line);border-radius:11px;padding:13px 16px;font-size:16.5px}
+  .try-arrow{font-family:var(--mono);color:var(--sage);font-size:16px}
+  .opts{display:flex;flex-direction:column;gap:7px}
+  .opt{
+    font-family:var(--mono);font-size:13.5px;text-align:left;cursor:pointer;
+    background:var(--card);border:1.5px solid var(--line);border-radius:9px;
+    padding:9px 13px;color:var(--ink);transition:all .16s;
+  }
+  .opt:hover{border-color:var(--sage);background:var(--sage-soft)}
+  .opt.right{border-color:var(--green);background:var(--nb-bg);color:var(--green-deep);font-weight:600}
+  .opt.wrong{border-color:#d9a99c;background:var(--warn-bg);color:var(--warn);opacity:.75}
+  @media(max-width:700px){.try-row{grid-template-columns:1fr}.try-arrow{display:none}}
+
+  /* ===== predict quiz ===== */
+  .quiz{background:var(--paper-2);border:1px solid var(--line);border-radius:14px;padding:23px;margin:20px 0}
+  .quiz-q{font-size:17.5px;margin:0 0 15px;color:var(--ink-soft)}
+  .quiz-opts{display:flex;flex-direction:column;gap:9px}
+  .reveal{margin-top:16px;padding:15px 18px;border-radius:11px;background:var(--nb-bg);
+    border:1px solid var(--nb-line);font-size:16.5px;display:none}
+  .reveal.show{display:block;animation:fade .34s var(--bouncy)}
+  @keyframes fade{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+  /* ===== mistakes ===== */
+  .mistake{display:grid;grid-template-columns:auto 1fr;gap:15px;background:var(--warn-bg);
+    border:1px solid #e3c4ba;border-radius:12px;padding:17px 19px;margin:15px 0}
+  .mistake-icon{font-size:21px;line-height:1}
+  .mistake-body strong{display:block;margin-bottom:5px;font-family:var(--display);font-size:19px;color:var(--warn)}
+  .mistake-body p{margin:0;font-size:16.5px;color:var(--ink-soft)}
+
+  /* ===== exercises ===== */
+  .exercise{border-left:3px solid var(--sage);padding:5px 0 5px 19px;margin:19px 0}
+  .ex-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--brass);display:block;margin-bottom:6px}
+  .exercise p{margin:0;font-size:17px}
+
+  /* ===== recap ===== */
+  .recap{background:var(--green-deep);color:#e8eee6;border-radius:16px;padding:30px 32px;margin:30px 0 0}
+  .recap h2{font-family:var(--display);font-size:26px;font-weight:600;margin:0 0 17px;color:#fff}
+  .recap ul{margin:0;padding-left:21px}
+  .recap li{margin-bottom:9px;font-size:17px;color:#cfdccb}
+  .recap li:last-child{margin-bottom:0}
+  .recap b{color:#a8d8ba;font-weight:600}
+
+  /* ===== next ===== */
+  .next{display:flex;justify-content:space-between;align-items:center;gap:16px;
+    margin-top:30px;padding-top:24px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .next a{font-family:var(--mono);font-size:13px;color:var(--green);text-decoration:none;
+    border:1px solid var(--line);border-radius:10px;padding:11px 17px;background:var(--card);transition:all .16s}
+  .next a:hover{border-color:var(--sage);background:var(--sage-soft)}
+
+  /* ===== Cobra companion ===== */
+  .cobra{position:fixed;bottom:22px;left:22px;z-index:40;display:flex;align-items:flex-end;gap:11px;max-width:340px;pointer-events:none}
+  .cobra-avatar{width:62px;height:62px;flex-shrink:0;background:var(--card);border-radius:50%;
+    border:2px solid var(--green);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;animation:bob 3.4s ease-in-out infinite}
+  .cobra-avatar svg{width:46px;height:46px}
+  .cobra-bubble{background:var(--card);border:1px solid var(--line);border-radius:15px 15px 15px 4px;
+    padding:11px 15px;box-shadow:var(--shadow);font-size:15.5px;color:var(--ink);line-height:1.5;
+    pointer-events:auto;animation:fade .45s var(--bouncy)}
+  .cobra-name{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sage);display:block;margin-bottom:3px}
+  @media(max-width:1150px){.cobra{display:none}}
+
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);
+    background:var(--green-deep);color:#eef2ea;padding:13px 24px;border-radius:99px;
+    font-family:var(--mono);font-size:13.5px;box-shadow:var(--shadow-lg);z-index:90;
+    transition:transform .42s var(--bouncy)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  /* ===== notebook hand-off link ===== */
+  .nb-link{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:13.5px;
+    font-weight:600;color:#dfeee4;background:var(--green-deep);border:1px solid var(--green-dk);
+    border-radius:9px;padding:11px 16px;text-decoration:none;transition:background .15s}
+  .nb-link:hover{background:var(--green-dk)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  .two-col > div{background:var(--paper-2);border:1px solid var(--line-soft);border-radius:12px;padding:17px 19px}
+  .two-col h4{font-family:var(--display);font-size:19px;font-weight:600;margin:0 0 9px}
+  .two-col p{margin:0;font-size:16.5px;color:var(--ink-soft)}
+  @media(max-width:700px){.two-col{grid-template-columns:1fr}}
+  table.cmp{width:100%;border-collapse:collapse;margin:20px 0;font-size:16.5px}
+  table.cmp th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-mute);text-align:left;padding:0 12px 9px 0;border-bottom:1px solid var(--line)}
+  table.cmp td{padding:11px 12px 11px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  table.cmp td:first-child{font-family:var(--mono);font-size:13.5px;color:var(--green-deep);white-space:nowrap}
+
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-in">
+  <div class="crumb"><a href="../../index.html">Coding</a><span class="sep">/</span><a href="../index.html">Python</a><span class="sep">/</span>1.6</div>
+  <div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
+  <div class="pct" id="ppc">0%</div>
+</div></div>
+
+<div class="hud">
+  <div class="hud-mascot">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M32 52c-10 0-16-5-16-11s5-9 11-9h10c4 0 7-2 7-5s-3-5-7-5H22" fill="none" stroke="#2f6b4f" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="20" cy="22" r="8" fill="#3c8362"/>
+      <circle cx="17.5" cy="21" r="3" fill="#fbfcf6"/><circle cx="17.5" cy="21" r="1.4" fill="#1a2820"/>
+    </svg>
+  </div>
+  <div class="hud-xp">XP<strong id="xp">0</strong></div>
+</div>
+
+<div class="page">
+
+<header class="hero">
+  <div class="hero-tag">The Python Book · Part I · The Basics</div>
+  <h1>input(), type conversion, and the classic bug</h1>
+  <p class="hero-sub">input() always hands back a string. Always. Every beginner in every language meets the bug that follows, and in Python it has a particularly clear shape.</p>
+  <div class="hero-meta">
+    <span>8 sections</span><span>~11 min</span><span>No setup needed</span>
+  </div>
+</header>
+
+<!-- 1 -->
+<section class="lesson-section" id="s1">
+  <div class="step-label"><span class="step-num">1</span><h2>Why this matters</h2></div>
+  <p class="lead">One rule, and the whole lesson follows from it: <strong><code>input()</code> returns a string.</strong></p>
+  <p>Not a number when the user types a number. Not an integer when the prompt says &ldquo;enter a number&rdquo;. A string, every time, no matter what was typed.</p>
+  <p>C makes you say what you want up front — <code>scanf(&quot;%d&quot;, &amp;n)</code> — and quietly does something strange when the input does not match. Python gives you text and makes converting it your explicit job. That is more honest, and it puts the error exactly where the bad data entered.</p>
+</section>
+
+<!-- 2 -->
+<section class="lesson-section" id="s2">
+  <div class="step-label"><span class="step-num">2</span><h2>The mental model</h2></div>
+  <p>Think of it as a boundary. Outside the program, everything is text. Inside, you want real types. Convert once, at the edge.</p>
+  <div class="model">
+    <svg viewBox="0 0 620 128" role="img" aria-label="Text enters from the user, is converted once at the boundary, and the program works with real types">
+      <rect x="8" y="40" width="130" height="46" rx="9" fill="#f4f5ec" stroke="#d2dacb"/>
+      <text x="73" y="62" font-family="EB Garamond, serif" font-size="14" fill="#41564a" text-anchor="middle">what the user</text>
+      <text x="73" y="79" font-family="EB Garamond, serif" font-size="14" fill="#41564a" text-anchor="middle">typed: "25"</text>
+      <path d="M144 63 h44" stroke="#7fa68b" stroke-width="2" marker-end="url(#a3)"/>
+      <rect x="194" y="34" width="150" height="58" rx="9" fill="#dde7dd" stroke="#2f6b4f"/>
+      <text x="269" y="58" font-family="JetBrains Mono, monospace" font-size="12.5" fill="#234f3b" text-anchor="middle">int(...)</text>
+      <text x="269" y="77" font-family="EB Garamond, serif" font-size="13" fill="#41564a" text-anchor="middle">the boundary</text>
+      <path d="M350 63 h44" stroke="#7fa68b" stroke-width="2" marker-end="url(#a3)"/>
+      <rect x="400" y="40" width="150" height="46" rx="9" fill="#16352a"/>
+      <text x="475" y="62" font-family="JetBrains Mono, monospace" font-size="13" fill="#a8d8ba" text-anchor="middle">25</text>
+      <text x="475" y="79" font-family="EB Garamond, serif" font-size="12.5" fill="#7fa68b" text-anchor="middle">a real int</text>
+      <text x="310" y="118" font-family="EB Garamond, serif" font-size="13" fill="#a98a4b" text-anchor="middle">convert once, here — not scattered through the program</text>
+      <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+        <path d="M0 0 L8 4 L0 8 z" fill="#7fa68b"/></marker></defs>
+    </svg>
+  </div>
+  <p>The converters are named after the types: <code>int()</code>, <code>float()</code>, <code>str()</code>, <code>bool()</code>. They are strict — <code>int(&quot;abc&quot;)</code> raises <code>ValueError</code> rather than guessing zero. That strictness is what makes the boundary useful: bad input fails immediately, at the point of entry, with a message naming the text that failed.</p>
+</section>
+
+<!-- 3 -->
+<section class="lesson-section" id="s3">
+  <div class="step-label"><span class="step-num">3</span><h2>Walk-through</h2></div>
+  <p>The pattern, and what each converter accepts.</p>
+  <div class="code">
+    <div class="code-head"><span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span><span class="code-name">age.py</span></div>
+<pre><span class="n">raw</span> = <span class="f">input</span>(<span class="s">"How many parts? "</span>)   <span class="c"># always a string</span>
+<span class="n">count</span> = <span class="f">int</span>(<span class="n">raw</span>)                     <span class="c"># convert at the boundary</span>
+<span class="f">print</span>(<span class="s">f"double that is </span><span class="n">{count * 2}</span><span class="s">"</span>)
+
+<span class="c"># the usual one-liner, once you trust the input</span>
+<span class="n">count</span> = <span class="f">int</span>(<span class="f">input</span>(<span class="s">"How many parts? "</span>))</pre>
+  </div>
+  <div class="ann">
+    <span class="ln"><code>int(&quot;25&quot;)</code></span><span class="tx">→ <code>25</code>. Surrounding whitespace is fine: <code>int(&quot; 25 &quot;)</code> works.</span>
+    <span class="ln"><code>int(&quot;25.0&quot;)</code></span><span class="tx"><strong>ValueError.</strong> <code>int()</code> parses integers only. Use <code>int(float(&quot;25.0&quot;))</code> if you must accept both.</span>
+    <span class="ln"><code>float(&quot;3.5&quot;)</code></span><span class="tx">→ <code>3.5</code>. Also accepts <code>&quot;3&quot;</code>, <code>&quot;1e6&quot;</code>, <code>&quot;inf&quot;</code>.</span>
+    <span class="ln"><code>int(3.9)</code></span><span class="tx">→ <code>3</code>. Converting a float truncates <em>toward zero</em> — it does not round. <code>int(-3.9)</code> is <code>-3</code>, not <code>-4</code>. Note this differs from <code>//</code>, from 1.2.</span>
+  </div>
+  <p>To survive a bad typist, wrap it — the full treatment is Part V, but the shape is worth seeing now:</p>
+  <div class="code">
+    <div class="code-head"><span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span><span class="code-name">safe.py</span></div>
+<pre><span class="k">while</span> <span class="k">True</span>:
+    <span class="k">try</span>:
+        <span class="n">count</span> = <span class="f">int</span>(<span class="f">input</span>(<span class="s">"How many parts? "</span>))
+        <span class="k">break</span>
+    <span class="k">except</span> <span class="f">ValueError</span>:
+        <span class="f">print</span>(<span class="s">"Please type a whole number."</span>)</pre>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="lesson-section" id="s4">
+  <div class="step-label"><span class="step-num">4</span><h2>Try it</h2></div>
+  <div class="try-grid" id="matcher">
+    <div class="try-row">
+      <div class="eng">The user types <code>42</code> and you need to do arithmetic.</div>
+      <div class="try-arrow">→</div>
+      <div class="opts" data-answer="a"><button class="opt" data-k="a">int(input())</button><button class="opt" data-k="b">input()</button><button class="opt" data-k="c">str(input())</button></div>
+    </div>
+    <div class="try-row">
+      <div class="eng">The user types <code>3.75</code> — a measurement.</div>
+      <div class="try-arrow">→</div>
+      <div class="opts" data-answer="b"><button class="opt" data-k="a">int(input())</button><button class="opt" data-k="b">float(input())</button><button class="opt" data-k="c">input().float()</button></div>
+    </div>
+    <div class="try-row">
+      <div class="eng">You want to print a number inside a message built with <code>+</code>.</div>
+      <div class="try-arrow">→</div>
+      <div class="opts" data-answer="b"><button class="opt" data-k="a">"n is " + n</button><button class="opt" data-k="b">"n is " + str(n)</button><button class="opt" data-k="c">"n is " + int(n)</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="lesson-section" id="s5">
+  <div class="step-label"><span class="step-num">5</span><h2>Predict the output</h2></div>
+  <div class="quiz">
+    <p class="quiz-q">The classic. The user types 5. What happens?</p>
+    <div class="code">
+    <div class="code-head"><span class="code-dot"></span><span class="code-dot"></span><span class="code-dot"></span><span class="code-name">classic.py</span></div>
+<pre><span class="n">n</span> = <span class="f">input</span>(<span class="s">"Pick a number: "</span>)
+<span class="f">print</span>(<span class="n">n</span> * <span class="n">3</span>)</pre>
+  </div>
+    <div class="quiz-opts" id="quiz" data-answer="b"><button class="opt" data-k="a">15</button><button class="opt" data-k="b">555</button><button class="opt" data-k="c">TypeError — you cannot multiply a string</button></div>
+    <div class="reveal" id="quizR"><strong>555.</strong> <code>n</code> is the string <code>&quot;5&quot;</code>, and multiplying a string by an integer <em>repeats</em> it. <code>&quot;5&quot; * 3</code> is <code>&quot;555&quot;</code>.<p style="margin:10px 0 0">What makes this the classic bug is that it does not crash. It produces a plausible-looking wrong answer, and in a longer program the nonsense surfaces far from here. Compare with <code>n + 3</code>, which <em>does</em> raise <code>TypeError: can only concatenate str (not &quot;int&quot;) to str</code> — much kinder, because it fails immediately.</p><p style="margin:10px 0 0">The fix is the habit from section 2: convert at the boundary. <code>n = int(input(...))</code> and the whole class of problem is gone.</p></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="lesson-section" id="s6">
+  <div class="step-label"><span class="step-num">6</span><h2>What trips people here</h2></div>
+  <div class="mistake"><div class="mistake-icon">🔤</div><div class="mistake-body">
+    <strong>Forgetting that <code>input()</code> is always a string</strong>
+    <p>Even when the prompt says &ldquo;enter a number&rdquo;. Even when they enter a number. Convert on the same line you read, and the rest of the program can trust the type.</p>
+  </div></div>
+
+  <div class="mistake"><div class="mistake-icon">🔢</div><div class="mistake-body">
+    <strong><code>int(&quot;3.0&quot;)</code> raising ValueError</strong>
+    <p>Surprising, but consistent: <code>int()</code> parses an <em>integer literal</em>, and <code>&quot;3.0&quot;</code> is not one. It has nothing to do with the value being whole. Use <code>int(float(s))</code> when the text might have a decimal point.</p>
+  </div></div>
+
+  <div class="mistake"><div class="mistake-icon">✂️</div><div class="mistake-body">
+    <strong>Expecting <code>int()</code> to round</strong>
+    <p><code>int(3.9)</code> is <code>3</code> and <code>int(-3.9)</code> is <code>-3</code> — it truncates toward zero. <code>round(3.9)</code> gives <code>4</code>. And <code>-7 // 2</code> gives <code>-4</code>. Three different roundings; pick deliberately.</p>
+  </div></div>
+</section>
+
+<!-- 7 -->
+<section class="lesson-section" id="s7">
+  <div class="step-label"><span class="step-num">7</span><h2>Your turn</h2></div>
+  <div class="exercise"><span class="ex-tag">Easy</span>
+    <p>Ask for two numbers and print their sum. Make it actually add rather than concatenate — then deliberately remove the conversion and observe what it prints instead.</p>
+  </div>
+  <div class="exercise"><span class="ex-tag">Medium</span>
+    <p>Write a prompt that keeps asking until it gets a whole number between 1 and 10, using the try/except loop above. Test it with letters, with 0, and with 5.5.</p>
+  </div>
+  <div class="exercise"><span class="ex-tag">Stretch</span>
+    <p>Your Rock–Paper–Scissors and number-guessing projects in the beginner notebook both read user input. Find where each converts, and check what happens if the user types a word instead of a number. Fix whichever one crashes ungracefully.</p>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="lesson-section" id="s8">
+  <div class="step-label"><span class="step-num">8</span><h2>Quick recap</h2></div>
+  <div class="recap">
+    <h2>What to carry forward</h2>
+    <ul>
+      <li><code>input()</code> <b>always returns a string</b> — no matter what was typed.</li>
+      <li>Convert <b>at the boundary</b>: <code>n = int(input(...))</code>, once, where data enters.</li>
+      <li><code>&quot;5&quot; * 3</code> is <code>&quot;555&quot;</code>, not 15 — the classic bug, and it doesn't crash.</li>
+      <li><code>int()</code> is strict: <code>int(&quot;3.0&quot;)</code> raises. Use <code>int(float(s))</code> for either form.</li>
+      <li><code>int(3.9)</code> <b>truncates toward zero</b>; <code>round()</code> rounds; <code>//</code> floors.</li>
+      <li>Wrap conversion in <code>try/except ValueError</code> whenever a human is typing.</li>
+    </ul>
+  </div>
+  <div class="next">
+    <a href="../index.html">&larr; All Python lessons</a>
+    <a href="Py_Lesson_1_7.html">Next — 1.7 Booleans and operators &rarr;</a>
+  </div>
+</section>
+
+</div><!-- /page -->
+
+<div class="cobra">
+  <div class="cobra-avatar">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M33 55c-11 0-18-5.5-18-12s5.5-10 12-10h11c4.5 0 8-2.2 8-5.5S42.5 22 38 22H24"
+            fill="none" stroke="#2f6b4f" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M33 55c-11 0-18-5.5-18-12s5.5-10 12-10h11c4.5 0 8-2.2 8-5.5S42.5 22 38 22H24"
+            fill="none" stroke="#7fa68b" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="3 7"/>
+      <circle cx="21" cy="20" r="9.5" fill="#3c8362"/>
+      <circle cx="17.4" cy="18.6" r="4.4" fill="#fbfcf6" stroke="#234f3b" stroke-width="1.5"/>
+      <circle cx="27.2" cy="18.6" r="4.4" fill="#fbfcf6" stroke="#234f3b" stroke-width="1.5"/>
+      <path d="M21.8 18.6h2.6" stroke="#234f3b" stroke-width="1.5"/>
+      <circle cx="17.4" cy="18.6" r="1.7" fill="#1a2820"/>
+      <circle cx="27.2" cy="18.6" r="1.7" fill="#1a2820"/>
+      <path d="M21 29.5v3.5m0 0l-2.4 2m2.4-2l2.4 2" stroke="#a5432f" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="cobra-bubble"><span class="cobra-name">Cobra</span><span id="cobraLine">Always a string. No exceptions.</span></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var xp = 0, xpEl = document.getElementById('xp'), toast = document.getElementById('toast');
+  var tT;
+  function say(msg) {
+    toast.textContent = msg; toast.classList.add('show');
+    clearTimeout(tT); tT = setTimeout(function () { toast.classList.remove('show'); }, 2100);
+  }
+  function addXp(n, msg) {
+    xp += n; xpEl.textContent = xp;
+    if (msg) say(msg + '  +' + n + ' XP');
+  }
+
+  /* ---- Cobra's line changes with the section in view ---- */
+  var LINES = {
+    "s1": "Always a string. No exceptions.",
+    "s2": "Convert at the boundary, not later.",
+    "s3": "int() is strict — and that is a feature.",
+    "s4": "Which conversion for which input?",
+    "s5": "The classic. You have hit this one.",
+    "s6": "int('3.0') fails. There is a reason.",
+    "s7": "Make it survive a bad typist.",
+    "s8": "Last of Part I: booleans."
+};
+  var lineEl = document.getElementById('cobraLine');
+
+  /* ---- generic option picker ---- */
+  function wire(container, onRight) {
+    var answer = container.getAttribute('data-answer');
+    var settled = false;
+    container.querySelectorAll('.opt').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (settled) return;
+        if (b.getAttribute('data-k') === answer) {
+          settled = true;
+          b.classList.add('right');
+          container.querySelectorAll('.opt').forEach(function (o) { o.disabled = true; });
+          onRight();
+        } else {
+          b.classList.add('wrong');
+          b.disabled = true;
+        }
+      });
+    });
+  }
+
+  /* ---- section 4: matcher ---- */
+  var rows = document.querySelectorAll('#matcher .opts');
+  var got = 0;
+  rows.forEach(function (r) {
+    wire(r, function () {
+      got++; addXp(10, 'Matched');
+      if (got === rows.length) {
+        document.getElementById('matchDone').classList.add('show');
+        addXp(15, 'All three');
+      }
+    });
+  });
+
+  /* ---- section 5: predict ---- */
+  wire(document.getElementById('quiz'), function () {
+    document.getElementById('quizR').classList.add('show');
+    addXp(20, 'Called it');
+  });
+
+  /* ---- progress: a section counts once 55% of it has been seen ---- */
+  var secs = Array.prototype.slice.call(document.querySelectorAll('section.lesson-section'));
+  var total = secs.length, seen = {};
+  var fill = document.getElementById('pfill'), pct = document.getElementById('ppc');
+  function paint() {
+    var n = Object.keys(seen).length;
+    var p = Math.round(n / total * 100);
+    fill.style.width = p + '%'; pct.textContent = p + '%';
+    if (window.PYPROGRESS) PYPROGRESS.write("1.6", p);
+  }
+  try {
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var id = e.target.id;
+        if (!seen[id]) {
+          seen[id] = 1; e.target.classList.add('done'); paint();
+          if (Object.keys(seen).length === total) { say('Lesson complete · ' + xp + ' XP'); }
+        }
+        if (LINES[id] && lineEl.textContent !== LINES[id]) {
+          lineEl.textContent = LINES[id];
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s) { io.observe(s); });
+  } catch (e) {}
+  paint();
+})();
+</script>
+
+<!-- Commonplace cloud reading-progress sync -->
+<script>window.READING_SYNC={resourceSet:"py_1_6",mode:"page",items:"section.lesson-section",pageName:"Python Lesson 1.6"};</script>
+<script src="../../../reading-sync.js"></script>
+<script src="../../../_lib/progress-backup.js"></script>
+<script src="../lib/lesson-reader.js" defer></script>
+</body>
+</html>

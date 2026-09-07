@@ -54,6 +54,12 @@ CONFIG = {
     # These are NOT generated from the markdown content tree.
     "related_links": [
         {
+            "label": "External app · 23 calculators",
+            "title": "Calc Console",
+            "summary": "One keyboard-driven page for every number on this hub \u2014 boring and milling speeds, press force, sheet-metal DFM minimums, ISO fits, tolerance stacks, beams, bolts, gears, bearings, belts, OEE. Type to find it, results update as you type.",
+            "href": "Calc_Console/index.html",
+        },
+        {
             "label": "External app · 22 chapters",
             "title": "CMTI Machine Tool Design Handbook",
             "summary": "Interactive scan of the Central Machine Tool Institute handbook — bearings, gearing, spindles, guideways, oil hydraulics, fits, threads, springs, and steels.",
