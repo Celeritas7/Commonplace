@@ -169,8 +169,8 @@ someone "gets" C or not, so we move slowly with lots of diagrams.
 | 0.1 | What is a program? What is a programming language? | New |
 | 0.2 | What computers actually do — instructions, memory, the CPU | New |
 | 0.3 | Why C++? Where it lives — games, browsers, finance, embedded | Partial |
-| 0.4 | The C++ way of thinking — types, ownership, zero-cost abstractions | New |
-| 0.5 | Standards in one paragraph — we use C++11 as our floor, mark newer features | New |
+| 0.4 | The C++ way of thinking — types, ownership, zero-cost abstractions | Delivered |
+| 0.5 | Standards in one paragraph — C++11 as our floor, newer features tagged | Delivered |
 
 ## Part I. Setting Up and Your First Program
 | # | Topic | Status |
@@ -192,6 +192,7 @@ someone "gets" C or not, so we move slowly with lots of diagrams.
 | 2.6 | Type conversion and the four C++ casts (just one of them at first) | New |
 | 2.7 | `const` and immutability | New |
 | 2.8 | Namespaces and `using` | New |
+| 2.9 | References and pointers — aliases, addresses, and which to reach for | New |
 
 ## Part III. Making Decisions and Repeating Work
 | # | Topic | Status |
@@ -224,8 +225,8 @@ tools first.
 | 5.4 | `std::set` and `std::unordered_set` — collections of unique things | New |
 | 5.5 | Iterators — the idea, not the gnarly details | New |
 | 5.6 | The algorithms you'll reach for: `sort`, `find`, `count`, `transform`, `accumulate` | New |
-| 5.7 | `std::optional` **(C++17)** — when "no value" is a real answer | New |
-| 5.8 | Tuples and structured bindings **(C++17)** | New |
+| 5.7 | `std::optional` **(C++17)** — when "no value" is a real answer | Not written — covered briefly in 10.6 |
+| 5.8 | Tuples and structured bindings **(C++17)** | Not written — structured bindings appear in 3.1/10.6 |
 
 ## Part VI. Object-Oriented Programming
 | # | Topic | Status |
@@ -245,13 +246,15 @@ tools first.
 ## Part VII. Inheritance and Polymorphism
 | # | Topic | Status |
 |---|---|---|
-| 7.1 | Single inheritance | Have |
-| 7.2 | `public`, `protected`, `private` inheritance — short overview | Have |
-| 7.3 | Virtual functions and dynamic dispatch | Have |
-| 7.4 | Pure virtual functions and abstract base classes | Have |
-| 7.5 | `override` and `final` **(C++11)** — always use them | New |
-| 7.6 | Object slicing — what it is and how to avoid it | New |
-| 7.7 | *Brief:* multiple inheritance and the diamond problem (when it comes up) | New |
+| 7.1 | Single inheritance | Delivered |
+| 7.2 | `public`, `protected`, `private` inheritance | Delivered |
+| 7.3 | Virtual functions and dynamic dispatch | Delivered |
+| 7.4 | Pure virtual functions and abstract base classes | Delivered |
+| 7.5 | Virtual destructors — the leak with no symptom | Delivered |
+| 7.6 | `override` and `final` **(C++11)** — always use them | Delivered |
+| 7.7 | *Brief:* multiple inheritance and the diamond problem | Delivered |
+| 7.8 | `dynamic_cast` and RTTI | Delivered |
+| 7.9 | Object slicing — what it is and how to avoid it | Delivered |
 
 ## Part VIII. Modern Resource Management (the soul of modern C++)
 | # | Topic | Status |
@@ -290,17 +293,19 @@ tools first.
 | 11.2 | File streams — `ifstream`, `ofstream` | Have |
 | 11.3 | `stringstream` — turning strings into structured data | New |
 | 11.4 | `std::filesystem` **(C++17)** — paths and directories the easy way | New |
-| 11.5 | `std::format` **(C++20)** — the modern way to format text | New |
+| 11.5 | `std::format` **(C++20)** — the modern way to format text | Not written |
 
 ## Part XII. Putting It All Together
 | # | Topic | Status |
 |---|---|---|
-| 12.1 | Building with CMake — the 20 lines that cover most projects | New |
-| 12.2 | A first unit test with Catch2 or doctest | New |
-| 12.3 | Turning on warnings and sanitizers — `-Wall -Wextra -fsanitize=address` | New |
-| 12.4 | A taste of the C++ Core Guidelines — five rules to live by | New |
-| 12.5 | **Capstone project:** a small to-do list app with file persistence | New |
-| 12.6 | **Capstone project:** a tiny JSON-like parser | New |
+| 12.1 | **Capstone project:** a small to-do list app with file persistence | Delivered |
+| 12.2 | **Capstone project:** a tiny JSON-like parser | Delivered |
+| 12.3 | **Capstone project:** an expression evaluator | Delivered |
+| 12.5 | Turning on warnings and sanitizers — `-Wall -Wextra -fsanitize=address,undefined` | Delivered |
+| 12.6 | Building with CMake — the nine lines that cover most projects | Delivered |
+| 12.7 | A first unit test with doctest, wired into CMake and `ctest` | Delivered |
+| 12.8 | A taste of the C++ Core Guidelines — five rules to live by | Delivered |
+| 12.9 | Where to go next — what this book left out, and habits worth keeping | Delivered |
 
 ---
 

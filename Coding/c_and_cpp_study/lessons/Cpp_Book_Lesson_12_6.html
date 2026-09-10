@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 12.6 — Building with CMake · The C++ Book</title>
+<link href="../../../_lib/fonts/gf-1ec34e24.css" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  pre.code { font-family: var(--mono); font-size: 13.5px; background: var(--terminal); color: #e0e7ff; padding: 14px 18px; border-radius: 12px; line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  pre.code .kw { color: #c4b5fd; font-weight: 700; }
+  pre.code .cm { color: #818cf8; font-style: italic; }
+  pre.code .str { color: #86efac; }
+  pre.code .hl { color: #fde047; font-weight: 700; }
+  pre.code .bad { color: #fca5a5; font-weight: 700; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 GOTCHA"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  .op-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  .op-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .op-table th, .op-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .op-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .op-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .op-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Binary lab picker */
+  .ft-modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .ftmode { flex: 1; min-width: 100px; background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 6px; font: inherit; font-family: var(--mono); font-weight: 700; font-size: 11.5px; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .ftmode.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ftmode:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .ftmode small { display: block; font-size: 9px; font-weight: 600; opacity: 0.8; }
+  .ft-code { background: #0d1033; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; color: #e0e7ff; white-space: pre-wrap; overflow-x: auto; }
+  .ft-code .kw { color: #c4b5fd; font-weight: 700; }
+  .ft-code .cm { color: #818cf8; font-style: italic; }
+  .ft-code .str { color: #86efac; }
+  .ft-code .hl { color: #fde047; font-weight: 700; }
+  .ft-code .bad { color: #fca5a5; font-weight: 700; }
+  .ft-info { background: #fff; border: 2px solid var(--purple-light); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 6px; }
+  .ft-info .row { display: flex; gap: 8px; padding: 2px 0; }
+  .ft-info .k { color: var(--purple-deep); font-weight: 700; min-width: 96px; }
+  .ft-info .v { color: var(--ink-soft); font-family: var(--mono); font-size: 12.5px; }
+  .fs-msg { font-size: 13.5px; color: var(--ink-soft); background: rgba(255,255,255,0.7); border-radius: 10px; padding: 10px 14px; line-height: 1.5; min-height: 44px; }
+  .fs-msg b { color: var(--purple-deep); } .fs-msg code { font-size: 0.92em; } .fs-msg .grn { color: #166534; font-weight: 700; } .fs-msg .red { color: var(--red); font-weight: 700; }
+
+  /* Predict the output */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-code { font-family: var(--mono); font-size: 12px; background: var(--terminal); color: #e0e7ff; padding: 12px 14px; border-radius: 8px; line-height: 1.55; white-space: pre-wrap; }
+  .out-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .obtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .obtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .obtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .obtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .po-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Stop retyping your compile command. Write it down once. 📝
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 12.6</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 84 / 87</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧰 PART XII &middot; PUTTING IT ALL TOGETHER</span>
+    <h1>Building with CMake</h1>
+    <p class="hero-sub">Every program in this book has been one file, built with one <code>g++</code> line you typed by hand. Real projects are many files with a build line nobody can remember. <strong>CMake</strong> is where you write that line down once — about twenty lines, most of which you will copy from this lesson forever.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+    <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>When one g++ line stops being enough 📚</h2>
+
+
+    <p>Split the to-do app from 12.1 into the shape a real project takes — a header, its implementation, and a <code>main</code> — and the build line stops being something you can type from memory:</p>
+
+    <div class="code-block">
+      <pre><span class="cm">todo/
+├── CMakeLists.txt
+└── src/
+    ├── main.cpp
+    ├── task.h
+    └── task.cpp</span></pre>
+    </div>
+
+    <div class="code-block">
+      <pre><span class="cm">g++ -std=c++11 -Wall -Wextra -Werror -O1 -g -Isrc \
+    -fsanitize=address,undefined \
+    src/main.cpp src/task.cpp -o todo</span></pre>
+    </div>
+
+    <p>That already has eleven things to remember, and it grows every time you add a file. Worse, it rebuilds <em>everything</em> every time — change one comment in <code>task.cpp</code> and you recompile <code>main.cpp</code> too. On a project of five files nobody notices. On fifty, you notice constantly.</p>
+
+    <p>And there is a subtler problem. If you edit <code>task.h</code>, both <code>.cpp</code> files need rebuilding, because both include it. Nothing in that <code>g++</code> line knows that. Keeping track of which files depend on which headers, by hand, is exactly the kind of bookkeeping people get wrong at 11pm.</p>
+
+    <div class="new-content">
+      A <strong>build system</strong> is a program that solves those three problems: it remembers the command, it rebuilds only what actually changed, and it works out the header dependencies for you. <strong>CMake</strong> is the one the C++ world settled on. It is not the prettiest tool you will ever use, but it is the one that opens every project you will ever clone, and the twenty lines you need are genuinely twenty lines.
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The mental model</div>
+    <h2>CMake generates a build system 🏗️</h2>
+
+
+    <p>Here is the one useful thing to understand before any syntax: <strong>CMake does not build your program.</strong> It reads your <code>CMakeLists.txt</code> and <em>generates</em> a build system — Makefiles on Linux, a Visual Studio solution on Windows, Ninja files if you ask — and <em>that</em> builds your program.</p>
+
+    <p>So there are always two steps, and they answer two different questions:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Step</th><th>Command</th><th>Question it answers</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">configure</td><td class="mono plain">cmake -S . -B build</td><td>which compiler, which options, what needs building?</td></tr>
+        <tr><td class="mono">build</td><td class="mono plain">cmake --build build</td><td>go and compile whatever is out of date</td></tr>
+      </tbody>
+    </table>
+
+    <p><code>-S .</code> says the source is here; <code>-B build</code> says put everything you generate in a folder called <code>build</code>. You run the first command once — or again whenever you edit <code>CMakeLists.txt</code> — and the second one every time you change code.</p>
+
+    <div class="new-content">
+      <strong>Why the separate <code>build/</code> folder matters.</strong> Everything CMake and the compiler produce lands in there and nowhere else, so your source folder stays exactly as clean as you wrote it. That means <code>build/</code> is completely disposable: if anything ever gets into a confusing state, delete the folder and configure again, and you have lost nothing. It also means <code>build/</code> goes straight into your <code>.gitignore</code> — never commit it. This arrangement has a name people will use around you: an <em>out-of-source build</em>.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> The file itself</div>
+    <h2>Nine lines, line by line 📄</h2>
+
+
+    <p>This is the file. It builds the project from section 1, and it is close to the shortest thing that deserves to be called complete:</p>
+
+    <div class="code-block">
+      <pre><span class="cm"># CMakeLists.txt</span>
+<span class="fn">cmake_minimum_required</span>(VERSION <span class="num">3.16</span>)
+<span class="fn">project</span>(todo LANGUAGES CXX)
+
+<span class="fn">set</span>(CMAKE_CXX_STANDARD <span class="num">11</span>)
+<span class="fn">set</span>(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+<span class="fn">add_executable</span>(todo src/main.cpp src/task.cpp)
+<span class="fn">target_include_directories</span>(todo PRIVATE src)
+<span class="fn">target_compile_options</span>(todo PRIVATE -Wall -Wextra)</pre>
+    </div>
+
+    <p>Line by line:</p>
+
+    <ul>
+      <li><code>cmake_minimum_required</code> — the oldest CMake that understands this file. Pick something recent; 3.16 is a safe floor.</li>
+      <li><code>project</code> — names the project and says it is C++ (<code>CXX</code>). This is also where CMake goes looking for your compiler.</li>
+      <li><code>CMAKE_CXX_STANDARD 11</code> — this book's baseline. <code>..._REQUIRED ON</code> means <em>fail</em> if the compiler cannot do C++11, rather than quietly falling back.</li>
+      <li><code>add_executable</code> — the important one. It says "there is a thing to build called <code>todo</code>, made from these source files". Headers are not listed; CMake finds those itself.</li>
+      <li><code>target_include_directories</code> — where to look for <code>#include "task.h"</code>. The old <code>-I</code> flag, attached to this target only.</li>
+      <li><code>target_compile_options</code> — the flags from 12.5, again attached to this target only.</li>
+    </ul>
+
+    <div class="new-content">
+      <strong>Notice the word <code>target</code> at the front of three of those commands, and the word <code>PRIVATE</code> inside them.</strong> That is the whole style of modern CMake: settings belong to a <em>target</em>, not to the whole directory. There are older commands (<code>include_directories</code>, <code>add_definitions</code>) that apply to everything at once, and you will meet them in old projects — they cause trouble the moment a project has two targets that need different flags. <code>PRIVATE</code> means "these flags are for building <em>this</em> target, and are not passed on to anything that links against it".
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> The daily loop</div>
+    <h2>Configure once, build often ⚙️</h2>
+
+
+    <p>Now the payoff. Configure once:</p>
+
+    <div class="code-block">
+      <pre><span class="cm">$ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug</span>
+-- The CXX compiler identification is GNU 13.3.0
+-- Configuring done (0.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/you/todo/build</pre>
+    </div>
+
+    <p>Then build:</p>
+
+    <div class="code-block">
+      <pre><span class="cm">$ cmake --build build</span>
+[ 33%] Building CXX object CMakeFiles/todo.dir/src/main.cpp.o
+[ 66%] Building CXX object CMakeFiles/todo.dir/src/task.cpp.o
+[100%] Linking CXX executable todo
+[100%] Built target todo</pre>
+    </div>
+
+    <p>Change one line in <code>task.cpp</code> and build again:</p>
+
+    <div class="code-block">
+      <pre><span class="cm">$ cmake --build build</span>
+[ 33%] Building CXX object CMakeFiles/todo.dir/src/task.cpp.o
+[ 66%] Linking CXX executable todo
+[100%] Built target todo</pre>
+    </div>
+
+    <p><code>main.cpp</code> was left alone — it had not changed. Now edit <code>task.h</code> instead, the header both files include:</p>
+
+    <div class="code-block">
+      <pre><span class="cm">$ cmake --build build</span>
+[ 33%] Building CXX object CMakeFiles/todo.dir/<span class="hl">src/main.cpp.o</span>
+[ 66%] Building CXX object CMakeFiles/todo.dir/<span class="hl">src/task.cpp.o</span>
+[100%] Linking CXX executable todo</pre>
+    </div>
+
+    <p><strong>Both</strong> came back, because both include that header. Nobody told CMake about that relationship — it scanned the <code>#include</code>s and worked it out. That is the piece you cannot reasonably do by hand, and the single best reason to stop typing <code>g++</code> lines.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Debug and Release</div>
+    <h2>Two builds from one source 🎚️</h2>
+
+
+    <p>Remember the rule from the last lesson: warnings and sanitizers while you develop, neither in the copy you ship. CMake has that idea built in as the <strong>build type</strong>, and the two standard ones already carry sensible flags:</p>
+
+    <table class="op-table">
+      <thead><tr><th>Build type</th><th>Flags CMake adds</th><th>For</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">Debug</td><td class="mono plain">-g</td><td>developing — real line numbers when things break</td></tr>
+        <tr><td class="mono">Release</td><td class="mono plain">-O3 -DNDEBUG</td><td>the copy you hand over — optimised, assertions off</td></tr>
+      </tbody>
+    </table>
+
+    <p>You pick one when you configure, and you can keep two build folders side by side and switch between them freely:</p>
+
+    <div class="code-block">
+      <pre><span class="cm">cmake -S . -B build     -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build-rel -DCMAKE_BUILD_TYPE=Release</span></pre>
+    </div>
+
+    <p>To attach the sanitizers to the Debug build only, add two lines. The <code>$&lt;...&gt;</code> spelling is a <em>generator expression</em> — a condition evaluated when the build files are written:</p>
+
+    <div class="code-block">
+      <pre><span class="cm"># only in Debug builds: the checks from 12.5</span>
+<span class="fn">target_compile_options</span>(todo PRIVATE $&lt;$&lt;CONFIG:Debug&gt;:-fsanitize=address,undefined&gt;)
+<span class="fn">target_link_options</span>(todo PRIVATE $&lt;$&lt;CONFIG:Debug&gt;:-fsanitize=address,undefined&gt;)</pre>
+    </div>
+
+    <p>Sanitizers need the flag at <em>both</em> compile and link time — a genuinely common thing to get half-right and then wonder why the checks never fire.</p>
+
+    <div class="new-content">
+      That is the moment the twenty lines start paying you back. You can no longer forget the warnings, no longer accidentally ship a sanitized binary, and no longer half-remember which folder had which flags — the file remembers, and it remembers on your colleague's machine and on your own laptop in six months. Everything past this point is more of the same: <code>add_library</code> for code shared between programs, <code>target_link_libraries</code> to join them, <code>find_package</code> to pull in something installed on the system. Look those up when you need them; the shape stays identical.
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — CMake, line by line</div>
+    <h2>What each command actually buys you 🔬</h2>
+
+
+    <p>Two tools. <strong>Line by Line</strong> walks the <code>CMakeLists.txt</code> above and shows what each command actually buys you. <strong>Predict the Output</strong> asks what happens after a given edit — mostly, what gets rebuilt.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">🏗️ CMake, Line by Line</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 predicted</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="ft">Line by Line</button>
+        <button class="tab-btn" data-tab="out">Predict the Output</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-ft">
+        <div class="ft-modes" id="ftMode">
+          <button class="ftmode active" data-m="proj">project<small>the header</small></button>
+          <button class="ftmode" data-m="std">standard<small>C++11 floor</small></button>
+          <button class="ftmode" data-m="exe">add_executable<small>the target</small></button>
+          <button class="ftmode" data-m="opts">target_<small>flags &amp; includes</small></button>
+        </div>
+        <div class="ft-code" id="ftChain"></div>
+        <div class="ft-info" id="ftInfo"></div>
+        <div class="fs-msg" id="ftMsg"></div>
+      </div>
+
+      <div class="tab-panel" id="tab-out">
+        <div class="scenario">
+          <div class="scenario-num" id="poNum">Situation 1 / 4</div>
+          <div class="scenario-code" id="poCode"></div>
+        </div>
+        <div class="out-btns" id="poBtns"></div>
+        <div class="po-fb" id="poFb">What happens next?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="poNext" disabled>Next situation →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Quick check</div>
+    <h2>One question 🎯</h2>
+
+
+    <div class="quiz">
+      <div class="quiz-q">
+        You edit <code>task.h</code>, which both <code>main.cpp</code> and <code>task.cpp</code> include, then run <code>cmake --build build</code>. What gets recompiled?
+      </div>
+      <button class="opt" data-correct="true"><span><strong>Both <code>.cpp</code> files</strong> — CMake scanned the <code>#include</code>s and knows they both depend on that header</span></button>
+      <button class="opt" data-correct="false"><span>Nothing — headers are not source files, so nothing needs rebuilding</span></button>
+      <button class="opt" data-correct="false"><span>Only <code>task.cpp</code>, because it shares the header's name</span></button>
+      <button class="opt" data-correct="false"><span>Every file in the project, from scratch, every time</span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: a header is pasted into every file that includes it — so changing it changes all of them.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 🏆</h2>
+
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🗑️</div>
+      <div class="mistake-body">
+        <strong>Committing the <code>build/</code> folder</strong>
+        <small>It is generated output, it is large, and it is specific to your machine — full of absolute paths that mean nothing anywhere else. Add <code>build/</code> to <code>.gitignore</code> on day one. If a build ever behaves strangely, deleting the whole folder and configuring again is the correct first move, not a last resort.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🧩</div>
+      <div class="mistake-body">
+        <strong>Listing headers in <code>add_executable</code></strong>
+        <small>Only <code>.cpp</code> files are compiled; CMake discovers the headers by scanning your <code>#include</code>s. Listing <code>task.h</code> there is harmless but pointless — and forgetting to list it does <em>not</em> break dependency tracking, which is the thing beginners usually fear.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔗</div>
+      <div class="mistake-body">
+        <strong>Adding <code>-fsanitize=...</code> to compile options only</strong>
+        <small>Sanitizers need the flag when linking too, or the runtime library never gets attached and the checks silently never fire. Set both <code>target_compile_options</code> and <code>target_link_options</code>.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Build something you already wrote.</strong> Take any single-file program from this book, put it in <code>src/main.cpp</code>, and write the nine-line <code>CMakeLists.txt</code> from section 3 around it. Configure, build, run. Then delete <code>build/</code> entirely and do it again — proving to yourself that nothing important lives in there.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Split it in two.</strong> Move one function out of <code>main.cpp</code> into <code>src/util.h</code> and <code>src/util.cpp</code>, add the new <code>.cpp</code> to <code>add_executable</code>, and rebuild. Now edit only <code>util.cpp</code> and watch which files recompile; then edit only <code>util.h</code> and watch again. The difference between those two runs is the whole point of this lesson.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>Two builds, one source.</strong> Configure <code>build/</code> as Debug with the sanitizer lines from section 5, and <code>build-rel/</code> as Release. Deliberately break something — read one past the end of a vector — and run both binaries. The Debug one should report the bug and stop; the Release one will most likely print nonsense and carry on. That contrast is the reason build types exist.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>CMake generates a build system; it does not compile anything itself.</strong> Two steps, always: <code>cmake -S . -B build</code>, then <code>cmake --build build</code>.</li>
+        <li><strong>Everything generated lives in <code>build/</code></strong> — disposable, gitignored, safe to delete whenever you like.</li>
+        <li><strong>The nine lines in section 3 are a complete project file</strong>: minimum version, project, standard, <code>add_executable</code>, and the <code>target_</code> commands for includes and flags.</li>
+        <li><strong>Prefer the <code>target_*</code> commands with <code>PRIVATE</code></strong> — settings belong to a target, not to a whole directory.</li>
+        <li><strong>Incremental builds and header dependencies come free</strong>, and that is the part you could not sensibly do by hand.</li>
+        <li><strong><code>CMAKE_BUILD_TYPE</code></strong> gives you Debug (<code>-g</code>) and Release (<code>-O3 -DNDEBUG</code>); hang the sanitizers off Debug only, at both compile and link.</li>
+      </ul>
+    </div>
+  </section>
+
+
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_12_5.html" class="nav-btn prev">
+      <small>← Previous</small>
+      12.5&nbsp; Warnings &amp; sanitizers
+    </a>
+    <a href="Cpp_Book_Lesson_12_7.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      12.7&nbsp; Your first unit test
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const BIT_LINES = [
+    "One source file is easy. Six files and a header are not. 📚",
+    "CMakeLists.txt describes what to build; CMake writes the actual build commands. 🏗️",
+    "Two commands: configure, then build. That is the whole daily loop. ⚙️",
+    "target_ commands attach flags to one target — that's the modern style. 🎯",
+    "Debug and Release are the same source, configured two different ways. 🎚️",
+    "Read a CMakeLists.txt line by line and see what each one buys you. 🔬",
+    "The build directory is disposable. Delete it any time; never commit it. 🗑️",
+    "Twenty lines now saves you an hour every time the project grows. ⏱️"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 12.6 complete — you have a build system! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updateBit(idx) {
+    const line = BIT_LINES[idx] || BIT_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentBit = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentBit) { currentBit = i; updateBit(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== CMake, line by line =====
+  let ftTouched = false;
+  const ftModeEl = document.getElementById('ftMode');
+  const ftChain = document.getElementById('ftChain');
+  const ftInfo = document.getElementById('ftInfo');
+  const ftMsg = document.getElementById('ftMsg');
+
+  const FT = {
+    proj: {
+      code: '<span class="fn">cmake_minimum_required</span>(VERSION <span class="num">3.16</span>)\n<span class="fn">project</span>(todo LANGUAGES CXX)',
+      does: 'names the project, finds the compiler',
+      omit: 'CMake refuses to configure',
+      verdict: '📌 every file starts here',
+      msg: `<b>The header of every CMakeLists.txt.</b> The first line says which CMake versions understand this file — pick something recent rather than copying an ancient number out of an old tutorial. The second names the project and declares it C++ (<code>CXX</code>); that declaration is what sends CMake looking for a working C++ compiler, which is why a missing compiler is reported <em>here</em>, at configure time, rather than halfway through a build.`
+    },
+    std: {
+      code: '<span class="fn">set</span>(CMAKE_CXX_STANDARD <span class="num">11</span>)\n<span class="fn">set</span>(CMAKE_CXX_STANDARD_REQUIRED ON)',
+      does: 'compiles everything as C++11',
+      omit: 'you get the compiler\'s default — varies!',
+      verdict: '🎚️ pins the language version',
+      msg: `<b>Which C++ are we writing?</b> Without this, you get whatever that particular compiler defaults to, which differs between versions and machines — a classic "works here, not there" bug. <code>REQUIRED ON</code> makes it a hard failure rather than a silent downgrade: if the compiler cannot do C++11, you find out immediately. <span class="grn">11 is this book's floor;</span> raise it when you start using tagged newer features.`
+    },
+    exe: {
+      code: '<span class="fn">add_executable</span>(todo\n    src/main.cpp\n    src/task.cpp)',
+      does: 'defines a target named todo',
+      omit: 'nothing gets built at all',
+      verdict: '🎯 the target everything hangs off',
+      msg: `<b>The important line.</b> It declares a <em>target</em> — a thing to be built — called <code>todo</code>, made from those two <code>.cpp</code> files. Only <code>.cpp</code> files go here; headers are found by scanning your <code>#include</code>s, so leaving <code>task.h</code> out costs you nothing. The name <code>todo</code> is what every following <code>target_</code> command refers to.`
+    },
+    opts: {
+      code: '<span class="fn">target_include_directories</span>(todo PRIVATE src)\n<span class="fn">target_compile_options</span>(todo PRIVATE -Wall -Wextra)',
+      does: 'attaches -Isrc and the warnings to that target',
+      omit: '#include "task.h" not found; no warnings',
+      verdict: '🔧 flags belong to a target',
+      msg: `<b>Modern CMake in one word: <code>target_</code>.</b> These attach the include path and the warning flags to <code>todo</code> specifically, rather than to every target in the directory. <code>PRIVATE</code> means "for building this, and not passed on to anything that links against it". Older projects use directory-wide commands like <code>include_directories</code> — they work, and they cause trouble the moment two targets need different settings.`
+    }
+  };
+  function renderFT(mode) {
+    const f = FT[mode];
+    ftChain.innerHTML = f.code;
+    ftInfo.innerHTML = `<div class="row"><span class="k">what it does</span><span class="v">${f.does}</span></div>` +
+      `<div class="row"><span class="k">leave it out</span><span class="v">${f.omit}</span></div>` +
+      `<div class="row"><span class="k">verdict</span><span class="v">${f.verdict}</span></div>`;
+    ftMsg.innerHTML = f.msg;
+  }
+  ftModeEl.querySelectorAll('.ftmode').forEach(b => b.addEventListener('click', (e) => {
+    ftModeEl.querySelectorAll('.ftmode').forEach(x => x.classList.toggle('active', x === b));
+    renderFT(b.dataset.m);
+    if (!ftTouched) { ftTouched = true; addXP(5, e.clientX, e.clientY, '🏗️ Explored! +5 XP'); }
+  }));
+  renderFT('proj');
+
+  // ===== Predict the Output =====
+  const PO = [
+    {
+      code: '// main.cpp and task.cpp both #include "task.h"\n// you edit task.cpp only, then:\ncmake --build build\n\n// which files are recompiled?',
+      opts: ['task.cpp only', 'both .cpp files', 'nothing', 'both, plus task.h'],
+      answer: 'task.cpp only',
+      why: 'main.cpp has not changed and nothing it depends on has changed, so it is left alone. Only task.cpp is recompiled, then the executable is relinked.'
+    },
+    {
+      code: '// you edit task.h this time, then:\ncmake --build build\n\n// which files are recompiled?',
+      opts: ['both .cpp files', 'task.cpp only', 'nothing — headers are not compiled', 'main.cpp only'],
+      answer: 'both .cpp files',
+      why: 'A header is pasted into every file that includes it, so changing it invalidates both. CMake worked that out by scanning the #includes — you never told it.'
+    },
+    {
+      code: 'rm -rf build\ncmake --build build\n\n// what happens?',
+      opts: ['an error — configure first', 'it rebuilds everything', 'it configures automatically', 'nothing, silently'],
+      answer: 'an error — configure first',
+      why: 'The build folder holds the generated build system. Delete it and there is nothing to build with, so you run cmake -S . -B build again first. That is safe and fast — nothing important lived in there.'
+    },
+    {
+      code: 'target_compile_options(todo PRIVATE\n    $<$<CONFIG:Debug>:-fsanitize=address>)\n// but no target_link_options\n\n// you build Debug and run a buggy program',
+      opts: ['it links but the checks never fire', 'a compile error', 'the checks work fine', 'a link error every time'],
+      answer: 'it links but the checks never fire',
+      why: 'Sanitizers need the flag at link time too, so the runtime library gets attached. Set it on both target_compile_options and target_link_options, or you get a build that looks instrumented and is not.'
+    }
+  ];
+  let poIdx = 0;
+  const poAnswered = new Set();
+  const poCode = document.getElementById('poCode');
+  const poNum = document.getElementById('poNum');
+  const poBtns = document.getElementById('poBtns');
+  const poFb = document.getElementById('poFb');
+  const poNext = document.getElementById('poNext');
+
+  function loadPO() {
+    const s = PO[poIdx];
+    poCode.textContent = s.code;
+    poNum.textContent = `Situation ${poIdx + 1} / ${PO.length}`;
+    poFb.innerHTML = 'What happens next?';
+    poNext.disabled = true;
+    poNext.textContent = poIdx < PO.length - 1 ? 'Next situation →' : 'Restart ↺';
+    poBtns.innerHTML = '';
+    s.opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'obtn'; b.textContent = o;
+      b.addEventListener('click', (e) => {
+        if (b.classList.contains('right') || b.classList.contains('wrong')) return;
+        if (o === s.answer) {
+          b.classList.add('right');
+          poFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+          poBtns.querySelectorAll('.obtn').forEach(x => x.disabled = true);
+          poNext.disabled = false;
+          if (!poAnswered.has(poIdx)) {
+            poAnswered.add(poIdx);
+            playCount.textContent = poAnswered.size;
+            playCount.style.transform = 'scale(1.3)';
+            setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+            addXP(5, e.clientX, e.clientY);
+            bumpStreak();
+            if (poAnswered.size === PO.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 predicted! +20 XP'); }
+          }
+        } else {
+          b.classList.add('wrong'); b.disabled = true;
+          poFb.innerHTML = `❌ Not quite. Remember: only changed files (and whatever includes a changed header) are rebuilt, build/ is generated and disposable, and sanitizers need the flag at link time as well.`;
+          breakStreak();
+        }
+      });
+      poBtns.appendChild(b);
+    });
+  }
+  poNext.addEventListener('click', () => { poIdx = (poIdx + 1) % PO.length; loadPO(); });
+  loadPO();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', (e) => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      opts.forEach(x => x.disabled = true);
+      fb.classList.add('show');
+      fb.innerHTML = '✅ <strong style="color: var(--green)">Right.</strong> A header is textually pasted into every file that includes it, so editing one invalidates all of them. CMake scanned the <code>#include</code>s and worked that out on its own — the piece of bookkeeping you could not sensibly keep doing by hand.';
+      if (firstTry) { addXP(20, r.right, r.top, '🎯 First try! +20 XP'); bumpStreak(); burst(); }
+      else addXP(10, r.right, r.top);
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.classList.add('show');
+      fb.innerHTML = '❌ Not that. Think about what <code>#include</code> literally does: it pastes the header into the file. Change the header and every file that pasted it is now out of date — and only those.';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+
+<!-- Commonplace cloud reading-progress sync -->
+<script>window.READING_SYNC={resourceSet:"cpp_12_6",mode:"page",items:"section.lesson-section",pageName:"C++ Lesson 12.6"};</script>
+<script src="../../../reading-sync.js"></script>
+<script src="../../../_lib/progress-backup.js"></script>
+<script src="../lib/lesson-reader.js" defer></script>
+</body>
+</html>

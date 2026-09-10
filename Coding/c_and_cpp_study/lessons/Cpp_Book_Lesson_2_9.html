@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2.9 — References and Pointers · The C++ Book</title>
+<link href="../../../_lib/fonts/gf-1ec34e24.css" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
+    --card: #ffffff;
+    --ink: #1a202c; --ink-soft: #4a5568; --ink-dim: #718096;
+    --purple: #8b5cf6; --purple-light: #c4b5fd; --purple-deep: #6d28d9;
+    --pink: #ec4899; --blue: #3b82f6; --cyan: #06b6d4;
+    --green: #22c55e; --red: #ef4444; --yellow: #facc15;
+    --terminal: #1e1b4b;
+    --shadow-sm: 0 2px 4px rgba(109, 40, 217, 0.08);
+    --shadow: 0 4px 16px rgba(109, 40, 217, 0.12);
+    --shadow-lg: 0 12px 32px rgba(109, 40, 217, 0.18);
+    --bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --sans: 'Fredoka', -apple-system, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: radial-gradient(at 10% 0%, var(--bg2) 0%, transparent 50%), radial-gradient(at 90% 100%, var(--bg3) 0%, transparent 50%), var(--bg1); background-attachment: fixed; color: var(--ink); line-height: 1.6; font-size: 17px; min-height: 100vh; }
+  .hud { position: fixed; top: 16px; right: 16px; background: var(--card); border-radius: 18px; padding: 10px 16px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; z-index: 50; border: 2px solid var(--purple-light); }
+  .hud-mascot { width: 36px; height: 36px; background: linear-gradient(135deg, var(--purple), var(--cyan)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: bob 2.2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-3deg);} 50% { transform: translateY(-3px) rotate(3deg);} }
+  .hud-xp { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.1; }
+  .hud-xp strong { display: block; font-size: 20px; color: var(--purple-deep); font-weight: 700; }
+  .hud-streak { background: linear-gradient(135deg, var(--cyan), var(--purple)); color: white; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+  .pixel-companion { position: fixed; bottom: 24px; left: 24px; z-index: 40; display: flex; align-items: flex-end; gap: 12px; max-width: 340px; pointer-events: none; }
+  .pixel-avatar { width: 64px; height: 64px; flex-shrink: 0; background: white; border-radius: 50%; border: 3px solid var(--purple); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; pointer-events: auto; animation: bob 3s ease-in-out infinite; }
+  .pixel-bubble { background: white; border: 2px solid var(--purple-light); border-radius: 16px 16px 16px 4px; padding: 10px 14px; box-shadow: var(--shadow); font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.45; pointer-events: auto; position: relative; animation: pixel-in 0.5s var(--bouncy); }
+  .pixel-bubble::after { content: ""; position: absolute; bottom: 10px; left: -10px; width: 0; height: 0; border-style: solid; border-width: 6px 10px 6px 0; border-color: transparent var(--purple-light) transparent transparent; }
+  @keyframes pixel-in { 0% { opacity: 0; transform: translateX(-20px) scale(0.8); } 100% { opacity: 1; transform: translateX(0) scale(1); } }
+  .pixel-name { font-weight: 700; color: var(--purple-deep); font-size: 12px; letter-spacing: 0.4px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+  @media (max-width: 700px) { .pixel-companion { max-width: 240px; bottom: 12px; left: 12px; } .pixel-avatar { width: 50px; height: 50px; } .pixel-bubble { font-size: 13px; } }
+
+  .page { max-width: 880px; margin: 0 auto; padding: 32px 20px 140px; position: relative; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; font-size: 14px; color: var(--ink-dim); font-weight: 500; }
+  .crumb-cpp { color: var(--purple-deep); font-weight: 700; letter-spacing: 0.6px; font-size: 13px; }
+  .crumb-cpp::before { content: "🟣 "; }
+  .progress-bar { flex: 1; max-width: 200px; height: 8px; background: rgba(139, 92, 246, 0.15); border-radius: 4px; margin: 0 16px; overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 4px; transition: width 0.6s var(--bouncy); box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+
+  .hero { background: linear-gradient(135deg, var(--purple) 0%, var(--pink) 50%, var(--cyan) 100%); border-radius: 28px; padding: 38px 36px; color: white; box-shadow: var(--shadow-lg); margin-bottom: 28px; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; top: -30px; right: -30px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%); border-radius: 50%; animation: float 8s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translate(0,0);} 50% { transform: translate(-20px, 20px);} }
+  .hero-tag { display: inline-block; background: rgba(255,255,255,0.25); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 14px; }
+  h1 { font-size: 36px; line-height: 1.15; margin: 0 0 10px; font-weight: 700; letter-spacing: -0.5px; }
+  .hero-sub { font-size: 17px; margin: 0; opacity: 0.92; max-width: 580px; }
+  .hero-mascot { position: absolute; bottom: -10px; right: 24px; width: 110px; height: 110px; animation: tilt 4s ease-in-out infinite; }
+  @keyframes tilt { 0%,100% { transform: rotate(-4deg);} 50% { transform: rotate(4deg);} }
+  @media (max-width: 640px) { .hero-mascot { display: none; } h1 { font-size: 28px; } }
+
+  section.lesson-section { background: var(--card); border-radius: 24px; padding: 28px 32px; margin-bottom: 18px; box-shadow: var(--shadow-sm); border: 2px solid transparent; transition: border-color 0.3s; position: relative; }
+  section.lesson-section:hover { border-color: rgba(139, 92, 246, 0.2); }
+  .step-label { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(139, 92, 246, 0.12), rgba(6, 182, 212, 0.08)); color: var(--purple-deep); font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 6px 14px 6px 6px; border-radius: 20px; margin-bottom: 14px; }
+  .step-num { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4); }
+  h2 { font-size: 26px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink); }
+  p { margin: 0 0 14px; color: var(--ink-soft); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; background: linear-gradient(135deg, #f5f3ff, #ede9fe); padding: 2px 8px; border-radius: 6px; color: var(--purple-deep); font-weight: 600; }
+  strong { color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 22px; color: var(--ink-soft); }
+  ul li { margin-bottom: 7px; }
+  .new-content { background: linear-gradient(135deg, #ecfeff, #cffafe); border-left: 4px solid var(--cyan); border-radius: 0 12px 12px 0; padding: 14px 18px 14px 22px; margin: 14px 0; position: relative; color: var(--ink); }
+  .new-content::before { content: "✨ NEWLY WRITTEN"; position: absolute; top: -10px; left: 14px; background: var(--cyan); color: white; padding: 2px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .prec-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  .prec-table thead { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; }
+  .prec-table th, .prec-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); }
+  .prec-table th { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+  .prec-table td.mono { font-family: var(--mono); font-size: 13px; color: var(--purple-deep); font-weight: 700; }
+  .prec-table td.mono.plain { color: var(--ink-soft); font-weight: 600; }
+
+  .trap { background: linear-gradient(135deg, #fee2e2, #fff1f2); border: 2px solid var(--red); border-radius: 14px; padding: 16px 20px; margin: 16px 0; position: relative; }
+  .trap::before { content: "🚨 NAMESPACE TRAP"; position: absolute; top: -10px; left: 14px; background: var(--red); color: white; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+  .trap h4 { margin: 4px 0 8px; color: var(--red); font-size: 16px; }
+  .trap p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+
+  /* ===== Play area ===== */
+  .play-area { background: linear-gradient(135deg, #faf5ff, #ecfeff); border: 2px solid var(--purple); border-radius: 20px; padding: 22px; margin-top: 14px; box-shadow: var(--shadow); }
+  .play-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .play-title { font-size: 17px; font-weight: 700; color: var(--purple-deep); display: flex; align-items: center; gap: 8px; }
+  .play-counter { background: white; color: var(--purple-deep); padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 2px solid var(--purple-light); }
+  .play-counter strong { font-size: 18px; }
+
+  .tab-row { display: flex; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; }
+  .tab-btn { background: transparent; border: none; padding: 10px 14px; font: inherit; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; border-radius: 8px; transition: all 0.2s var(--bouncy); flex: 1; }
+  .tab-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; box-shadow: var(--shadow-sm); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Name resolver */
+  .resolver-setup { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-family: var(--mono); font-size: 13px; color: var(--ink); line-height: 1.7; }
+  .resolver-setup .ns { color: var(--purple-deep); font-weight: 700; }
+  .resolver-setup .cm { color: var(--ink-dim); font-style: italic; }
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .ntoggle { display: flex; align-items: center; gap: 10px; background: white; border: 2px solid var(--bg3); border-radius: 12px; padding: 10px 16px; cursor: pointer; font-family: var(--mono); font-weight: 700; font-size: 13px; transition: all 0.2s var(--bouncy); user-select: none; }
+  .ntoggle:hover { border-color: var(--purple); }
+  .ntoggle.on { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .ntoggle .box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--purple-light); display: flex; align-items: center; justify-content: center; font-size: 12px; background: white; color: var(--purple-deep); }
+  .ntoggle.on .box { background: white; border-color: white; }
+  .call-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+  .call-label { font-size: 12px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .call-btn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 9px 14px; font: inherit; font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--purple-deep); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .call-btn:hover { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .call-btn.active { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .resolver-out { background: var(--terminal); color: #e0e7ff; border-radius: 12px; padding: 16px 20px; font-family: var(--mono); font-size: 14px; min-height: 92px; }
+  .resolver-out .label { color: #a5b4fc; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+  .resolver-out .call { color: #c4b5fd; font-size: 16px; margin: 6px 0 10px; }
+  .resolver-out .res-ok { color: #86efac; font-size: 15px; font-weight: 700; }
+  .resolver-out .res-err { color: #fca5a5; font-size: 15px; font-weight: 700; }
+  .resolver-out .why { color: #c7d2fe; font-style: italic; font-family: var(--sans); font-size: 13px; margin-top: 8px; line-height: 1.55; }
+
+  /* Best practice */
+  .scenario { background: white; border: 2px solid var(--purple-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; }
+  .scenario-num { font-size: 11px; color: var(--ink-dim); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .scenario-text { font-size: 14.5px; color: var(--ink); line-height: 1.5; }
+  .scenario-text code { font-size: 0.92em; }
+  .verdict-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .vbtn { background: white; border: 2px solid var(--bg3); border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.2s var(--bouncy); }
+  .vbtn:hover:not(:disabled) { border-color: var(--purple); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  .vbtn.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; }
+  .vbtn.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; }
+  .bp-fb { font-size: 14px; min-height: 22px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); line-height: 1.5; }
+  .scenario-nav { display: flex; gap: 8px; margin-top: 12px; }
+  .scen-btn { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border: none; padding: 9px 18px; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: transform 0.2s var(--bouncy); }
+  .scen-btn:hover:not(:disabled) { transform: translateY(-2px); }
+  .scen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .quiz { background: linear-gradient(135deg, #ddd6fe, #fbcfe8); border-radius: 18px; padding: 22px; margin-top: 14px; border: 2px solid var(--purple); }
+  .quiz-q { font-weight: 600; margin-bottom: 14px; font-size: 16px; color: var(--ink); }
+  .quiz-q pre { font-family: var(--mono); font-size: 13px; background: var(--terminal); color: #e0e7ff; padding: 10px 14px; border-radius: 8px; margin: 8px 0; line-height: 1.6; overflow-x: auto; }
+  .opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: white; color: var(--ink); border: 2px solid var(--bg3); padding: 12px 16px; border-radius: 14px; margin-bottom: 10px; font: inherit; cursor: pointer; transition: all 0.2s var(--bouncy); font-weight: 500; }
+  .opt::before { content: "○"; color: var(--ink-dim); font-size: 20px; flex-shrink: 0; }
+  .opt:hover:not(:disabled) { border-color: var(--purple); transform: translateX(4px); box-shadow: var(--shadow-sm); }
+  .opt.right { background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-color: var(--green); color: #166534; animation: pop-in 0.5s var(--bouncy); }
+  @keyframes pop-in { 0% {transform:scale(0.5);} 100% {transform:scale(1);} }
+  .opt.right::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .opt.wrong { background: linear-gradient(135deg, #fee2e2, #fecaca); border-color: var(--red); color: #991b1b; animation: shake 0.4s; }
+  @keyframes shake { 0%,100% {transform:translateX(0);} 20%,60% {transform:translateX(-6px);} 40%,80% {transform:translateX(6px);} }
+  .opt.wrong::before { content: "✗"; color: var(--red); font-weight: 700; }
+  .quiz-feedback { margin-top: 12px; font-size: 14.5px; min-height: 24px; color: var(--ink-soft); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.7); }
+  .mistake { display: flex; gap: 14px; padding: 14px 18px; background: linear-gradient(135deg, #fff1f2, white); border-radius: 14px; margin-bottom: 12px; border-left: 5px solid var(--red); transition: transform 0.3s var(--bouncy); }
+  .mistake:hover { transform: translateX(4px); }
+  .mistake-icon { font-size: 26px; flex-shrink: 0; width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+  .mistake-body strong { color: var(--red); display: block; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
+  .mistake-body small { color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .mistake-body code { font-size: 0.9em; }
+  .exercise { background: linear-gradient(135deg, #ecfeff, white); border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; border-left: 5px solid var(--cyan); transition: transform 0.3s var(--bouncy); }
+  .exercise:hover { transform: translateX(4px); }
+  .ex-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.6px; margin-right: 10px; text-transform: uppercase; }
+  .ex-easy { background: var(--green); color: white; }
+  .ex-med { background: var(--purple); color: white; }
+  .ex-hard { background: var(--pink); color: white; }
+  .recap { background: linear-gradient(135deg, var(--purple), var(--pink), var(--cyan)); color: white; border-radius: 24px; padding: 28px 32px; margin-top: 22px; box-shadow: var(--shadow-lg); position: relative; overflow: hidden; }
+  .recap::after { content: "🎓"; position: absolute; top: 20px; right: 20px; font-size: 60px; opacity: 0.3; }
+  .recap h3 { margin: 0 0 16px; font-size: 22px; }
+  .recap ul { margin: 0; padding-left: 24px; color: white; }
+  .recap li { margin-bottom: 8px; font-size: 15.5px; }
+  .nav-foot { display: flex; gap: 14px; margin-top: 32px; }
+  .nav-btn { flex: 1; background: white; border: 2px solid var(--bg3); border-radius: 18px; padding: 18px 22px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s var(--bouncy); box-shadow: var(--shadow-sm); }
+  .nav-btn:hover:not(.disabled) { border-color: var(--purple); transform: translateY(-4px); box-shadow: var(--shadow); }
+  .nav-btn small { display: block; color: var(--ink-dim); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .nav-btn.next { text-align: right; background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; border-color: var(--purple); }
+  .nav-btn.next:hover { transform: translateY(-4px) scale(1.02); }
+  .nav-btn.next small { color: rgba(255,255,255,0.85); }
+  .nav-btn.disabled { opacity: 0.5; cursor: default; }
+  .xp-pop { position: fixed; pointer-events: none; font-weight: 700; font-size: 18px; color: var(--purple-deep); animation: xp-rise 1.3s var(--bouncy) forwards; z-index: 100; text-shadow: 0 2px 4px rgba(255,255,255,0.8); }
+  @keyframes xp-rise { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-20px) scale(1.2); } 100% { opacity: 0; transform: translateY(-80px) scale(0.9); } }
+  .confetti { position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 200; animation: confetti-fall linear forwards; }
+  @keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px); background: linear-gradient(135deg, var(--purple), var(--cyan)); color: white; padding: 14px 28px; border-radius: 20px; font-weight: 700; box-shadow: var(--shadow-lg); z-index: 60; transition: transform 0.5s var(--bouncy); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* --- Phase 3: layout overflow guards ---
+     A grid/flex child defaults to min-width:auto, so a wide <pre>/<code> inside it
+     stops the column shrinking and stretches the card past the viewport instead of
+     letting the pre scroll. These apply at every width; the media block below is
+     only for the extra squeeze on phones. --- */
+  .cascade-card, .vs-col, .flavor-card, .flavor-body, .pat-card, .pat-body,
+  .lang-card, .mistake, .mistake-body, .se-code, .su-row, .su-cell,
+  .bit-bubble, .pixel-bubble, .bit-companion, .pixel-companion { min-width: 0; }
+
+  @media (max-width: 700px) {
+    :not(pre) > code { overflow-wrap: anywhere; }
+    .call-row { gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-mascot">🤖</div>
+  <div class="hud-xp"><span>XP</span><strong id="xpNum">0</strong></div>
+  <div class="hud-streak" id="streak" style="display:none">🔥 0</div>
+</div>
+<div class="toast" id="toast">Level up!</div>
+
+<div class="pixel-companion" id="pixelCompanion">
+  <div class="pixel-avatar">
+    <svg viewBox="0 0 80 80" width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="8" x2="40" y2="16" stroke="#6d28d9" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="3" fill="#06b6d4" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="14" y="16" width="52" height="44" rx="16" fill="#fff" stroke="#6d28d9" stroke-width="3"/>
+      <rect x="20" y="26" width="40" height="20" rx="8" fill="#1e1b4b" stroke="#6d28d9" stroke-width="2"/>
+      <circle cx="30" cy="36" r="3.5" fill="#06b6d4"/>
+      <circle cx="50" cy="36" r="3.5" fill="#06b6d4"/>
+      <rect x="30" y="50" width="20" height="3" rx="1.5" fill="#6d28d9"/>
+      <rect x="20" y="60" width="40" height="14" rx="6" fill="#fff" stroke="#6d28d9" stroke-width="2.5"/>
+    </svg>
+  </div>
+  <div class="pixel-bubble" id="pixelBubble">
+    <span class="pixel-name">Pixel</span>
+    Two ways to talk about someone else's box: a second name, or its address. 📍
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="topbar">
+    <span class="crumb-cpp">THE C++ BOOK &middot; 2.9</span>
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <span>Lesson 19 / 87</span>
+  </div>
+
+  <div class="hero">
+    <span class="hero-tag">🧩 PART II &middot; CORE LANGUAGE</span>
+    <h1>References and Pointers</h1>
+    <p class="hero-sub">Every variable so far has owned its own box of memory. Now for the two ways to talk about <em>someone else's</em> box: a <strong>reference</strong>, which is simply a second name for it, and a <strong>pointer</strong>, which is a variable holding its address. Get these straight and the rest of C++ — functions that change their arguments, classes, <code>this</code> — stops looking like punctuation soup.</p>
+    <svg class="hero-mascot" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <line x1="50" y1="10" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="8" r="4" fill="#fff" stroke="#fff" stroke-width="2"/>
+      <rect x="18" y="20" width="64" height="56" rx="20" fill="#fff" stroke="#fff" stroke-width="3"/>
+      <rect x="25" y="33" width="50" height="25" rx="10" fill="#1e1b4b" stroke="#fff" stroke-width="2"/>
+      <circle cx="38" cy="45" r="4.5" fill="#06b6d4"/>
+      <circle cx="62" cy="45" r="4.5" fill="#06b6d4"/>
+      <rect x="38" y="63" width="24" height="4" rx="2" fill="#fff"/>
+    </svg>
+  </div>
+
+  <!-- 1 -->
+  <section class="lesson-section" data-section="0" data-bit="0">
+    <div class="step-label"><span class="step-num">1</span> Why this matters</div>
+    <h2>A copy is not the original 💭</h2>
+
+    <p>Every declaration you have written so far makes a brand-new box and fills it:</p>
+
+    <pre class="code"><span class="ty">std::string</span> a = <span class="str">"a long piece of text…"</span>;
+<span class="ty">std::string</span> b = a;   <span class="cm">// a second, complete copy of the text</span>
+b += <span class="str">"!"</span>;          <span class="cm">// b changed; a is untouched</span></pre>
+
+    <div class="new-content">
+      That is exactly right most of the time — and it costs you two things. Copying a big object is real work (every character of that string gets duplicated), and a copy is a <em>different</em> object, so changing it can never change the original. Sometimes you want the opposite: to work with the very same object under a different name, or to hold on to <em>where</em> an object lives so you can find it later.
+    </div>
+
+    <p>C++ gives you two tools for that. A <strong>reference</strong> is a second name for an existing object. A <strong>pointer</strong> is a variable whose value is an address. They overlap enough to be confusing and differ enough to matter, so this lesson takes them one at a time — and by the end you will know which to reach for.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="lesson-section" data-section="1" data-bit="1">
+    <div class="step-label"><span class="step-num">2</span> The mental model</div>
+    <h2>Boxes, labels, and addresses 📦</h2>
+
+    <p>Picture memory as a street of numbered boxes. A variable is a box with a label stuck on it:</p>
+
+    <div class="new-content">
+      <strong>A value</strong> is a box of its own, holding its own contents.<br>
+      <strong>A reference</strong> is a <em>second label</em> stuck on a box that already exists. Nothing new is stored — the box just answers to two names now.<br>
+      <strong>A pointer</strong> is a box of its own, but what it holds is the <em>house number</em> of another box. To reach the thing itself you have to walk to that address.
+    </div>
+
+    <table class="prec-table">
+      <thead><tr><th></th><th>What it stores</th><th>Can it be empty?</th><th>Can it change target?</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">int v</td><td class="plain">its own value</td><td class="plain">no</td><td class="plain">n/a</td></tr>
+        <tr><td class="mono">int&amp; r</td><td class="plain">nothing — it <em>is</em> another object</td><td class="plain">no, never</td><td class="plain">no, never</td></tr>
+        <tr><td class="mono">int* p</td><td class="plain">an address</td><td class="plain">yes — <code>nullptr</code></td><td class="plain">yes, any time</td></tr>
+      </tbody>
+    </table>
+
+    <p>Those last two columns are the whole difference. A reference is a promise: <em>there is definitely an object here, and it will always be the same one</em>. A pointer promises nothing — it may point somewhere, may point nowhere, and may point somewhere else a line later. Choose whichever promise matches your situation.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="lesson-section" data-section="2" data-bit="2">
+    <div class="step-label"><span class="step-num">3</span> References</div>
+    <h2>A permanent second name 🔗</h2>
+
+    <p>Write <code>&amp;</code> after the type to declare a reference. It must be attached to something at the moment it is born:</p>
+
+    <pre class="code"><span class="kw">int</span> x = <span class="num">10</span>;
+<span class="kw">int</span><span class="hl">&amp;</span> r = x;        <span class="cm">// r is another name for x</span>
+
+r = <span class="num">20</span>;             <span class="cm">// writes into x</span>
+std::cout &lt;&lt; x;      <span class="cm">// 20</span></pre>
+
+    <p>Notice there is no special syntax for <em>using</em> a reference. You do not unwrap it or follow it — you just use <code>r</code> exactly as you would use <code>x</code>, because it <em>is</em> <code>x</code>. That is the pleasant part.</p>
+
+    <div class="new-content">
+      🚨 Here is the one thing everybody gets wrong. Once <code>r</code> is attached to <code>x</code>, it is attached <strong>for life</strong>. So what does <code>r = y;</code> do? Not what it looks like: it does <em>not</em> point <code>r</code> at <code>y</code>. It copies <code>y</code>'s value into the box <code>r</code> names — that is, into <code>x</code>. There is no syntax in C++ for re-seating a reference, because that is precisely the guarantee a reference makes.
+    </div>
+
+    <p>Two smaller rules follow from the same guarantee. <code>int&amp; r;</code> on its own will not compile — a reference with nothing to refer to is a contradiction. And a reference can never be null, which is why code that takes a reference never has to check for one.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="lesson-section" data-section="3" data-bit="3">
+    <div class="step-label"><span class="step-num">4</span> Pointers</div>
+    <h2>A variable that holds an address 📍</h2>
+
+    <p>Two operators do the work. <code>&amp;</code> in front of an object asks "what is your address?", and <code>*</code> in front of an address says "give me what lives there":</p>
+
+    <pre class="code"><span class="kw">int</span> x = <span class="num">10</span>;
+<span class="kw">int</span><span class="hl">*</span> p = <span class="hl">&amp;</span>x;       <span class="cm">// p holds the address of x</span>
+
+std::cout &lt;&lt; <span class="hl">*</span>p;    <span class="cm">// 10  — follow the address</span>
+<span class="hl">*</span>p = <span class="num">20</span>;            <span class="cm">// write through it: x is now 20</span>
+
+<span class="kw">int</span> y = <span class="num">99</span>;
+p = &amp;y;              <span class="cm">// re-seated: p now holds y's address</span>
+p = <span class="kw">nullptr</span>;        <span class="cm">// or nothing at all (C++11)</span></pre>
+
+    <div class="new-content">
+      Both symbols do <strong>two different jobs</strong> depending on where they appear, and that is the single biggest source of confusion. In a <em>declaration</em>, <code>int&amp; r</code> and <code>int* p</code> describe what kind of thing you are making. In an <em>expression</em>, <code>&amp;x</code> takes an address and <code>*p</code> follows one. Read the line and ask "am I declaring, or am I doing?" — the symbols mean different things in each case.
+    </div>
+
+    <p><code>nullptr</code> is the value meaning "deliberately pointing at nothing." It is worth using precisely because you can test for it: <code>if (p) { … }</code> is true when <code>p</code> points somewhere and false when it is null. A pointer you have not initialised at all is far worse than a null one — it holds whatever junk was in that memory, and following it is undefined behaviour.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="lesson-section" data-section="4" data-bit="4">
+    <div class="step-label"><span class="step-num">5</span> Choosing between them</div>
+    <h2>The arrow, and which tool when ⚖️</h2>
+
+    <p>One more piece of syntax you will meet constantly from Part VI onward. When a pointer points at something with members, reaching a member takes two steps — follow the pointer, then pick the member — and <code>-&gt;</code> is the shorthand for both:</p>
+
+    <pre class="code">(*p).size()    <span class="cm">// follow p, then call size()</span>
+p-&gt;size()      <span class="cm">// identical, and this is what everyone writes</span></pre>
+
+    <p>With the mechanics out of the way, the practical question is which to reach for. This table is the short answer, and it will carry you a long way:</p>
+
+    <table class="prec-table">
+      <thead><tr><th>Situation</th><th>Reach for</th></tr></thead>
+      <tbody>
+        <tr><td class="plain">A small value you only need to read (<code>int</code>, <code>char</code>, <code>bool</code>)</td><td class="mono">a plain copy</td></tr>
+        <tr><td class="plain">Something big you only need to read (a string, a container)</td><td class="mono">const T&amp;</td></tr>
+        <tr><td class="plain">Something you must be able to modify, and it definitely exists</td><td class="mono">T&amp;</td></tr>
+        <tr><td class="plain">Something that might be absent, or that you need to re-aim later</td><td class="mono">T*</td></tr>
+      </tbody>
+    </table>
+
+    <div class="new-content">
+      Modern C++ leans on references much harder than on raw pointers, and the table shows why: most of the time you either want a cheap copy or you want to touch an object that certainly exists. The pointer earns its place in exactly one situation — when "nothing here" is a legitimate answer, or when the thing you are looking at needs to change over time. Part VIII will add smart pointers for the cases where you also <em>own</em> what you point at.
+    </div>
+  </section>
+
+  <!-- 6 — INTERACTIVE -->
+  <section class="lesson-section" data-section="5" data-bit="5">
+    <div class="step-label"><span class="step-num">6</span> Try it — Reference &amp; Pointer Lab</div>
+    <h2>Watch the alias and the address diverge 🔬</h2>
+
+    <p>Two tools. <strong>Alias or Address?</strong> keeps a live picture of memory: run the operations in any order and watch which box actually changes — especially <code>r = y</code>. <strong>Pick the Tool</strong> gives you four situations and asks which of the three you would use.</p>
+
+    <div class="play-area">
+      <div class="play-header">
+        <div class="play-title">📍 Reference &amp; Pointer Lab</div>
+        <div class="play-counter"><strong id="playCount">0</strong> / 4 situations</div>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" data-tab="mem">Alias or Address?</button>
+        <button class="tab-btn" data-tab="pick">Pick the Tool</button>
+      </div>
+
+      <!-- MEMORY LAB -->
+      <div class="tab-panel active" id="tab-mem">
+        <div class="resolver-setup">
+          <span class="ns">int</span>  x = 10;&nbsp;&nbsp;&nbsp;<span class="ns">int</span>  y = 99;<br>
+          <span class="ns">int&amp;</span> r = x;&nbsp;&nbsp;&nbsp;<span class="cm">// r is a second name for x</span><br>
+          <span class="ns">int*</span> p = &amp;x;&nbsp;&nbsp;<span class="cm">// p holds x's address</span>
+        </div>
+        <div class="call-row">
+          <span class="call-label">Run:</span>
+          <button class="call-btn" data-op="r20">r = 20;</button>
+          <button class="call-btn" data-op="deref30">*p = 30;</button>
+          <button class="call-btn" data-op="reseat">p = &amp;y;</button>
+          <button class="call-btn" data-op="rassign">r = y;</button>
+          <button class="call-btn" data-op="reset">↺ reset</button>
+        </div>
+        <div class="resolver-out" id="memOut"></div>
+      </div>
+
+      <!-- PICK THE TOOL -->
+      <div class="tab-panel" id="tab-pick">
+        <div class="scenario">
+          <div class="scenario-num" id="pkNum">Situation 1 / 4</div>
+          <div class="scenario-text" id="pkText"></div>
+        </div>
+        <div class="verdict-btns" id="pkBtns">
+          <button class="vbtn" data-v="value">📄 a plain copy</button>
+          <button class="vbtn" data-v="ref">🔗 a reference</button>
+          <button class="vbtn" data-v="ptr">📍 a pointer</button>
+        </div>
+        <div class="bp-fb" id="pkFb">Which of the three fits this situation best?</div>
+        <div class="scenario-nav">
+          <button class="scen-btn" id="pkNext" disabled>Next situation →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="lesson-section" data-section="6" data-bit="6">
+    <div class="step-label"><span class="step-num">7</span> Predict the output</div>
+    <h2>Quick check 🎯</h2>
+
+    <div class="quiz">
+      <div class="quiz-q">
+        Trace this line by line. What does it print?
+        <pre>int x = 1, y = 2;
+int&amp; r = x;
+int* p = &amp;x;
+
+r = y;      // ?
+p = &amp;y;     // ?
+*p = 9;     // ?
+
+std::cout &lt;&lt; x &lt;&lt; " " &lt;&lt; y;</pre>
+      </div>
+      <button class="opt" data-correct="true"><span><code>2 9</code></span></button>
+      <button class="opt" data-correct="false"><span><code>9 9</code></span></button>
+      <button class="opt" data-correct="false"><span><code>1 2</code></span></button>
+      <button class="opt" data-correct="false"><span><code>2 2</code></span></button>
+      <div class="quiz-feedback" id="quizFb">Hint: one of those three lines re-aims something, and one only looks like it does.</div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="lesson-section" data-section="7" data-bit="7">
+    <div class="step-label"><span class="step-num">8</span> Mistakes, exercises, recap</div>
+    <h2>Wrap up 📚</h2>
+
+    <h3 style="margin-top:18px;font-size:18px">Three mistakes to avoid 🚨</h3>
+
+    <div class="mistake">
+      <div class="mistake-icon">🔗</div>
+      <div class="mistake-body">
+        <strong>Expecting <code>r = y;</code> to re-aim the reference</strong>
+        <small>It never does. A reference is bound once, at birth, and stays bound; <code>r = y</code> copies <code>y</code>'s value into whatever <code>r</code> already names. If you need something that can change target, you wanted a pointer.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">💥</div>
+      <div class="mistake-body">
+        <strong>Following a pointer that points nowhere</strong>
+        <small><code>int* p;</code> without an initialiser holds junk, and <code>*p</code> on it is undefined behaviour — often a crash, sometimes worse. Initialise every pointer, use <code>nullptr</code> for "nothing yet", and guard with <code>if (p)</code> before dereferencing anything that might be empty.</small>
+      </div>
+    </div>
+
+    <div class="mistake">
+      <div class="mistake-icon">🎭</div>
+      <div class="mistake-body">
+        <strong>Writing <code>int* p, q;</code> and expecting two pointers</strong>
+        <small>The <code>*</code> binds to the declarator, not the type, so <code>q</code> is a plain <code>int</code>. Either write <code>int *p, *q;</code> or — much better — give each pointer its own line.</small>
+      </div>
+    </div>
+
+    <h3 style="margin-top:22px;font-size:18px">Practice exercises 💪</h3>
+
+    <div class="exercise">
+      <span class="ex-tag ex-easy">Easy</span>
+      <strong>Prove the alias.</strong> Declare <code>int x = 5;</code> and <code>int&amp; r = x;</code>. Print both, set <code>r = 42</code>, print both again. Then declare <code>int y = 7;</code>, run <code>r = y;</code>, and print <code>x</code>, <code>y</code> and <code>r</code>. Convince yourself that the last line changed <code>x</code> and left <code>r</code> still attached to it.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-med">Medium</span>
+      <strong>Walk a pointer.</strong> With <code>int a = 1, b = 2;</code>, declare <code>int* p = &amp;a;</code>. Print <code>*p</code>, re-seat it with <code>p = &amp;b;</code>, print <code>*p</code> again. Then set <code>p = nullptr;</code> and write an <code>if (p) … else …</code> that prints the value when there is one and "nothing to show" when there isn't.
+    </div>
+
+    <div class="exercise">
+      <span class="ex-tag ex-hard">Stretch</span>
+      <strong>The declaration trap.</strong> Write <code>int* p, q;</code> and hover over <code>q</code> in VS Code to see its real type. Now fix it two ways — once by moving the <code>*</code>, once by splitting the line — and check with <code>static_assert(std::is_same&lt;decltype(q), int*&gt;::value, "not a pointer");</code> from <code>&lt;type_traits&gt;</code> that you actually got what you wanted.
+    </div>
+
+    <div class="recap">
+      <h3>🎓 What to remember</h3>
+      <ul>
+        <li><strong>A reference is a second name</strong> for an object that already exists — no new storage, no special syntax to use it.</li>
+        <li><strong>A reference is bound for life.</strong> <code>r = y</code> copies a value into the object <code>r</code> names; it never re-aims <code>r</code>.</li>
+        <li><strong>A pointer is a variable holding an address.</strong> <code>&amp;x</code> takes an address, <code>*p</code> follows one, and <code>p-&gt;m</code> is shorthand for <code>(*p).m</code>.</li>
+        <li><strong>Only a pointer can be empty or re-aimed</strong> — that is exactly when to prefer one, and <code>nullptr</code> is how you say "nothing here."</li>
+        <li><strong>Default to a copy for small values, <code>const&amp;</code> for big read-only ones</strong>, <code>T&amp;</code> when you must modify, <code>T*</code> when it might be absent.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="nav-foot">
+    <a href="Cpp_Book_Lesson_2_8.html" class="nav-btn prev">
+      <small>← Previous</small>
+      2.8  Namespaces and using
+    </a>
+    <a href="Cpp_Book_Lesson_3_1.html" class="nav-btn next">
+      <small>Next lesson →</small>
+      3.1  <code>if</code>, <code>else</code>, and if-init
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PIXEL_LINES = [
+    "Two ways to talk about someone else's box: a second name, or its address. 📍",
+    "A reference is a second label on the same box. A pointer is a box holding an address. 📦",
+    "A reference is born attached — and can never be re-aimed. That's the whole promise. 🔗",
+    "<code>&amp;</code> takes an address, <code>*</code> follows one. Same symbols, two jobs each. 🎯",
+    "Copy if it's small, <code>const&amp;</code> if it's big, pointer if it might be missing. ⚖️",
+    "Run <code>r = y</code> and watch which box actually changes. Not the one you'd think! 🔬",
+    "Three lines, three different effects. Trace them one at a time. 🎯",
+    "Three traps, three exercises. Part IV puts all of this to work. 💪"
+  ];
+
+  let xp = 0, streak = 0;
+  const xpEl = document.getElementById('xpNum');
+  const streakEl = document.getElementById('streak');
+  const toast = document.getElementById('toast');
+  const progFill = document.getElementById('progFill');
+  const visited = new Set();
+  const TOTAL_SECTIONS = 8;
+
+  function addXP(amount, x, y, msg) {
+    xp += amount; xpEl.textContent = xp;
+    xpEl.style.transform = 'scale(1.4)';
+    setTimeout(() => xpEl.style.transform = 'scale(1)', 200);
+    if (x !== undefined) {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop'; pop.textContent = `+${amount} XP`;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1400);
+    }
+    if (msg) showToast(msg);
+  }
+  function showToast(text) { toast.textContent = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+  function bumpStreak() { streak++; streakEl.style.display = 'inline-block'; streakEl.textContent = `🔥 ${streak}`; streakEl.style.transform = 'scale(1.3)'; setTimeout(() => streakEl.style.transform = 'scale(1)', 200); }
+  function breakStreak() { if (streak > 0) { streak = 0; streakEl.style.display = 'none'; } }
+  function markVisited(idx) {
+    if (visited.has(idx)) return;
+    visited.add(idx);
+    progFill.style.width = (visited.size / TOTAL_SECTIONS * 100) + '%';
+    if (visited.size === TOTAL_SECTIONS) {
+      setTimeout(() => { burst(); showToast('🎉 Lesson 2.9 complete! +50 XP'); addXP(50); }, 400);
+    }
+  }
+
+  const pixelBubble = document.getElementById('pixelBubble');
+  function updatePixel(idx) {
+    const line = PIXEL_LINES[idx] || PIXEL_LINES[0];
+    pixelBubble.style.opacity = '0';
+    setTimeout(() => { pixelBubble.innerHTML = `<span class="pixel-name">Pixel</span> ${line}`; pixelBubble.style.opacity = '1'; }, 250);
+  }
+  let currentPixel = -1;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        markVisited(+e.target.dataset.section);
+        const i = +e.target.dataset.bit;
+        if (i !== currentPixel) { currentPixel = i; updatePixel(i); }
+      }
+    });
+  }, { threshold: 0.55 });
+  document.querySelectorAll('section.lesson-section').forEach(s => obs.observe(s));
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tab-btn').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  }));
+
+  const playCount = document.getElementById('playCount');
+
+  // ===== Alias or Address? =====
+  const memOut = document.getElementById('memOut');
+  let mem = { x: 10, y: 99, ptr: 'x', last: null };
+  const opsTried = new Set();
+
+  function renderMem() {
+    const arrow = (name, target) => `${name} <span style="color:#a5b4fc">──▶</span> <b style="color:#c4b5fd">${target}</b>`;
+    const why = {
+      r20:      '<code>r</code> <em>is</em> <code>x</code>, so assigning to <code>r</code> writes straight into <code>x</code>. <code>y</code> and <code>p</code> are untouched.',
+      deref30:  `<code>*p</code> means "the box <code>p</code> points at" — right now that is <code>${mem.ptr}</code>, so <code>${mem.ptr}</code> became 30.`,
+      reseat:   'A pointer can be re-aimed at any time: <code>p</code> now holds <code>y</code>\'s address. No value changed — only where <code>p</code> looks.',
+      rassign:  '⚠️ The trap. This did <strong>not</strong> make <code>r</code> refer to <code>y</code>. It copied <code>y</code>\'s value into the box <code>r</code> names — <code>x</code>. <code>r</code> is still <code>x</code>, and always will be.',
+      reset:    'Back to the starting state. Try the four operations in different orders.'
+    };
+    memOut.innerHTML =
+      '<div class="label">Memory</div>' +
+      `<div class="call">x = <b style="color:#86efac">${mem.x}</b> &nbsp;&nbsp; y = <b style="color:#86efac">${mem.y}</b></div>` +
+      `<div style="line-height:1.9">${arrow('r', 'x')} &nbsp; <span style="color:#64748b">(fixed for life)</span><br>` +
+      `${arrow('p', mem.ptr)} &nbsp; <span style="color:#64748b">(re-aimable)</span></div>` +
+      (mem.last ? `<div class="why">${why[mem.last]}</div>` : '<div class="why">Run an operation and watch which box changes.</div>');
+  }
+
+  document.querySelectorAll('.call-btn').forEach(b => b.addEventListener('click', () => {
+    const op = b.dataset.op;
+    if (op === 'reset') { mem = { x: 10, y: 99, ptr: 'x', last: 'reset' }; renderMem(); return; }
+    if (op === 'r20') mem.x = 20;
+    if (op === 'deref30') mem[mem.ptr] = 30;
+    if (op === 'reseat') mem.ptr = 'y';
+    if (op === 'rassign') mem.x = mem.y;
+    mem.last = op;
+    renderMem();
+    if (!opsTried.has(op)) {
+      opsTried.add(op);
+      const rect = b.getBoundingClientRect();
+      addXP(5, rect.left + rect.width / 2, rect.top);
+    }
+  }));
+  renderMem();
+
+  // ===== Pick the Tool =====
+  const PICKS = [
+    { text: 'A counter that some other part of your program needs to be able to <strong>increment for you</strong>. It definitely exists.',
+      answer: 'ref',
+      why: 'It must be modifiable and it certainly exists — that is exactly a <code>T&amp;</code>. No emptiness to represent, no re-aiming needed.' },
+    { text: 'A long <code>std::string</code> you only need to <strong>read</strong> — print it, measure it, search it.',
+      answer: 'ref',
+      why: 'A <code>const std::string&amp;</code>. Copying a long string costs real work, and a reference avoids it while <code>const</code> promises you won\'t change it.' },
+    { text: 'A "currently selected item" that may legitimately be <strong>nothing yet</strong> — the user hasn\'t chosen.',
+      answer: 'ptr',
+      why: 'Only a pointer can represent absence. <code>nullptr</code> means "nothing selected", and <code>if (sel)</code> tests it. A reference has no way to say "empty".' },
+    { text: 'A single <code>int</code> that a piece of code only needs to <strong>look at</strong>.',
+      answer: 'value',
+      why: 'Copying an <code>int</code> is free — usually one machine instruction. A reference here adds indirection for no benefit; just take the copy.' }
+  ];
+  let pkIdx = 0;
+  const pkAnswered = new Set();
+  const pkNum = document.getElementById('pkNum');
+  const pkText = document.getElementById('pkText');
+  const pkFb = document.getElementById('pkFb');
+  const pkNext = document.getElementById('pkNext');
+  const pkBtns = document.querySelectorAll('#pkBtns .vbtn');
+
+  function loadPk() {
+    pkNum.textContent = `Situation ${pkIdx + 1} / ${PICKS.length}`;
+    pkText.innerHTML = PICKS[pkIdx].text;
+    pkFb.innerHTML = 'Which of the three fits this situation best?';
+    pkBtns.forEach(b => { b.disabled = false; b.classList.remove('right', 'wrong'); });
+    pkNext.disabled = true;
+  }
+  pkBtns.forEach(b => b.addEventListener('click', e => {
+    const s = PICKS[pkIdx];
+    if (b.dataset.v === s.answer) {
+      b.classList.add('right');
+      pkFb.innerHTML = `✅ <strong style="color: var(--green)">Correct.</strong> ${s.why}`;
+      pkBtns.forEach(x => x.disabled = true);
+      pkNext.disabled = false;
+      if (!pkAnswered.has(pkIdx)) {
+        pkAnswered.add(pkIdx);
+        playCount.textContent = pkAnswered.size;
+        playCount.style.transform = 'scale(1.3)';
+        setTimeout(() => playCount.style.transform = 'scale(1)', 200);
+        addXP(5, e.clientX, e.clientY);
+        bumpStreak();
+        if (pkAnswered.size === PICKS.length) { burst(); addXP(20, window.innerWidth / 2, window.innerHeight / 2, '🎉 All 4 situations nailed! +20 XP'); }
+      }
+    } else {
+      b.classList.add('wrong'); b.disabled = true;
+      pkFb.innerHTML = '❌ Not quite. Ask two questions: does it need to change, and could it legitimately be absent?';
+      breakStreak();
+    }
+  }));
+  pkNext.addEventListener('click', () => { pkIdx = (pkIdx + 1) % PICKS.length; loadPk(); });
+  loadPk();
+
+  // ===== Quiz =====
+  const opts = document.querySelectorAll('.opt');
+  const fb = document.getElementById('quizFb');
+  let firstTry = true;
+  opts.forEach(o => o.addEventListener('click', () => {
+    const r = o.getBoundingClientRect();
+    if (o.dataset.correct === 'true') {
+      o.classList.add('right');
+      fb.innerHTML = firstTry
+        ? '🌟 <strong style="color: var(--green)">Exactly — <code>2 9</code>.</strong> <code>r = y</code> copied 2 into <code>x</code> (it did not re-aim <code>r</code>). <code>p = &y</code> re-aimed the pointer. <code>*p = 9</code> then wrote 9 into <code>y</code>. So x is 2 and y is 9.'
+        : '✓ <strong style="color: var(--green)">Right — <code>2 9</code>.</strong> Only the pointer moved; the reference stayed attached to <code>x</code> and simply received a value.';
+      opts.forEach(x => x.disabled = true);
+      addXP(firstTry ? 15 : 5, r.left + r.width / 2, r.top);
+      if (firstTry) burst();
+    } else {
+      o.classList.add('wrong'); o.disabled = true;
+      fb.innerHTML = '❌ Not quite. Take the three lines one at a time: which of them changes <em>where</em> something looks, and which only changes a <em>value</em>?';
+      firstTry = false; breakStreak();
+    }
+  }));
+
+  function burst() {
+    const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#facc15', '#22c55e', '#3b82f6'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.top = '-20px';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (1.5 + Math.random() * 1.5) + 's';
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) c.style.borderRadius = '50%';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3000);
+    }
+  }
+</script>
+<script>
+/* Commonplace reading-progress tracker (shared, self-contained) */
+(function () {
+  try {
+    var crumb = document.querySelector('.crumb-c, .crumb-cpp');
+    if (!crumb) return;
+    var isCpp = crumb.classList.contains('crumb-cpp');
+    var m = crumb.textContent.match(/(\d+(?:\.\d+)?)/);
+    if (!m) return;
+    var id = (isCpp ? 'CPP ' : 'C ') + m[1];
+    var KEY = 'commonplace_ccpp_progress';
+    var secs = document.querySelectorAll('section.lesson-section');
+    if (!secs.length) return;
+    var total = secs.length, seen = {};
+    function markDone() {
+      try {
+        var d = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (!d[id] || !d[id].done) { d[id] = { done: true, at: Date.now() }; localStorage.setItem(KEY, JSON.stringify(d)); }
+      } catch (e) {}
+    }
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        if (e.isIntersecting) {
+          seen[e.target.__progIdx] = 1;
+          if (Object.keys(seen).length >= total) { markDone(); io.disconnect(); }
+        }
+      });
+    }, { threshold: 0.55 });
+    secs.forEach(function (s, i) { s.__progIdx = i; io.observe(s); });
+  } catch (e) {}
+})();
+</script>
+
+
+<!-- Commonplace cloud reading-progress sync -->
+<script>window.READING_SYNC={resourceSet:"cpp_2_9",mode:"page",items:"section.lesson-section",pageName:"C++ Lesson 2.9"};</script>
+<script src="../../../reading-sync.js"></script>
+<script src="../../../_lib/progress-backup.js"></script>
+<script src="../lib/lesson-reader.js" defer></script>
+</body>
+</html>
