@@ -349,8 +349,14 @@
 <span class="kw">void</span> load(<span class="ty">Book</span> *b, <span class="kw">const</span> <span class="kw">char</span> *path) {
     <span class="kw">FILE</span> *f = fopen(path, <span class="str">"rb"</span>);
     <span class="kw">if</span> (!f) <span class="kw">return</span>;                          <span class="cm">// no file yet = empty book, fine</span>
-    fread(&amp;b-&gt;count, <span class="kw">sizeof</span> b-&gt;count, 1, f);
-    fread(b-&gt;items, <span class="kw">sizeof</span> b-&gt;items[0], b-&gt;count, f);
+    <span class="kw">if</span> (fread(&amp;b-&gt;count, <span class="kw">sizeof</span> b-&gt;count, 1, f) != 1 ||
+        b-&gt;count &lt; 0 || b-&gt;count &gt; MAX_CONTACTS) {   <span class="cm">// corrupt or truncated file</span>
+        b-&gt;count = 0;
+        fclose(f);
+        <span class="kw">return</span>;
+    }
+    <span class="kw">if</span> (fread(b-&gt;items, <span class="kw">sizeof</span> b-&gt;items[0], b-&gt;count, f) != (size_t)b-&gt;count)
+        b-&gt;count = 0;                          <span class="cm">// never trust a count the file gave you</span>
     fclose(f);
 }</pre>
 

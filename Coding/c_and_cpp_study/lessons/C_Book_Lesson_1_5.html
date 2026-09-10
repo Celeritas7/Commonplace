@@ -298,7 +298,7 @@
         <div class="pat-body">
           <strong>Unknown identifier (undeclared)</strong>
           <div class="pat-msg">error: 'foo' undeclared (first use in this function)</div>
-          <small>You used a name the compiler hasn't seen — typo, missing <code>#include</code>, or you forgot to define a variable / function. Stage: compiler.</small>
+          <small>You used a name the compiler hasn't seen — a typo or a missing <code>#include</code>. For a variable GCC says <em>undeclared</em>; for a function it says <em>implicit declaration of function 'foo'</em> and usually adds <em>did you mean …?</em>. Stage: compiler.</small>
         </div>
       </div>
       <div class="pat-card">
@@ -342,23 +342,24 @@
     <div class="cascade-side">
       <div class="cascade-card bad">
         <h5>🌊 What you see (panic-inducing)</h5>
-        <pre>hello.c:4:33: error: expected ';' before 'return'
-hello.c:5:5: error: expected expression
-hello.c:5:12: error: 'return' undeclared
-hello.c:6:1: error: expected ';' before '}' token
-hello.c:6:1: error: expected statement before '}'
-hello.c: At top level:
-hello.c:7:1: error: expected identifier or '('</pre>
+        <pre>hello.c:6:12: error: expected declaration specifiers or '...' before string constant
+hello.c:6:20: error: unknown type name 'x'
+hello.c:7:9: error: initializer element is not constant
+hello.c:8:12: error: expected declaration specifiers or '...' before string constant
+hello.c:8:20: error: expected declaration specifiers or '...' before 'x'
+hello.c:9:5: error: expected identifier or '(' before 'return'
+hello.c:10:1: error: expected identifier or '(' before '}' token</pre>
       </div>
       <div class="cascade-card good">
         <h5>✓ The actual problem</h5>
-        <pre>hello.c:4 — missing semicolon
-            after printf(...).
+        <pre>hello.c:5 — a stray extra }
+            right after int x = 3;
+            closed main() early.
 
-After fixing that ONE thing,
+Delete that ONE character and
 every other error disappears.
 
-That's the cascade: 6 errors
+That's the cascade: 7 errors
 shown, only 1 was real.</pre>
       </div>
     </div>
@@ -373,7 +374,7 @@ shown, only 1 was real.</pre>
 
     <div class="quiz" id="quiz">
       <div class="quiz-q">You see this error message:
-<pre>hello.c:5:5: error: 'prinft' undeclared (first use in this function)
+<pre>hello.c:5:5: error: implicit declaration of function 'prinft'; did you mean 'printf'?
     5 |     prinft("Hello\n");
       |     ^~~~~~
       |     printf</pre>
@@ -425,11 +426,11 @@ What's the actual bug?</div>
     </div>
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Cascade chase.</strong> Take a slightly bigger program (say, one with 3 or 4 lines inside main). Delete the semicolon after the first line. Compile. Count how many error lines GCC produces. Now fix only the topmost one and recompile. Note how the count drops dramatically. This is the cascade effect in real life.
+      <strong>Cascade chase.</strong> Take a slightly bigger program (say, one with 3 or 4 lines inside main). Add an extra closing brace <code>}</code> right after the first line — so main "ends" early. Compile. Count how many errors GCC produces. Now delete only that one brace and recompile. Note how the count drops to zero. This is the cascade effect in real life.
     </div>
     <div class="exercise">
       <span class="ex-tag ex-hard">Stretch</span>
-      <strong>Turn on all the warnings.</strong> Compile <code>hello.c</code> with <code>gcc -Wall -Wextra -Wpedantic hello.c -o hello</code>. These extra flags ask GCC to flag everything it finds suspicious. Now write a program that uses an uninitialized variable — like <code>int x; printf("%d\n", x);</code> — and see what happens with vs without <code>-Wall</code>. The warning that appears is one of the most useful catches in all of C.
+      <strong>Turn on all the warnings.</strong> Compile <code>hello.c</code> with <code>gcc -O1 -Wall -Wextra -Wpedantic hello.c -o hello</code> (the <code>-O1</code> matters: GCC only notices uninitialized reads while optimizing). These extra flags ask GCC to flag everything it finds suspicious. Now write a program that uses an uninitialized variable — like <code>int x; printf("%d\n", x);</code> — and see what happens with vs without <code>-Wall</code>. The warning that appears is one of the most useful catches in all of C.
     </div>
   </section>
 
@@ -462,7 +463,6 @@ What's the actual bug?</div>
 <script>
   const BIT_LINES = [
     "Errors aren't enemies — they're hints! Last lesson of Part I: learn to read them like a sentence. 📖",
-    "Beginners panic at red text. Pros read the first line and move on. The difference is pattern recognition.",
     "Click each part of this real error — +6 XP each. After this you can decode any GCC error. 🔍",
     "Five patterns cover almost every error you'll see in your first year. Memorize the shapes.",
     "RULE ONE: fix the FIRST error. Recompile. Most of the others were fake.",

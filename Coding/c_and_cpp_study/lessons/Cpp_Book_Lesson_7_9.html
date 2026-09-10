@@ -244,8 +244,8 @@
 
     <p>Assign or initialize a base <em>value</em> from a derived object, and only the base subobject is copied — the rest is sliced away:</p>
 
-    <pre class="code"><span class="kw">struct</span> Animal { <span class="kw">virtual</span> std::string speak() { <span class="kw">return</span> <span class="str">"..."</span>; } };
-<span class="kw">struct</span> Dog : Animal { std::string speak() <span class="kw">override</span> { <span class="kw">return</span> <span class="str">"Woof"</span>; } };
+    <pre class="code"><span class="kw">struct</span> Animal { <span class="kw">virtual</span> std::string speak() <span class="kw">const</span> { <span class="kw">return</span> <span class="str">"..."</span>; } };
+<span class="kw">struct</span> Dog : Animal { std::string speak() <span class="kw">const</span> <span class="kw">override</span> { <span class="kw">return</span> <span class="str">"Woof"</span>; } };
 
 Dog d;
 Animal a = d;        <span class="bad">// SLICE: only the Animal part of d is copied into a</span>
@@ -390,7 +390,7 @@ std::vector&lt;Animal<span class="hl">*</span>&gt; zoo;          <span class="cm
       <div class="mistake-icon">📥</div>
       <div class="mistake-body">
         <strong>Passing a polymorphic object by value</strong>
-        <small><code>void f(Base b)</code> slices any derived argument. Take it by reference instead: <code>void f(const Base&amp; b)</code> (or <code>Base*</code>).</small>
+        <small><code>void f(Base b)</code> slices any derived argument. Take it by reference instead: <code>void f(const Base&amp; b)</code> (or <code>Base*</code>) — and mark the virtual functions you call <code>const</code>, or the <code>const&amp;</code> version won't compile.</small>
       </div>
     </div>
 
@@ -419,7 +419,7 @@ std::vector&lt;Animal<span class="hl">*</span>&gt; zoo;          <span class="cm
 
     <div class="exercise">
       <span class="ex-tag ex-med">Medium</span>
-      <strong>Fix the function.</strong> Write <code>void announce(Animal a)</code>, call it with a <code>Dog</code> (sliced → base). Change the parameter to <code>const Animal&amp;</code> and confirm it now prints <code>"Woof"</code>.
+      <strong>Fix the function.</strong> Write <code>void announce(Animal a)</code>, call it with a <code>Dog</code> (sliced → base). Change the parameter to <code>const Animal&amp;</code> (declaring <code>speak()</code> as a <code>const</code> member first, as in the lesson) and confirm it now prints <code>"Woof"</code>.
     </div>
 
     <div class="exercise">
@@ -444,7 +444,7 @@ std::vector&lt;Animal<span class="hl">*</span>&gt; zoo;          <span class="cm
       <small>← Previous</small>
       7.8  dynamic_cast &amp; RTTI
     </a>
-    <a href="#" class="nav-btn next disabled">
+    <a href="Cpp_Book_Lesson_8_1.html" class="nav-btn next">
       <small>Next lesson →</small>
       8.1  RAII — the central idea
     </a>
@@ -541,8 +541,8 @@ std::vector&lt;Animal<span class="hl">*</span>&gt; zoo;          <span class="cm
     else                     { line = 'Animal<span class="v">*</span> a = &amp;d;'; call = 'a-&gt;speak()'; sliced = false; access = 'a-&gt;speak()'; }
     out = sliced ? '"..."' : '"Woof"';
     ddDecl.innerHTML =
-      `<span class="kw">struct</span> Animal { <span class="kw">virtual</span> string speak() { <span class="cm">"..."</span> } };<br>` +
-      `<span class="kw">struct</span> Dog : Animal { string speak() override { <span class="cm">"Woof"</span> } };<br>` +
+      `<span class="kw">struct</span> Animal { <span class="kw">virtual</span> string speak() const { <span class="cm">"..."</span> } };<br>` +
+      `<span class="kw">struct</span> Dog : Animal { string speak() const override { <span class="cm">"Woof"</span> } };<br>` +
       `Dog d;  ${line}`;
     ddResult.innerHTML = `<div class="call">${access}</div><div class="out">${out}</div>`;
     ddMsg.innerHTML = sliced
@@ -558,25 +558,25 @@ std::vector&lt;Animal<span class="hl">*</span>&gt; zoo;          <span class="cm
   // ===== Predict the Output =====
   const PO = [
     {
-      code: 'struct Animal { virtual std::string speak() { return "..."; } };\nstruct Dog : Animal { std::string speak() override { return "Woof"; } };\nint main() {\n  Dog d;\n  Animal a = d;       // copy into a base value\n  std::cout << a.speak();\n}',
+      code: 'struct Animal { virtual std::string speak() const { return "..."; } };\nstruct Dog : Animal { std::string speak() const override { return "Woof"; } };\nint main() {\n  Dog d;\n  Animal a = d;       // copy into a base value\n  std::cout << a.speak();\n}',
       opts: ['...', 'Woof', 'error', 'Dog'],
       answer: '...',
       why: 'Animal a = d slices: a is a base value, so a.speak() runs Animal::speak() → "...".'
     },
     {
-      code: 'struct Animal { virtual std::string speak() { return "..."; } };\nstruct Dog : Animal { std::string speak() override { return "Woof"; } };\nint main() {\n  Dog d;\n  Animal& a = d;      // reference — no copy\n  std::cout << a.speak();\n}',
+      code: 'struct Animal { virtual std::string speak() const { return "..."; } };\nstruct Dog : Animal { std::string speak() const override { return "Woof"; } };\nint main() {\n  Dog d;\n  Animal& a = d;      // reference — no copy\n  std::cout << a.speak();\n}',
       opts: ['Woof', '...', 'error', 'Animal'],
       answer: 'Woof',
       why: 'A reference refers to the real Dog (no slice), so virtual dispatch runs Dog::speak() → "Woof".'
     },
     {
-      code: 'struct Animal { virtual std::string speak() { return "..."; } };\nstruct Dog : Animal { std::string speak() override { return "Woof"; } };\nstd::string call(Animal a) { return a.speak(); }  // by value\nint main() {\n  Dog d;\n  std::cout << call(d);\n}',
+      code: 'struct Animal { virtual std::string speak() const { return "..."; } };\nstruct Dog : Animal { std::string speak() const override { return "Woof"; } };\nstd::string call(Animal a) { return a.speak(); }  // by value\nint main() {\n  Dog d;\n  std::cout << call(d);\n}',
       opts: ['...', 'Woof', 'error', 'nothing'],
       answer: '...',
       why: 'The by-value parameter Animal a slices the Dog argument, so a.speak() is the base version → "...".'
     },
     {
-      code: 'struct Animal { virtual std::string speak() { return "..."; } };\nstruct Dog : Animal { std::string speak() override { return "Woof"; } };\nstd::string call(const Animal& a) { return a.speak(); }  // by ref\nint main() {\n  Dog d;\n  std::cout << call(d);\n}',
+      code: 'struct Animal { virtual std::string speak() const { return "..."; } };\nstruct Dog : Animal { std::string speak() const override { return "Woof"; } };\nstd::string call(const Animal& a) { return a.speak(); }  // by ref\nint main() {\n  Dog d;\n  std::cout << call(d);\n}',
       opts: ['Woof', '...', 'error', 'Animal'],
       answer: 'Woof',
       why: 'A const reference parameter doesn\'t copy — the real Dog is passed, so a.speak() → "Woof".'
