@@ -437,6 +437,7 @@
         relocate(block,body);
         if(card){ [".pmb-hr",".pmb-hint",".pmb-reveal"].forEach(function(sel){ var n=card.querySelector(sel); if(n) relocate(n,body); }); }
         relocate(fb,body); relocate(out,body);
+        if(card){ var at=card.querySelector(".pmb-att"); if(at) relocate(at,body); }
         if(card){ var nw=card.querySelector(".pmb-next-wrap"); if(nw) relocate(nw,body); }
         document.body.style.overflow="hidden"; fsBtn.textContent="✕ Exit"; api.isFull=true;
       } else {

@@ -214,7 +214,9 @@ window.CommonplacePractice = (function () {
         var body=document.createElement("div"); body.className="pmb-full-body";
         overlay.appendChild(head); overlay.appendChild(q); overlay.appendChild(body);
         document.body.appendChild(overlay);
+        var pcard=block.closest?block.closest(".pmb-card"):null;
         relocate(block,body); relocate(fb,body); relocate(out,body);
+        if(pcard){ [".pmb-hr",".pmb-hint",".pmb-reveal",".pmb-att",".pmb-next-wrap"].forEach(function(sel){ var n=pcard.querySelector(sel); if(n) relocate(n,body); }); }
         document.body.style.overflow="hidden"; fullBtn.textContent="✕ Exit fullscreen  (Esc)"; api.isFull=true; ta.focus();
       } else {
         restoreAll(); if(overlay){ overlay.parentNode.removeChild(overlay); overlay=null; }
@@ -300,7 +302,19 @@ window.CommonplacePractice = (function () {
       var revB=document.createElement("button"); revB.type="button"; revB.className="pmb-btn pmb-btn-ghost"; revB.textContent="Reveal answer";
       hr.appendChild(hintB); hr.appendChild(revB); card.appendChild(hr);
       var hintBox=document.createElement("div"); hintBox.className="pmb-hint"; hintBox.style.display="none"; hintBox.textContent=ex.hint||""; card.appendChild(hintBox);
-      var revBox=document.createElement("pre"); revBox.className="pmb-reveal"; revBox.style.display="none"; revBox.innerHTML=hl(ex.sol); card.appendChild(revBox);
+      var revBox=document.createElement("div"); revBox.className="pmb-reveal"; revBox.style.display="none";
+      var revHead=document.createElement("div"); revHead.className="pmb-reveal-head";
+      revHead.innerHTML='<span class="pmb-reveal-kick">ANSWER \u00b7 FOR REFERENCE</span>';
+      var copyB=document.createElement("button"); copyB.type="button"; copyB.className="pmb-copy"; copyB.textContent="Copy";
+      copyB.addEventListener("click",function(){
+        var code=ex.sol||"";
+        function done(){ copyB.textContent="Copied \u2713"; copyB.classList.add("done"); setTimeout(function(){ copyB.textContent="Copy"; copyB.classList.remove("done"); },1600); }
+        function fallback(){ var x=document.createElement("textarea"); x.value=code; x.style.position="fixed"; x.style.opacity="0"; document.body.appendChild(x); x.select(); try{ document.execCommand("copy"); done(); }catch(e){} document.body.removeChild(x); }
+        if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done,fallback); else fallback();
+      });
+      revHead.appendChild(copyB);
+      var revPre=document.createElement("pre"); revPre.className="pmb-reveal-pre"; revPre.innerHTML=hl(ex.sol);
+      revBox.appendChild(revHead); revBox.appendChild(revPre); card.appendChild(revBox);
       hintB.addEventListener("click",function(){ var o=hintBox.style.display==="none"; hintBox.style.display=o?"":"none"; hintB.textContent=o?"Hide hint":"Hint"; });
       revB.addEventListener("click",function(){ var o=revBox.style.display==="none"; revBox.style.display=o?"":"none"; revB.textContent=o?"Hide answer":"Reveal answer"; });
 
@@ -691,7 +705,12 @@ window.CommonplacePractice = (function () {
 ".pmb-stdin{font-family:'JetBrains Mono',monospace;font-size:11px;color:#7a8c80;}.pmb-stdin span{color:#2f6b4f;}",
 ".pmb-hr{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}",
 ".pmb-hint{margin-top:12px;font-size:14.5px;color:#7a5a17;background:#faf3df;border:1px solid #e7d6a8;border-radius:8px;padding:9px 12px;font-family:'EB Garamond',serif;}",
-".pmb-reveal{margin-top:12px;background:#16352a;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:12px;border-radius:8px;overflow:auto;white-space:pre;color:#d7e8dd;}",
+".pmb-reveal{margin-top:12px;background:#fbfcf6;border:1px solid #d2dacb;border-radius:9px;overflow:hidden;}",
+".pmb-reveal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 9px 7px 12px;border-bottom:1px solid #d2dacb;}",
+".pmb-reveal-kick{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:#7a8c80;}",
+".pmb-copy{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;background:#f4f5ec;border:1px solid #d2dacb;border-radius:7px;padding:6px 11px;color:#234f3b;cursor:pointer;white-space:nowrap;}",
+".pmb-copy:hover{border-color:#7fa68b;}.pmb-copy.done{color:#2f8f5b;border-color:#b6dcc4;background:#e9f5ee;}",
+".pmb-reveal-pre{margin:0;background:#16352a;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;padding:12px;overflow:auto;white-space:pre;color:#d7e8dd;}",
 ".pmb-fb{margin-top:11px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 12px;border-radius:8px;}",
 ".pmb-fb.ok{color:#2f8f5b;background:#e9f5ee;border:1px solid #b6dcc4;}.pmb-fb.err{color:#b3261e;background:#f8ebe6;border:1px solid #e7c3b4;}",
 ".pmb-out{margin-top:10px;}.pmb-out-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:#7a8c80;margin-bottom:5px;}",

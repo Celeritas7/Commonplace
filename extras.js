@@ -37,9 +37,27 @@
     '.cpx-dot:hover{transform:scale(1.2)}' +
     '.cpx-dot.cpx-sel{outline:2px solid #111827;outline-offset:1px}' +
     '#cpx-panel{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:92vw;background:#fff;border-left:1px solid #e5e7eb;box-shadow:-8px 0 30px rgba(0,0,0,.10);z-index:9998;overflow-y:auto;padding:18px 18px 30px;' + FONT + 'font-size:14px;color:#1f2937}' +
-    '#cpx-panel h3{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#6b7280;margin:20px 0 8px}' +
-    '#cpx-panel .cpx-item{border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;margin-bottom:8px;cursor:pointer;line-height:1.45}' +
-    '#cpx-panel .cpx-item:hover{border-color:#4f46e5}' +
+    '#cpx-panel h3{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#6b7280;margin:22px 0 8px;clear:both;overflow:hidden}' +
+    '#cpx-panel h3 .cpx-sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px}' +
+    '#cpx-panel h3 .cpx-n{float:right;font-size:10.5px;letter-spacing:.6px;color:#9ca3af;background:#f3f4f6;border-radius:999px;padding:1px 7px;margin:-2px 0 0 8px}' +
+    '#cpx-panel .cpx-empty{display:block;color:#9ca3af;font-size:12px;padding:2px 0 2px 16px;border-left:2px dotted #e5e7eb}' +
+    '#cpx-panel .cpx-item{position:relative;border:1px solid #e9eaee;border-left:3px solid #d1d5db;border-radius:8px;padding:8px 10px 8px 31px;margin-bottom:7px;cursor:pointer;line-height:1.45;background:#fff;transition:box-shadow .12s,transform .12s}' +
+    '#cpx-panel .cpx-item:hover{box-shadow:0 3px 12px rgba(17,24,39,.10);transform:translateX(-1px)}' +
+    '#cpx-panel .cpx-ico{position:absolute;left:8px;top:8px;width:16px;text-align:center;font-size:11px;line-height:1.6;color:#9ca3af}' +
+    '#cpx-panel .cpx-q{font-size:13px;color:#1f2937}' +
+    /* per-category identity: each item echoes how that mark looks in the page */
+    '#cpx-panel .cpx-k-rs{background:#f6fdfa}' +
+    '#cpx-panel .cpx-k-rs .cpx-ico{font-size:12px}' +
+    '#cpx-panel .cpx-k-bm{background:#f7f6ff;border-left-color:#4f46e5}' +
+    '#cpx-panel .cpx-k-bm .cpx-ico{color:#4f46e5}' +
+    '#cpx-panel .cpx-k-un{background:#fef6f6;border-left-color:#dc2626}' +
+    '#cpx-panel .cpx-k-un .cpx-ico{color:#dc2626;font-weight:700}' +
+    '#cpx-panel .cpx-k-un .cpx-q{text-decoration:underline wavy #dc2626;text-decoration-skip-ink:none;text-underline-offset:3px}' +
+    '#cpx-panel .cpx-k-hl{background:#fffdf4;border-left-color:#eab308}' +
+    '#cpx-panel .cpx-k-hl .cpx-ico{color:#b45309}' +
+    '#cpx-panel .cpx-k-hl .cpx-q{background:#fef08a;box-shadow:0 1px 0 #eab308 inset;border-radius:2px;padding:0 2px}' +
+    '#cpx-panel .cpx-tag{display:inline-block;font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;font-weight:600;border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:1px;background:#ede9fe;color:#6d28d9}' +
+    '#cpx-panel .cpx-item:hover{border-top-color:#dcdce6;border-right-color:#dcdce6;border-bottom-color:#dcdce6}' +
     '#cpx-panel .cpx-item small{color:#6b7280;display:block;font-size:11.5px}' +
     '#cpx-panel .cpx-note{color:#7c3aed;font-size:12.5px;margin-top:4px;white-space:pre-wrap}' +
     '#cpx-panel .cpx-x,#cpx-rsmenu .cpx-x{float:right;color:#9ca3af;border:0;background:none;cursor:pointer;font-size:14px;padding:0 2px}' +
@@ -65,7 +83,9 @@
     '#cpx-toast button.cpx-ghost{background:rgba(255,255,255,.14);color:#d1fae5;padding:6px 10px}' +
     '.cpx-flash{animation:cpxflash 1.2s ease 2}' +
     '@keyframes cpxflash{50%{background:#c7d2fe}}';
+  css.id = 'cpx-css';
   document.head.appendChild(css);
+  function ensureCss() { if (!css.isConnected && document.head) document.head.appendChild(css); }
 
   /* ---------- text search / wrapping across nodes ---------- */
   function textNodes() {
@@ -80,10 +100,13 @@
     var out = []; while (w.nextNode()) out.push(w.currentNode); return out;
   }
   function findOccurrence(text, occ) { // -> [{node, start, end}] or null
+    if (!text) return null;
+    occ = (typeof occ === 'number' && occ >= 0) ? occ : 0; // missing/NaN occ used to leave idx at -1
     var nodes = textNodes(), full = '', map = [];
     for (var i = 0; i < nodes.length; i++) { map.push({ node: nodes[i], off: full.length }); full += nodes[i].nodeValue; }
     var idx = -1, from = 0, count = -1;
     while (count < occ) { idx = full.indexOf(text, from); if (idx < 0) return null; from = idx + 1; count++; }
+    if (idx < 0) return null; // never anchor to the document start
     var end = idx + text.length, segs = [];
     for (var j = 0; j < map.length; j++) {
       var s = map[j].off, e = s + map[j].node.nodeValue.length;
@@ -138,6 +161,7 @@
   function removeMark(id) { unwrap(id); setPageMarks(pageMarks().filter(function (m) { return m.id !== id; })); refreshPanel(); positionRibbons(); }
   function restoreMarks() {
     pageMarks().forEach(function (m) {
+      if (document.querySelector('[data-cpx-id="' + m.id + '"]')) return; // already painted
       var segs = findOccurrence(m.text, m.occ) || findOccurrence(m.text, 0);
       if (segs) wrapSegs(segs, m);
     });
@@ -255,6 +279,12 @@
     var el = document.querySelector('.cpx-rsline[data-cpx-rs="' + r.id + '"]'); if (!el) return;
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 110, behavior: 'smooth' });
     el.classList.add('cpx-flash'); setTimeout(function () { el.classList.remove('cpx-flash'); }, 2600);
+  }
+  function cpxNote(msg) {
+    var t = document.createElement('div'); t.id = 'cpx-toast';
+    t.style.background = '#374151'; t.style.padding = '9px 16px';
+    t.textContent = msg; document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2600);
   }
   function resumeToast() {
     var n = pageResume().length; if (!n || IS_HOME) return;
@@ -414,25 +444,74 @@
 
   /* ---------- floating buttons ---------- */
   var fab = document.createElement('div'); fab.id = 'cpx-fab';
+  // critical positioning inline too, so the strip never lands mid-page if the stylesheet is dropped
+  fab.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px';
   fab.innerHTML = '<button id="cpx-rs" title="Reading bookmarks">🔖<span class="cpx-cnt"></span></button><button id="cpx-bm" title="Save this page (★)">★</button><button id="cpx-open" title="Saved pages & marks">☰</button>';
-  document.body.appendChild(fab);
+  fab.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep the text selection alive
+  var fabBm = fab.querySelector('#cpx-bm'), fabRs = fab.querySelector('#cpx-rs'), fabOpen = fab.querySelector('#cpx-open');
+  if (fabBm) fabBm.onclick = toggleBookmark;
+  if (fabOpen) fabOpen.onclick = togglePanel;
+  if (fabRs) fabRs.onclick = function (e) { e.stopPropagation(); if (!rsmenu) { captureSelection(); hideTools(); } toggleRsMenu(); };
+  /* Host apps that re-render document.body (React/DC pages) delete our injected nodes.
+     Re-attach instead of assuming they are still there. */
+  function ensureFab() {
+    if (!document.body) return false;
+    if (!fab.isConnected) document.body.appendChild(fab);
+    return !!fabBm;
+  }
   function syncFab() {
-    document.getElementById('cpx-bm').classList.toggle('cpx-on', isBookmarked());
-    var n = pageResume().length, cnt = document.querySelector('#cpx-rs .cpx-cnt');
-    cnt.textContent = n; cnt.style.display = n ? 'flex' : 'none';
-    document.getElementById('cpx-rs').title = n ? n + ' reading bookmark' + (n > 1 ? 's' : '') + ' on this page' : 'Bookmark where you stopped reading';
+    if (!ensureFab()) return;
+    fabBm.classList.toggle('cpx-on', isBookmarked());
+    var n = pageResume().length, cnt = fabRs && fabRs.querySelector('.cpx-cnt');
+    if (cnt) { cnt.textContent = n; cnt.style.display = n ? 'flex' : 'none'; }
+    if (fabRs) fabRs.title = n ? n + ' reading bookmark' + (n > 1 ? 's' : '') + ' on this page' : 'Bookmark where you stopped reading';
   }
   syncFab();
-  document.getElementById('cpx-bm').onclick = toggleBookmark;
-  document.getElementById('cpx-open').onclick = togglePanel;
-  fab.addEventListener('mousedown', function (e) { e.preventDefault(); }); // keep the text selection alive
-  document.getElementById('cpx-rs').onclick = function (e) { e.stopPropagation(); if (!rsmenu) { captureSelection(); hideTools(); } toggleRsMenu(); };
+  /* Repaint marks after a host re-render. A plain debounce is wrong here: pages with a live
+     console or animation mutate the DOM constantly, so the timer never settles. Instead only
+     schedule when a mark is genuinely missing, and throttle so it always fires. */
+  function marksMissing() {
+    var m = pageMarks(), r = pageResume(), i, out = { hl: false, rs: false };
+    for (i = 0; i < m.length; i++) if (!document.querySelector('[data-cpx-id="' + m[i].id + '"]')) { out.hl = true; break; }
+    for (i = 0; i < r.length; i++) if (!document.querySelector('.cpx-rsline[data-cpx-rs="' + r[i].id + '"]')) { out.rs = true; break; }
+    out.any = out.hl || out.rs;
+    return out;
+  }
+  if (window.MutationObserver) {
+    var reTimer = null, reBusy = false, lastPaint = 0, failStreak = 0;
+    var repaint = function () {
+      var miss = marksMissing();
+      reBusy = true;
+      try {
+        ensureCss();
+        if (miss.hl) restoreMarks();
+        if (miss.rs) paintResume(); else positionRibbons();
+        syncFab();
+      } catch (e) {}
+      lastPaint = Date.now();
+      failStreak = marksMissing().any ? failStreak + 1 : 0; // text really is gone -> stop retrying
+      setTimeout(function () { reBusy = false; }, 80);
+    };
+    var schedule = function () {
+      if (reTimer || failStreak > 5) return;
+      reTimer = setTimeout(function () { reTimer = null; repaint(); }, Math.max(150, 600 - (Date.now() - lastPaint)));
+    };
+    new MutationObserver(function () {
+      if (reBusy) return;
+      ensureCss();
+      if (!fab.isConnected) { ensureFab(); syncFab(); }
+      if (panel && !panel.isConnected) document.body.appendChild(panel);
+      if (marksMissing().any) schedule();
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
 
   /* ---------- side panel ---------- */
   var panel = null;
   function togglePanel() { if (panel) { panel.remove(); panel = null; } else { panel = document.createElement('div'); panel.id = 'cpx-panel'; document.body.appendChild(panel); refreshPanel(); } }
   function scrollToMark(id) {
-    var el = document.querySelector('[data-cpx-id="' + id + '"]'); if (!el) return;
+    var el = document.querySelector('[data-cpx-id="' + id + '"]');
+    if (!el) { try { restoreMarks(); } catch (e) {} el = document.querySelector('[data-cpx-id="' + id + '"]'); }
+    if (!el) { cpxNote('That passage is no longer on this page.'); return; }
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - window.innerHeight / 3, behavior: 'smooth' });
     el.classList.add('cpx-flash'); setTimeout(function () { el.classList.remove('cpx-flash'); }, 2600);
   }
@@ -447,29 +526,40 @@
     var unclear = marks.filter(function (m) { return m.kind === 'unclear'; });
     var hls = marks.filter(function (m) { return m.kind !== 'unclear'; });
     function markItem(m) {
-      return '<div class="cpx-item" data-goto="' + m.id + '"><button class="cpx-x" data-rm="' + m.id + '" title="Remove">✕</button>' +
-        esc(m.text.slice(0, 90)) + (m.text.length > 90 ? '…' : '') +
-        (m.note ? '<div class="cpx-note">✎ ' + esc(m.note) + '</div>' : '') + '</div>';
+      var un = m.kind === 'unclear';
+      return '<div class="cpx-item ' + (un ? 'cpx-k-un' : 'cpx-k-hl') + '" data-goto="' + m.id + '">' +
+        '<button class="cpx-x" data-rm="' + m.id + '" title="Remove">✕</button>' +
+        '<span class="cpx-ico">' + (un ? '?' : '▬') + '</span>' +
+        '<span class="cpx-q">' + esc(m.text.slice(0, 90)) + (m.text.length > 90 ? '…' : '') + '</span>' +
+        (m.note ? '<span class="cpx-tag">note</span><div class="cpx-note">✎ ' + esc(m.note) + '</div>' : '') + '</div>';
     }
+    function head(color, label, n) {
+      return '<h3><span class="cpx-sw" style="background:' + color + '"></span><span class="cpx-lb">' + label + '</span>' +
+        (n === null ? '' : '<span class="cpx-n">' + n + '</span>') + '</h3>';
+    }
+    function empty(t) { return '<small class="cpx-empty">' + t + '</small>'; }
     panel.innerHTML =
       '<button class="cpx-x" id="cpx-close" style="font-size:18px" title="Close">✕</button>' +
-      '<h3 style="margin-top:2px">Continue reading (' + rs.length + ')</h3>' +
+      head('#059669', 'Continue reading', rs.length) +
       (rs.length ? rs.map(function (r) {
         var here = r.path === PAGE, c = RS_COLORS[r.color] || RS_COLORS.green;
-        return '<div class="cpx-item" data-rsgo="' + r.id + '" data-rspath="' + esc(r.path) + '"><button class="cpx-x" data-rsrm="' + r.id + '" data-rspath="' + esc(r.path) + '" title="Clear">✕</button>' +
-          '<span class="cpx-pip" style="background:' + c + '"></span>' +
+        return '<div class="cpx-item cpx-k-rs" data-rsgo="' + r.id + '" data-rspath="' + esc(r.path) + '" style="border-left-color:' + c + '">' +
+          '<button class="cpx-x" data-rsrm="' + r.id + '" data-rspath="' + esc(r.path) + '" title="Clear">✕</button>' +
+          '<span class="cpx-ico" style="color:' + c + '">🔖</span>' +
           (here ? '<span style="color:#111827">' + esc(r.label || r.title) + ' <em style="font-style:normal;color:#9ca3af">(this page)</em></span>'
                 : '<a href="' + esc(r.path) + '#cpx-resume=' + r.id + '" style="color:#111827;text-decoration:none">' + esc(r.label || r.title) + '</a>') +
           '<small>“' + esc(r.text.slice(0, 60)) + '…”' + (r.label && !here ? ' · ' + esc(r.title) : '') + '</small></div>';
-      }).join('') : '<small style="color:#9ca3af">None — press 🔖 where you stop reading.</small>') +
-      '<h3>Saved pages</h3>' +
+      }).join('') : empty('None — press 🔖 where you stop reading.')) +
+      head('#4f46e5', 'Saved pages', bms.length) +
       (bms.length ? bms.map(function (b) {
-        return '<div class="cpx-item"><button class="cpx-x" data-unbm="' + esc(b.path) + '" title="Remove">✕</button><a href="' + esc(b.path) + '" style="color:#4f46e5;text-decoration:none">' + esc(b.title) + '</a><small>' + esc(b.path) + '</small></div>';
-      }).join('') : '<small style="color:#9ca3af">None yet — press ★ on any note page.</small>') +
-      '<h3>Unclear on this page (' + unclear.length + ')</h3>' +
-      (unclear.length ? unclear.map(markItem).join('') : '<small style="color:#9ca3af">Select text → “? Unclear”.</small>') +
-      '<h3>Highlights & notes on this page (' + hls.length + ')</h3>' +
-      (hls.length ? hls.map(markItem).join('') : '<small style="color:#9ca3af">Select text → “Highlight” or “Note”.</small>') +
+        return '<div class="cpx-item cpx-k-bm"><button class="cpx-x" data-unbm="' + esc(b.path) + '" title="Remove">✕</button>' +
+          '<span class="cpx-ico">★</span>' +
+          '<a href="' + esc(b.path) + '" style="color:#4f46e5;text-decoration:none">' + esc(b.title) + '</a><small>' + esc(b.path) + '</small></div>';
+      }).join('') : empty('None yet — press ★ on any note page.')) +
+      head('#dc2626', 'Unclear on this page', unclear.length) +
+      (unclear.length ? unclear.map(markItem).join('') : empty('Select text → “? Unclear”.')) +
+      head('#eab308', 'Highlights &amp; notes', hls.length) +
+      (hls.length ? hls.map(markItem).join('') : empty('Select text → “Highlight” or “Note”.')) +
       '<div class="cpx-btnrow"><button id="cpx-exp">Export backup</button><button id="cpx-imp">Import</button></div>' +
       '<input type="file" id="cpx-file" accept=".json" style="display:none">';
     panel.querySelector('#cpx-close').onclick = togglePanel;
