@@ -142,9 +142,11 @@
     ta.focus(); var p=s+ins.length-back; ta.setSelectionRange(p,p);
   }
 
+  function PMB_TOUCH(){ try{ return !!(window.matchMedia && window.matchMedia("(hover:none) and (pointer:coarse)").matches); }catch(e){ return false; } }
   function makeEditor(ex, initialCode, onCodeChange, onCheck, placeholder){
     var block=document.createElement("div"); block.className="pmb-edblock";
     var ta=document.createElement("textarea");
+    ta.setAttribute("autocapitalize","off"); ta.setAttribute("autocorrect","off"); ta.setAttribute("autocomplete","off"); ta.setAttribute("spellcheck","false");
 
     function tokBtn(t,kind){
       var b=document.createElement("button"); b.type="button"; b.className="pmb-tok pmb-tok-"+kind;
@@ -212,7 +214,7 @@
         overlay.appendChild(head); overlay.appendChild(q); overlay.appendChild(body);
         document.body.appendChild(overlay);
         relocate(block,body); relocate(fb,body); relocate(out,body);
-        document.body.style.overflow="hidden"; fullBtn.textContent="✕ Exit fullscreen  (Esc)"; api.isFull=true; ta.focus();
+        document.body.style.overflow="hidden"; fullBtn.textContent="✕ Exit fullscreen  (Esc)"; api.isFull=true; if(!PMB_TOUCH()) ta.focus();
       } else {
         restoreAll(); if(overlay){ overlay.parentNode.removeChild(overlay); overlay=null; }
         document.body.style.overflow=""; fullBtn.textContent="⤢ Fullscreen"; api.isFull=false;

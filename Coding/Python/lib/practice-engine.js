@@ -141,6 +141,7 @@ window.CommonplacePractice = (function () {
     ta.dispatchEvent(new Event("input",{bubbles:true}));
     ta.focus(); var p=s+ins.length-back; ta.setSelectionRange(p,p);
   }
+  function PMB_TOUCH(){ try{ return !!(window.matchMedia && window.matchMedia("(hover:none) and (pointer:coarse)").matches); }catch(e){ return false; } }
   function makeEditor(ex, initialCode, onCodeChange, onCheck, placeholder){
     /* Compose Blocks replaces the flat textarea when compose-blocks.js is loaded */
     if(window.ComposeBlocks && window.ComposeBlocks.enabled){
@@ -217,7 +218,7 @@ window.CommonplacePractice = (function () {
         var pcard=block.closest?block.closest(".pmb-card"):null;
         relocate(block,body); relocate(fb,body); relocate(out,body);
         if(pcard){ [".pmb-hr",".pmb-hint",".pmb-reveal",".pmb-att",".pmb-next-wrap"].forEach(function(sel){ var n=pcard.querySelector(sel); if(n) relocate(n,body); }); }
-        document.body.style.overflow="hidden"; fullBtn.textContent="✕ Exit fullscreen  (Esc)"; api.isFull=true; ta.focus();
+        document.body.style.overflow="hidden"; fullBtn.textContent="✕ Exit fullscreen  (Esc)"; api.isFull=true; if(!PMB_TOUCH()) ta.focus();
       } else {
         restoreAll(); if(overlay){ overlay.parentNode.removeChild(overlay); overlay=null; }
         document.body.style.overflow=""; fullBtn.textContent="⤢ Fullscreen"; api.isFull=false;

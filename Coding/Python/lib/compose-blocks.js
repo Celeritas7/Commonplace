@@ -267,7 +267,7 @@
 
         var head=document.createElement("div"); head.className="cb-head";
         var grip=document.createElement("span"); grip.className="cb-grip"; grip.textContent="⠿";
-        var name=document.createElement("input"); name.className="cb-name"; name.value=b.n; name.spellcheck=false;
+        var name=document.createElement("input"); name.className="cb-name"; name.value=b.n; name.spellcheck=false; name.setAttribute("autocapitalize","off"); name.setAttribute("autocorrect","off"); name.setAttribute("autocomplete","off");
         name.addEventListener("input",function(){ b.n=name.value; b.auto=false; sync(); });
         name.addEventListener("focus",function(){ setFocus(i,false); });
         head.appendChild(grip); head.appendChild(name);
@@ -411,7 +411,7 @@
       if(mi>=0){ blocks.splice(mi,0,nb); ni=mi; } else { blocks.push(nb); ni=blocks.length-1; }
       errBlockIdx=-1; sync(); renderStack();
       var last=stackEl.querySelector('[data-i="'+ni+'"] .cb-ta');
-      if(last) last.focus();
+      if(last && !(window.matchMedia && window.matchMedia("(hover:none) and (pointer:coarse)").matches)) last.focus();
     });
 
     /* --- run / fullscreen --- */
