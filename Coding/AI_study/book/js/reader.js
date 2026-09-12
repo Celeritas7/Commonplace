@@ -55,9 +55,9 @@
 
   document.getElementById("crumbCh").textContent = (ch.id + " · " + ch.title).toUpperCase();
   const jl = document.getElementById("jlink");
-  if (jl) jl.href = "notebooks/index.html?path=" + encodeURIComponent(file);
+  if (jl) jl.href = "../notebooks/index.html?path=" + encodeURIComponent(file);
 
-  fetch("files/" + file)
+  fetch("../files/" + file)
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(init)
     .catch((e) => { app.innerHTML = '<div class="loading">Could not load files/' + file + " — " + e.message + "</div>"; });
@@ -65,6 +65,35 @@
   function src(c) { return Array.isArray(c.source) ? c.source.join("") : c.source || ""; }
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
   function join(t) { return Array.isArray(t) ? t.join("") : t || ""; }
+
+  /* ------------------------------------------------- static python highlighter
+     Page-view cells aren't CodeMirror, so they get the same palette by hand.
+     Token classes (.t-*) are coloured by reader.html from the skin's --syn-* vars. */
+  const PY_KW = /^(False|None|True|and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|match|case)$/;
+  const PY_BI = /^(abs|all|any|bool|dict|enumerate|filter|float|format|getattr|hasattr|input|int|isinstance|iter|len|list|map|max|min|next|open|print|range|repr|reversed|round|set|setattr|slice|sorted|str|sum|super|tuple|type|zip)$/;
+  function sp(cls, t) { return '<span class="t-' + cls + '">' + esc(t) + "</span>"; }
+  function pyhl(code) {
+    const re = /(#[^\n]*)|([rbfuRBFU]{0,2}(?:"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'))|(\b\d+\.?\d*(?:[eE][+-]?\d+)?\b)|(@[A-Za-z_]\w*)|([A-Za-z_]\w*)|([+\-*/%=<>!&|^~]+)/g;
+    let out = "", last = 0, m;
+    while ((m = re.exec(code))) {
+      out += esc(code.slice(last, m.index)); last = re.lastIndex;
+      const t = m[0];
+      if (m[1]) out += sp("com", t);
+      else if (m[2]) out += sp("str", t);
+      else if (m[3]) out += sp("num", t);
+      else if (m[4]) out += sp("dec", t);
+      else if (m[5]) {
+        const dotted = code[m.index - 1] === ".", call = /^\s*\(/.test(code.slice(re.lastIndex));
+        if (PY_KW.test(t)) out += sp("kw", t);
+        else if (t === "self" || t === "cls") out += sp("self", t);
+        else if (!dotted && PY_BI.test(t)) out += sp("bi", t);
+        else if (call) out += sp("fn", t);
+        else if (dotted) out += sp("prop", t);
+        else out += esc(t);
+      } else out += sp("op", t);
+    }
+    return out + esc(code.slice(last));
+  }
 
   function init(nb) {
     let s = -1, codeN = 0;
@@ -224,7 +253,7 @@
           '<button class="btn" data-reset="' + j + '">Reset</button>' +
           '<button class="btn btn-run" data-run="' + j + '">▶ Run</button>') +
       "</div>" +
-      (isStatic ? '<pre class="static">' + esc(c.src) + "</pre>" : '<div class="ed" data-ed="' + j + '"></div>') +
+      (isStatic ? '<pre class="static" data-focus="' + i + '" title="Open this cell in focus view to run it">' + pyhl(c.src) + "</pre>" : '<div class="ed" data-ed="' + j + '"></div>') +
       '<div class="out" id="out-' + j + '"></div></div>';
   }
 

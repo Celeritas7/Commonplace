@@ -1,34 +1,51 @@
 # Classical Machine Learning — Interactive Book
 
-An interactive, runnable version of the 18 course notebooks
-(`3_Classical_ML/Course/Lessons`). Built with **JupyterLite**: Python runs
-entirely in your browser via Pyodide — no install, no server account, no setup.
+18 course notebooks as a runnable, annotated study book. Python runs in the browser
+via JupyterLite/Pyodide — no install, no server account.
 
-## How to open it
+## Run it
 
-JupyterLite must be served over HTTP. **Double-clicking `index.html` will not work.**
+JupyterLite must be served over HTTP; double-clicking `index.html` will not work.
 
-**Easiest (Windows):** double-click **`START_HERE.bat`**. It starts a tiny local
-server and opens the book at `http://localhost:8000`. Keep that window open while
-you read; close it when finished.
+- **Windows:** double-click `START_HERE.bat`, then open <http://localhost:8000>.
+- **Anything else:** `python -m http.server 8000` in this folder, then open the same URL.
 
-**Manual alternative:** open a terminal in this folder and run
-`python -m http.server 8000`, then visit `http://localhost:8000` in your browser.
+First load takes ~20–30 s while the Python runtime downloads. Internet is required.
 
-## Using the book
+## Where things live
 
-- The landing page lists all 18 chapters. Click one to open the live notebook.
-- First load takes ~20–30s while the Python runtime downloads (needs internet).
-- Edit any code cell and press **Shift+Enter** to re-run it and see the output change.
-- Saved outputs (plots, tables) are shown until you re-run a cell.
-- "Open full JupyterLab" gives the full multi-notebook interface.
+```
+AI_study/
+├─ index.html            landing page — chapter list, progress            ← START HERE
+├─ book/                 everything that is *ours*
+│  ├─ reader.html        the study reader (skins, focus/page view, margin notes, labs)
+│  ├─ css/
+│  │  ├─ colors.css      THE palette — every hex used by index + reader lives here
+│  │  └─ observatory-jupyter.css   dark theme for the raw JupyterLab/notebook views
+│  ├─ js/
+│  │  ├─ reader.js       renders a notebook into sections, runs cells via Pyodide
+│  │  ├─ lab.js          interactive lab plates (draggable least-squares etc.)
+│  │  ├─ motifs.js       chapter motifs / accents
+│  │  └─ app.jsx         landing-page React app
+│  └─ data/
+│     ├─ data.js         chapter list (id, file, title, tag, lead)
+│     └─ study-data.js   per-chapter study layer: asides, recall, exercises, lab config
+├─ files/                the 18 source notebooks (.ipynb) — the reader loads these
+├─ START_HERE.bat        local server launcher
+└─ (everything else)     JupyterLite runtime — api/ build/ extensions/ lab/ notebooks/
+                         repl/ tree/ static/ *.json service-worker.js bootstrap.js
+                         config-utils.js. Must stay flat at the root. Don't move it.
+```
 
-## Notes / limitations
+## Entry points
 
-- An internet connection is required: the Python runtime loads from a CDN, and any
-  cell that fetches a dataset from a URL needs network access.
-- A few original notebooks load local data files (e.g. `adult.data.txt`) that were
-  not present in the source folder. Those specific cells will error if re-run, but
-  their saved outputs still display. All self-contained cells run normally.
-- Your edits live only in the browser session and are not written back to the
-  original `.ipynb` files. Use File ▸ Download to save a modified notebook.
+- `index.html` → `book/reader.html?nb=<file>` is the canonical way to read.
+- `notebooks/`, `lab/`, `tree/`, `repl/` are the raw JupyterLite apps — reachable from
+  the landing-page chips when you want the full notebook UI.
+
+## Notes
+
+- Cells that fetch remote datasets need network access; a few original notebooks load
+  local files that were never in the source folder and will error if re-run.
+- Edits live in the browser session only. Use File ▸ Download in JupyterLab to save.
+- `RESTORE_README.md` is the one-time recovery procedure from an earlier reorg — kept for reference.

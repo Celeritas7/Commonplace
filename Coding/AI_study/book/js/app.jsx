@@ -13,7 +13,7 @@ const GROUP_COLORS = {
 };
 const SPECTRUM_VARS = ["var(--cyan)", "var(--blue)", "var(--violet)", "var(--magenta)", "var(--solar)"];
 const ACCENTS = window.AI_ACCENTS || {};
-const NB_BASE = "./reader.html?nb=";   // Observatory chapter reader (Jupyter link inside)
+const NB_BASE = "./book/reader.html?nb=";   // Observatory chapter reader (Jupyter link inside)
 const PROGRESS_KEY = "aistudy.progress.v1";
 const ROUTE_KEY = "aistudy.route.v1";
 
