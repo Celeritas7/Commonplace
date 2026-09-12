@@ -2908,5 +2908,83 @@ sb.auth.getSession().then(function(res){
   })();
 })();
 </script>
+
+<style id="v5-head-css">
+/* -- v5: the mode + reset row cost a full 38px band plus a rule for two rarely
+   used controls. On a phone they ride the title line instead. -- */
+@media (max-width:640px){
+  #editor-panel .panel-head{flex-wrap:nowrap !important;align-items:center;gap:7px !important;padding:9px 11px !important;}
+  #editor-panel .panel-head .ttl{flex:1 1 auto !important;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #cpx2-mode,#reset-btn{flex:0 0 auto !important;min-height:32px !important;height:32px !important;
+    padding:0 10px !important;font-size:10px !important;letter-spacing:1.2px !important;text-transform:uppercase;
+    border-radius:9px !important;text-align:center;white-space:nowrap;}
+  #reset-btn.v5-icon{width:32px !important;padding:0 !important;font-size:13px !important;letter-spacing:0 !important;}
+}
+#editor-panel.v5-locked .CodeMirror-cursors{visibility:hidden !important;}
+</style>
+<script id="v5-keyboard-js">
+/* -- v5: keyboard on demand.
+   The panel is built to be written with the key palette, not the phone keyboard.
+   CodeMirror is held at readOnly:"nocursor" -- the API still edits it, so palette
+   inserts keep working -- and only a tap INSIDE a block hands focus back. Any tap
+   outside (pill, run, nav, problem card) re-locks, so the keyboard never covers
+   the UI you were aiming at. Desktop is untouched. -- */
+(function(){
+  var phoneish = (window.matchMedia && window.matchMedia("(max-width:640px)").matches) || ("ontouchstart" in window);
+  if (!phoneish) return;
+  var panel, armed = false;
+
+  function lock(){
+    if (!window.cm) return;
+    if (cm.getOption("readOnly") !== "nocursor") cm.setOption("readOnly", "nocursor");
+    if (panel) panel.classList.add("v5-locked");
+    armed = false;
+  }
+  function unlock(){
+    if (!window.cm) return;
+    cm.setOption("readOnly", false);
+    if (panel) panel.classList.remove("v5-locked");
+    armed = true;
+  }
+
+  /* .cpx2-ta are the includes/helpers slots -- real textareas, and tapping one IS
+     a block tap, so they keep native focus behaviour. */
+  var BLOCK = ".CodeMirror, .cpx2-cbody, .cpx2-ta, .v3-block-body";
+
+  document.addEventListener("pointerdown", function(e){
+    var t = e.target;
+    if (!t || !t.closest || !window.cm) return;
+    if (t.closest(BLOCK)) { if (!armed) unlock(); return; }
+    if (armed) lock();
+  }, true);
+
+  function paintHead(){
+    var r = document.getElementById("reset-btn");
+    if (!r) return;
+    var phone = window.matchMedia("(max-width:640px)").matches;
+    if (phone && !r.classList.contains("v5-icon")) {
+      r.dataset.v5label = r.textContent;
+      r.textContent = "\u21ba";
+      r.title = "Reset the code";
+      r.setAttribute("aria-label", "Reset the code");
+      r.classList.add("v5-icon");
+    } else if (!phone && r.classList.contains("v5-icon")) {
+      r.textContent = r.dataset.v5label || "\u21ba Reset";
+      r.classList.remove("v5-icon");
+    }
+  }
+
+  var t = setInterval(function(){
+    panel = document.getElementById("editor-panel");
+    if (!panel || !window.cm) return;
+    clearInterval(t);
+    lock();
+    paintHead();
+    window.addEventListener("resize", paintHead);
+    new MutationObserver(paintHead).observe(panel, {childList:true});
+  }, 150);
+  setTimeout(function(){ clearInterval(t); }, 10000);
+})();
+</script>
 </body>
 </html>

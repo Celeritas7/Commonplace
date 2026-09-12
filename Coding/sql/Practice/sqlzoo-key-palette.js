@@ -178,12 +178,16 @@
 
       var act = null;
       tables.forEach(function (tb) { if (tb.t === state.openTable) act = tb; });
+      // columns get their OWN scroll lane, so the table chips never scroll out of
+      // reach on a phone — tables stay on the line above, columns below.
       if (act) {
-        tr.appendChild(el("span",
-          "display:inline-flex;align-items:center;flex:0 0 auto;margin:0 4px 0 8px;padding-left:10px;border-left:1px solid #cdbfa3;",
-          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9.5px;font-weight:700;letter-spacing:1.6px;color:#8a7c63;">COLS</span>'));
+        var cr = row();
+        cr.appendChild(el("span",
+          "display:inline-flex;align-items:center;flex:0 0 auto;",
+          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:#8a7c63;">' +
+          act.t.toUpperCase() + ' \u00B7</span>'));
         act.cols.forEach(function (cn) {
-          tr.appendChild(colPill(cn, function () { insertKey(ta, cn, "id"); }));
+          cr.appendChild(colPill(cn, function () { insertKey(ta, cn, "id"); }));
         });
       }
     }
