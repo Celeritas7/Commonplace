@@ -751,7 +751,7 @@
     <div class="panel-head">
       <span class="ttl">🧪 Your code <span class="hint" id="ver-hint">(Judge0 CE · g++)</span></span>
       <span class="spacer"></span>
-      <button class="btn btn-ghost btn-sm" id="reset-btn" type="button">↺ Reset</button>
+      <button class="btn btn-ghost btn-sm" id="reset-btn" type="button" title="Reset the code" aria-label="Reset the code">↺ Reset</button>
     </div>
     <div class="active-ex" id="active-ex"></div>
     <textarea id="code"></textarea>
@@ -2984,6 +2984,436 @@ sb.auth.getSession().then(function(res){
     new MutationObserver(paintHead).observe(panel, {childList:true});
   }, 150);
   setTimeout(function(){ clearInterval(t); }, 10000);
+})();
+</script>
+<style id="v6a-type-chrome">
+/* -- Phase A: type & chrome. CSS only, no logic touched. Deleting this block
+   restores the previous appearance exactly. -- */
+
+/* 1. engine label leaves the code-panel title (it was wrapping to a 2nd line)
+      and reappears in the output/status row, where run facts belong. */
+#editor-panel .panel-head #ver-hint{display:none !important;}
+#output-panel .panel-head .ttl::after{
+  content:"judge0 ce \00b7\0020 g++";
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;
+  letter-spacing:1.2px;text-transform:uppercase;color:#8b83a0;
+  margin-left:10px;white-space:nowrap;}
+
+/* 2. mode chip + reset: mono, uppercase, tracked - at every width, not just phone. */
+#editor-panel #cpx2-mode,
+#editor-panel #reset-btn{
+  font-family:"JetBrains Mono",monospace !important;
+  font-weight:700 !important;letter-spacing:1.2px !important;
+  text-transform:uppercase;border-radius:9px !important;
+  height:34px !important;min-height:34px !important;
+  display:inline-flex !important;align-items:center;justify-content:center;
+  white-space:nowrap;}
+#editor-panel #cpx2-mode{font-size:10px !important;padding:0 11px !important;}
+/* reset goes icon-only: label suppressed, glyph drawn by the pseudo-element so it
+   stays a single arrow whether or not the v5 phone script swapped the text. */
+#editor-panel #reset-btn{
+  width:34px !important;padding:0 !important;font-size:0 !important;letter-spacing:0 !important;}
+#editor-panel #reset-btn::before{content:"\21ba";font-size:15px;line-height:1;}
+
+/* 3. block meta joins the mono regime; subtitles drop out (they truncated
+      mid-word at panel width and repeated what the block name already said). */
+.cpx2-clines{font-family:"JetBrains Mono",monospace !important;
+  text-transform:uppercase;letter-spacing:.8px;}
+.cpx2-cnote{display:none !important;}
+
+html[data-theme="midnight"] #output-panel .panel-head .ttl::after{color:#8d80b5;}
+</style>
+<style id="v6b-problem-css">
+/* -- Phase B: problem card. Kicker carries the metadata, the card can be
+   hidden, and the expected output is on the card before the first run. -- */
+#cpx-problem .cpx-prob-kick{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;
+  letter-spacing:1.3px;text-transform:uppercase;white-space:nowrap;}
+#cpx-problem .cpx-prob-kick .v6b-sep{opacity:.55;margin:0 4px;}
+#cpx-problem .badge-diff{display:none !important;}          /* now lives in the kicker */
+#cpx-problem .v6b-hide{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;color:#6d28d9;background:none;border:0;padding:4px 2px 4px 8px;cursor:pointer;
+  min-height:28px;display:inline-flex;align-items:center;gap:5px;}
+#cpx-problem .v6b-hide::before{content:"\25be";font-size:9px;transition:transform .15s;}
+#cpx-problem.v6b-collapsed .v6b-hide::before{transform:rotate(-90deg);}
+#cpx-problem.v6b-collapsed .cpx-prob-title,
+#cpx-problem.v6b-collapsed .cpx-prob-prompt,
+#cpx-problem.v6b-collapsed .v6b-expected{display:none !important;}
+#cpx-problem.v6b-collapsed .cpx-prob-top{margin-bottom:0 !important;}
+#cpx-problem .v6b-expected{margin:10px 0 0;max-width:640px;}
+#cpx-problem .v6b-exp-k{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:700;
+  letter-spacing:1.2px;text-transform:uppercase;color:#6d28d9;margin-bottom:5px;}
+#cpx-problem .v6b-exp-pre{margin:0;font-family:"JetBrains Mono",monospace;font-size:12px;line-height:1.5;
+  background:var(--terminal,#1e1b4b);color:#e0e7ff;border-radius:9px;padding:9px 12px;white-space:pre-wrap;
+  word-break:break-word;max-height:160px;overflow:auto;}
+html[data-theme="midnight"] #cpx-problem .cpx-prob-kick,
+html[data-theme="midnight"] #cpx-problem .v6b-hide,
+html[data-theme="midnight"] #cpx-problem .v6b-exp-k{color:#c4b5fd !important;}
+html[data-theme="midnight"] #cpx-problem .v6b-exp-pre{background:#120e28 !important;border:1px solid #2f2650;}
+</style>
+<script id="v6b-problem-js">
+/* -- Phase B: decorates the card that cpp-practice-plus renders. That renderer
+   rewrites innerHTML on every problem change, so this runs off a MutationObserver
+   and is idempotent: kicker text is always recomputed, the hide control and the
+   expected-output box are added only when missing. -- */
+(function(){
+  var LS = "cpx.v6b.probHidden";
+  function txt(s){ return (s == null ? "" : String(s)); }
+  function pad(n){ n = parseInt(n, 10); return isNaN(n) ? "" : (n < 10 ? "0" + n : "" + n); }
+  function meta(ex){
+    var pills = Array.prototype.slice.call(document.querySelectorAll(".cpx2-pills .cpx2-pill"));
+    var pill = null, i;
+    for (i = 0; i < pills.length; i++) if (pills[i].getAttribute("data-ex") === ex.id) { pill = pills[i]; break; }
+    var b = pill && pill.querySelector("b");
+    var n = b ? pad(txt(b.textContent).replace(/^P/i, "")) : "";
+    var total = pills.length ? pad(pills.length) : "";
+    var tab = document.querySelector(".cpx2-tab.on");
+    var topic = tab ? txt(tab.textContent).replace(/\s*\(\d+\)\s*$/, "").replace(/^\u2605\s*/, "").trim() : "";
+    var diff = txt(ex.difficulty).trim();
+    var parts = [];
+    if (n && total) parts.push(n + " / " + total);
+    if (diff) parts.push(diff);
+    if (topic) parts.push(topic);
+    return parts;
+  }
+  function decorate(){
+    var card = document.getElementById("cpx-problem");
+    var ex = window.activeExercise;
+    if (!card || card.hidden || !ex) return;
+    var kick = card.querySelector(".cpx-prob-kick");
+    var top = card.querySelector(".cpx-prob-top");
+    if (!kick || !top) return;
+
+    var parts = meta(ex);
+    var html = "PROBLEM";
+    if (parts.length) html += '<span class="v6b-sep">\u00b7</span>' + parts.map(function(p){
+      return p.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+    }).join('<span class="v6b-sep">\u00b7</span>');
+    if (kick.innerHTML !== html) kick.innerHTML = html;
+
+    if (!card.querySelector(".v6b-hide")) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "v6b-hide";
+      btn.addEventListener("click", function(){
+        var on = !card.classList.contains("v6b-collapsed");
+        card.classList.toggle("v6b-collapsed", on);
+        btn.textContent = on ? "Show" : "Hide";
+        btn.setAttribute("aria-expanded", on ? "false" : "true");
+        try { localStorage.setItem(LS, on ? "1" : "0"); } catch(e){}
+      });
+      var collapsed = false;
+      try { collapsed = localStorage.getItem(LS) === "1"; } catch(e){}
+      card.classList.toggle("v6b-collapsed", collapsed);
+      btn.textContent = collapsed ? "Show" : "Hide";
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.setAttribute("aria-controls", "cpx-problem");
+      top.appendChild(btn);
+    }
+
+    var exp = ex.expected_output;
+    var has = exp != null && txt(exp).length > 0;
+    var box = card.querySelector(".v6b-expected");
+    if (has && !box) {
+      box = document.createElement("div");
+      box.className = "v6b-expected";
+      var k = document.createElement("span"); k.className = "v6b-exp-k"; k.textContent = "Expected output";
+      var pre = document.createElement("pre"); pre.className = "v6b-exp-pre"; pre.textContent = txt(exp);
+      box.appendChild(k); box.appendChild(pre);
+      var prompt = card.querySelector(".cpx-prob-prompt");
+      if (prompt && prompt.parentNode === card) card.insertBefore(box, prompt.nextSibling); else card.appendChild(box);
+    } else if (!has && box) {
+      box.parentNode.removeChild(box);
+    }
+  }
+  var t = setInterval(function(){
+    var card = document.getElementById("cpx-problem");
+    if (!card) return;
+    clearInterval(t);
+    decorate();
+    new MutationObserver(decorate).observe(card, {childList:true, attributes:true, attributeFilter:["hidden"]});
+    /* pill numbers / section tab can settle after the card renders */
+    var strip = document.getElementById("cpx2-strip");
+    if (strip) new MutationObserver(decorate).observe(strip, {childList:true, subtree:true});
+  }, 150);
+  setTimeout(function(){ clearInterval(t); }, 15000);
+})();
+</script>
+<style id="v6c-blocks-css">
+/* -- Phase C: block chrome. main drops the filled-purple header for a light card
+   with a purple border and a purple number chip; every block header gets a
+   reorder handle (inert until Phase D wires drag); the "+ add helpers" hint in
+   the empty helpers slot goes. -- */
+#cpx2-slots .cpx2-card-main{border:1.5px solid var(--purple,#8b5cf6) !important;}
+#cpx2-slots .cpx2-card-main .cpx2-chead{background:#f2edfd !important;}
+#cpx2-slots .cpx2-card-main .cpx2-cname{color:var(--ink,#1a202c) !important;}
+#cpx2-slots .cpx2-card-main .cpx2-clines{color:#a0aec0 !important;}
+#cpx2-slots .cpx2-card-main .cpx2-cnum-main{background:var(--purple-deep,#6d28d9) !important;color:#fff !important;}
+#cpx2-slots .cpx2-card-main .cpx2-stamp{color:var(--purple-deep,#6d28d9) !important;border-color:var(--purple-light,#c4b5fd) !important;background:#fff !important;}
+#cpx2-slots .cpx2-card-main .cpx2-stamp-err{color:#b91c1c !important;border-color:#f3b4ad !important;background:rgba(239,68,68,.07) !important;}
+#cpx2-slots .cpx2-card-main .cpx2-chev{color:var(--ink-dim,#718096) !important;}
+
+.v6c-grip{flex:none;width:22px;height:28px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:13px;line-height:1;color:#c3bcd6;user-select:none;letter-spacing:-1px;cursor:grab;touch-action:none;}
+.v6c-grip:active{cursor:grabbing;color:#6d28d9;}
+.v3-block.v6d-dragging{opacity:.55;}
+.v6c-grip::before{content:"\2807\2807";}
+html[data-theme="midnight"] .v6c-grip{color:#4a4070;}
+
+#cpx2-slots .cpx2-ph::after{content:none !important;}
+#cpx2-slots .cpx2-ph{font-size:12px !important;}
+/* the ta's height is set from pre.offsetHeight, so the two must keep identical
+   padding — overriding only the pre made the empty slot overflow and grow a
+   scrollbar. Leave the density patch's padding alone. */
+
+.v3-block-head{display:flex;align-items:center;gap:9px;}
+.v3-block-head input{flex:1 1 auto;min-width:0;}
+.v3-block-x{font-family:"JetBrains Mono",monospace;font-size:12px;color:#a0aec0;background:none;border:0;
+  width:28px;height:28px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+.v3-block-x:hover{color:#b91c1c;background:rgba(239,68,68,.08);}
+
+html[data-theme="midnight"] #cpx2-slots .cpx2-card-main{border-color:#7c4dff !important;}
+html[data-theme="midnight"] #cpx2-slots .cpx2-card-main .cpx2-chead{background:#221a44 !important;}
+html[data-theme="midnight"] #cpx2-slots .cpx2-card-main .cpx2-cname{color:#f1eefb !important;}
+html[data-theme="midnight"] #cpx2-slots .cpx2-card-main .cpx2-stamp{background:#1a1435 !important;border-color:#5b3fb0 !important;color:#c4b5fd !important;}
+</style>
+<script id="v6c-blocks-js">
+/* -- Phase C: prepend a reorder grip to each block header. Idempotent; runs off
+   a MutationObserver because the slot cards and add-blocks render late. -- */
+(function(){
+  function grip(){
+    var g = document.createElement("span");
+    g.className = "v6c-grip"; g.setAttribute("aria-hidden", "true");
+    return g;
+  }
+  function decorate(){
+    var heads = document.querySelectorAll("#cpx2-slots .v3-block-head");
+    Array.prototype.forEach.call(heads, function(hd){
+      if (!hd.querySelector(":scope > .v6c-grip")) hd.insertBefore(grip(), hd.firstChild);
+    });
+  }
+  var t = setInterval(function(){
+    var slots = document.getElementById("cpx2-slots");
+    if (!slots) return;
+    clearInterval(t);
+    decorate();
+    new MutationObserver(decorate).observe(slots, {childList:true, subtree:true});
+  }, 150);
+  setTimeout(function(){ clearInterval(t); }, 15000);
+})();
+</script>
+<style id="v6d-layout-css">
+/* -- Phase D: stack order and opening state.
+   The COMPOSE row spent a full band on a label that repeats the mode chip and
+   one button; the button moves up to the header and the label goes. Order is
+   done with flex `order` rather than by moving nodes, because two earlier
+   patches re-insert #v3-blocks on an interval and would fight a DOM move. -- */
+/* the component's own .cpx2-slots rule already sets display:flex/column — do NOT
+   restate it here: an !important display would beat paintMode()'s inline
+   display:none and leak the slot cards into classic mode. */
+#cpx2-slots > .cpx2-kickrow{display:none !important;}
+#cpx2-slots > *{order:2;}
+#cpx2-slots > #cpx2-card-main{order:3;}
+#cpx2-slots > #v3-blocks{order:4;}
+#cpx2-slots > #cpx2-asm{order:5;}
+
+#editor-panel .panel-head .cpx2-asmbtn{
+  font-family:"JetBrains Mono",monospace !important;font-size:0 !important;font-weight:700 !important;
+  width:34px !important;height:34px !important;min-height:34px !important;padding:0 !important;
+  border-radius:9px !important;display:inline-flex !important;align-items:center;justify-content:center;flex:0 0 auto;}
+#editor-panel .panel-head .cpx2-asmbtn::before{content:"\25a4";font-size:15px;line-height:1;}
+#editor-panel .panel-head .cpx2-asmbtn.v6d-on{border-color:var(--purple,#8b5cf6) !important;color:var(--purple-deep,#6d28d9) !important;background:#f2edfd !important;}
+html[data-theme="midnight"] #editor-panel .panel-head .cpx2-asmbtn{background:#1a1435 !important;border-color:#3a2f63 !important;color:#c4b5fd !important;}
+</style>
+<script id="v6d-layout-js">
+/* -- Phase D: header button, opening state, and real reordering of add-blocks. -- */
+(function(){
+  var LS = "cpx.v6d.slotOpen";
+  var DEFAULTS = { inc:false, fn:false, main:true };
+
+  function readPref(){
+    try { var v = JSON.parse(localStorage.getItem(LS)); return (v && typeof v === "object") ? v : null; }
+    catch(e){ return null; }
+  }
+  function writePref(p){ try { localStorage.setItem(LS, JSON.stringify(p)); } catch(e){} }
+
+  /* 1. "View assembled" rides the header next to the mode chip. */
+  function moveAsmBtn(){
+    var btn = document.querySelector("#cpx2-slots .cpx2-asmbtn");
+    var head = document.querySelector("#editor-panel .panel-head");
+    var mode = document.getElementById("cpx2-mode");
+    if (!btn || !head) return;
+    btn.title = "View the assembled program";
+    btn.setAttribute("aria-label", "View the assembled program");
+    if (mode && mode.parentNode === head) head.insertBefore(btn, mode); else head.appendChild(btn);
+    btn.addEventListener("click", function(){
+      var asm = document.getElementById("cpx2-asm");
+      btn.classList.toggle("v6d-on", !!(asm && !asm.hidden));
+    });
+  }
+
+  /* 2. opening state: includes + helpers closed, main open, remembered after that. */
+  function applyOpenState(){
+    var pref = readPref() || DEFAULTS;
+    ["inc","fn","main"].forEach(function(k){
+      var card = document.getElementById("cpx2-card-" + k);
+      if (!card || card.dataset.v6dInit) return;
+      card.dataset.v6dInit = "1";
+      card.classList.toggle("cpx2-closed", !pref[k]);
+      var chev = card.querySelector(".cpx2-chev");
+      if (chev) chev.addEventListener("click", function(){
+        var p = readPref() || {};
+        ["inc","fn","main"].forEach(function(j){
+          var c = document.getElementById("cpx2-card-" + j);
+          if (c) p[j] = !c.classList.contains("cpx2-closed");
+        });
+        writePref(p);
+      });
+    });
+  }
+
+  /* 3. grip drag reorders the helper blocks.
+     The strip's own closure concatenates from its blocks[] array, not the DOM,
+     so moving nodes alone would reorder the picture and not the program.
+     Swapping the CONTENTS between cards keeps both in step. */
+  function pair(el){ return { name: el.querySelector("input"), ta: el.querySelector("textarea") }; }
+  function rotate(cards, from, to){
+    if (from === to) return;
+    var vals = cards.map(function(c){ var p = pair(c); return { n: p.name ? p.name.value : "", t: p.ta ? p.ta.value : "" }; });
+    var moved = vals.splice(from, 1)[0];
+    vals.splice(to, 0, moved);
+    cards.forEach(function(c, i){
+      var p = pair(c);
+      if (p.name && p.name.value !== vals[i].n) { p.name.value = vals[i].n; p.name.dispatchEvent(new Event("input", {bubbles:true})); }
+      if (p.ta && p.ta.value !== vals[i].t) { p.ta.value = vals[i].t; p.ta.dispatchEvent(new Event("input", {bubbles:true})); }
+    });
+  }
+  function wireDrag(){
+    var list = document.querySelector("#v3-blocks .v3-blocks");
+    if (!list || list.dataset.v6dDrag) return;
+    list.dataset.v6dDrag = "1";
+    var dragCard = null, cards = [], startIdx = 0;
+
+    list.addEventListener("pointerdown", function(e){
+      var g = e.target.closest(".v6c-grip");
+      if (!g) return;
+      dragCard = g.closest(".v3-block");
+      if (!dragCard) return;
+      cards = Array.prototype.slice.call(list.querySelectorAll(".v3-block"));
+      startIdx = cards.indexOf(dragCard);
+      dragCard.classList.add("v6d-dragging");
+      g.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    list.addEventListener("pointermove", function(e){
+      if (!dragCard) return;
+      var over = null;
+      cards.forEach(function(c){
+        var r = c.getBoundingClientRect();
+        if (e.clientY >= r.top && e.clientY <= r.bottom) over = c;
+      });
+      if (over && over !== dragCard) {
+        var to = cards.indexOf(over);
+        list.insertBefore(dragCard, to > cards.indexOf(dragCard) ? over.nextSibling : over);
+        cards = Array.prototype.slice.call(list.querySelectorAll(".v3-block"));
+      }
+    });
+    function end(e){
+      if (!dragCard) return;
+      dragCard.classList.remove("v6d-dragging");
+      var endIdx = Array.prototype.slice.call(list.querySelectorAll(".v3-block")).indexOf(dragCard);
+      /* put the nodes back and move the values instead — the strip owns node order */
+      var ordered = Array.prototype.slice.call(list.querySelectorAll(".v3-block"));
+      if (endIdx !== startIdx) {
+        var home = ordered.slice();
+        home.splice(endIdx, 1);
+        home.splice(startIdx, 0, dragCard);
+        home.forEach(function(c){ list.appendChild(c); });
+        rotate(home, startIdx, endIdx);
+      }
+      dragCard = null;
+    }
+    list.addEventListener("pointerup", end);
+    list.addEventListener("pointercancel", end);
+  }
+
+  var t = setInterval(function(){
+    var slots = document.getElementById("cpx2-slots");
+    if (!slots) return;
+    clearInterval(t);
+    moveAsmBtn();
+    applyOpenState();
+    wireDrag();
+    new MutationObserver(function(){ applyOpenState(); wireDrag(); }).observe(slots, {childList:true, subtree:true});
+  }, 150);
+  setTimeout(function(){ clearInterval(t); }, 15000);
+})();
+</script>
+<script id="v6e-input-js">
+/* -- Phase E (C++): the phone keyboard stops fighting the code.
+   Two separate problems, both from the same place — the OS assuming prose:
+     1. every code field capitalised the first letter and autocorrected
+        identifiers ("cout" -> "count", "int" -> "In").  Only spellcheck was off.
+     2. tapping a palette key or "+ Add block" called .focus() on a textarea,
+        which summoned the keyboard over the very palette being tapped.
+   Both are fixed from outside the renderers, so cpp-practice-sections.js and
+   cpp-practice-plus.js stay untouched. -- */
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------- 1. no autocapitalise */
+  var CODE = [
+    "#code", "#stdin",
+    ".cpx2-ta",                      /* includes / helpers slots */
+    "#v3-blocks textarea", "#v3-blocks input",   /* add-block body + its name */
+    ".CodeMirror textarea"           /* CodeMirror's hidden input */
+  ].join(",");
+
+  function fix(el){
+    if (!el || el.__cppInputFixed) return;
+    el.__cppInputFixed = true;
+    el.setAttribute("autocapitalize", "none");
+    el.setAttribute("autocorrect", "off");
+    el.setAttribute("autocomplete", "off");
+    el.setAttribute("spellcheck", "false");
+  }
+  function sweep(root){
+    if (!root || root.nodeType !== 1) return;
+    if (root.matches && root.matches(CODE)) fix(root);
+    if (root.querySelectorAll) Array.prototype.forEach.call(root.querySelectorAll(CODE), fix);
+  }
+
+  /* ------------------------------------- 2. palette taps don't open the board */
+  var touch = (window.matchMedia && window.matchMedia("(max-width:640px)").matches) || ("ontouchstart" in window);
+  /* Controls that insert text WITHOUT the reader asking to type. The editors'
+     own insertAtCaret() focuses the target so the caret lands right; on a phone
+     that focus is the whole problem, so we let it happen and take it straight
+     back. Selection is set after focus() and survives the blur, so the caret is
+     still in the right place next time the reader does tap in. */
+  var NOFOCUS = ".cpx-pill, .v3-addblock";
+  var guardAt = 0;
+
+  function start(){
+    sweep(document.documentElement);
+    new MutationObserver(function(recs){
+      for (var i = 0; i < recs.length; i++){
+        var a = recs[i].addedNodes;
+        for (var j = 0; j < a.length; j++) sweep(a[j]);
+      }
+    }).observe(document.documentElement, {childList:true, subtree:true});
+
+    if (!touch) return;
+    document.addEventListener("pointerdown", function(e){
+      if (e.target && e.target.closest && e.target.closest(NOFOCUS)) guardAt = Date.now();
+    }, true);
+    document.addEventListener("focusin", function(e){
+      if (Date.now() - guardAt > 600) return;
+      var t = e.target;
+      if (!t || (t.tagName !== "TEXTAREA" && t.tagName !== "INPUT")) return;
+      t.blur();
+    }, true);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
 })();
 </script>
 </body>
