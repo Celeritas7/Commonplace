@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 1 "The Machine Learning Landscape".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 1 — The Machine Learning Landscape</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+#mbCv{height:320px} #ofCv{height:280px} #ofCurve{height:170px}
+@media (max-width:560px){#mbCv{height:280px}}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 1 · book pp. 1–34</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 1 — The Machine Learning Landscape</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    Machine learning means a program gets better at a task by learning from data instead of hand-written rules.
+    ML systems are sorted by how they are supervised, how they learn and how they generalise. Most failures come
+    from bad data or a model that is too simple or too complex, and you only find out how good a model is by
+    testing it on data it has never seen.
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=32">What Is Machine Learning? <span>p. 2</span></a>
+    <a href="../geron/reader.html#p=32">Why Use Machine Learning? <span>p. 2</span></a>
+    <a href="../geron/reader.html#p=35">Examples of Applications <span>p. 5</span></a>
+    <a href="../geron/reader.html#p=37">Types of ML Systems <span>p. 7</span></a>
+    <a href="../geron/reader.html#p=53">Main Challenges of ML <span>p. 23</span></a>
+    <a href="../geron/reader.html#p=60">Testing and Validating <span>p. 30</span></a>
+    <a href="../geron/reader.html#p=63">Exercises <span>p. 33</span></a>
+  </nav>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · What is machine learning? <a class="book" href="../geron/reader.html#p=32">book p. 2 ↗</a></h2>
+  <p><span class="def">Machine learning (ML)</span> is programming computers so that they improve at a task by learning from data, rather than by following rules someone wrote by hand.</p>
+  <p>A more precise, engineering-style version: a program <b>learns</b> if its score on some <b>task T</b>, measured by a <b>performance measure P</b>, gets better as it gains <b>experience E</b>.</p>
+  <div class="tw"><table>
+    <tr><th>Piece</th><th>Spam-filter example</th></tr>
+    <tr><td>Task T</td><td>flag new emails as spam or not spam ("ham")</td></tr>
+    <tr><td>Experience E</td><td>the <span class="def">training data</span>: emails users have already flagged</td></tr>
+    <tr><td>Performance P</td><td>you choose it, for example <span class="def">accuracy</span> = the share of emails classified correctly</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li>The <span class="def">training set</span> is the set of examples the system learns from. Each example is a <span class="def">training instance</span> (or <span class="def">sample</span>).</li>
+    <li class="exp">Just having more data isn't learning. Downloading an encyclopaedia doesn't make your computer better at any task, so it isn't ML.</li>
+  </ul>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Why use machine learning? <a class="book" href="../geron/reader.html#p=32">book p. 2 ↗</a></h2>
+  <p>Compare two ways to build a spam filter:</p>
+  <div class="tw"><table>
+    <tr><th></th><th>Traditional programming</th><th>Machine learning</th></tr>
+    <tr><td>How it works</td><td>You study spam, write a detection rule for each pattern you notice, test, and repeat</td><td>The algorithm finds which words and phrases are unusually common in spam compared with ham</td></tr>
+    <tr><td>Code</td><td class="imp">a long, fragile list of rules</td><td class="tip">shorter, easier to maintain, usually more accurate</td></tr>
+    <tr><td>Spammers change tactics</td><td>you write new rules, forever</td><td class="tip">it picks up the new pattern from freshly flagged emails by itself</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li><span class="exp">No known algorithm.</span> Some problems, such as speech recognition, are too complex for hand-written rules. A system that learns from many recorded examples is the best approach we have.</li>
+    <li><span class="exp">ML can teach people.</span> You can inspect a trained model (for example, the words a spam filter relies on most) and find patterns you didn't expect. Using ML to find patterns in large datasets is called <span class="def">data mining</span>.</li>
+  </ul>
+  <span class="k i" data-l="Remember — ML is a good fit for">
+    ① problems that need lots of hand-tuning or long rule lists ·
+    ② complex problems with no good traditional solution ·
+    ③ changing environments (the system can adapt to new data) ·
+    ④ getting insight from complex problems and large amounts of data
+  </span>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · Examples of applications <a class="book" href="../geron/reader.html#p=35">book p. 5 ↗</a></h2>
+  <p>Learn to name the <b>task type</b> behind a product. That tells you which family of models to reach for.</p>
+  <div class="tw"><table>
+    <tr><th>Application</th><th>Task type</th><th>Typical tools</th><th>Book ch</th></tr>
+    <tr><td>Sort product photos on a production line</td><td>image classification</td><td>CNNs</td><td>14</td></tr>
+    <tr><td>Locate tumours in brain scans</td><td>semantic segmentation (a class for every pixel)</td><td>CNNs</td><td>14</td></tr>
+    <tr><td>Categorise news or flag offensive comments</td><td>NLP · text classification</td><td>RNNs, CNNs, Transformers</td><td>16</td></tr>
+    <tr><td>Summarise long documents</td><td>NLP · text summarisation</td><td>same NLP tools</td><td>16</td></tr>
+    <tr><td>Chatbot or personal assistant</td><td>NLU + question answering</td><td>many NLP components</td><td>16</td></tr>
+    <tr><td>Forecast next year's revenue</td><td><b>regression</b></td><td>linear/polynomial regression, SVM, random forest, neural nets. For sequences: RNNs, CNNs, Transformers</td><td>4, 5, 7, 10, 15</td></tr>
+    <tr><td>Voice commands</td><td>speech recognition</td><td>RNNs, CNNs, Transformers (long audio sequences)</td><td>15, 16</td></tr>
+    <tr><td>Detect credit-card fraud</td><td><b>anomaly detection</b></td><td>e.g. Isolation Forest</td><td>9</td></tr>
+    <tr><td>Segment customers by purchases</td><td><b>clustering</b></td><td>e.g. K-Means</td><td>9</td></tr>
+    <tr><td>Plot high-dimensional data clearly</td><td>visualisation / <b>dimensionality reduction</b></td><td>PCA, t-SNE…</td><td>8</td></tr>
+    <tr><td>Recommend the next product</td><td>recommender system</td><td>neural net trained on purchase sequences</td><td>10</td></tr>
+    <tr><td>Game-playing bot</td><td><b>reinforcement learning</b></td><td>RL agents (AlphaGo was built this way)</td><td>18</td></tr>
+  </table></div>
+  <p class="skip">Most of the deep-learning rows (CNNs, RNNs, Transformers) belong to Part II of the book. For now, just recognise the task names.</p>
+
+  <!-- ===================================================== 4 -->
+  <h2>4 · Types of machine learning systems <a class="book" href="../geron/reader.html#p=37">book p. 7 ↗</a></h2>
+  <p>There are three independent ways to classify an ML system. <span class="imp">The axes combine freely.</span> For example, a modern spam filter that keeps learning with a neural network trained on labelled emails is <i>online + model-based + supervised</i>.</p>
+  <div class="tw"><table>
+    <tr><th>Question</th><th>Options</th></tr>
+    <tr><td>How much human supervision during training?</td><td>supervised · unsupervised · semi-supervised · reinforcement learning</td></tr>
+    <tr><td>Can it learn incrementally, on the fly?</td><td>batch (offline) · online (incremental)</td></tr>
+    <tr><td>How does it generalise?</td><td>instance-based (compare to stored examples) · model-based (fit a model, then predict)</td></tr>
+  </table></div>
+
+  <h3>4a · Supervised learning</h3>
+  <p>In <span class="def">supervised learning</span>, every training example comes with the answer you want, called its <span class="def">label</span>.</p>
+  <ul class="tight">
+    <li><span class="def">Classification</span>: predict a <b>class</b> (spam or ham).</li>
+    <li><span class="def">Regression</span>: predict a <b>number</b> (the <span class="def">target</span>, for example a car's price) from input <span class="def">features</span>, also called <span class="def">predictors</span> (mileage, age, brand…).</li>
+    <li class="exp">Some algorithms do both jobs. <code>LogisticRegression</code> is used for classification because it outputs a class probability (e.g. "20 % spam").</li>
+    <li class="skip">The odd word "regression" comes from 19th-century statistics ("regression to the mean") and stuck.</li>
+  </ul>
+  <span class="k d" data-l="Attribute vs feature">An <b>attribute</b> is a kind of data ("mileage"). A <b>feature</b> usually means an attribute together with its value ("mileage = 15,000"). In practice most people use the two words interchangeably.</span>
+  <div class="tw"><table>
+    <tr><th>Key supervised algorithms</th><th>scikit-learn</th><th>Book ch</th></tr>
+    <tr><td>k-Nearest Neighbors</td><td><code>KNeighborsClassifier</code>, <code>KNeighborsRegressor</code></td><td>1</td></tr>
+    <tr><td>Linear Regression</td><td><code>LinearRegression</code></td><td>4</td></tr>
+    <tr><td>Logistic Regression</td><td><code>LogisticRegression</code></td><td>4</td></tr>
+    <tr><td>Support Vector Machines</td><td><code>SVC</code>, <code>LinearSVC</code>, <code>SVR</code></td><td>5</td></tr>
+    <tr><td>Decision Trees &amp; Random Forests</td><td><code>DecisionTreeClassifier</code>, <code>RandomForestClassifier</code></td><td>6, 7</td></tr>
+    <tr><td>Neural networks</td><td><code>MLPClassifier</code> (Keras in the book)</td><td>10+</td></tr>
+  </table></div>
+
+  <h3>4b · Unsupervised learning</h3>
+  <p>In <span class="def">unsupervised learning</span> the data has <b>no labels</b>. The system has to find structure on its own.</p>
+  <div class="tw"><table>
+    <tr><th>Task</th><th>What it does</th><th>Algorithms → scikit-learn</th></tr>
+    <tr><td><span class="def">Clustering</span></td><td>groups similar instances, e.g. types of blog visitors. <span class="def">Hierarchical</span> clustering also splits groups into sub-groups.</td><td>K-Means → <code>KMeans</code>, DBSCAN → <code>DBSCAN</code>, HCA → <code>AgglomerativeClustering</code></td></tr>
+    <tr><td><span class="def">Anomaly detection</span></td><td>learns what "normal" looks like, then flags unusual instances (fraud, defects, outliers to remove)</td><td>One-class SVM → <code>OneClassSVM</code>, <code>IsolationForest</code></td></tr>
+    <tr><td><span class="def">Novelty detection</span></td><td>flags instances unlike <i>anything</i> in a clean training set</td><td>same tools, trained on clean data</td></tr>
+    <tr><td><span class="def">Visualisation</span></td><td>squeezes data into 2D or 3D for plotting while keeping clusters apart</td><td><code>TSNE</code>, <code>LocallyLinearEmbedding</code></td></tr>
+    <tr><td><span class="def">Dimensionality reduction</span></td><td>simplifies data while losing little information, e.g. merging correlated features</td><td><code>PCA</code>, <code>KernelPCA</code></td></tr>
+    <tr><td><span class="def">Association rule learning</span></td><td>finds relations between attributes ("people who buy X and Y also buy Z")</td><td>Apriori, Eclat (<i>not in scikit-learn</i>)</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li><span class="def">Feature extraction</span>: combining correlated features into one, for example mileage + age → "wear and tear".</li>
+    <li class="tip">Reducing dimensions before a supervised model often makes training faster, uses less memory and disk, and sometimes improves results.</li>
+    <li class="exp">Anomaly vs novelty: if 1 % of your dog photos are Chihuahuas, a novelty detector should <i>not</i> flag a new Chihuahua, because it has seen some. An anomaly detector might, because they are rare.</li>
+  </ul>
+
+  <h3>4c · Semi-supervised learning</h3>
+  <p><span class="def">Semi-supervised learning</span> handles data where only a few instances are labelled and many aren't, which is common because labelling is slow and expensive.</p>
+  <ul class="tight">
+    <li class="exp">Photo apps: clustering (the unsupervised part) finds that the same face appears in many photos. You name each person once (the supervised part), and every photo gets tagged.</li>
+    <li>Most methods <b>combine unsupervised and supervised steps</b>. An older example is a <span class="def">deep belief network</span>: stacked restricted Boltzmann machines are pretrained without labels, then the whole network is fine-tuned with labels.</li>
+  </ul>
+
+  <h3>4d · Reinforcement learning</h3>
+  <p>In <span class="def">reinforcement learning (RL)</span> an <span class="def">agent</span> observes an <span class="def">environment</span>, takes <span class="def">actions</span> and receives <span class="def">rewards</span> (or penalties, which are negative rewards). It learns a <span class="def">policy</span>, a rule for which action to take in each situation, that maximises reward over time.</p>
+  <ul class="tight">
+    <li class="exp">Examples: robots learning to walk, and AlphaGo, which learned from records of past games and then from games against itself.</li>
+    <li class="skip">During AlphaGo's matches against the champion, learning was switched off. It only applied the policy it had already learned.</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book">scikit-learn now has ready-made semi-supervised wrappers: <code>SelfTrainingClassifier</code> (added in 0.24) and <code>LabelSpreading</code> / <code>LabelPropagation</code>, which use <code>-1</code> to mark unlabelled rows. <code>HDBSCAN</code> joined <code>sklearn.cluster</code> in 1.3. <code>KMeans</code> now defaults to <code>n_init="auto"</code> (1.4), and <code>TSNE</code>'s <code>n_iter</code> is now called <code>max_iter</code> (1.5).</span>
+
+  <h3>4e · Batch vs online learning <a class="book" href="../geron/reader.html#p=44">book p. 14 ↗</a></h3>
+  <div class="tw"><table>
+    <tr><th></th><th>Batch (offline) learning</th><th>Online (incremental) learning</th></tr>
+    <tr><td>Training</td><td>on <b>all</b> the data at once, then deployed and no longer learns</td><td>fed instances one at a time or in small <span class="def">mini-batches</span>; each step is quick and cheap</td></tr>
+    <tr><td>New data arrives</td><td>retrain a new version from scratch on old + new data, then swap it in (this can be automated, e.g. daily or weekly)</td><td>learns from it on the fly</td></tr>
+    <tr><td>Resources</td><td class="imp">heavy CPU, memory, disk and I/O. Impossible if the data is huge</td><td class="tip">light. Old instances can be thrown away once learned</td></tr>
+    <tr><td>Good for</td><td>stable problems with enough compute</td><td>continuous streams (e.g. stock prices), fast-changing data, limited devices (phones, Mars rovers)</td></tr>
+    <tr><td>scikit-learn</td><td><code>.fit(X, y)</code></td><td><code>.partial_fit(X_batch, y_batch)</code>, e.g. <code>SGDRegressor</code>, <code>SGDClassifier</code>, <code>MiniBatchKMeans</code></td></tr>
+  </table></div>
+  <ul class="tight">
+    <li><span class="def">Out-of-core learning</span>: using an online algorithm to train on data too big for memory, one chunk at a time. <span class="tip">It usually runs offline, so think "incremental" rather than "online".</span></li>
+    <li>The <span class="def">learning rate</span> sets how quickly an online system adapts. <span class="exp">High</span>: it adapts fast but forgets old data quickly. <span class="exp">Low</span>: it has more inertia and is less thrown off by noise or unrepresentative data points.</li>
+  </ul>
+  <span class="k i" data-l="Important">With online learning, bad input (a broken sensor, spam aimed at a search engine) slowly degrades a live system. Monitor performance, be ready to switch learning off and roll back to an earlier version, and consider running anomaly detection on the incoming data.</span>
+
+  <h3>4f · Instance-based vs model-based learning <a class="book" href="../geron/reader.html#p=47">book p. 17 ↗</a></h3>
+  <p>The real goal is to <span class="def">generalise</span>: to make good predictions on examples the system has <b>never seen</b>. Doing well on the training data is not enough.</p>
+  <div class="tw"><table>
+    <tr><th></th><th>Instance-based</th><th>Model-based</th></tr>
+    <tr><td>Idea</td><td>memorise the training examples, then compare new cases to them with a <span class="def">similarity measure</span></td><td>fit a <b>model</b> to the examples, then use the model to predict</td></tr>
+    <tr><td>Spam example</td><td>flag emails that share many words with known spam</td><td>learn a weight for each word</td></tr>
+    <tr><td>Example algorithm</td><td>k-NN: average (or take a majority vote over) the k most similar instances</td><td>linear regression</td></tr>
+    <tr><td>Beyond the training range</td><td>stays at the value of the nearest stored examples</td><td>follows the model's shape (a line keeps rising)</td></tr>
+  </table></div>
+  <p>A model-based workflow, using "does GDP per capita predict life satisfaction?" as the example:</p>
+  <ol class="tight">
+    <li><b>Study the data.</b> Plot it and see a rough upward trend with noise.</li>
+    <li><b>Model selection</b>: choose a type of model and fully specify its architecture, e.g. a linear model with one input:
+      <div class="math">$$\text{life satisfaction}=\theta_0+\theta_1\times\text{GDP per capita}$$</div>
+      $\theta_0,\theta_1$ are the <span class="def">model parameters</span>.</li>
+    <li><b>Choose a performance measure.</b> Either a <span class="def">utility (fitness) function</span>, which measures how <i>good</i> the model is, or a <span class="def">cost function</span>, which measures how <i>bad</i> it is. Linear regression usually minimises the distance between predictions and targets.</li>
+    <li><b>Train</b>: the learning algorithm searches for the parameter values that minimise the cost.</li>
+    <li><b>Predict</b> on new cases. This is called <span class="def">inference</span>.</li>
+  </ol>
+  <span class="k d" data-l="Three meanings of “model”">① a model <b>type</b> (linear regression) · ② a fully specified <b>architecture</b> (linear regression with one input and one output) · ③ a <b>trained model</b> with fixed parameter values, ready to predict.</span>
+<pre><code>from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import KNeighborsRegressor
+
+model = LinearRegression()                   # model-based
+# model = KNeighborsRegressor(n_neighbors=3) # instance-based: swap one line
+model.fit(X_train, y_train)                  # X is 2-D: (n_samples, n_features)
+model.predict([[25_000]])</code></pre>
+  <p class="tip">If the predictions are poor: add more informative attributes, get more or cleaner data, or choose a more powerful model (e.g. polynomial).</p>
+
+  <div class="panel" id="mbPanel">
+    <b>Play: a line vs k nearest neighbours</b>
+    <p class="hint" style="margin-top:.2rem">Synthetic countries: satisfaction rises with income, then levels off. Click the chart to move the <b>query country</b> (the vertical line). Hollow dots are countries left out of training.</p>
+    <div class="controls">
+      <div class="ctl"><label>Learner</label>
+        <span class="seg" id="mbMethod"><button data-m="lin" class="on">Linear model</button><button data-m="knn">k-NN</button></span></div>
+      <div class="ctl" id="mbKRow" hidden><label>k (neighbours)</label><input type="range" id="mbK" min="1" max="20" step="1" value="3"/><output id="mbKO"></output></div>
+      <div class="ctl"><label>Training sample</label>
+        <span class="seg" id="mbSample"><button data-s="mid" class="on">Mid-income only</button><button data-s="all">All countries</button></span></div>
+      <div class="ctl"><label>Noise</label><input type="range" id="mbNoise" min="0" max="0.8" step="0.05" value="0.2"/><output id="mbNoiseO"></output></div>
+      <div class="ctl"><label></label><button class="btn" id="mbSeed">↻ New countries</button></div>
+    </div>
+    <canvas id="mbCv" height="320" aria-label="Life satisfaction against GDP with a linear or k-NN fit"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">query GDP</div><div class="v" id="mbQ">–</div></div>
+      <div class="stat"><div class="kk">prediction</div><div class="v" id="mbP">–</div></div>
+      <div class="stat"><div class="kk">train RMSE</div><div class="v" id="mbTr">–</div></div>
+      <div class="stat"><div class="kk">RMSE on all countries</div><div class="v" id="mbTe">–</div></div>
+    </div>
+    <p class="hint" id="mbMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Linear model with "Mid-income only": the line looks fine inside the range but overshoots for rich countries. That is <b>nonrepresentative data</b> (section 5).</li>
+      <li>k-NN with k = 1: training RMSE drops to 0 because it has memorised the data, yet the error on all countries goes <i>up</i>.</li>
+      <li>k-NN with a query far to the right: the prediction flattens at the value of the nearest stored countries.</li>
+      <li>Switch to "All countries": the line still can't bend, so it <b>underfits</b>, while k-NN follows the curve.</li>
+    </ul>
+  </details>
+
+  <!-- ===================================================== 5 -->
+  <h2>5 · Main challenges of machine learning <a class="book" href="../geron/reader.html#p=53">book p. 23 ↗</a></h2>
+  <p>You choose an algorithm and train it on data, so two things can go wrong: <span class="imp">bad data</span> or a <span class="imp">bad algorithm</span>.</p>
+
+  <h3>Bad data</h3>
+  <div class="tw"><table>
+    <tr><th>Problem</th><th>What it means</th><th>What to do</th></tr>
+    <tr><td><b>Too little data</b></td><td>Most algorithms need thousands of examples even for simple problems, and millions for images or speech</td><td>collect more, or reuse parts of an existing model</td></tr>
+    <tr><td><b>Nonrepresentative data</b> <a class="book" href="../geron/reader.html#p=55">p. 25 ↗</a></td><td>The training set doesn't look like the cases you'll predict on</td><td>sample carefully, and cover the whole range you care about</td></tr>
+    <tr><td><b>Poor-quality data</b></td><td>errors, outliers, noise from bad measurements</td><td>clean it: drop or fix outliers, decide what to do with missing values</td></tr>
+    <tr><td><b>Irrelevant features</b></td><td>garbage in, garbage out</td><td><span class="def">feature engineering</span> (below)</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li><span class="def">Sampling noise</span>: a sample that is unrepresentative just by chance, because it is too small.</li>
+    <li><span class="def">Sampling bias</span>: a <b>flawed sampling method</b>. It can make even a huge sample unrepresentative. <span class="def">Nonresponse bias</span> is one kind: the people who don't answer a survey differ from those who do.</li>
+    <li class="skip">Classic case: a 1936 US poll mailed millions of people chosen from phone books and magazine subscriber lists, which skewed towards wealthier voters, and few people replied. It confidently predicted the wrong winner. Another: searching a video site for a music genre returns mostly popular artists, and results vary by country.</li>
+    <li class="skip">Research in the early 2000s found that quite different algorithms performed almost equally well on a hard language task once they had enough data ("the unreasonable effectiveness of data"). Small and medium datasets are still common, though, so algorithms still matter.</li>
+    <li><span class="exp">Missing values</span> (say 5 % of customers left out their age): drop the attribute, drop those rows, fill them in (e.g. with the median), or train models both with and without the attribute.</li>
+  </ul>
+  <p><span class="def">Feature engineering</span> means building a good set of features to train on:</p>
+  <ul class="tight">
+    <li><span class="def">Feature selection</span>: keep the most useful existing features.</li>
+    <li><span class="def">Feature extraction</span>: combine existing features into a better one (dimensionality reduction can help).</li>
+    <li>Create new features by gathering new data.</li>
+  </ul>
+
+  <h3>Bad algorithm: overfitting <a class="book" href="../geron/reader.html#p=57">p. 27 ↗</a></h3>
+  <p><span class="def">Overfitting</span>: the model does well on the training data but <b>generalises poorly</b>. It is the machine version of judging a whole country by one dishonest taxi driver.</p>
+  <ul class="tight">
+    <li class="exp">A flexible model trained on a small or noisy dataset will find patterns in the noise. For example, it might notice that the training countries with a "w" in their name happen to be happy. That rule is pure chance, and the model can't tell.</li>
+  </ul>
+  <span class="k i" data-l="Overfitting = model too complex for the amount and noisiness of the data. Fixes">
+    ① <b>simplify</b>: a model with fewer parameters, fewer attributes, or constraints on the model ·
+    ② <b>get more</b> training data ·
+    ③ <b>reduce noise</b>: fix errors and remove outliers
+  </span>
+  <p><span class="def">Regularisation</span> constrains a model to make it simpler, which lowers the risk of overfitting.</p>
+  <ul class="tight">
+    <li class="exp">A line $\theta_0+\theta_1x$ has two <span class="def">degrees of freedom</span>: its height and its slope. Forcing $\theta_1=0$ leaves one (a flat line at about the mean). Letting $\theta_1$ vary but keeping it small gives something <b>in between</b>. The result fits the training data a bit worse but often generalises better.</li>
+    <li>A <span class="def">hyperparameter</span> is a setting of the <b>learning algorithm</b>, not of the model. You set it before training and it stays fixed during training. The amount of regularisation is one.</li>
+    <li class="imp">A very large regularisation hyperparameter gives an almost flat model. It won't overfit, but it won't find a good solution either.</li>
+  </ul>
+  <div class="tw"><table>
+    <tr><th></th><th>Model parameter</th><th>Hyperparameter</th></tr>
+    <tr><td>Belongs to</td><td>the model</td><td>the learning algorithm</td></tr>
+    <tr><td>Set by</td><td>training (learned from data)</td><td>you, before training</td></tr>
+    <tr><td>Examples</td><td><code>coef_</code>, <code>intercept_</code> (θ₀, θ₁)</td><td><code>alpha</code> in <code>Ridge</code>, <code>n_neighbors</code> in k-NN, polynomial <code>degree</code></td></tr>
+  </table></div>
+
+  <h3>Bad algorithm: underfitting <a class="book" href="../geron/reader.html#p=59">p. 29 ↗</a></h3>
+  <p><span class="def">Underfitting</span> is the opposite: the model is <b>too simple</b> for the structure in the data, so it is inaccurate even on the training set. A straight line for life satisfaction is an example.</p>
+  <span class="k t" data-l="Fixes for underfitting">① a more powerful model with more parameters · ② better features (feature engineering) · ③ fewer constraints (lower the regularisation hyperparameter)</span>
+
+  <div class="panel" id="ofPanel">
+    <b>Play: under- and overfitting with polynomial degree</b>
+    <p class="hint" style="margin-top:.2rem">Noisy points from a smooth curve (dashed). The coloured curve is a polynomial fitted by least squares. Validation error is measured on 300 fresh points. The lower chart shows both errors for every degree, and the ring marks the current one.</p>
+    <div class="controls">
+      <div class="ctl"><label>Degree</label><input type="range" id="ofD" min="1" max="15" step="1" value="3"/><output id="ofDO"></output></div>
+      <div class="ctl"><label>Training points</label><input type="range" id="ofN" min="8" max="120" step="1" value="20"/><output id="ofNO"></output></div>
+      <div class="ctl"><label>Noise σ</label><input type="range" id="ofS" min="0.05" max="0.8" step="0.05" value="0.25"/><output id="ofSO"></output></div>
+      <div class="ctl"><label></label><button class="btn" id="ofSeed">↻ New sample</button></div>
+    </div>
+    <canvas id="ofCv" height="280" aria-label="Polynomial fit to noisy data"></canvas>
+    <canvas id="ofCurve" height="170" style="margin-top:.5rem" aria-label="Training and validation error for each degree"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">parameters</div><div class="v" id="ofP">–</div></div>
+      <div class="stat"><div class="kk">train MSE</div><div class="v" id="ofTr">–</div></div>
+      <div class="stat"><div class="kk">validation MSE</div><div class="v" id="ofVa">–</div></div>
+      <div class="stat"><div class="kk">best degree</div><div class="v" id="ofBest">–</div></div>
+    </div>
+    <p class="hint" id="ofMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Degree 1: both errors are high and close together, which is underfitting.</li>
+      <li>Degree 12 with 15 points: training error is almost zero, but the curve swings wildly between points and validation error jumps. That is overfitting.</li>
+      <li>Keep degree 12 and slide the points up to 120. The extra data calms the curve, because more data is a fix for overfitting.</li>
+      <li>Raise the noise: the best degree drops, because noisy data supports only a simpler model.</li>
+    </ul>
+  </details>
+
+  <span class="k s" data-l="Stepping back — the big picture">ML means improving at a task from data, not from hand-written rules. Systems vary in supervision, batch vs online, and instance- vs model-based. Model-based learners tune parameters to fit the training set, while instance-based learners memorise examples and compare new ones to them. Performance suffers when data is scarce, unrepresentative, noisy or full of irrelevant features, and when the model is too simple or too complex.</span>
+
+  <!-- ===================================================== 6 -->
+  <h2>6 · Testing and validating <a class="book" href="../geron/reader.html#p=60">book p. 30 ↗</a></h2>
+  <p>The only way to know how a model does on new cases is to try it on new cases. Monitoring it in production works, but unhappy users are an expensive way to find a bad model. Instead, split the data:</p>
+  <ul class="tight">
+    <li><span class="def">Training set</span>: used to fit the model. <span class="def">Test set</span>: used to evaluate it.</li>
+    <li>The <span class="def">generalisation error</span> (or <span class="def">out-of-sample error</span>) is the error rate on new cases. The test-set error is your estimate of it.</li>
+    <li class="imp">Low training error + high generalisation error = overfitting.</li>
+    <li class="tip">A common split is 80 % train and 20 % test. With a very large dataset (say 10 million rows), even 1 % is plenty for testing. <code>train_test_split(X, y, test_size=0.2, random_state=42)</code></li>
+  </ul>
+
+  <h3>Hyperparameter tuning &amp; model selection <a class="book" href="../geron/reader.html#p=61">p. 31 ↗</a></h3>
+  <span class="k i" data-l="The trap">If you try 100 hyperparameter values and keep the one with the best <b>test</b> error, you have tuned the model to that particular test set. The test error is now too optimistic, so a "5 %" model may give 15 % in production.</span>
+  <p><span class="def">Holdout validation</span> fixes this. Set aside part of the training set as a <span class="def">validation set</span> (also called a <span class="def">development</span> or <span class="def">dev set</span>):</p>
+  <ol class="tight">
+    <li>Train each candidate (model type × hyperparameters) on the <b>reduced</b> training set.</li>
+    <li>Pick the one with the best <b>validation</b> score.</li>
+    <li>Retrain that one on the <b>full</b> training set, validation data included.</li>
+    <li>Evaluate it <b>once</b> on the test set to estimate the generalisation error.</li>
+  </ol>
+  <ul class="tight">
+    <li><span class="exp">Validation set too small</span>: noisy scores, so you may pick a worse model by chance.</li>
+    <li><span class="exp">Validation set too large</span>: candidates are trained on much less data than the final model, so you are comparing them in the wrong setting (like choosing a marathon runner from a sprint race).</li>
+    <li><span class="def">Repeated cross-validation</span> uses many small validation sets. Train on the rest, score on each one, then average. <span class="tip">The estimate is more reliable</span>, <span class="imp">but training time is multiplied by the number of folds</span>. In scikit-learn: <code>cross_val_score</code>, <code>GridSearchCV</code>.</li>
+  </ul>
+
+  <h3>Data mismatch <a class="book" href="../geron/reader.html#p=62">p. 32 ↗</a></h3>
+  <p>Sometimes plenty of training data is available, but it doesn't match production data. Example: millions of flower photos from the web, but only about 10k photos actually taken with your mobile app.</p>
+  <span class="k i" data-l="Rule">The validation and test sets must look like <b>production</b> data. Use only the representative (in-app) photos, split them between the two sets, and keep duplicates and near-duplicates out of both.</span>
+  <p>If validation scores are poor, is the model overfitting or is it the mismatch? To find out, hold out some of the web photos as a <span class="def">train-dev set</span> (a term from Andrew Ng) and don't train on it.</p>
+  <div class="tw"><table>
+    <tr><th>Train-dev score</th><th>Validation score</th><th>Diagnosis</th><th>Next step</th></tr>
+    <tr><td class="imp">poor</td><td>poor</td><td>overfitting the training set</td><td>simplify or regularise, get more data, clean the data</td></tr>
+    <tr><td class="tip">good</td><td class="imp">poor</td><td>data mismatch</td><td>preprocess the training images to look like app photos, then retrain</td></tr>
+    <tr><td class="tip">good</td><td class="tip">good</td><td>ready for the test set</td><td>evaluate once on the test set</td></tr>
+  </table></div>
+
+  <h3>No Free Lunch <a class="book" href="../geron/reader.html#p=63">p. 33 ↗</a></h3>
+  <p>A model is a simplified version of the data, and deciding what to throw away means making <b>assumptions</b>. A linear model assumes the data is basically linear and that the distances from points to the line are just noise.</p>
+  <p>The <span class="def">No Free Lunch (NFL) theorem</span> (Wolpert, 1996): <span class="imp">if you make no assumptions about the data, no model is better than any other in advance</span>. A linear model wins on some datasets and a neural network on others.</p>
+  <p class="tip">Since you can't test every model, make reasonable assumptions and compare a few sensible candidates. For a simple task, try linear models with different amounts of regularisation. For a complex one, try several neural networks.</p>
+
+  <!-- ===================================================== 7 -->
+  <h2>7 · Exercises <a class="book" href="../geron/reader.html#p=63">book p. 33 ↗</a></h2>
+  <p>The chapter ends with 19 short questions. They cover everything above:</p>
+  <ul class="tight">
+    <li>defining ML and naming where it shines (sections 1–2)</li>
+    <li>labelled data, the common supervised and unsupervised tasks, and matching a problem (a walking robot, customer segments, spam) to a learning type (section 4)</li>
+    <li>online and out-of-core learning, similarity-based learners, parameters vs hyperparameters, what model-based learners search for (section 4)</li>
+    <li>the main challenges, and three fixes for overfitting (section 5)</li>
+    <li>test, validation and train-dev sets, and why tuning on the test set goes wrong (section 6)</li>
+  </ul>
+  <p class="tip">Answer them out loud without notes, then check with the <a href="../geron/reader.html#p=749">book's answers (Appendix A) ↗</a>.</p>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — chapter 1 in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. scikit-learn downloads on the first run (≈ 20–40 s, needs internet). All data is synthetic, so nothing else is downloaded.</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false" style="min-height:420px">import numpy as np
+from sklearn.linear_model import LinearRegression, Ridge, SGDRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import mean_squared_error
+from sklearn.cluster import KMeans
+from sklearn.ensemble import IsolationForest
+from sklearn.datasets import make_blobs
+
+rng = np.random.default_rng(0)
+# Synthetic "income vs happiness": rises, then flattens out
+gdp = rng.uniform(5, 80, 60)                      # thousands of USD
+sat = 4 + 3.2 * (1 - np.exp(-gdp / 25)) + rng.normal(0, 0.3, 60)
+X, y = gdp.reshape(-1, 1), sat
+
+# 1) Model-based vs instance-based: same API, different idea
+for name, model in [("linear", LinearRegression()), ("3-NN  ", KNeighborsRegressor(n_neighbors=3))]:
+    model.fit(X, y)
+    print(f"{name} predicts {model.predict([[25.0]])[0]:.2f} for GDP=25k")
+
+# 2) Train / test split and over/underfitting by polynomial degree
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42)
+for d in (1, 3, 15):
+    poly = make_pipeline(PolynomialFeatures(d), StandardScaler(), LinearRegression()).fit(X_tr, y_tr)
+    tr = mean_squared_error(y_tr, poly.predict(X_tr))
+    te = mean_squared_error(y_te, poly.predict(X_te))
+    print(f"degree {d:2}: train MSE {tr:.3f}   test MSE {te:.3f}")
+
+# 3) Holdout validation: choose alpha on a validation set, NOT the test set
+X_fit, X_val, y_fit, y_val = train_test_split(X_tr, y_tr, test_size=0.25, random_state=1)
+scores = {}
+for a in (1e-4, 1e-2, 1, 100):
+    m = make_pipeline(PolynomialFeatures(10), StandardScaler(), Ridge(alpha=a)).fit(X_fit, y_fit)
+    scores[a] = mean_squared_error(y_val, m.predict(X_val))
+best = min(scores, key=scores.get)
+final = make_pipeline(PolynomialFeatures(10), StandardScaler(), Ridge(alpha=best)).fit(X_tr, y_tr)
+print("best alpha:", best, "| test MSE (reported once):", round(mean_squared_error(y_te, final.predict(X_te)), 3))
+
+# 4) Cross-validation: many small validation folds
+cv = cross_val_score(final, X_tr, y_tr, cv=5, scoring="neg_mean_squared_error")
+print("5-fold CV MSE:", (-cv).round(3), "mean", round(-cv.mean(), 3))
+
+# 5) Online learning: feed mini-batches one by one with partial_fit
+sgd = SGDRegressor(learning_rate="constant", eta0=0.02, random_state=0)
+scaler = StandardScaler().fit(X)          # in real streams, fit the scaler on early data
+for day in range(30):                     # the same stream replayed 30 times
+    for start in range(0, 60, 10):
+        sgd.partial_fit(scaler.transform(X[start:start + 10]), y[start:start + 10])
+print("online SGD after 180 mini-batches, MSE:", round(mean_squared_error(y, sgd.predict(scaler.transform(X))), 3))
+
+# 6) Unsupervised: clustering and anomaly detection (no labels used)
+Xb, _ = make_blobs(n_samples=300, centers=3, random_state=0)
+km = KMeans(n_clusters=3, n_init=10, random_state=0).fit(Xb)
+print("cluster sizes:", np.bincount(km.labels_))
+iso = IsolationForest(random_state=0).fit(Xb)
+odd = np.vstack([km.cluster_centers_[0], [20.0, 20.0]])
+print("anomaly flags (1 normal, -1 anomaly):", iso.predict(odd))</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">Name the T, E and P for a model that predicts house prices.</div><div class="face a">T: predict the price of a house. E: past sales with known prices. P: an error measure such as RMSE.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Group shoppers into segments without any labels. Which learning type and task?</div><div class="face a">Unsupervised learning, specifically clustering (e.g. <code>KMeans</code>). Hierarchical clustering if you want sub-groups.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">A robot has to learn to walk on unknown ground. What kind of ML?</div><div class="face a">Reinforcement learning: an agent acts, collects rewards or penalties, and learns a policy.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Your dataset is 2 TB and your machine has 32 GB of RAM. What do you do?</div><div class="face a">Out-of-core learning: an incremental algorithm trained chunk by chunk (e.g. <code>SGDRegressor.partial_fit</code>).</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">k-NN vs linear regression: which is instance-based, and why?</div><div class="face a">k-NN. It stores the examples and predicts by comparing a new case to its most similar neighbours. Linear regression fits parameters and then discards the data.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Model parameter vs hyperparameter, with one example each.</div><div class="face a">A parameter is learned during training (a slope, θ₁). A hyperparameter is set before training and belongs to the algorithm (<code>alpha</code>, <code>n_neighbors</code>).</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Great training score, poor score on new data. What's happening, and three fixes?</div><div class="face a">Overfitting. Simplify or regularise the model, get more data, reduce noise in the data.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Good on train-dev, bad on validation. What's wrong?</div><div class="face a">Data mismatch: the training data doesn't look like production data. Make the training data more like production data, then retrain.</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="geron-ch02-end-to-end-project.html">Ch 2 — End-to-end project</a>: the workflow from this chapter, done for real, with a proper test set, cross-validation and grid search</li>
+    <li><a href="geron-ch03-classification.html">Ch 3 — Classification</a>: performance measures beyond accuracy</li>
+    <li><a href="geron-ch04-training-models.html">Ch 4 — Training models</a>: cost functions, regularisation, learning curves (under- and overfitting in depth)</li>
+    <li><a href="gradient-descent.html">Gradient descent note</a>: the learning-rate idea behind online learning</li>
+    <li><a href="geron-ch08-dimensionality-reduction.html">Ch 8 — Dimensionality reduction</a> and <a href="geron-ch09-unsupervised.html">Ch 9 — Unsupervised learning</a>: clustering and anomaly detection</li>
+    <li><a href="../geron/reader.html#p=749">Book answers to the chapter 1 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> define ML with task, experience and performance measure, and say when it beats hand-written rules</label></li>
+    <li><label><input type="checkbox"/> sort any problem into supervised, unsupervised, semi-supervised or RL, and name its task</label></li>
+    <li><label><input type="checkbox"/> explain batch vs online vs out-of-core learning and the risk of bad data in online systems</label></li>
+    <li><label><input type="checkbox"/> contrast instance-based and model-based learning, and parameters vs hyperparameters</label></li>
+    <li><label><input type="checkbox"/> list the main data and model problems, with fixes for overfitting and underfitting</label></li>
+    <li><label><input type="checkbox"/> explain train, validation, test and train-dev sets, and why you never tune on the test set</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 1. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch01';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const fmt=(v,d=3)=>!isFinite(v)?'∞':Math.abs(v)>=1e5?v.toExponential(1):v.toFixed(d);
+function solve(A,b){const n=b.length;A=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];
+    const d=A[c][c]||1e-12;for(let r=0;r<n;r++){if(r===c)continue;const f=A[r][c]/d;for(let k=c;k<=n;k++)A[r][k]-=f*A[c][k];}}
+  return A.map((r,i)=>r[n]/(r[i]||1e-12));}
+
+/* ================= Model-based vs instance-based ================= */
+const M={method:'lin',sample:'mid',seed:5,q:25};
+const happy=g=>4+3.2*(1-Math.exp(-g/15));
+function mbData(){const r=mulberry(M.seed),noise=+$('#mbNoise').value;M.all=[];
+  for(let i=0;i<40;i++){const g=5+75*r();M.all.push([g,happy(g)+noise*gauss(r)]);}
+  M.all.sort((a,b)=>a[0]-b[0]);}
+function mbFit(){
+  const tr=M.sample==='mid'?M.all.filter(p=>p[0]>=20&&p[0]<=55):M.all;
+  let pred;
+  if(M.method==='lin'){const n=tr.length,sx=tr.reduce((a,p)=>a+p[0],0),sy=tr.reduce((a,p)=>a+p[1],0),
+      sxx=tr.reduce((a,p)=>a+p[0]*p[0],0),sxy=tr.reduce((a,p)=>a+p[0]*p[1],0);
+    const t1=(n*sxy-sx*sy)/(n*sxx-sx*sx),t0=(sy-t1*sx)/n;pred=g=>t0+t1*g;}
+  else{const k=Math.min(+$('#mbK').value,tr.length);
+    pred=g=>{const nb=tr.map(p=>[Math.abs(p[0]-g),p[1],p[0]]).sort((a,b)=>a[0]-b[0]).slice(0,k);return nb.reduce((s,v)=>s+v[1],0)/k;};}
+  const rmse=S=>Math.sqrt(S.reduce((s,p)=>s+(pred(p[0])-p[1])**2,0)/S.length);
+  return{tr,pred,trE:rmse(tr),allE:rmse(M.all)};
+}
+function drawMB(){
+  $('#mbKO').textContent=$('#mbK').value;$('#mbNoiseO').textContent=(+$('#mbNoise').value).toFixed(2);
+  const f=mbFit();const{x,W,H}=setupCanvas($('#mbCv'));
+  const L=34,B=24,px=g=>L+(g/85)*(W-L-8),py=s=>H-B-((s-3)/5.5)*(H-B-8);
+  // axes + grid
+  x.strokeStyle=css('--border');x.lineWidth=1;x.fillStyle=css('--muted');x.font='11px system-ui';
+  for(let s=3;s<=8;s++){x.beginPath();x.moveTo(L,py(s));x.lineTo(W,py(s));x.stroke();x.fillText(s,L-14,py(s)+4);}
+  for(let g=0;g<=80;g+=20){x.fillText(g+'k',px(g)-8,H-8);}
+  x.textAlign='right';x.fillText('GDP per capita →',W-8,14);x.textAlign='left';x.fillText('satisfaction',L+4,14);
+  // training range shading
+  if(M.sample==='mid'){x.fillStyle=css('--accent');x.globalAlpha=.07;x.fillRect(px(20),0,px(55)-px(20),H-B);x.globalAlpha=1;}
+  // true curve
+  x.setLineDash([5,5]);x.strokeStyle=css('--muted');x.beginPath();for(let g=0;g<=85;g+=1){g?x.lineTo(px(g),py(happy(g))):x.moveTo(px(g),py(happy(g)));}x.stroke();x.setLineDash([]);
+  // points
+  const inTr=new Set(f.tr);
+  M.all.forEach(p=>{x.beginPath();x.arc(px(p[0]),py(p[1]),4,0,7);if(inTr.has(p)){x.fillStyle=css('--text');x.fill();}else{x.strokeStyle=css('--muted');x.lineWidth=1.3;x.stroke();}});
+  // prediction curve
+  x.strokeStyle=M.method==='lin'?css('--accent'):css('--code');x.lineWidth=2.5;x.beginPath();
+  for(let g=0;g<=85;g+=0.25){const Y=Math.max(-20,Math.min(H+20,py(f.pred(g))));g?x.lineTo(px(g),Y):x.moveTo(px(g),Y);}x.stroke();
+  // query
+  const q=M.q,pq=f.pred(q);
+  if(M.method==='knn'){const k=Math.min(+$('#mbK').value,f.tr.length);
+    const nb=f.tr.map(p=>[Math.abs(p[0]-q),p]).sort((a,b)=>a[0]-b[0]).slice(0,k);
+    x.strokeStyle=css('--code');x.lineWidth=1;x.globalAlpha=.6;nb.forEach(([,p])=>{x.beginPath();x.moveTo(px(q),py(pq));x.lineTo(px(p[0]),py(p[1]));x.stroke();
+      x.beginPath();x.arc(px(p[0]),py(p[1]),7,0,7);x.stroke();});x.globalAlpha=1;}
+  x.strokeStyle=css('--def');x.lineWidth=1.5;x.beginPath();x.moveTo(px(q),0);x.lineTo(px(q),H-B);x.stroke();
+  x.fillStyle=css('--def');x.beginPath();x.arc(px(q),py(pq),5.5,0,7);x.fill();
+  x.fillStyle=css('--muted');x.fillText('● trained on   ○ left out   - - true trend',L+4,H-B-6);
+  $('#mbQ').textContent=q.toFixed(0)+'k';$('#mbP').textContent=fmt(pq,2);$('#mbTr').textContent=fmt(f.trE,2);$('#mbTe').textContent=fmt(f.allE,2);
+  const k=+$('#mbK').value,outside=M.sample==='mid'&&(q<20||q>55);
+  let msg;
+  if(M.method==='knn'&&k===1)msg='k = 1 memorises the training set: training error is '+fmt(f.trE,2)+', but it copies every bit of noise.';
+  else if(M.method==='knn'&&outside)msg='Outside the training range, k-NN just repeats its nearest stored countries, so the prediction goes flat.';
+  else if(M.method==='lin'&&outside)msg='The line extrapolates beyond the data it saw. Nonrepresentative training data makes it '+(pq>happy(q)?'over':'under')+'-predict here.';
+  else if(M.method==='lin'&&f.allE>f.trE*1.3)msg='The line fits its training countries but misses the others: its error is '+(f.allE/f.trE).toFixed(1)+'× larger on all countries.';
+  else if(M.method==='lin')msg='A straight line can\'t follow the levelling-off, so it underfits the curve.';
+  else if(M.method==='knn'&&k>=f.tr.length*0.6)msg='Very large k averages almost everything, so the prediction is close to one flat value (underfitting).';
+  else msg='k-NN follows the bend with no formula. It only needs a similarity measure (distance in GDP).';
+  $('#mbMsg').textContent=msg;
+}
+$$('#mbMethod button').forEach(b=>b.onclick=()=>{$$('#mbMethod button').forEach(z=>z.classList.toggle('on',z===b));M.method=b.dataset.m;$('#mbKRow').hidden=M.method!=='knn';drawMB();});
+$$('#mbSample button').forEach(b=>b.onclick=()=>{$$('#mbSample button').forEach(z=>z.classList.toggle('on',z===b));M.sample=b.dataset.s;drawMB();});
+$('#mbK').oninput=drawMB;
+$('#mbNoise').oninput=()=>{mbData();drawMB();};
+$('#mbSeed').onclick=()=>{M.seed=Math.floor(Math.random()*1e6);mbData();drawMB();};
+$('#mbCv').addEventListener('pointerdown',e=>{const cv=e.currentTarget,rc=cv.getBoundingClientRect(),W=rc.width;
+  const g=((e.clientX-rc.left)-34)/(W-42)*85;M.q=Math.max(0,Math.min(85,g));drawMB();});
+mbData();
+
+/* ================= Under/overfitting playground ================= */
+const O={seed:9};
+const truthO=x=>Math.sin(2.6*x)+0.4*x;
+function ofData(){const r=mulberry(O.seed),n=+$('#ofN').value,s=+$('#ofS').value;O.tr=[];O.va=[];
+  for(let i=0;i<n;i++){const x=-1+2*(i+r())/n;O.tr.push([x,truthO(x)+s*gauss(r)]);}
+  const r2=mulberry(O.seed+999);for(let i=0;i<300;i++){const x=-1+2*r2();O.va.push([x,truthO(x)+s*gauss(r2)]);}}
+function polyFit(d){
+  const feats=x=>{const f=[];for(let k=1;k<=d;k++)f.push(Math.pow(x,k));return f;};
+  const F=O.tr.map(p=>feats(p[0]));const mu=[],sd=[];
+  for(let k=0;k<d;k++){const c=F.map(r=>r[k]);const m=c.reduce((a,b)=>a+b,0)/c.length;mu.push(m);sd.push(Math.sqrt(c.reduce((a,b)=>a+(b-m)**2,0)/c.length)||1);}
+  const Z=f=>[1,...f.map((v,k)=>(v-mu[k])/sd[k])];
+  const X=F.map(Z),y=O.tr.map(p=>p[1]),n=d+1,lam=1e-9*X.length;
+  const A=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>X.reduce((s,r)=>s+r[i]*r[j],0)+(i===j&&i>0?lam:0)));
+  const b=Array.from({length:n},(_,i)=>X.reduce((s,r,k)=>s+r[i]*y[k],0));
+  const w=solve(A,b);const pred=x=>Z(feats(x)).reduce((s,v,i)=>s+v*w[i],0);
+  const err=S=>S.reduce((s,p)=>s+(pred(p[0])-p[1])**2,0)/S.length;
+  return{pred,tr:err(O.tr),va:err(O.va)};
+}
+function drawOF(){
+  const d=+$('#ofD').value,s=+$('#ofS').value;
+  $('#ofDO').textContent=d;$('#ofNO').textContent=$('#ofN').value;$('#ofSO').textContent=s.toFixed(2);
+  const all=[];for(let k=1;k<=15;k++)all.push(polyFit(k));
+  const f=all[d-1];
+  let best=1;all.forEach((e,i)=>{if(e.va<all[best-1].va)best=i+1;});
+  // main chart
+  {const{x,W,H}=setupCanvas($('#ofCv'));const px=v=>(v+1.05)/2.1*W,py=v=>H/2-v*(H/2-10)/2.4;
+   x.strokeStyle=css('--border');x.lineWidth=1;x.beginPath();x.moveTo(0,py(0));x.lineTo(W,py(0));x.stroke();
+   x.setLineDash([5,5]);x.strokeStyle=css('--muted');x.beginPath();for(let v=-1.05;v<=1.05;v+=.01){v<=-1.049?x.moveTo(px(v),py(truthO(v))):x.lineTo(px(v),py(truthO(v)));}x.stroke();x.setLineDash([]);
+   x.fillStyle=css('--muted');x.globalAlpha=.18;O.va.forEach(p=>{x.beginPath();x.arc(px(p[0]),py(p[1]),1.8,0,7);x.fill();});x.globalAlpha=1;
+   x.fillStyle=css('--text');O.tr.forEach(p=>{x.beginPath();x.arc(px(p[0]),py(p[1]),4,0,7);x.fill();});
+   const over=d>best&&f.va>1.25*all[best-1].va;
+   x.strokeStyle=over?css('--imp'):css('--accent');x.lineWidth=2.5;x.beginPath();let first=true;
+   for(let v=-1.05;v<=1.05;v+=.004){const Y=Math.max(-40,Math.min(H+40,py(f.pred(v))));first?x.moveTo(px(v),Y):x.lineTo(px(v),Y);first=false;}x.stroke();
+   x.font='12px system-ui';x.fillStyle=css('--muted');x.fillText('● train   · validation   - - true curve',10,16);}
+  // error-vs-degree chart
+  {const{x,W,H}=setupCanvas($('#ofCurve'));const L=34,B=20;
+   const lg=v=>Math.log10(Math.max(v,1e-4));
+   const vals=all.flatMap(e=>[lg(e.tr),lg(e.va)]);let lo=Math.min(...vals),hi=Math.min(Math.max(...vals),lo+4);
+   if(hi-lo<0.5)hi=lo+0.5;
+   const px=k=>L+(k-1)/14*(W-L-12),py=v=>8+(1-(Math.min(v,hi)-lo)/(hi-lo))*(H-B-14);
+   x.strokeStyle=css('--border');x.lineWidth=1;x.fillStyle=css('--muted');x.font='11px system-ui';
+   for(let k=1;k<=15;k+=2){x.fillText(k,px(k)-3,H-5);}
+   x.fillText('MSE (log scale) by polynomial degree',2,12);
+   x.beginPath();x.moveTo(L,H-B);x.lineTo(W,H-B);x.stroke();
+   // noise floor
+   x.setLineDash([3,4]);x.strokeStyle=css('--muted');x.beginPath();x.moveTo(L,py(lg(s*s)));x.lineTo(W,py(lg(s*s)));x.stroke();x.setLineDash([]);
+   const line=(key,col)=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();all.forEach((e,i)=>{i?x.lineTo(px(i+1),py(lg(e[key]))):x.moveTo(px(1),py(lg(e[key])));});x.stroke();
+     x.fillStyle=col;all.forEach((e,i)=>{x.beginPath();x.arc(px(i+1),py(lg(e[key])),2.5,0,7);x.fill();});};
+   line('tr',css('--tip'));line('va',css('--imp'));
+   x.strokeStyle=css('--text');x.lineWidth=1.8;x.beginPath();x.arc(px(d),py(lg(f.va)),7,0,7);x.stroke();
+   x.fillStyle=css('--tip');x.fillText('train',W-120,28);x.fillStyle=css('--imp');x.fillText('validation',W-84,28);
+   x.fillStyle=css('--muted');x.fillText('- - noise σ²',W-120,42);}
+  $('#ofP').textContent=d+1;$('#ofTr').textContent=fmt(f.tr);$('#ofVa').textContent=fmt(f.va);$('#ofBest').textContent=best;
+  const n=+$('#ofN').value,floor=s*s;
+  let msg;
+  if(d>best&&f.va>1.25*all[best-1].va)msg=`Overfitting: training error (${fmt(f.tr)}) is ${f.tr<floor?'below the noise level σ² = '+fmt(floor)+', so the curve is fitting noise':'low'}, but validation error is much worse than at degree ${best}. Lower the degree, add points, or regularise.`;
+  else if(d<best&&f.va>1.25*all[best-1].va)msg=`Underfitting: both errors are high and close together. Degree ${d} is too simple, and degree ${best} does better on validation.`;
+  else msg=`Good balance: validation error is close to the best possible (the noise floor)${d+1>=n?', although the model has almost as many parameters as there are points':''}.`;
+  $('#ofMsg').textContent=msg;
+}
+$('#ofD').oninput=drawOF;
+['ofN','ofS'].forEach(id=>$('#'+id).oninput=()=>{ofData();drawOF();});
+$('#ofSeed').onclick=()=>{O.seed=Math.floor(Math.random()*1e6);ofData();drawOF();};
+ofData();
+
+function redrawAll(){drawMB();drawOF();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+redrawAll();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

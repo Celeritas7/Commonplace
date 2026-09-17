@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 2 "End-to-End Machine Learning Project".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 2 — End-to-End ML Project</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+#spCv{height:300px} #scCv{height:280px}
+@media (max-width:560px){#spCv{height:270px}}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 2 · book pp. 35–84</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 2 — End-to-End Machine Learning Project</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    A real ML project is mostly not about the algorithm. You frame the business question, lock away an honest
+    test set, explore and clean the data, wrap every preparation step in a reusable pipeline, compare models
+    with cross-validation, tune the best one, and then keep watching it after it goes live.
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=65">Working with Real Data <span>p. 35</span></a>
+    <a href="../geron/reader.html#p=67">Look at the Big Picture <span>p. 37</span></a>
+    <a href="../geron/reader.html#p=72">Get the Data <span>p. 42</span></a>
+    <a href="../geron/reader.html#p=86">Discover &amp; Visualize <span>p. 56</span></a>
+    <a href="../geron/reader.html#p=92">Prepare the Data <span>p. 62</span></a>
+    <a href="../geron/reader.html#p=102">Select &amp; Train a Model <span>p. 72</span></a>
+    <a href="../geron/reader.html#p=105">Fine-Tune Your Model <span>p. 75</span></a>
+    <a href="../geron/reader.html#p=110">Launch, Monitor, Maintain <span>p. 80</span></a>
+    <a href="../geron/reader.html#p=113">Try It Out! <span>p. 83</span></a>
+    <a href="../geron/reader.html#p=114">Exercises <span>p. 84</span></a>
+  </nav>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · Working with real data &amp; the project checklist <a class="book" href="../geron/reader.html#p=65">book p. 35 ↗</a></h2>
+  <p>The chapter plays out one project from start to finish: you are the new data scientist at a (made-up) real-estate company and must predict the <b>median house value of each California district</b> from 1990 census data (about 20,640 districts, 10 attributes, one of them text).</p>
+  <p class="tip">Practise on real data, not toy data. Real data has missing values, caps and odd units, and handling those is the actual skill.</p>
+  <p class="skip">Places to find datasets: the UCI repository, Kaggle, AWS open data, meta-portals that list other portals, and Wikipedia's list of ML datasets.</p>
+
+  <h3>The 8-step project checklist</h3>
+  <div class="tw"><table>
+    <tr><th>#</th><th>Step</th><th>Key question / output</th><th>Main tools in this chapter</th></tr>
+    <tr><td>1</td><td><b>Look at the big picture</b></td><td>What is the business goal? How is the problem framed? Which metric?</td><td>RMSE, MAE</td></tr>
+    <tr><td>2</td><td><b>Get the data</b></td><td>Load it, take a first look, <span class="imp">set a test set aside now</span></td><td><code>train_test_split</code>, <code>StratifiedShuffleSplit</code></td></tr>
+    <tr><td>3</td><td><b>Explore &amp; visualise</b></td><td>Patterns, correlations, data quirks, useful new features (training set only)</td><td><code>df.corr()</code>, <code>scatter_matrix</code></td></tr>
+    <tr><td>4</td><td><b>Prepare the data</b></td><td>Clean, encode, add features, scale, all inside functions or pipelines</td><td><code>SimpleImputer</code>, <code>OneHotEncoder</code>, <code>StandardScaler</code>, <code>ColumnTransformer</code></td></tr>
+    <tr><td>5</td><td><b>Select &amp; train models</b></td><td>Try several quick models and shortlist 2–5</td><td><code>cross_val_score</code></td></tr>
+    <tr><td>6</td><td><b>Fine-tune</b></td><td>Search hyperparameters, try ensembles, then test once</td><td><code>GridSearchCV</code>, <code>RandomizedSearchCV</code></td></tr>
+    <tr><td>7</td><td><b>Present the solution</b></td><td>What worked, what didn't, assumptions, limits</td><td>clear plots and one-line findings</td></tr>
+    <tr><td>8</td><td><b>Launch, monitor, maintain</b></td><td>Deploy, watch live performance and input quality, retrain, keep backups</td><td><code>joblib</code>, a web service</td></tr>
+  </table></div>
+  <span class="k t" data-l="Tip">The book's Appendix B has a longer version of this checklist. Adapt it to each project rather than following it blindly.</span>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Look at the big picture <a class="book" href="../geron/reader.html#p=67">book p. 37 ↗</a></h2>
+  <h3>Frame the problem</h3>
+  <ul class="tight">
+    <li><span class="exp">Ask what the model is for.</span> Here, its price estimate is one input to a downstream system that decides where to invest. The objective drives the framing, the algorithm, the metric and how much tuning effort is worth it.</li>
+    <li><span class="exp">Ask what the current solution is.</span> Experts estimate prices by hand with rules, and are often off by more than 20%. That gives you a baseline to beat.</li>
+    <li>A <span class="def">data pipeline</span> is a chain of processing components that usually run asynchronously and talk only through data stores. <span class="tip">It is robust (a broken stage leaves the last output in place)</span>, but <span class="imp">a silent failure makes the data stale unless you monitor it</span>.</li>
+  </ul>
+  <div class="tw"><table>
+    <tr><th>Question</th><th>Answer for the housing project</th><th>Why</th></tr>
+    <tr><td>Supervised / unsupervised / RL?</td><td><b>Supervised</b></td><td>each district comes with its label (the median price)</td></tr>
+    <tr><td>Classification or regression?</td><td><b>Regression</b></td><td>the target is a number</td></tr>
+    <tr><td>How many inputs?</td><td><span class="def">multiple regression</span></td><td>many features per district</td></tr>
+    <tr><td>How many outputs?</td><td><span class="def">univariate regression</span></td><td>one value per district (several would be <i>multivariate</i>)</td></tr>
+    <tr><td>Batch or online?</td><td><b>Batch</b></td><td>no data stream, and it fits in memory. For huge data, split the work across machines (MapReduce) or learn online.</td></tr>
+  </table></div>
+
+  <h3>Select a performance measure</h3>
+  <p>The usual regression metric is the <span class="def">root mean square error (RMSE)</span>. Because the errors are squared, large errors count much more:</p>
+  <div class="math">$$\text{RMSE}(\mathbf X,h)=\sqrt{\frac1m\sum_{i=1}^{m}\big(h(\mathbf x^{(i)})-y^{(i)}\big)^2}$$</div>
+  <p>If there are many outlier districts, the <span class="def">mean absolute error (MAE)</span> is a safer choice:</p>
+  <div class="math">$$\text{MAE}(\mathbf X,h)=\frac1m\sum_{i=1}^{m}\big|h(\mathbf x^{(i)})-y^{(i)}\big|$$</div>
+  <ul class="tight">
+    <li><span class="exp">Notation:</span> $m$ = number of instances, $\mathbf x^{(i)}$ = feature vector of instance $i$ (label excluded), $y^{(i)}$ = its label, $\mathbf X$ = matrix with one row $(\mathbf x^{(i)})^\top$ per instance, $h$ = the prediction function or <span class="def">hypothesis</span>, $\hat y^{(i)}=h(\mathbf x^{(i)})$.</li>
+    <li>Both metrics measure a distance between the prediction vector and the target vector, using a <span class="def">norm</span>. RMSE matches the <span class="def">ℓ2 (Euclidean) norm</span>; MAE matches the <span class="def">ℓ1 (Manhattan) norm</span>.</li>
+  </ul>
+  <div class="math">$$\lVert\mathbf v\rVert_k=\big(|v_1|^k+|v_2|^k+\dots+|v_n|^k\big)^{1/k}\qquad \ell_0=\text{count of non-zeros},\quad \ell_\infty=\max_i|v_i|$$</div>
+  <span class="k i" data-l="Important">The higher the norm index, the more it focuses on the biggest values. So RMSE is more sensitive to outliers than MAE. When outliers are very rare (bell-shaped errors), RMSE works well and is the usual choice.</span>
+
+  <h3>Check the assumptions</h3>
+  <p>Write down every assumption and verify it early. <span class="exp">Example:</span> if the downstream team only turned prices into "cheap / medium / expensive", the task would really be <b>classification</b>, and months of regression work would be aimed at the wrong target. Here they confirmed they need actual prices.</p>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · Get the data <a class="book" href="../geron/reader.html#p=72">book p. 42 ↗</a></h2>
+  <p class="skip">Setting up the workspace: install Python, create an isolated environment (virtualenv / venv / conda), <code>pip install</code> Jupyter, NumPy, pandas, Matplotlib and scikit-learn, then start a notebook.</p>
+  <ul class="tight">
+    <li class="tip">Write a small function that downloads and extracts the data. Then refreshing the data, or setting it up on another machine, takes one call (or a scheduled job).</li>
+    <li>First look with pandas: <code>head()</code>, <code>info()</code> (row count, dtypes, non-null counts), <code>value_counts()</code> for text columns, <code>describe()</code> (count, mean, std, min, <span class="def">percentiles</span>/quartiles, max), and <code>hist()</code>.</li>
+  </ul>
+  <h3>What the first look reveals</h3>
+  <ul class="tight">
+    <li><code>total_bedrooms</code> has <b>207 missing values</b>. That gets fixed later.</li>
+    <li><code>ocean_proximity</code> is text with 5 repeated values, so it is a <span class="def">categorical attribute</span>.</li>
+    <li><code>median_income</code> is not in dollars. It was scaled (roughly units of $10,000) and capped at about 0.5 and 15. <span class="tip">Preprocessed columns are fine; just find out how they were made.</span></li>
+    <li><span class="imp">The target, <code>median_house_value</code>, is capped at $500,000.</span> A model may learn that prices never go higher. If the client needs predictions above the cap, either collect proper labels for those districts or remove them from both the training and test sets.</li>
+    <li>Features have very different scales, and many histograms are <span class="def">tail-heavy</span> (long right tail). Both are handled later (scaling, and possibly a log transform).</li>
+  </ul>
+
+  <h3>Create a test set — now, before looking further</h3>
+  <p><span class="def">Data snooping bias</span>: if you study the test set, your brain spots patterns in it and you pick a model that suits it. The test error then looks better than what you will see in production.</p>
+  <span class="k i" data-l="Important">Split off the test set (typically 20%, less for very large datasets) before any real exploration, and don't look at it again until the very end.</span>
+  <div class="tw"><table>
+    <tr><th>Way to split</th><th>Problem / benefit</th></tr>
+    <tr><td>Shuffle with no seed</td><td class="imp">Each run gives a different test set, so over time you see all of the data.</td></tr>
+    <tr><td>Fixed seed (<code>random_state=42</code>) or save the split</td><td>Stable, but breaks when the dataset is refreshed.</td></tr>
+    <tr><td>Hash of a stable unique ID (e.g. <code>crc32(id) &lt; 0.2·2³²</code>)</td><td class="tip">Stays stable even after new rows are added: old test rows stay in test, and about 20% of new rows join it. Needs an ID that never changes (row index only if rows are only ever appended; or build one from stable features such as latitude/longitude).</td></tr>
+    <tr><td><code>train_test_split(..., test_size=0.2, random_state=42)</code></td><td>scikit-learn's version. It can split several arrays (X and y) on the same indices.</td></tr>
+    <tr><td><b>Stratified</b> split</td><td class="tip">Keeps important subgroups in the same proportions as the full data.</td></tr>
+  </table></div>
+  <p><span class="def">Stratified sampling</span>: split the population into homogeneous groups called <span class="def">strata</span>, then sample the right number from each stratum. Pure random sampling can give a skewed test set, especially when the dataset is not large compared with the number of attributes.</p>
+  <ul class="tight">
+    <li>Experts say median income matters most, so the book builds an <code>income_cat</code> column with <code>pd.cut</code> (5 bins with edges 0, 1.5, 3, 4.5, 6, ∞) and stratifies on it.</li>
+    <li class="imp">Keep the number of strata small, so each stratum has enough instances. Too few rows in a stratum gives a biased estimate of its importance.</li>
+    <li>Tools: <code>StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)</code>, or simply <code>train_test_split(..., stratify=df["income_cat"])</code>.</li>
+    <li class="exp">Drop the helper <code>income_cat</code> column after splitting.</li>
+  </ul>
+
+  <div class="panel">
+    <b>Play: random vs stratified test sets</b>
+    <p class="hint" style="margin-top:.2rem">A synthetic dataset has 5 income categories with uneven shares. Each dot is one split (40 different seeds). The height shows how far that test set's share of the category is from the full dataset's share (relative error). <span style="color:var(--imp)">●</span> random, <span style="color:var(--tip)">●</span> stratified. The ringed dots are the seed chosen below.</p>
+    <div class="controls">
+      <div class="ctl"><label>Dataset size</label><input type="range" id="spN" min="2.3" max="4.3" step="0.05" value="3"/><output id="spNO"></output></div>
+      <div class="ctl"><label>Test ratio</label><input type="range" id="spT" min="0.05" max="0.5" step="0.01" value="0.2"/><output id="spTO"></output></div>
+      <div class="ctl"><label>Highlighted seed</label><input type="range" id="spS" min="1" max="40" step="1" value="1"/><output id="spSO"></output></div>
+    </div>
+    <canvas id="spCv" height="300" aria-label="Relative error of category proportions in random and stratified test sets"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">random: worst error (this seed)</div><div class="v" id="spR">–</div></div>
+      <div class="stat"><div class="kk">stratified: worst error</div><div class="v" id="spSt">–</div></div>
+      <div class="stat"><div class="kk">random seeds off by &gt;10%</div><div class="v" id="spBad">–</div></div>
+      <div class="stat"><div class="kk">test rows in rarest category</div><div class="v" id="spMin">–</div></div>
+    </div>
+    <p class="hint" id="spMsg"></p>
+  </div>
+
+  <!-- ===================================================== 4 -->
+  <h2>4 · Discover and visualise the data <a class="book" href="../geron/reader.html#p=86">book p. 56 ↗</a></h2>
+  <p class="imp">Explore the training set only, and work on a copy. If the training set is huge, explore a smaller sample.</p>
+  <h3>Geographical scatter</h3>
+  <ul class="tight">
+    <li>Plotting longitude against latitude with a low <code>alpha</code> (e.g. 0.1) shows where districts are dense: the Bay Area, Los Angeles, San Diego and the Central Valley.</li>
+    <li>Adding <code>s=</code> (marker size = population) and <code>c=</code> (colour = price) with a colormap shows that <span class="exp">price depends strongly on location and density</span>, for example near the coast.</li>
+    <li class="tip">Idea: clustering could give new features such as the distance to the main cluster centres.</li>
+  </ul>
+  <h3>Looking for correlations</h3>
+  <p>The <span class="def">standard correlation coefficient</span> (<span class="def">Pearson's r</span>) is between −1 and 1. <code>df.corr()</code> computes it for every pair of columns. Median income has by far the strongest link to the price (r ≈ 0.69).</p>
+  <div class="math">$$r_{xy}=\frac{\sum_i (x_i-\bar x)(y_i-\bar y)}{\sqrt{\sum_i (x_i-\bar x)^2}\,\sqrt{\sum_i (y_i-\bar y)^2}}$$</div>
+  <span class="k i" data-l="Important">r only measures <b>linear</b> relationships. A strong non-linear dependence (e.g. a U-shape) can have r ≈ 0. And r says nothing about the slope: height in cm and height in inches have r = 1.</span>
+  <ul class="tight">
+    <li><code>pandas.plotting.scatter_matrix</code> plots every chosen numeric column against every other one, with histograms on the diagonal. Pick a few promising columns, because n columns give n² plots.</li>
+    <li>The income vs. price scatter shows the $500k cap as a horizontal line, plus <span class="imp">fainter horizontal lines</span> (around $450k, $350k, $280k…). These are data quirks; consider removing those districts so models don't learn them.</li>
+  </ul>
+  <h3>Experimenting with attribute combinations</h3>
+  <p>Raw totals mean little without context. Ratios are more informative:</p>
+  <ul class="tight">
+    <li><code>rooms_per_household</code> = rooms / households</li>
+    <li><code>bedrooms_per_room</code> = bedrooms / rooms. <span class="tip">Its correlation with price (≈ −0.26) is much stronger than either total alone.</span> Fewer bedrooms per room tends to mean pricier homes.</li>
+    <li><code>population_per_household</code> = population / households</li>
+  </ul>
+  <p class="exp">Exploration doesn't need to be exhaustive. Build a prototype fast, then come back here with what the model teaches you.</p>
+
+  <!-- ===================================================== 5 -->
+  <h2>5 · Prepare the data for ML algorithms <a class="book" href="../geron/reader.html#p=92">book p. 62 ↗</a></h2>
+  <p>Write preparation as <b>functions and transformers</b>, not manual edits. Then you can repeat it on fresh data, reuse it in later projects, apply it in production, and switch options on and off to see what helps.</p>
+  <p class="exp">Start again from a clean copy of the training set, and separate the predictors (X) from the labels (y), since they don't get the same transformations.</p>
+
+  <h3>Data cleaning (missing values)</h3>
+  <div class="tw"><table>
+    <tr><th>Option</th><th>pandas</th><th>Downside</th></tr>
+    <tr><td>1. Drop the rows with missing values</td><td><code>dropna(subset=[...])</code></td><td>loses data</td></tr>
+    <tr><td>2. Drop the whole column</td><td><code>drop(col, axis=1)</code></td><td>loses a feature</td></tr>
+    <tr><td>3. Fill with a value (0, mean, median…)</td><td><code>fillna(median)</code></td><td>must reuse the <b>training</b> median on test and live data</td></tr>
+  </table></div>
+  <p><code>SimpleImputer(strategy="median")</code> does option 3 properly. <code>fit</code> learns each column's median (stored in <code>statistics_</code>), and <code>transform</code> fills the gaps. It only works on numeric columns, so remove the text column first (or use a <code>ColumnTransformer</code>).</p>
+  <span class="k t" data-l="Tip">Fit the imputer on all numeric columns, not just the one with gaps today. New data may have missing values anywhere.</span>
+
+  <h3>scikit-learn's design (worth memorising)</h3>
+  <div class="tw"><table>
+    <tr><th>Idea</th><th>Meaning</th></tr>
+    <tr><td><span class="def">Estimator</span></td><td>Anything that learns from data with <code>fit(X[, y])</code>. Settings passed to the constructor are <b>hyperparameters</b> (e.g. <code>strategy</code>).</td></tr>
+    <tr><td><span class="def">Transformer</span></td><td>An estimator with <code>transform(X)</code>. <code>fit_transform</code> does both, sometimes faster.</td></tr>
+    <tr><td><span class="def">Predictor</span></td><td>An estimator with <code>predict(X)</code> and <code>score(X, y)</code>.</td></tr>
+    <tr><td>Inspection</td><td>Hyperparameters are public attributes (<code>imputer.strategy</code>); learned values end in an underscore (<code>imputer.statistics_</code>).</td></tr>
+    <tr><td>No extra classes</td><td>Data are NumPy arrays or SciPy sparse matrices; hyperparameters are plain strings and numbers.</td></tr>
+    <tr><td>Composition</td><td>Building blocks combine, e.g. <code>Pipeline</code>.</td></tr>
+    <tr><td>Sensible defaults</td><td>A working baseline comes quickly.</td></tr>
+  </table></div>
+
+  <h3>Text &amp; categorical attributes</h3>
+  <ul class="tight">
+    <li><code>OrdinalEncoder</code> maps each category to an integer (the list is in <code>categories_</code>). <span class="imp">Models then assume that nearby numbers mean similar categories</span>, which only makes sense for ordered categories (bad &lt; average &lt; good).</li>
+    <li><span class="def">One-hot encoding</span> creates one 0/1 column per category (<span class="def">dummy attributes</span>). <code>OneHotEncoder</code> returns a <span class="def">sparse matrix</span> by default, which stores only the positions of the 1s. That saves a lot of memory when there are thousands of categories. Use <code>.toarray()</code> to get a dense array.</li>
+    <li class="tip">If a category has very many values, one-hot creates too many features. Replace it with meaningful numbers (e.g. distance to the ocean, a country's GDP) or with a learned <span class="def">embedding</span>, an example of <i>representation learning</i>.</li>
+  </ul>
+
+  <h3>Custom transformers</h3>
+  <p>scikit-learn uses duck typing: a class with <code>fit</code> (which returns <code>self</code>) and <code>transform</code> works in pipelines.</p>
+  <ul class="tight">
+    <li>Inherit from <code>TransformerMixin</code> to get <code>fit_transform</code> for free.</li>
+    <li>Inherit from <code>BaseEstimator</code> (and use explicit constructor arguments, no <code>*args</code>/<code>**kwargs</code>) to get <code>get_params</code>/<code>set_params</code>, which grid search needs.</li>
+    <li class="tip">Put a hyperparameter on any preparation step you're unsure about (the book's example: <code>add_bedrooms_per_room=True</code>). Then a search can decide whether the step helps.</li>
+  </ul>
+  <pre><code># minimal pattern (own example)
+from sklearn.base import BaseEstimator, TransformerMixin
+class RatioAdder(BaseEstimator, TransformerMixin):
+    def __init__(self, add_ratio=True):
+        self.add_ratio = add_ratio
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X):
+        return np.c_[X, X[:, 0] / X[:, 1]] if self.add_ratio else X</code></pre>
+
+  <h3>Feature scaling</h3>
+  <p>Most algorithms work badly when numeric inputs have very different ranges (rooms go up to about 39,000, income stays under about 15). <span class="exp">Scaling the target is usually not needed.</span></p>
+  <div class="tw"><table>
+    <tr><th></th><th>Min-max scaling ("normalisation")</th><th>Standardisation</th></tr>
+    <tr><td>Formula</td><td>$x' = \dfrac{x-\min}{\max-\min}$</td><td>$z = \dfrac{x-\mu}{\sigma}$</td></tr>
+    <tr><td>Result</td><td>values in [0, 1] (or a chosen <code>feature_range</code>)</td><td>mean 0, variance 1, <b>not bounded</b></td></tr>
+    <tr><td>Outliers</td><td class="imp">one extreme value squashes all the others into a tiny range</td><td class="tip">much less affected</td></tr>
+    <tr><td>Good for</td><td>inputs that must lie in a fixed range (e.g. many neural nets)</td><td>most other models</td></tr>
+    <tr><td>scikit-learn</td><td><code>MinMaxScaler</code></td><td><code>StandardScaler</code></td></tr>
+  </table></div>
+  <span class="k i" data-l="Important">Fit scalers (and every other transformer) on the <b>training set only</b>. Then use that fitted transformer on the training set, the test set and new data.</span>
+
+  <div class="panel">
+    <b>Play: one bad value vs. three scalers</b>
+    <p class="hint" style="margin-top:.2rem">40 district incomes (roughly 1–10) plus one mistyped value. Drag the outlier and watch where the normal points (shaded band) end up under each scaler. The rows below the raw values use fixed windows, so their spreads can be compared. The robust scaler (<code>RobustScaler</code>: median and IQR) is shown for comparison.</p>
+    <div class="controls">
+      <div class="ctl"><label>Outlier value</label><input type="range" id="scO" min="10" max="200" step="1" value="100"/><output id="scOO"></output></div>
+      <div class="ctl"><label>Normal points</label><input type="range" id="scN" min="10" max="200" step="5" value="40"/><output id="scNO"></output></div>
+    </div>
+    <canvas id="scCv" height="280" aria-label="Number lines comparing min-max, standard and robust scaling"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">min-max: normal points span</div><div class="v" id="scMM">–</div></div>
+      <div class="stat"><div class="kk">standardised: normal points span</div><div class="v" id="scSS">–</div></div>
+      <div class="stat"><div class="kk">outlier's z-score</div><div class="v" id="scZ">–</div></div>
+      <div class="stat"><div class="kk">robust: normal points span</div><div class="v" id="scRB">–</div></div>
+    </div>
+    <p class="hint" id="scMsg"></p>
+  </div>
+
+  <h3>Transformation pipelines</h3>
+  <ul class="tight">
+    <li><code>Pipeline([("name", step), ...])</code> runs the steps in order. Every step except the last must be a transformer. Names must be unique and must not contain <code>__</code>, because the double underscore is used later to address nested parameters (<code>"imputer__strategy"</code>).</li>
+    <li><span class="exp">Calling <code>pipeline.fit</code></span> runs <code>fit_transform</code> on each step in turn and then <code>fit</code> on the last. The pipeline offers whatever methods the last step has (<code>transform</code>, <code>predict</code>…).</li>
+    <li><code>ColumnTransformer([("num", num_pipeline, num_cols), ("cat", OneHotEncoder(), cat_cols)])</code> sends each group of columns to its own transformer and joins the outputs side by side. It accepts pandas column names.</li>
+    <li>If sparse and dense outputs are mixed, the result is sparse only when the overall density is below <code>sparse_threshold</code> (default 0.3).</li>
+    <li>A step can be <code>"drop"</code> or <code>"passthrough"</code>. Columns you don't list are <b>dropped by default</b>; change that with <code>remainder=</code>.</li>
+    <li class="skip">Before <code>ColumnTransformer</code> existed (0.20), people used <code>FeatureUnion</code> with a custom column-selector transformer, or the sklearn-pandas library.</li>
+  </ul>
+
+  <span class="k t" data-l="Changed since the book (2019 → scikit-learn 1.4+)">
+    • <code>OneHotEncoder(sparse=False)</code> is now <code>sparse_output=False</code> (renamed in 1.2). Add <code>handle_unknown="ignore"</code> so categories that appear only in new data don't raise an error.<br>
+    • <code>get_feature_names()</code> became <code>get_feature_names_out()</code>, and it works on whole pipelines and <code>ColumnTransformer</code>s. <code>set_output(transform="pandas")</code> makes transformers return DataFrames.<br>
+    • Simple custom steps can be a <code>FunctionTransformer(func, feature_names_out=...)</code> instead of a class.<br>
+    • Use <code>root_mean_squared_error(y, ŷ)</code> (1.4+) instead of <code>np.sqrt(mean_squared_error(...))</code>, and <code>scoring="neg_root_mean_squared_error"</code> in CV. (<code>squared=False</code> was deprecated.)<br>
+    • <code>train_test_split(..., stratify=y_cat)</code> is a one-line stratified split.<br>
+    • pandas 2: <code>df.corr()</code> no longer skips text columns silently; use <code>df.corr(numeric_only=True)</code>.<br>
+    • <code>RandomForestRegressor</code>: <code>criterion="mse"</code> is now <code>"squared_error"</code>, <code>n_estimators</code> now defaults to 100 (it was 10), and the old <code>min_impurity_split</code> was removed.
+  </span>
+
+  <!-- ===================================================== 6 -->
+  <h2>6 · Select and train a model <a class="book" href="../geron/reader.html#p=102">book p. 72 ↗</a></h2>
+  <ol class="tight">
+    <li><code>LinearRegression</code>: training RMSE ≈ $68.6k, while typical prices are $120k–$265k. That is <span class="imp">underfitting</span>. Fixes: a more powerful model, better features, or fewer constraints (this model has no regularisation to remove).</li>
+    <li><code>DecisionTreeRegressor</code>: training RMSE = <b>0</b>. That is almost certainly <span class="imp">severe overfitting</span>, not perfection.</li>
+    <li>So evaluate on data the model hasn't trained on, <b>without touching the test set</b>. Use a validation split or, better, cross-validation.</li>
+  </ol>
+  <h3>Cross-validation</h3>
+  <p><span class="def">K-fold cross-validation</span> splits the training set into K <span class="def">folds</span>, trains K times (each time on K−1 folds) and scores on the remaining fold. You get K scores, so you get <b>a mean and a standard deviation</b>, which tells you how precise the estimate is. The cost is K times the training time.</p>
+  <pre><code>scores = cross_val_score(model, X, y, cv=10, scoring="neg_root_mean_squared_error")
+rmse = -scores          # scorers follow "greater is better", so errors come back negated</code></pre>
+  <div class="tw"><table>
+    <tr><th>Model (book's housing run)</th><th>Training RMSE</th><th>10-fold CV RMSE</th><th>Reading</th></tr>
+    <tr><td>Linear regression</td><td>≈ 68.6k</td><td>≈ 69.1k ± 2.7k</td><td>underfits</td></tr>
+    <tr><td>Decision tree</td><td>0</td><td>≈ 71.4k ± 2.4k</td><td class="imp">overfits badly, worse than linear</td></tr>
+    <tr><td>Random forest</td><td>≈ 18.6k</td><td>≈ 50.2k ± 2.1k</td><td class="tip">best so far, but the big train/CV gap means it still overfits</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li>A <code>RandomForestRegressor</code> averages many decision trees trained on random subsets. Building on many models like this is <span class="def">ensemble learning</span> (chapter 7).</li>
+    <li class="tip">Try many model families quickly (SVMs with different kernels, a neural net…) without much tuning, and <b>shortlist 2–5</b>.</li>
+    <li class="tip">Save every experiment: hyperparameters, learned parameters, CV scores and predictions. Use <code>joblib.dump(model, "m.pkl")</code> / <code>joblib.load</code> (better than pickle for large NumPy arrays).</li>
+  </ul>
+
+  <!-- ===================================================== 7 -->
+  <h2>7 · Fine-tune your model <a class="book" href="../geron/reader.html#p=105">book p. 75 ↗</a></h2>
+  <h3>Grid search</h3>
+  <p><code>GridSearchCV(estimator, param_grid, cv=5, scoring=..., return_train_score=True)</code> cross-validates <b>every combination</b> in the grid. <code>param_grid</code> can be a list of dicts, each explored separately.</p>
+  <ul class="tight">
+    <li><span class="exp">Cost:</span> the book's grid has 3×4 + 2×3 = 18 combinations × 5 folds = <b>90 training runs</b>.</li>
+    <li>Results: <code>best_params_</code>, <code>best_estimator_</code>, <code>cv_results_</code> (mean test score for each combination).</li>
+    <li class="exp">With <code>refit=True</code> (the default), the best combination is retrained on the whole training set.</li>
+    <li class="tip">No idea what value to try? Start with consecutive powers of 10, then zoom in.</li>
+    <li class="imp">If the best value sits at the edge of the grid (here <code>max_features=8</code>, <code>n_estimators=30</code>), extend the grid in that direction.</li>
+    <li class="tip">Preparation options can be hyperparameters too (whether to add a feature, how to impute, how to treat outliers). Put them in one pipeline and search over <code>"step__param"</code>.</li>
+  </ul>
+  <h3>Randomized search</h3>
+  <p><code>RandomizedSearchCV(estimator, param_distributions, n_iter=..., cv=...)</code> samples random combinations. It is better when the search space is large:</p>
+  <ul class="tight">
+    <li>Every run tries a new value for each hyperparameter, so 1,000 iterations explore 1,000 values per hyperparameter instead of a handful.</li>
+    <li>You set the compute budget directly with <code>n_iter</code>.</li>
+  </ul>
+  <h3>Ensembles</h3>
+  <p>Combining your best models often beats the best single one, <span class="exp">especially when they make different kinds of errors</span>. Details in chapter 7.</p>
+  <h3>Analyse the best models and their errors</h3>
+  <ul class="tight">
+    <li><code>feature_importances_</code> of a random forest ranks the inputs. In the book, median income comes first, then the INLAND category and population per household.</li>
+    <li class="tip">Drop features that don't help (e.g. most one-hot ocean categories), and look at the specific errors to find missing features or outliers to clean.</li>
+  </ul>
+  <h3>Evaluate on the test set — once</h3>
+  <ul class="tight">
+    <li class="imp">Run the fitted pipeline on the test set with <code>transform()</code>, <b>never <code>fit_transform()</code></b>, then compute the RMSE (≈ $47.7k in the book).</li>
+    <li>A single number may not be enough to justify a launch. Add a <span class="def">95% confidence interval</span> for the RMSE, using the t-distribution over the squared errors $e_i=(\hat y_i-y_i)^2$:</li>
+  </ul>
+  <div class="math">$$\text{CI}_{\text{RMSE}}=\sqrt{\;\bar e\;\pm\;t_{0.975,\,m-1}\cdot\frac{s_e}{\sqrt m}\;}\qquad\texttt{scipy.stats.t.interval(0.95, m-1, loc=e.mean(), scale=stats.sem(e))}$$</div>
+  <span class="k i" data-l="Important">The test score is often a little worse than the CV score after heavy tuning. Do <b>not</b> tweak hyperparameters to improve the test number; those gains won't carry over to new data.</span>
+  <p><span class="exp">Pre-launch:</span> present what you learned, what worked and what didn't, your assumptions and limitations, with clear visuals and one-line findings ("median income is the top predictor"). Even a model that only matches the experts can be worth launching if it frees their time.</p>
+
+  <!-- ===================================================== 8 -->
+  <h2>8 · Launch, monitor, and maintain <a class="book" href="../geron/reader.html#p=110">book p. 80 ↗</a></h2>
+  <h3>Deploy</h3>
+  <ul class="tight">
+    <li>Polish the code, write tests and docs. Save the <b>whole</b> fitted pipeline (preprocessing + model) with <code>joblib</code>.</li>
+    <li>Options: load it inside the web app (once at start-up, not on every request); or wrap it as a separate <span class="def">web service</span> behind a REST API, which is easier to upgrade and scale and can be called from any language; or use a cloud prediction service.</li>
+    <li class="skip">The book's cloud example is Google Cloud AI Platform: upload the joblib file to Cloud Storage and create a model version. Chapter 19 covers this for TensorFlow.</li>
+  </ul>
+  <h3>Monitor</h3>
+  <ul class="tight">
+    <li class="imp">Models "rot": the world changes, so performance can fall suddenly (a broken component) or slowly (data drift). A slow decline can go unnoticed for a long time.</li>
+    <li>Measure live performance through downstream metrics (e.g. sales from recommendations) or with <b>human raters</b> checking a sample, especially low-confidence cases. Raters can be experts, crowd workers, or the users themselves.</li>
+    <li class="tip">Also monitor the <b>inputs</b>: more missing values, mean or standard deviation drifting away from the training data, new categories. These warn you earlier than the output metrics.</li>
+    <li class="skip">Even a cats-vs-dogs model needs retraining eventually, because cameras, image formats and fashions change.</li>
+  </ul>
+  <h3>Maintain</h3>
+  <ul class="tight">
+    <li>Automate: collect and label fresh data, retrain and tune on a schedule, compare the new model with the old one on an updated test set, and deploy only if it isn't worse (if it is worse, investigate).</li>
+    <li class="imp">Keep backups of every model and every dataset version, and be able to roll back quickly.</li>
+    <li class="tip">Build test subsets for specific slices (the most recent data, inland vs. coastal districts…) to understand where the model is strong or weak.</li>
+    <li class="exp">Monitoring and infrastructure are often more work than building the model. The first project is slow; later ones are much faster.</li>
+  </ul>
+
+  <!-- ===================================================== 9 -->
+  <h2>9 · Try it out &amp; exercises <a class="book" href="../geron/reader.html#p=113">book p. 83 ↗</a></h2>
+  <p>The main lesson: most of the effort goes into data preparation, monitoring and automation. <span class="tip">Knowing the whole process well and 3–4 algorithms thoroughly is worth more than knowing many exotic algorithms.</span> Pick a dataset you care about (Kaggle is a good start) and go from A to Z.</p>
+  <p><a class="book" href="../geron/reader.html#p=114">Exercises, book p. 84 ↗</a> All use the housing data:</p>
+  <ol class="tight">
+    <li>Try <code>sklearn.svm.SVR</code> with <code>kernel="linear"</code> (vary <code>C</code>) and <code>kernel="rbf"</code> (vary <code>C</code> and <code>gamma</code>).</li>
+    <li>Replace <code>GridSearchCV</code> with <code>RandomizedSearchCV</code>.</li>
+    <li>Add a pipeline step that keeps only the most important features.</li>
+    <li>Build a single pipeline from raw data to prediction.</li>
+    <li>Use <code>GridSearchCV</code> to explore preparation options automatically.</li>
+  </ol>
+  <p class="hint">The cell below does a small version of exercises 2, 4 and 5.</p>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — the whole project in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. The packages download on the first run (≈ 20–40 s, needs internet). <b>The California housing file needs a download, so this cell builds a synthetic "housing-like" dataset instead</b> (income, rooms, households, a text zone column, missing values and a capped target). The steps are the same as in the book.</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false">import numpy as np, pandas as pd
+from scipy import stats
+from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
+from sklearn.pipeline import make_pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransformer
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import root_mean_squared_error
+
+# Synthetic "housing-like" data (the real California file needs a download)
+rng = np.random.default_rng(42)
+n = 3000
+income = rng.lognormal(1.2, 0.45, n)
+rooms = rng.gamma(4, 300, n); households = rooms / rng.normal(5, 1, n).clip(2)
+zone = rng.choice(["COAST", "INLAND", "BAY"], n, p=[.45, .4, .15])
+bonus = np.select([zone == "COAST", zone == "BAY"], [60, 90], 0)
+value = 25 * income + 8 * rooms / households + bonus * (income &gt; 3) + rng.normal(0, 15, n)
+value = value.clip(max=300)                              # a capped target, like the book's
+df = pd.DataFrame(dict(income=income, rooms=rooms, households=households, zone=zone, value=value))
+df.loc[rng.random(n) &lt; 0.02, "rooms"] = np.nan          # some missing values
+
+# 1) Stratified split on an income category
+df["income_cat"] = pd.cut(df.income, [0, 2, 3, 4.5, 6, np.inf], labels=[1, 2, 3, 4, 5])
+train, test = train_test_split(df, test_size=0.2, stratify=df.income_cat, random_state=42)
+print("income_cat share  all :", df.income_cat.value_counts(normalize=True).sort_index().round(3).tolist())
+print("income_cat share  test:", test.income_cat.value_counts(normalize=True).sort_index().round(3).tolist())
+X, y = train.drop(columns=["value", "income_cat"]), train.value
+X_test, y_test = test.drop(columns=["value", "income_cat"]), test.value
+
+# 2) Preprocessing: impute -&gt; ratio feature -&gt; scale; one-hot the category
+def add_ratio(Z):
+    return np.c_[Z, Z[:, 1] / Z[:, 2]]          # rooms per household
+num = make_pipeline(SimpleImputer(strategy="median"),
+                    FunctionTransformer(add_ratio, feature_names_out=lambda s, f: [*f, "rooms_per_hh"]),
+                    StandardScaler())
+prep = ColumnTransformer([("num", num, ["income", "rooms", "households"]),
+                          ("cat", OneHotEncoder(handle_unknown="ignore"), ["zone"])])
+print("features:", list(prep.fit(X).get_feature_names_out()))
+
+# 3) Try several models with 5-fold cross-validation (RMSE)
+for name, model in [("linear", LinearRegression()),
+                    ("tree", DecisionTreeRegressor(random_state=42)),
+                    ("forest", RandomForestRegressor(n_estimators=50, random_state=42))]:
+    pipe = make_pipeline(prep, model).fit(X, y)
+    train_rmse = root_mean_squared_error(y, pipe.predict(X))
+    cv = -cross_val_score(pipe, X, y, cv=5, scoring="neg_root_mean_squared_error")
+    print(f"{name:7} train RMSE={train_rmse:6.2f}   CV RMSE={cv.mean():6.2f} ± {cv.std():.2f}")
+
+# 4) Fine-tune the forest with randomized search (prep step is tuned too!)
+full = make_pipeline(prep, RandomForestRegressor(random_state=42))
+search = RandomizedSearchCV(full, {
+    "columntransformer__num__simpleimputer__strategy": ["mean", "median"],
+    "randomforestregressor__max_features": [1, 2, 3, 4, 5, 6],
+    "randomforestregressor__min_samples_leaf": [1, 5, 10, 20]},
+    n_iter=8, cv=3, scoring="neg_root_mean_squared_error", random_state=42)
+search.fit(X, y)
+print("best params:", {k.split("__")[-1]: v for k, v in search.best_params_.items()})
+print(f"best CV RMSE: {-search.best_score_:.2f}")
+
+# 5) Touch the test set ONCE, with a 95% confidence interval
+pred = search.best_estimator_.predict(X_test)
+sq = (pred - y_test) ** 2
+lo, hi = np.sqrt(stats.t.interval(0.95, len(sq) - 1, loc=sq.mean(), scale=stats.sem(sq)))
+print(f"test RMSE = {root_mean_squared_error(y_test, pred):.2f}  (95% CI {lo:.2f} – {hi:.2f})")</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+  <details><summary>What to look for in the output</summary>
+    <ul class="tight">
+      <li>The stratified test set matches the full dataset's income-category shares almost exactly.</li>
+      <li><code>get_feature_names_out()</code> lists the added ratio column and the one-hot columns.</li>
+      <li>The tree scores 0 on the training data but much worse in CV: classic overfitting. The forest wins in CV.</li>
+      <li>The search also tunes the imputer's strategy, a preparation step used as a hyperparameter.</li>
+      <li>The test RMSE lands close to the best CV RMSE and comes with a confidence interval.</li>
+    </ul>
+  </details>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">The downstream team only uses "cheap / medium / expensive". What changes?</div><div class="face a">The task becomes classification, not regression. That's why you check assumptions before building anything.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Your errors include some huge outliers. RMSE or MAE?</div><div class="face a">MAE (ℓ1). RMSE (ℓ2) squares errors, so a few outliers dominate it. With bell-shaped errors, RMSE is fine.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why split off the test set before exploring?</div><div class="face a">To avoid data snooping bias. Patterns you notice in the test data would shape your choices and make the final estimate too optimistic.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">When does stratified sampling matter most?</div><div class="face a">When the dataset is small, or a key attribute has rare groups. A random split can then over- or under-represent those groups.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why is OrdinalEncoder a poor choice for ocean_proximity?</div><div class="face a">The categories have no order, but the model would treat 0 and 1 as "closer" than 0 and 4. Use one-hot encoding.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">A district's income is mistyped as 100. Which scaler suffers?</div><div class="face a">Min-max: every normal value is squeezed into a tiny range near 0. Standardisation is much less affected, and a robust scaler even less.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Training RMSE = 0, 10-fold CV RMSE is high. Diagnosis?</div><div class="face a">Severe overfitting (the book's decision tree). Constrain or regularise the model, get more data, or pick another model.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Grid vs randomized search: when do you pick randomized?</div><div class="face a">When the search space is large. It tries many values per hyperparameter, and n_iter fixes the compute budget.</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="geron-ch01-ml-landscape.html">Ch 1 — The ML landscape</a>: supervised vs. unsupervised, batch vs. online, overfitting, test and validation sets</li>
+    <li><a href="geron-ch03-classification.html">Ch 3 — Classification</a>: the same workflow with classification metrics</li>
+    <li><a href="geron-ch04-training-models.html">Ch 4 — Training models</a>: what happens inside <code>LinearRegression</code>, why scaling matters for gradient descent, learning curves</li>
+    <li><a href="geron-ch05-svm.html">Ch 5 — SVMs</a> (exercise 1's <code>SVR</code>) · <a href="geron-ch06-decision-trees.html">Ch 6 — Decision trees</a> · <a href="geron-ch07-ensembles.html">Ch 7 — Ensembles &amp; random forests</a></li>
+    <li><a href="gradient-descent.html">Gradient descent note</a>: see how unscaled features slow training down</li>
+    <li>Project notebooks: <i>5. PreProcessing</i> and <i>8. Composite Estimators using Pipelines</i> practise the same tools</li>
+    <li><a href="../geron/reader.html#p=751">Book answers to the chapter 2 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> list the 8 steps of an ML project and say what each one produces</label></li>
+    <li><label><input type="checkbox"/> frame a problem (supervised? regression? batch?) and choose between RMSE and MAE</label></li>
+    <li><label><input type="checkbox"/> make a stable, stratified test set and explain data snooping</label></li>
+    <li><label><input type="checkbox"/> build a <code>ColumnTransformer</code> with imputing, encoding, a custom step and scaling</label></li>
+    <li><label><input type="checkbox"/> compare models with cross-validation and spot under- and overfitting</label></li>
+    <li><label><input type="checkbox"/> tune with grid or randomized search, test once with a confidence interval, and list what to monitor after launch</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 2. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch02';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const fmt=(v,d=3)=>!isFinite(v)?'∞':Math.abs(v)>=1e5?v.toExponential(1):v.toFixed(d);
+// largest-remainder allocation: split `total` into integers proportional to weights w
+function allocate(total,w){const s=w.reduce((a,b)=>a+b,0);const raw=w.map(v=>v/s*total);const out=raw.map(Math.floor);
+  let left=total-out.reduce((a,b)=>a+b,0);raw.map((v,i)=>[v-out[i],i]).sort((a,b)=>b[0]-a[0]).slice(0,left).forEach(([,i])=>out[i]++);return out;}
+
+/* ================= Split playground ================= */
+const SHARES=[0.05,0.30,0.35,0.19,0.11], NSEEDS=40, NCAT=SHARES.length;
+function spCompute(){
+  const N=Math.round(Math.pow(10,+$('#spN').value)), ratio=+$('#spT').value, t=Math.max(1,Math.round(N*ratio));
+  const counts=allocate(N,SHARES), overall=counts.map(c=>c/N);
+  const labels=new Uint8Array(N);{let p=0;counts.forEach((c,k)=>{for(let i=0;i<c;i++)labels[p++]=k;});}
+  const strat=allocate(t,counts).map(c=>c/t);             // stratified: same share whatever the seed
+  const stratErr=strat.map((p,k)=>(p-overall[k])/overall[k]*100);
+  const rand=[];const arr=new Uint8Array(N);
+  for(let s=1;s<=NSEEDS;s++){
+    arr.set(labels);const r=mulberry(s*7919+N*13+Math.round(ratio*100));const cnt=new Array(NCAT).fill(0);
+    for(let i=0;i<t;i++){const j=i+Math.floor(r()*(N-i));const tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;cnt[arr[i]]++;}
+    rand.push(cnt.map((c,k)=>(c/t-overall[k])/overall[k]*100));
+  }
+  return{N,t,counts,overall,stratErr,rand,minTest:Math.min(...allocate(t,counts))};
+}
+function drawSP(){
+  const S=spCompute(), seed=+$('#spS').value;
+  $('#spNO').textContent=S.N.toLocaleString('en');$('#spTO').textContent=Math.round(+$('#spT').value*100)+'%';$('#spSO').textContent=seed;
+  const{x,W,H}=setupCanvas($('#spCv'));
+  const worst=e=>Math.max(...e.map(Math.abs));
+  let R=Math.max(10,...S.rand.map(worst));R=Math.min(150,Math.ceil(R/10)*10);
+  const padL=44,padB=34,padT=12,plotW=W-padL-8,plotH=H-padB-padT;
+  const py=v=>padT+plotH/2-Math.max(-R,Math.min(R,v))/R*plotH/2;
+  // grid
+  x.font='11px system-ui';x.textAlign='right';x.textBaseline='middle';
+  [-R,-R/2,0,R/2,R].forEach(v=>{x.strokeStyle=css('--border');x.lineWidth=v===0?2:1;x.beginPath();x.moveTo(padL,py(v));x.lineTo(W-8,py(v));x.stroke();
+    x.fillStyle=css('--muted');x.fillText((v>0?'+':'')+Math.round(v)+'%',padL-5,py(v));});
+  // ±10% band
+  x.fillStyle=css('--tip');x.globalAlpha=.08;x.fillRect(padL,py(10),plotW,py(-10)-py(10));x.globalAlpha=1;
+  const gw=plotW/NCAT;
+  for(let k=0;k<NCAT;k++){
+    const cx=padL+gw*(k+.5), xr=cx-gw*.2, xs=cx+gw*.2;
+    const r=mulberry(k+99);
+    S.rand.forEach((e,s)=>{const jx=xr+(r()-.5)*gw*.22;x.fillStyle=css('--imp');x.globalAlpha=.55;x.beginPath();x.arc(jx,py(e[k]),3,0,7);x.fill();
+      if(s===seed-1){x.globalAlpha=1;x.strokeStyle=css('--text');x.lineWidth=2;x.beginPath();x.arc(jx,py(e[k]),6,0,7);x.stroke();}});
+    x.globalAlpha=1;
+    x.fillStyle=css('--tip');x.beginPath();x.arc(xs,py(S.stratErr[k]),5,0,7);x.fill();
+    x.strokeStyle=css('--text');x.lineWidth=2;x.beginPath();x.arc(xs,py(S.stratErr[k]),8,0,7);x.stroke();
+    x.textAlign='center';x.textBaseline='top';x.fillStyle=css('--text');x.font='12px system-ui';
+    x.fillText('cat '+(k+1),cx,H-padB+5);x.fillStyle=css('--muted');x.font='11px system-ui';x.fillText(Math.round(S.overall[k]*100)+'% of data',cx,H-padB+19);
+  }
+  x.textAlign='left';x.textBaseline='alphabetic';x.fillStyle=css('--muted');x.font='11px system-ui';x.fillText('test share vs. full-data share (relative error)',padL+4,padT+10);
+  const rw=worst(S.rand[seed-1]), sw=worst(S.stratErr), bad=S.rand.filter(e=>worst(e)>10).length;
+  $('#spR').textContent=rw.toFixed(1)+'%';$('#spSt').textContent=sw.toFixed(1)+'%';
+  $('#spBad').textContent=bad+' / '+NSEEDS;$('#spMin').textContent=S.minTest;
+  const k=S.rand[seed-1].map(Math.abs).indexOf(rw);
+  $('#spMsg').textContent=S.minTest<10?`Only ${S.minTest} test rows fall in the rarest category, so any split gives a noisy estimate for it. Use more data or fewer strata.`:
+    rw>10?`Seed ${seed}: the random test set gets category ${k+1} wrong by ${rw.toFixed(0)}%. Stratified stays within ${sw.toFixed(1)}% for every seed.`:
+    bad>0?`Seed ${seed} happens to be fine, but ${bad} of ${NSEEDS} random seeds are off by more than 10% somewhere. Stratified never is.`:
+    'With this much data even random splits stay within 10%. Stratifying matters most for small datasets and rare groups.';
+}
+['spN','spT','spS'].forEach(id=>$('#'+id).oninput=drawSP);
+
+/* ================= Scaling playground ================= */
+const SC={base:(()=>{const r=mulberry(5),a=[];for(let i=0;i<200;i++)a.push(Math.min(10,Math.max(1,Math.exp(1.2+0.4*gauss(r)))));return a;})()};
+function quantile(s,q){const p=(s.length-1)*q,lo=Math.floor(p),hi=Math.ceil(p);return s[lo]+(s[hi]-s[lo])*(p-lo);}
+function drawSC(){
+  const out=+$('#scO').value,n=+$('#scN').value;$('#scOO').textContent=out;$('#scNO').textContent=n;
+  const inl=SC.base.slice(0,n),all=[...inl,out];
+  const mn=Math.min(...all),mx=Math.max(...all),mu=all.reduce((a,b)=>a+b,0)/all.length,sd=Math.sqrt(all.reduce((a,b)=>a+(b-mu)**2,0)/all.length);
+  const srt=[...all].sort((a,b)=>a-b),med=quantile(srt,.5),iqr=quantile(srt,.75)-quantile(srt,.25)||1;
+  const rows=[
+    {name:'raw value',f:v=>v},
+    {name:'min-max  (window 0 … 1)',f:v=>(v-mn)/(mx-mn),win:[0,1],ticks:[0,.25,.5,.75,1]},
+    {name:'standardised z  (window −2 … 4)',f:v=>(v-mu)/sd,win:[-2,4],ticks:[-2,-1,0,1,2,3,4]},
+    {name:'robust  (window −2 … 4)',f:v=>(v-med)/iqr,win:[-2,4],ticks:[-2,-1,0,1,2,3,4]},
+  ];
+  const{x,W,H}=setupCanvas($('#scCv'));const padX=16,rowH=H/rows.length;
+  const stats={};
+  rows.forEach((row,i)=>{
+    const vals=inl.map(row.f),ov=row.f(out);
+    const lo=row.win?row.win[0]:0,hi=row.win?row.win[1]:Math.max(...vals,ov);
+    const a=lo-(hi-lo)*.03,b=hi+(hi-lo)*.03;
+    const px=v=>padX+(v-a)/(b-a)*(W-2*padX), y=i*rowH+rowH*.62;
+    x.fillStyle=css('--text');x.font='12px system-ui';x.textAlign='left';x.textBaseline='alphabetic';x.fillText(row.name,padX,i*rowH+15);
+    x.strokeStyle=css('--border');x.lineWidth=1.5;x.beginPath();x.moveTo(padX,y);x.lineTo(W-padX,y);x.stroke();
+    x.fillStyle=css('--muted');x.font='10px system-ui';x.textBaseline='top';x.textAlign='center';
+    const ticks=row.ticks||[0,Math.round(hi/2),Math.round(hi)];
+    ticks.forEach(t=>{x.beginPath();x.moveTo(px(t),y-4);x.lineTo(px(t),y+4);x.stroke();x.fillText(String(t),Math.max(padX+8,Math.min(W-padX-8,px(t))),y+7);});
+    // inlier span shading
+    const imn=Math.min(...vals),imx=Math.max(...vals);
+    x.fillStyle=css('--accent');x.globalAlpha=.18;x.fillRect(px(imn),y-9,Math.max(2,px(imx)-px(imn)),18);x.globalAlpha=.75;
+    vals.forEach(v=>{x.beginPath();x.arc(px(v),y,3,0,7);x.fill();});x.globalAlpha=1;
+    x.fillStyle=css('--imp');
+    if(ov<=b){x.beginPath();x.arc(px(ov),y,5.5,0,7);x.fill();}
+    else{const ex=W-padX;x.beginPath();x.moveTo(ex,y);x.lineTo(ex-10,y-6);x.lineTo(ex-10,y+6);x.closePath();x.fill();
+      x.font='11px system-ui';x.textAlign='right';x.textBaseline='bottom';x.fillText('outlier at '+ov.toFixed(1)+' →',ex,y-8);}
+    stats[i]={span:imx-imn,ov};
+  });
+  x.textAlign='left';x.textBaseline='alphabetic';
+  $('#scMM').textContent=stats[1].span.toFixed(3);$('#scSS').textContent=stats[2].span.toFixed(2);
+  $('#scZ').textContent=stats[2].ov.toFixed(1);$('#scRB').textContent=stats[3].span.toFixed(2);
+  const pct=Math.round(stats[1].span*100);
+  $('#scMsg').textContent=pct<25?`Min-max squeezes all ${n} normal points into just ${pct}% of [0, 1]. The robust scaler keeps them spread out (${stats[3].span.toFixed(1)} units) and the outlier simply sits far away.`:
+    pct<60?`The outlier already takes ${100-pct}% of the min-max range. Standardised values still spread over ${stats[2].span.toFixed(1)} units.`:
+    'The "outlier" is barely unusual here, so all three scalers give similar pictures. Drag it higher.';
+}
+['scO','scN'].forEach(id=>$('#'+id).oninput=drawSC);
+
+function redrawAll(){drawSP();drawSC();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+redrawAll();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn + pandas… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn','pandas']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

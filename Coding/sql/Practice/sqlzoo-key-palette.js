@@ -128,6 +128,11 @@
         r2.appendChild(keycap(k, CAP_PUNCT, function () { insertKey(ta, k, k === "''" ? "pair" : "p"); }, true));
       });
 
+      // Newline without opening the soft keyboard. Kind "p" so insertKey adds no
+      // leading space and no trailing space. sql-kb-fix.js intercepts the focus()
+      // inside insertKey, so the caret moves but the keyboard stays down.
+      r2.appendChild(keycap("\u21B5", CAP_PUNCT, function () { insertKey(ta, "\n", "p"); }, true));
+
       // ---- tables + the open table's columns ----
       var tables = TABLES[ds] || [];
       if (!tables.length) return;

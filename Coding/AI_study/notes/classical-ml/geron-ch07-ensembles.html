@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 7 "Ensemble Learning and Random Forests".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 7 — Ensemble Learning and Random Forests</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+<style>
+#vtCv{height:280px} #vtHist{height:150px} #gbCv{height:280px} #gbRes{height:130px} #gbErr{height:130px}
+.twoup{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.6rem}
+@media (max-width:560px){#vtCv,#gbCv{height:240px} .twoup{grid-template-columns:1fr}}
+.cap{font-size:.76rem;color:var(--muted);margin:.35rem 0 .15rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 7 · book pp. 189–212</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 7 — Ensemble Learning and Random Forests</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    Combine many models so their errors cancel out. You can train them in parallel on shuffled
+    versions of the data and average them (bagging, Random Forests), train them one after another
+    so each fixes the last one's mistakes (boosting), or train a model to combine them (stacking).
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=219">Voting Classifiers <span>p. 189</span></a>
+    <a href="../geron/reader.html#p=222">Bagging and Pasting <span>p. 192</span></a>
+    <a href="../geron/reader.html#p=226">Random Patches &amp; Subspaces <span>p. 196</span></a>
+    <a href="../geron/reader.html#p=227">Random Forests <span>p. 197</span></a>
+    <a href="../geron/reader.html#p=229">Boosting <span>p. 199</span></a>
+    <a href="../geron/reader.html#p=238">Stacking <span>p. 208</span></a>
+    <a href="../geron/reader.html#p=241">Exercises <span>p. 211</span></a>
+  </nav>
+
+  <p>An <span class="def">ensemble</span> is a group of predictors whose outputs are combined into one prediction. <span class="def">Ensemble learning</span> is the practice of building one, and an algorithm that does it is an <span class="def">ensemble method</span>. Ensembles usually come at the end of a project, once you already have a few decent models to combine.</p>
+  <span class="k s" data-l="Skip on review">The chapter opens with the "wisdom of the crowd" idea and notes that competition winners, such as the Netflix Prize team, often stacked several ensembles.</span>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · Voting classifiers <a class="book" href="../geron/reader.html#p=219">book p. 189 ↗</a></h2>
+  <p>Train several <b>different</b> classifiers on the same data, for example logistic regression, an SVM, a Random Forest and k-NN. Then let them vote.</p>
+  <div class="tw"><table>
+    <tr><th></th><th>Hard voting</th><th>Soft voting</th></tr>
+    <tr><td>How it combines</td><td>majority of the predicted <b>labels</b></td><td>average of the predicted <b>class probabilities</b>, then argmax</td></tr>
+    <tr><td>Requirement</td><td>any classifier</td><td class="imp">every member needs <code>predict_proba()</code></td></tr>
+    <tr><td>Usually</td><td>good</td><td class="tip">a bit better, because confident votes count more</td></tr>
+    <tr><td>scikit-learn</td><td colspan="2"><code>VotingClassifier(estimators=[("lr", …), ("svc", …)], voting="hard" | "soft")</code>. For regression, <code>VotingRegressor</code> averages the predictions.</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li>A <span class="def">weak learner</span> is only slightly better than random guessing. A <span class="def">strong learner</span> is highly accurate. With enough weak learners that are also <b>diverse</b>, the vote can be a strong learner.</li>
+    <li class="imp"><code>SVC</code> has no <code>predict_proba()</code> by default. Set <code>probability=True</code> for soft voting. This makes training slower, because the probabilities are calibrated with an internal cross-validation.</li>
+  </ul>
+
+  <h3>Why voting works: the law of large numbers</h3>
+  <p>Suppose each of $n$ voters is right with probability $p$, independently of the others. The number of correct votes $K$ then follows a binomial distribution, and the ensemble is right when more than half the votes are correct:</p>
+  <div class="math">$$P(\text{ensemble correct}) = \sum_{k > n/2} \binom{n}{k} p^k (1-p)^{n-k}$$</div>
+  <p class="exp">If $p$ is even slightly above 0.5, the fraction of correct votes $K/n$ settles closer and closer to $p$ as $n$ grows, so it ends up above one half almost every time. A coin that lands heads 51% of the time shows a heads majority in about three quarters of 1,000-toss runs, and in more than 97% of 10,000-toss runs.</p>
+  <span class="k i" data-l="Important">That maths assumes the voters make <b>independent</b> errors. Models trained on the same data tend to make the same mistakes, so the real gain is much smaller. Anything that makes the members more different helps: different algorithms, different data samples, different feature subsets.</span>
+
+  <div class="panel" id="vtPanel">
+    <b>Play: how much does a crowd of voters gain?</b>
+    <p class="hint" style="margin-top:.2rem">Exact maths, not a simulation. With correlation 0 the count of correct votes is binomial. With correlation above 0 the voters share an instance-level "difficulty", which gives a beta-binomial count: some instances fool most of the voters at once.</p>
+    <div class="controls">
+      <div class="ctl"><label>Voters n</label><input type="range" id="vtN" min="0" max="3" step="0.01" value="2"/><output id="vtNO"></output></div>
+      <div class="ctl"><label>Voter accuracy p</label><input type="range" id="vtP" min="0.40" max="0.80" step="0.01" value="0.55"/><output id="vtPO"></output></div>
+      <div class="ctl"><label>Error correlation ρ</label><input type="range" id="vtR" min="0" max="0.6" step="0.01" value="0"/><output id="vtRO"></output></div>
+      <div class="ctl"><label>Preset</label><button class="btn" id="vtCoin">51% coin × 1,000</button><button class="btn" id="vtReal">realistic (p = 0.8, ρ = 0.3)</button></div>
+    </div>
+    <div class="cap">Ensemble accuracy as the number of voters grows (log scale). Dashed: independent voters. Solid: your ρ.</div>
+    <canvas id="vtCv" height="280" aria-label="Ensemble accuracy versus number of voters"></canvas>
+    <div class="cap">How many of the n votes are correct, as a fraction (green: the majority is right)</div>
+    <canvas id="vtHist" height="150" aria-label="Distribution of the fraction of correct votes"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">one voter</div><div class="v" id="vtS1">–</div></div>
+      <div class="stat"><div class="kk">majority of n</div><div class="v" id="vtS2">–</div></div>
+      <div class="stat"><div class="kk">limit as n → ∞</div><div class="v" id="vtS3">–</div></div>
+      <div class="stat"><div class="kk">gain</div><div class="v" id="vtS4">–</div></div>
+    </div>
+    <p class="hint" id="vtMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Keep ρ = 0 and set p = 0.51. The curve climbs slowly towards 100%, but it needs thousands of voters.</li>
+      <li>Set p to 0.45: the vote amplifies the errors too, and accuracy falls towards 0.</li>
+      <li>Raise ρ to 0.3. The curve flattens at a ceiling well below 100%, and adding voters stops helping. This is why ensemble members need to be diverse.</li>
+    </ul>
+  </details>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Bagging and pasting <a class="book" href="../geron/reader.html#p=222">book p. 192 ↗</a></h2>
+  <p>This is the other route to diversity: use <b>one</b> algorithm, but train each copy on a different random sample of the training set.</p>
+  <ul class="tight">
+    <li><span class="def">Bagging</span> (<i>bootstrap aggregating</i>) samples <b>with replacement</b>, so the same row can appear several times in one predictor's sample. Sampling with replacement is called <span class="def">bootstrapping</span>.</li>
+    <li><span class="def">Pasting</span> samples <b>without replacement</b>. A row can appear in many predictors' samples, but at most once in each.</li>
+    <li><span class="exp">Aggregation:</span> the most common label (the statistical mode) for classification, and the mean for regression.</li>
+    <li><span class="exp">Bias and variance:</span> each member trains on less information, so on its own it has a little more bias. Averaging removes much of the variance, so the ensemble ends up with <b>about the same bias and lower variance</b> than a single model trained on all the data.</li>
+    <li class="tip">Members are independent of each other, so training and prediction run in parallel across CPU cores or machines. This is why bagging scales so well.</li>
+    <li>Bootstrapping adds diversity, which means slightly more bias but less correlated members. <span class="tip">Bagging usually wins over pasting</span>, but you can cross-validate both if you have the compute.</li>
+  </ul>
+  <pre><code>from sklearn.ensemble import BaggingClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+bag = BaggingClassifier(
+    estimator=DecisionTreeClassifier(),   # the model being copied
+    n_estimators=300,                     # how many copies
+    max_samples=0.8,                      # int = rows, float = fraction of rows
+    bootstrap=True,                       # False → pasting
+    n_jobs=-1)                            # use every CPU core</code></pre>
+  <span class="k t" data-l="Tip">If the base model has <code>predict_proba()</code>, as decision trees do, <code>BaggingClassifier</code> averages the probabilities (soft voting) rather than counting labels. The result looks like a single tree with a much smoother, less jagged decision boundary.</span>
+
+  <h3>Out-of-bag (OOB) evaluation</h3>
+  <p>A bootstrap sample of size $m$ drawn from $m$ rows leaves some rows out. The chance that a given row is never picked is $(1-\tfrac1m)^m \approx e^{-1}$, so each predictor sees about <b>63%</b> of the distinct rows, and the remaining ~37% are its <span class="def">out-of-bag instances</span>. Each predictor has a different OOB set.</p>
+  <div class="math">$$P(\text{row is sampled}) = 1-\Big(1-\frac1m\Big)^m \;\xrightarrow{m\to\infty}\; 1-e^{-1}\approx 0.632$$</div>
+  <ul class="tight">
+    <li class="tip">Each row can be scored by the members that never saw it, so you get a validation estimate <b>for free</b>, with no hold-out set.</li>
+    <li><code>oob_score=True</code> → read <code>oob_score_</code> after <code>fit</code>. <code>oob_decision_function_</code> holds each training row's OOB class probabilities.</li>
+    <li class="imp">OOB only exists with <code>bootstrap=True</code>. Pasting leaves nothing "out of bag".</li>
+  </ul>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · Random patches and random subspaces <a class="book" href="../geron/reader.html#p=226">book p. 196 ↗</a></h2>
+  <p>A bagging ensemble can sample <b>features</b> as well as rows. <code>max_features</code> and <code>bootstrap_features</code> work for columns the same way <code>max_samples</code> and <code>bootstrap</code> work for rows.</p>
+  <div class="tw"><table>
+    <tr><th>Method</th><th>Rows sampled?</th><th>Features sampled?</th><th>Settings</th></tr>
+    <tr><td><span class="def">Random Patches</span></td><td>yes</td><td>yes</td><td><code>max_samples&lt;1.0</code> or <code>bootstrap=True</code>, plus <code>max_features&lt;1.0</code></td></tr>
+    <tr><td><span class="def">Random Subspaces</span></td><td>no, every row is used</td><td>yes</td><td><code>bootstrap=False, max_samples=1.0</code>, plus <code>max_features&lt;1.0</code> and/or <code>bootstrap_features=True</code></td></tr>
+  </table></div>
+  <p class="tip">This is most useful with many input features, such as image pixels. Feature sampling adds diversity: a little more bias, less variance.</p>
+
+  <!-- ===================================================== 4 -->
+  <h2>4 · Random Forests <a class="book" href="../geron/reader.html#p=227">book p. 197 ↗</a></h2>
+  <p>A <span class="def">Random Forest</span> is a bagging ensemble of decision trees, normally with each sample as large as the training set, plus <b>one extra source of randomness</b>: at each node, the tree searches for the best split among a <b>random subset of the features</b> rather than all of them.</p>
+  <ul class="tight">
+    <li><code>RandomForestClassifier</code> / <code>RandomForestRegressor</code> are faster and more convenient than wrapping trees in <code>BaggingClassifier</code>.</li>
+    <li>They take almost all the tree hyperparameters (<code>max_depth</code>, <code>max_leaf_nodes</code>, <code>min_samples_leaf</code>…) plus the ensemble ones (<code>n_estimators</code>, <code>bootstrap</code>, <code>oob_score</code>, <code>n_jobs</code>, <code>max_samples</code>).</li>
+    <li><code>max_features</code> sets how many features are tried at each split. The current default is <code>"sqrt"</code> for classification and <code>1.0</code> (all features) for regression.</li>
+    <li class="exp">Random feature subsets make the trees less alike (less correlated), so averaging removes more variance. You trade a little bias for a clear drop in variance.</li>
+    <li class="tip">More trees rarely hurt accuracy. They only cost time. Add trees until the OOB score stops improving.</li>
+  </ul>
+  <pre><code>from sklearn.ensemble import RandomForestClassifier
+rf = RandomForestClassifier(n_estimators=500, max_leaf_nodes=16, n_jobs=-1, oob_score=True)</code></pre>
+
+  <h3>Extra-Trees</h3>
+  <p><span class="def">Extremely Randomized Trees</span> (Extra-Trees) go one step further. At each node they draw a <b>random threshold</b> for each candidate feature and keep the best of those random splits, instead of searching for the optimal threshold.</p>
+  <ul class="tight">
+    <li class="exp">Even more bias traded for less variance.</li>
+    <li class="tip">Much <b>faster to train</b>, because searching for the best threshold is the most expensive part of growing a tree.</li>
+    <li><code>ExtraTreesClassifier</code> / <code>ExtraTreesRegressor</code> have the same API as the Random Forest classes. Note: <code>bootstrap=False</code> by default.</li>
+    <li class="imp">You can't tell in advance which of the two will do better. Cross-validate both, ideally with a hyperparameter search.</li>
+  </ul>
+
+  <h3>Feature importance</h3>
+  <p>After fitting, <code>feature_importances_</code> gives each feature a score that sums to 1 across features. A feature's score is the total impurity decrease from the nodes that split on it, <b>weighted by how many training samples reach each node</b>, averaged over all trees. This score is also called <span class="def">mean decrease in impurity (MDI)</span>.</p>
+  <ul class="tight">
+    <li class="tip">A quick way to see which features matter, and a handy first step for feature selection. On iris, the two petal measurements carry almost all the importance.</li>
+    <li class="imp">MDI is computed on the training data and favours high-cardinality features, such as IDs or continuous noise. For a more reliable ranking, use <code>sklearn.inspection.permutation_importance</code> on a validation set.</li>
+  </ul>
+
+  <!-- ===================================================== 5 -->
+  <h2>5 · Boosting <a class="book" href="../geron/reader.html#p=229">book p. 199 ↗</a></h2>
+  <p><span class="def">Boosting</span> (originally <i>hypothesis boosting</i>) turns weak learners into a strong learner by training them <b>one after another</b>. Each new model tries to fix what the ensemble so far gets wrong.</p>
+  <span class="k i" data-l="Important">Because each model depends on the one before it, boosting <b>can't be parallelised across members</b>. It scales worse than bagging (a single tree can still be built in parallel).</span>
+
+  <h3>AdaBoost — reweight the hard instances</h3>
+  <p><span class="def">AdaBoost</span> (Adaptive Boosting) raises the weight of the training rows the previous model got wrong, so the next model focuses on them. It works much like gradient descent, except that the ensemble improves by <b>adding predictors</b> rather than by adjusting one model's parameters.</p>
+  <ol class="tight">
+    <li>Start with equal weights $w^{(i)} = 1/m$.</li>
+    <li>Train predictor $j$ with these weights and compute its <b>weighted error rate</b>:
+      <div class="math">$$r_j = \frac{\sum_{i:\,\hat y_j^{(i)} \ne y^{(i)}} w^{(i)}}{\sum_{i=1}^{m} w^{(i)}}$$</div></li>
+    <li>Give the predictor a <b>weight</b>, where $\eta$ is the learning rate:
+      <div class="math">$$\alpha_j = \eta \,\log\frac{1-r_j}{r_j}$$</div>
+      <span class="exp">If the predictor is accurate, α is large. If it guesses at random ($r_j=0.5$), α ≈ 0. If it is worse than random, α is negative.</span></li>
+    <li>Multiply the weight of every <b>misclassified</b> row by $\exp(\alpha_j)$, leave the others unchanged, then normalise all weights so they sum to 1.</li>
+    <li>Repeat until you reach <code>n_estimators</code>, or until a predictor is perfect.</li>
+  </ol>
+  <p>To predict, every predictor casts a vote weighted by its α, and the class with the largest total wins:</p>
+  <div class="math">$$\hat y(\mathbf x) = \underset{k}{\operatorname{argmax}} \sum_{j=1}^{N} \alpha_j \,\big[\hat y_j(\mathbf x) = k\big]$$</div>
+  <ul class="tight">
+    <li>scikit-learn uses <span class="def">SAMME</span>, the multiclass version. It adds $\log(K-1)$ to α for $K$ classes, so with two classes it is exactly AdaBoost.</li>
+    <li>The default base model is a <span class="def">decision stump</span>: a tree with <code>max_depth=1</code>, which has one split and two leaves.</li>
+    <li class="tip">If AdaBoost <b>overfits</b>, use fewer estimators, a lower learning rate, or a more regularised base model. If it <b>underfits</b>, do the opposite: more estimators, less regularisation, or a slightly higher learning rate.</li>
+    <li class="skip">The original AdaBoost has no learning rate; η was added later as a regularisation knob. SVMs make poor AdaBoost members, being slow and unstable in this setting.</li>
+  </ul>
+  <pre><code>from sklearn.ensemble import AdaBoostClassifier
+ada = AdaBoostClassifier(estimator=DecisionTreeClassifier(max_depth=1),
+                         n_estimators=200, learning_rate=0.5)</code></pre>
+
+  <h3>Gradient Boosting — fit the residuals</h3>
+  <p><span class="def">Gradient Boosting</span> leaves the row weights alone. Instead, each new predictor is fitted to the <span class="def">residual errors</span> of the ensemble so far. With trees as the base model, this is called <span class="def">Gradient Tree Boosting</span> or <span class="def">GBRT</span> (gradient boosted regression trees).</p>
+  <div class="math">$$F_0(\mathbf x) = \bar y,\qquad h_m \leftarrow \text{fit to } \big(\mathbf x^{(i)},\; y^{(i)} - F_{m-1}(\mathbf x^{(i)})\big),\qquad F_m(\mathbf x) = F_{m-1}(\mathbf x) + \eta\, h_m(\mathbf x)$$</div>
+  <p class="exp">For squared error, the residual is the negative gradient of the loss with respect to the current prediction. Each tree is therefore one gradient-descent step taken in "function space", which is where the name comes from. Other losses (<code>loss=</code>) plug in their own gradients.</p>
+  <ul class="tight">
+    <li><code>GradientBoostingRegressor</code> / <code>GradientBoostingClassifier</code> take tree settings (<code>max_depth</code>, <code>min_samples_leaf</code>) plus ensemble settings (<code>n_estimators</code>, <code>learning_rate</code>).</li>
+    <li><span class="def">Shrinkage</span>: a small <code>learning_rate</code>, such as 0.1, needs more trees but usually <b>generalises better</b>. It is a form of regularisation.</li>
+    <li class="imp">Unlike a Random Forest, <b>too many trees overfits</b>. <code>n_estimators</code> and <code>learning_rate</code> must be tuned together.</li>
+    <li class="tip"><span class="exp">Early stopping</span>, three ways:
+      <ul class="tight">
+        <li>train many trees, then use <code>staged_predict()</code> on a validation set and pick the number with the lowest error;</li>
+        <li>grow the ensemble step by step with <code>warm_start=True</code> and stop once the validation error hasn't improved for a few rounds;</li>
+        <li>simplest today: <code>n_iter_no_change=10, validation_fraction=0.1</code>, which stops automatically. The number of trees kept is in <code>n_estimators_</code>.</li>
+      </ul></li>
+    <li><span class="def">Stochastic Gradient Boosting</span>: <code>subsample=0.25</code> trains each tree on a random 25% of the rows. Training is faster, with a little more bias and less variance.</li>
+    <li class="imp">If gradient boosting <b>overfits</b>, <b>lower</b> the learning rate (and use early stopping to find the new number of trees).</li>
+  </ul>
+
+  <div class="panel" id="gbPanel">
+    <b>Play: gradient boosting with decision stumps</b>
+    <p class="hint" style="margin-top:.2rem">60 noisy training points (●) from a wavy curve (dashed). Each new stump is fitted to the current residuals (bottom left) and added to the ensemble after scaling by η. The faint dots are a separate validation set.</p>
+    <div class="controls">
+      <div class="ctl"><label>n_estimators</label><input type="range" id="gbN" min="0" max="400" step="1" value="20"/><output id="gbNO"></output></div>
+      <div class="ctl"><label>learning_rate η</label><input type="range" id="gbLr" min="-2" max="0" step="0.05" value="-0.5"/><output id="gbLrO"></output></div>
+      <div class="ctl"><label>subsample</label><span class="seg" id="gbSub"><button data-s="1" class="on">1.0</button><button data-s="0.5">0.5 (stochastic)</button></span></div>
+      <div class="ctl"><label></label><button class="btn on" id="gbRun">▶ Grow from 0</button><button class="btn" id="gbSeed">↻ New sample</button></div>
+    </div>
+    <canvas id="gbCv" height="280" aria-label="Gradient boosting fit on 1D data"></canvas>
+    <div class="twoup">
+      <div><div class="cap">Residuals before the last stump, and that stump h (η·h dashed)</div><canvas id="gbRes" height="130" aria-label="Residuals and latest stump"></canvas></div>
+      <div><div class="cap">MSE vs number of trees (log scale): train and validation</div><canvas id="gbErr" height="130" aria-label="Training and validation error by number of trees"></canvas></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="kk">trees</div><div class="v" id="gbS1">–</div></div>
+      <div class="stat"><div class="kk">train MSE</div><div class="v" id="gbS2">–</div></div>
+      <div class="stat"><div class="kk">validation MSE</div><div class="v" id="gbS3">–</div></div>
+      <div class="stat"><div class="kk">best # trees (early stop)</div><div class="v" id="gbS4">–</div></div>
+    </div>
+    <p class="hint" id="gbMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>η = 1, then step n from 1 to 5. Each stump takes a large bite out of the residuals.</li>
+      <li>η = 1 with 400 trees: training error keeps falling, validation error turns back up, and the curve starts chasing noise.</li>
+      <li>η = 0.03: you need hundreds of trees, but the best validation error is usually a bit lower than with η = 1 (shrinkage).</li>
+      <li>subsample 0.5: the curves get noisier, but overfitting sets in later.</li>
+    </ul>
+  </details>
+
+  <h3>Faster implementations</h3>
+  <ul class="tight">
+    <li><span class="def">XGBoost</span> (<i>Extreme Gradient Boosting</i>) is a separate, heavily optimised library with a scikit-learn-style API (<code>xgboost.XGBRegressor</code>) and built-in early stopping. LightGBM and CatBoost are popular alternatives.</li>
+    <li class="skip">XGBoost began in the DMLC community and became a fixture of winning competition entries.</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book">
+    <b>1.</b> scikit-learn now has its own fast booster: <code>HistGradientBoostingRegressor</code> / <code>HistGradientBoostingClassifier</code> (stable since 1.0, no <code>experimental</code> import needed). It bins the features into histograms, so it is much faster on large data, handles missing values and categorical features natively, and turns early stopping on automatically for datasets over 10,000 rows. Prefer it to <code>GradientBoosting*</code> once you have more than about 10k rows.<br/>
+    <b>2.</b> The <code>base_estimator</code> parameter of <code>BaggingClassifier</code>, <code>AdaBoostClassifier</code> and related classes is now called <code>estimator</code>. The old name was removed in 1.4.<br/>
+    <b>3.</b> <code>AdaBoostClassifier(algorithm="SAMME.R")</code> is gone. SAMME.R was removed in 1.6, and the <code>algorithm</code> parameter itself was deprecated and then removed, so AdaBoost always uses SAMME. Just omit the parameter.<br/>
+    <b>4.</b> In XGBoost 2.x, pass <code>early_stopping_rounds</code> to the constructor. It no longer goes to <code>fit()</code>.<br/>
+    <b>5.</b> <code>RandomForestClassifier</code> now also accepts <code>max_samples</code> (the bootstrap sample size), and the old <code>presort</code> option has been removed.
+  </span>
+
+  <!-- ===================================================== 6 -->
+  <h2>6 · Stacking <a class="book" href="../geron/reader.html#p=238">book p. 208 ↗</a></h2>
+  <p><span class="def">Stacking</span> (<i>stacked generalization</i>) replaces a fixed rule such as voting with a <b>trained model</b> that learns how to combine the base predictions. That final model is called a <span class="def">blender</span> or <span class="def">meta learner</span>.</p>
+  <ol class="tight">
+    <li>Split the training data. Fit the first-layer models on part A.</li>
+    <li>Have them predict part B, the <b>hold-out</b> rows. These predictions are "clean", because the models never saw those rows.</li>
+    <li>Build a new dataset: the inputs are the base models' predictions (one column per model) and the targets are the original ones. Train the blender on it.</li>
+    <li>To predict, pass new data through the base models, then feed their outputs to the blender.</li>
+  </ol>
+  <ul class="tight">
+    <li class="exp">Using a hold-out set this way is often called <span class="def">blending</span>. Using <b>out-of-fold</b> (cross-validated) predictions, so every row contributes, is often called stacking. Many people use the two names interchangeably.</li>
+    <li>You can stack several layers. Each extra layer needs its own fresh slice of data (three subsets for two layers of models plus a blender).</li>
+    <li class="imp">Never train the blender on predictions for rows the base models were trained on. Those predictions are too optimistic, so the blender learns to trust the models that overfit most.</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book">The book says scikit-learn doesn't support stacking. Since version 0.22 it does: <code>StackingClassifier</code> / <code>StackingRegressor</code> build the out-of-fold predictions for you (<code>cv=5</code>), then fit <code>final_estimator</code> on them. <code>passthrough=True</code> also gives the blender the original features.</span>
+  <pre><code>from sklearn.ensemble import StackingClassifier
+stack = StackingClassifier(
+    estimators=[("rf", RandomForestClassifier()), ("svc", SVC(probability=True))],
+    final_estimator=LogisticRegression(), cv=5)</code></pre>
+
+  <!-- ===================================================== 7 -->
+  <h2>7 · Exercises <a class="book" href="../geron/reader.html#p=241">book p. 211 ↗</a></h2>
+  <p>The first seven questions are conceptual; the cards below cover most of them. The last two are hands-on MNIST projects: build a voting ensemble from Random Forest, Extra-Trees and SVM classifiers, then build a blender from their validation-set predictions. <span class="tip">To practise offline, swap MNIST for <code>load_digits()</code>, which works in the cell below.</span></p>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — all of chapter 7 in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. scikit-learn downloads on the first run (≈ 20–40 s, needs internet). Don't be surprised if voting doesn't beat the best single model: on a small, easy dataset the members make similar mistakes.</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false" style="min-height:420px">import warnings; warnings.filterwarnings("ignore")
+import numpy as np
+from sklearn.datasets import make_moons, load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.ensemble import (VotingClassifier, BaggingClassifier, RandomForestClassifier,
+    ExtraTreesClassifier, AdaBoostClassifier, GradientBoostingRegressor,
+    HistGradientBoostingClassifier, StackingClassifier)
+
+X, y = make_moons(n_samples=600, noise=0.3, random_state=42)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, random_state=42)
+
+# 1) Hard vs soft voting over three different algorithms
+base = [("lr", LogisticRegression()), ("rf", RandomForestClassifier(random_state=42)),
+        ("svc", SVC(probability=True, random_state=42))]
+for name, clf in base:
+    print(f"{name:10} {clf.fit(X_tr, y_tr).score(X_te, y_te):.3f}")
+for v in ("hard", "soft"):
+    vc = VotingClassifier(base, voting=v).fit(X_tr, y_tr)
+    print(f"{v+' vote':10} {vc.score(X_te, y_te):.3f}")
+
+# 2) Bagging with out-of-bag evaluation (no validation set needed)
+bag = BaggingClassifier(estimator=DecisionTreeClassifier(), n_estimators=300,
+                        oob_score=True, n_jobs=-1, random_state=42).fit(X_tr, y_tr)
+tree = DecisionTreeClassifier(random_state=42).fit(X_tr, y_tr)
+print(f"\nsingle tree test={tree.score(X_te, y_te):.3f}")
+print(f"bagging     oob={bag.oob_score_:.3f}  test={bag.score(X_te, y_te):.3f}")
+
+# 3) Random Forest vs Extra-Trees, plus feature importances on iris
+for cls in (RandomForestClassifier, ExtraTreesClassifier):
+    m = cls(n_estimators=300, max_leaf_nodes=16, n_jobs=-1, random_state=42).fit(X_tr, y_tr)
+    print(f"{cls.__name__:24} test={m.score(X_te, y_te):.3f}")
+iris = load_iris()
+rf = RandomForestClassifier(n_estimators=300, random_state=42).fit(iris.data, iris.target)
+for n, s in zip(iris.feature_names, rf.feature_importances_):
+    print(f"  {n:18} {s:.2f}")
+
+# 4) AdaBoost with decision stumps
+ada = AdaBoostClassifier(estimator=DecisionTreeClassifier(max_depth=1),
+                         n_estimators=200, learning_rate=0.5, random_state=42).fit(X_tr, y_tr)
+print(f"\nAdaBoost (200 stumps) test={ada.score(X_te, y_te):.3f}")
+
+# 5) Gradient boosting by hand (fit residuals) vs sklearn, then early stopping
+rng = np.random.default_rng(42)
+Xr = rng.random((200, 1)) - 0.5
+yr = 3 * Xr[:, 0] ** 2 + 0.05 * rng.normal(size=200)
+pred, trees = np.zeros(200), []
+for _ in range(3):
+    t = DecisionTreeRegressor(max_depth=2, random_state=42).fit(Xr, yr - pred)
+    trees.append(t); pred += t.predict(Xr)
+gbr = GradientBoostingRegressor(max_depth=2, n_estimators=3, learning_rate=1.0, random_state=42).fit(Xr, yr)
+print(f"by hand vs sklearn, max diff = {np.abs(pred - gbr.predict(Xr)).max():.2e}")
+Xa, Xv, ya, yv = train_test_split(Xr, yr, random_state=42)
+gb = GradientBoostingRegressor(max_depth=2, n_estimators=300, learning_rate=0.1, random_state=42).fit(Xa, ya)
+val = [np.mean((yv - p) ** 2) for p in gb.staged_predict(Xv)]
+print(f"best #trees by staged_predict = {np.argmin(val) + 1}  (val MSE {min(val):.4f})")
+es = GradientBoostingRegressor(max_depth=2, n_estimators=1000, n_iter_no_change=10,
+                               validation_fraction=0.2, random_state=42).fit(Xr, yr)
+print(f"built-in early stopping kept {es.n_estimators_} trees")
+
+# 6) Modern extras: histogram-based GB and stacking
+hgb = HistGradientBoostingClassifier(random_state=42).fit(X_tr, y_tr)
+print(f"\nHistGradientBoosting test={hgb.score(X_te, y_te):.3f}")
+stack = StackingClassifier(base, final_estimator=LogisticRegression(), cv=5).fit(X_tr, y_tr)
+print(f"Stacking (blender=LogReg) test={stack.score(X_te, y_te):.3f}")</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">Five different models all score 95% on the same data. Can combining them help?</div><div class="face a">Often, yes: try a voting or stacking ensemble. It helps most when the models are different kinds of model, so their errors are less correlated.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Hard vs soft voting?</div><div class="face a">Hard voting counts the predicted labels. Soft voting averages the class probabilities, so confident members count more. Soft voting needs predict_proba on every member.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Which ensembles can be trained across many servers?</div><div class="face a">Bagging, pasting and Random Forests: fully parallel. Stacking: each layer's models can run in parallel. Boosting: no, because each model needs the previous one.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">What does out-of-bag evaluation buy you?</div><div class="face a">A validation score with no hold-out set. Each row is scored by the members that never saw it (about 37% of them), so all the data can be used for training.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Extra-Trees vs Random Forest: what's different, and which trains faster?</div><div class="face a">Extra-Trees also draw random split thresholds, so they are more random (less variance, a bit more bias). They train faster, because they skip the search for the best threshold.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">AdaBoost underfits. What do you change?</div><div class="face a">Add estimators, loosen the regularisation on the base model (for example a deeper tree), or raise the learning rate a little.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Gradient boosting overfits. Raise or lower the learning rate?</div><div class="face a">Lower it (shrinkage), and use early stopping to find the right number of trees for the new rate.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why does a bootstrap sample contain only about 63% of the distinct rows?</div><div class="face a">Each row is missed with probability (1 − 1/m)^m ≈ e⁻¹ ≈ 0.37. The rest, about 63%, gets picked at least once.</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="geron-ch06-decision-trees.html">Ch 6 — Decision Trees</a>: the base model for bagging, Random Forests and GBRT, and where their high variance comes from</li>
+    <li><a href="geron-ch04-training-models.html">Ch 4 — Training Models</a>: bias/variance, early stopping, and learning rates (gradient boosting is gradient descent in function space)</li>
+    <li><a href="gradient-descent.html">Gradient descent note</a>: the step-size intuition behind shrinkage</li>
+    <li><a href="geron-ch05-svm.html">Ch 5 — SVMs</a> and <a href="geron-ch03-classification.html">Ch 3 — Classification</a>: the diverse members for a voting ensemble</li>
+    <li><a href="geron-ch08-dimensionality-reduction.html">Ch 8 — Dimensionality Reduction</a>: another way to deal with many features, next to random subspaces and feature importances</li>
+    <li><a href="geron-ch02-end-to-end-project.html">Ch 2 — End-to-end project</a>: where Random Forests and "combine your best models" first appear</li>
+    <li><a href="../geron/reader.html#p=756">Book answers to the chapter 7 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> explain why independent, better-than-chance voters make a strong ensemble, and why correlation ruins it</label></li>
+    <li><label><input type="checkbox"/> tell bagging from pasting and explain where the 63% / 37% OOB split comes from</label></li>
+    <li><label><input type="checkbox"/> say how a Random Forest, Extra-Trees and random subspaces each add randomness</label></li>
+    <li><label><input type="checkbox"/> walk through one AdaBoost round: weighted error, α, reweighting</label></li>
+    <li><label><input type="checkbox"/> code gradient boosting by hand with residuals, and tune η, the number of trees and early stopping</label></li>
+    <li><label><input type="checkbox"/> build a stacking ensemble without leaking training predictions into the blender</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 7. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch07';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const fmt=(v,d=3)=>!isFinite(v)?'∞':Math.abs(v)>=1e5?v.toExponential(1):v.toFixed(d);
+const pct=v=>(100*v).toFixed(1)+'%';
+
+/* ================= Voting playground (exact binomial / beta-binomial) ================= */
+// log-gamma (Lanczos, g=7)
+const LC=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+function lgamma(z){if(z<0.5)return Math.log(Math.PI/Math.abs(Math.sin(Math.PI*z)))-lgamma(1-z);
+  z-=1;let a=LC[0];const t=z+7.5;for(let i=1;i<9;i++)a+=LC[i]/(z+i);return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(a);}
+const lbeta=(a,b)=>lgamma(a)+lgamma(b)-lgamma(a+b);
+// pmf of the number of correct votes K among n voters
+function votePmf(n,p,rho){
+  const pmf=new Float64Array(n+1),lnf=lgamma(n+1);
+  if(rho<1e-4){const lp=Math.log(p),lq=Math.log(1-p);
+    for(let k=0;k<=n;k++)pmf[k]=Math.exp(lnf-lgamma(k+1)-lgamma(n-k+1)+k*lp+(n-k)*lq);}
+  else{const a=p*(1-rho)/rho,b=(1-p)*(1-rho)/rho,lb=lbeta(a,b);
+    for(let k=0;k<=n;k++)pmf[k]=Math.exp(lnf-lgamma(k+1)-lgamma(n-k+1)+lbeta(k+a,n-k+b)-lb);}
+  return pmf;}
+function majAcc(pmf){const n=pmf.length-1;let s=0;for(let k=0;k<=n;k++){if(2*k>n)s+=pmf[k];else if(2*k===n)s+=0.5*pmf[k];}return s;}
+// limit n→∞: P(q > 1/2) with q ~ Beta(a,b)  (independent case: step function)
+function majLimit(p,rho){
+  if(rho<1e-4)return p>0.5?1:p<0.5?0:0.5;
+  const a=p*(1-rho)/rho,b=(1-p)*(1-rho)/rho;
+  return 1-betai(a,b,0.5);}
+// regularized incomplete beta I_x(a,b) via Lentz continued fraction
+function betacf(a,b,x){const E=1e-30;let c=1,d=1-(a+b)*x/(a+1);if(Math.abs(d)<E)d=E;d=1/d;let h=d;
+  for(let m=1;m<=300;m++){const m2=2*m;let aa=m*(b-m)*x/((a+m2-1)*(a+m2));
+    d=1+aa*d;if(Math.abs(d)<E)d=E;c=1+aa/c;if(Math.abs(c)<E)c=E;d=1/d;h*=d*c;
+    aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+m2+1));
+    d=1+aa*d;if(Math.abs(d)<E)d=E;c=1+aa/c;if(Math.abs(c)<E)c=E;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<1e-12)break;}
+  return h;}
+function betai(a,b,x){if(x<=0)return 0;if(x>=1)return 1;
+  const bt=Math.exp(a*Math.log(x)+b*Math.log(1-x)-lbeta(a,b));
+  return x<(a+1)/(a+b+2)?bt*betacf(a,b,x)/a:1-bt*betacf(b,a,1-x)/b;}
+const vtNs=(()=>{const s=new Set();for(let i=0;i<=140;i++){let n=Math.round(Math.pow(10,3*i/140));if(n%2===0)n+=1;s.add(n);}return[...s].sort((a,b)=>a-b);})();
+function vtN(){let n=Math.round(Math.pow(10,+$('#vtN').value));if(n%2===0)n+=1;return Math.min(n,1001);}
+function drawVT(){
+  const n=vtN(),p=+$('#vtP').value,rho=+$('#vtR').value;
+  $('#vtNO').textContent=n;$('#vtPO').textContent=p.toFixed(2);$('#vtRO').textContent=rho.toFixed(2);
+  const indep=vtNs.map(k=>majAcc(votePmf(k,p,0))),corr=rho<1e-4?indep:vtNs.map(k=>majAcc(votePmf(k,p,rho)));
+  const pmf=votePmf(n,p,rho),acc=majAcc(pmf),lim=majLimit(p,rho);
+  // --- curve
+  {const{x,W,H}=setupCanvas($('#vtCv'));const L=40,R=10,T=10,B=26;
+   const px=k=>L+Math.log10(k)/Math.log10(1001)*(W-L-R),py=a=>T+(1-a)*(H-T-B);
+   x.strokeStyle=css('--border');x.lineWidth=1;x.fillStyle=css('--muted');x.font='11px system-ui';
+   for(let a=0;a<=1.0001;a+=0.25){x.beginPath();x.moveTo(L,py(a));x.lineTo(W-R,py(a));x.stroke();x.textAlign='right';x.fillText(Math.round(a*100)+'%',L-5,py(a)+4);}
+   [1,10,100,1000].forEach(k=>{x.beginPath();x.moveTo(px(k),T);x.lineTo(px(k),H-B);x.stroke();x.textAlign=k===1000?'right':'center';x.fillText(k,Math.min(px(k),W-2),H-8);});
+   x.textAlign='left';
+   // single-voter reference
+   x.strokeStyle=css('--muted');x.setLineDash([2,4]);x.beginPath();x.moveTo(L,py(p));x.lineTo(W-R,py(p));x.stroke();
+   x.fillText('one voter',W-R-60,py(p)-4);
+   // independent
+   x.setLineDash([6,5]);x.lineWidth=1.8;x.strokeStyle=css('--muted');x.beginPath();vtNs.forEach((k,i)=>i?x.lineTo(px(k),py(indep[i])):x.moveTo(px(k),py(indep[i])));x.stroke();x.setLineDash([]);
+   // correlated
+   x.strokeStyle=css('--accent');x.lineWidth=2.6;x.beginPath();vtNs.forEach((k,i)=>i?x.lineTo(px(k),py(corr[i])):x.moveTo(px(k),py(corr[i])));x.stroke();
+   if(rho>=1e-4&&isFinite(lim)){x.strokeStyle=css('--def');x.lineWidth=1;x.setLineDash([3,3]);x.beginPath();x.moveTo(L,py(lim));x.lineTo(W-R,py(lim));x.stroke();x.setLineDash([]);
+     x.fillStyle=css('--def');x.fillText('ceiling',L+4,py(lim)-4);}
+   x.fillStyle=css('--def');x.beginPath();x.arc(px(n),py(acc),5,0,7);x.fill();
+   x.fillStyle=css('--muted');x.fillText('voters →',L+4,H-B-6);}
+  // --- histogram of K/n
+  {const{x,W,H}=setupCanvas($('#vtHist'));const T=8,B=20;let mx=0;for(const v of pmf)mx=Math.max(mx,v);
+   const bw=W/(n+1);
+   for(let k=0;k<=n;k++){const h=pmf[k]/mx*(H-T-B);x.fillStyle=2*k>n?css('--tip'):2*k===n?css('--muted'):css('--imp');x.fillRect(k*bw,H-B-h,Math.max(bw-(n<60?1:0),0.8),h);}
+   x.strokeStyle=css('--text');x.lineWidth=1;x.setLineDash([4,3]);x.beginPath();x.moveTo(W/2,T);x.lineTo(W/2,H-B);x.stroke();x.setLineDash([]);
+   x.fillStyle=css('--muted');x.font='11px system-ui';x.textAlign='left';x.fillText('0% correct',2,H-5);x.textAlign='center';x.fillText('50%',W/2,H-5);x.textAlign='right';x.fillText('100%',W-2,H-5);x.textAlign='left';}
+  $('#vtS1').textContent=pct(p);$('#vtS2').textContent=pct(acc);$('#vtS3').textContent=pct(lim);
+  const g=acc-p;$('#vtS4').textContent=(g>=0?'+':'')+(100*g).toFixed(1)+' pts';
+  $('#vtMsg').textContent=p<0.5?'Voters are worse than chance, so the majority is wrong even more often. Ensembling amplifies whatever tendency the members have.':
+    p===0.5?'Coin-flip voters: the majority is a coin flip too, however many you add.':
+    rho>=0.2&&lim<0.99?`Correlated errors: even infinitely many voters stop at about ${pct(lim)}. Diversity matters more than numbers.`:
+    g<0.02?'Barely any gain yet. Add voters or make each one better.':
+    `The majority vote beats a single voter by ${(100*g).toFixed(1)} points.`;
+}
+$$('#vtN,#vtP,#vtR').forEach(e=>e.oninput=drawVT);
+$('#vtCoin').onclick=()=>{$('#vtN').value=3;$('#vtP').value=0.51;$('#vtR').value=0;drawVT();};
+$('#vtReal').onclick=()=>{$('#vtN').value=1.7;$('#vtP').value=0.8;$('#vtR').value=0.3;drawVT();};
+
+/* ================= Gradient boosting playground ================= */
+const GB={seed:5,sub:1,NMAX:400,anim:null};
+const gbTruth=x=>0.9*Math.sin(2*Math.PI*x)+0.6*x;
+function gbData(){const r=mulberry(GB.seed);GB.tr=[];GB.va=[];
+  for(let i=0;i<60;i++){const x=r();GB.tr.push([x,gbTruth(x)+0.25*gauss(r)]);}
+  for(let i=0;i<200;i++){const x=r();GB.va.push([x,gbTruth(x)+0.25*gauss(r)]);}
+  GB.tr.sort((a,b)=>a[0]-b[0]);}
+// best stump on sorted xs with residuals res, restricted to index set idx (sorted)
+function fitStump(xs,res,idx){
+  let tot=0;for(const i of idx)tot+=res[i];const n=idx.length;
+  let best=-Infinity,bt=0,bl=tot/n,br=tot/n,sl=0;
+  for(let j=0;j<n-1;j++){sl+=res[idx[j]];const a=xs[idx[j]],b=xs[idx[j+1]];if(b<=a)continue;
+    const nl=j+1,nr=n-nl,sc=sl*sl/nl+(tot-sl)*(tot-sl)/nr;
+    if(sc>best){best=sc;bt=(a+b)/2;bl=sl/nl;br=(tot-sl)/nr;}}
+  return{t:bt,l:bl,r:br};}
+const stumpAt=(s,x)=>x<=s.t?s.l:s.r;
+function gbTrain(){
+  const lr=Math.pow(10,+$('#gbLr').value),xs=GB.tr.map(p=>p[0]),ys=GB.tr.map(p=>p[1]),m=xs.length;
+  const r=mulberry(GB.seed*7+Math.round(GB.sub*10));
+  const f0=ys.reduce((a,b)=>a+b,0)/m;const F=new Float64Array(m).fill(f0);const FV=new Float64Array(GB.va.length).fill(f0);
+  const mse=(P,S)=>{let s=0;for(let i=0;i<S.length;i++)s+=(S[i][1]-P[i])**2;return s/S.length;};
+  GB.f0=f0;GB.lr=lr;GB.stumps=[];GB.resid=[];GB.trE=[mse(F,GB.tr)];GB.vaE=[mse(FV,GB.va)];
+  const all=[...Array(m).keys()];
+  for(let j=0;j<GB.NMAX;j++){
+    const res=ys.map((y,i)=>y-F[i]);GB.resid.push(res);
+    const idx=GB.sub<1?all.filter(()=>r()<GB.sub):all;
+    const s=fitStump(xs,res,idx.length>=2?idx:all);GB.stumps.push(s);
+    for(let i=0;i<m;i++)F[i]+=lr*stumpAt(s,xs[i]);
+    for(let i=0;i<FV.length;i++)FV[i]+=lr*stumpAt(s,GB.va[i][0]);
+    GB.trE.push(mse(F,GB.tr));GB.vaE.push(mse(FV,GB.va));}
+  let b=0;for(let j=1;j<GB.vaE.length;j++)if(GB.vaE[j]<GB.vaE[b])b=j;GB.best=b;
+}
+function gbPredict(x,n){let s=GB.f0;for(let j=0;j<n;j++)s+=GB.lr*stumpAt(GB.stumps[j],x);return s;}
+function drawGB(nOverride){
+  const n=nOverride??+$('#gbN').value;
+  $('#gbNO').textContent=n;$('#gbLrO').textContent=GB.lr.toPrecision(2);
+  const X0=-0.02,X1=1.02,Y0=-2.3,Y1=2.3;
+  // --- main fit
+  {const{x,W,H}=setupCanvas($('#gbCv'));const px=v=>(v-X0)/(X1-X0)*W,py=v=>H-(v-Y0)/(Y1-Y0)*H;
+   x.strokeStyle=css('--border');x.lineWidth=1;x.beginPath();x.moveTo(0,py(0));x.lineTo(W,py(0));x.stroke();
+   x.fillStyle=css('--muted');x.globalAlpha=.28;GB.va.forEach(p=>{x.beginPath();x.arc(px(p[0]),py(p[1]),2,0,7);x.fill();});x.globalAlpha=1;
+   x.setLineDash([5,5]);x.strokeStyle=css('--muted');x.lineWidth=1.5;x.beginPath();for(let i=0;i<=200;i++){const v=i/200;i?x.lineTo(px(v),py(gbTruth(v))):x.moveTo(px(v),py(gbTruth(v)));}x.stroke();x.setLineDash([]);
+   x.fillStyle=css('--text');GB.tr.forEach(p=>{x.beginPath();x.arc(px(p[0]),py(p[1]),3.6,0,7);x.fill();});
+   // ensemble: piecewise constant → evaluate on fine grid
+   x.strokeStyle=css('--accent');x.lineWidth=2.6;x.beginPath();const G=500;
+   for(let i=0;i<=G;i++){const v=X0+(X1-X0)*i/G,Y=Math.max(-20,Math.min(H+20,py(gbPredict(v,n))));i?x.lineTo(px(v),Y):x.moveTo(px(v),Y);}x.stroke();
+   x.font='12px system-ui';x.fillStyle=css('--muted');x.fillText(`● train  · validation  - - true curve  — ensemble of ${n} stump${n===1?'':'s'}`,8,15);}
+  // --- residuals + last stump
+  {const{x,W,H}=setupCanvas($('#gbRes'));const px=v=>(v-X0)/(X1-X0)*W;
+   const res=n>0?GB.resid[n-1]:GB.tr.map(p=>p[1]-GB.f0);let a=0.3;res.forEach(v=>a=Math.max(a,Math.abs(v)));a*=1.1;
+   const py=v=>H/2-v/a*(H/2-6);
+   x.strokeStyle=css('--border');x.beginPath();x.moveTo(0,H/2);x.lineTo(W,H/2);x.stroke();
+   x.fillStyle=css('--imp');GB.tr.forEach((p,i)=>{x.beginPath();x.arc(px(p[0]),py(res[i]),2.6,0,7);x.fill();});
+   if(n>0){const s=GB.stumps[n-1];
+     const seg=(k,dash,col,lw)=>{x.strokeStyle=col;x.lineWidth=lw;x.setLineDash(dash);x.beginPath();x.moveTo(px(X0),py(k*s.l));x.lineTo(px(s.t),py(k*s.l));x.lineTo(px(s.t),py(k*s.r));x.lineTo(px(X1),py(k*s.r));x.stroke();x.setLineDash([]);};
+     seg(1,[],css('--accent'),2.4);if(GB.lr<0.999)seg(GB.lr,[4,3],css('--accent'),1.2);}
+   else{x.fillStyle=css('--muted');x.font='11px system-ui';x.fillText('no trees yet: residuals from the mean',6,14);}}
+  // --- error curves
+  {const{x,W,H}=setupCanvas($('#gbErr'));const L=4,R=4,T=6,B=6;
+   let lo=Infinity,hi=-Infinity;[...GB.trE,...GB.vaE].forEach(v=>{lo=Math.min(lo,v);hi=Math.max(hi,v);});
+   lo=Math.log(Math.max(lo,1e-4));hi=Math.log(hi);
+   const px=j=>L+j/GB.NMAX*(W-L-R),py=v=>T+(1-(Math.log(Math.max(v,1e-4))-lo)/(hi-lo||1))*(H-T-B);
+   const line=(A,col,dash)=>{x.strokeStyle=col;x.lineWidth=1.8;x.setLineDash(dash);x.beginPath();A.forEach((v,j)=>j?x.lineTo(px(j),py(v)):x.moveTo(px(j),py(v)));x.stroke();x.setLineDash([]);};
+   line(GB.trE,css('--muted'),[5,4]);line(GB.vaE,css('--imp'),[]);
+   x.strokeStyle=css('--accent');x.lineWidth=1.5;x.beginPath();x.moveTo(px(n),T);x.lineTo(px(n),H-B);x.stroke();
+   x.fillStyle=css('--tip');x.beginPath();x.arc(px(GB.best),py(GB.vaE[GB.best]),4.5,0,7);x.fill();
+   x.font='11px system-ui';x.fillStyle=css('--muted');x.textAlign='right';x.fillText('- - train   — validation   ● best',W-6,14);x.textAlign='left';}
+  const tr=GB.trE[n],va=GB.vaE[n],bv=GB.vaE[GB.best];
+  $('#gbS1').textContent=n;$('#gbS2').textContent=fmt(tr,3);$('#gbS3').textContent=fmt(va,3);$('#gbS4').textContent=GB.best;
+  $('#gbMsg').textContent=n===0?'Zero trees: the model just predicts the mean of y.':
+    va<=bv*1.05?`Near the sweet spot: validation MSE is within 5% of the best (${fmt(bv,3)} at ${GB.best} trees).`:
+    n<GB.best?'Underfitting: the stumps haven\'t captured the wave yet. Add trees, or raise η.':
+    `Overfitting: training error keeps falling, but validation error is ${(va/bv).toFixed(2)}× its best. Use fewer trees or a smaller η.`;
+}
+function gbAll(){cancelAnimationFrame(GB.anim);gbTrain();drawGB();}
+$('#gbN').oninput=()=>{cancelAnimationFrame(GB.anim);drawGB();};
+$('#gbLr').oninput=gbAll;
+$$('#gbSub button').forEach(b=>b.onclick=()=>{$$('#gbSub button').forEach(x=>x.classList.toggle('on',x===b));GB.sub=+b.dataset.s;gbAll();});
+$('#gbSeed').onclick=()=>{GB.seed=Math.floor(Math.random()*1e6);gbData();gbAll();};
+$('#gbRun').onclick=()=>{cancelAnimationFrame(GB.anim);const target=+$('#gbN').value||60;if(!+$('#gbN').value)$('#gbN').value=target;
+  let i=0;const step=Math.max(1,Math.ceil(target/90)),tick=()=>{i=Math.min(target,i+step);drawGB(i);if(i<target)GB.anim=requestAnimationFrame(tick);else drawGB();};tick();};
+gbData();gbTrain();
+
+function redrawAll(){cancelAnimationFrame(GB.anim);drawVT();drawGB();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+redrawAll();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

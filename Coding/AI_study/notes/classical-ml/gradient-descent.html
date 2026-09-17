@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Gradient descent — AI study note</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{--bg:#fbfaf7;--surface:#fff;--text:#23221f;--muted:#6b6a64;--border:#e7e4dc;--code-bg:#f4f2ec;--accent:#534ab7}
+html[data-theme="dark"]{--bg:#1a1916;--surface:#23221f;--text:#ecebe6;--muted:#a3a199;--border:#3a3833;--code-bg:#2a2925}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.25rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.4rem 0 .8rem;padding-top:.6rem;border-top:1px solid var(--border)}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.9em}
+.topbar{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem}
+.btn:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.4rem .9rem;margin:.6rem 0}
+details[open]{padding-bottom:.9rem}
+summary{cursor:pointer;font-weight:600;padding:.4rem 0;list-style:none}
+summary::before{content:"▸ ";color:var(--accent)}details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin:1.2rem 0}
+.controls{display:flex;flex-direction:column;gap:.7rem;margin:.4rem 0 1rem}
+.ctl{display:flex;align-items:center;gap:.8rem}
+.ctl label{min-width:130px;font-size:.9rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;accent-color:var(--accent)}
+.ctl output{min-width:60px;font-weight:600;font-variant-numeric:tabular-nums}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem}
+canvas{width:100%;border:1px solid var(--border);border-radius:10px;background:var(--surface);display:block}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.stat{background:var(--code-bg);border-radius:8px;padding:.6rem .7rem}
+.stat .k{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.3rem;font-weight:650;font-variant-numeric:tabular-nums}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:200px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.5rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:1rem;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.face.q{font-weight:600}.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.92rem}
+.checklist{list-style:none;padding:0}.checklist li{padding:.3rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.2)}
+.warn{color:#a32d2d}.good{color:#0f6e56}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Source: your <code>SGD</code> + <code>Linear_models/1_Linear_regression</code> notes</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐ theme</button>
+  </div>
+
+  <h1>Gradient descent</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    Stand on the loss surface, feel which way is downhill (the gradient), take a
+    small step that way, repeat until you reach the bottom.
+  </div>
+
+  <h2>The idea</h2>
+  <p>A model has parameters — for a line, a weight $w$ and bias $b$. Each choice of
+     $(w,b)$ gives some error on the data, measured by a <em>loss</em>. Plotting loss
+     against the parameters makes a bowl-shaped surface. Gradient descent finds the
+     lowest point by repeatedly stepping opposite the gradient, scaled by a
+     <em>learning rate</em> $\eta$. Too small and it crawls; too large and it
+     overshoots and diverges. Everything from linear regression to deep networks is
+     trained this way.</p>
+
+  $$\hat y = wx+b \qquad L=\tfrac{1}{n}\sum_{i=1}^{n}(\hat y_i-y_i)^2$$
+  $$w \leftarrow w-\eta\,\frac{\partial L}{\partial w}, \qquad
+    b \leftarrow b-\eta\,\frac{\partial L}{\partial b}$$
+
+  <h2>Derivation, step by step</h2>
+  <details open>
+    <summary>Step 1 — hypothesis</summary>
+    <p>Predict with a straight line: $\hat y = wx + b$.</p>
+  </details>
+  <details>
+    <summary>Step 2 — loss (MSE)</summary>
+    <p>Penalise squared error so big misses hurt more, and the surface stays smooth:
+       $L=\tfrac1n\sum(\hat y-y)^2$.</p>
+  </details>
+  <details>
+    <summary>Step 3 — loss for one sample</summary>
+    <p>For a single point, $L_i=(\hat y_i-y_i)^2$ with $\hat y_i = wx_i+b$.</p>
+  </details>
+  <details>
+    <summary>Step 4 — chain rule</summary>
+    <p>$\dfrac{\partial L_i}{\partial w}=\dfrac{\partial L_i}{\partial \hat y_i}\cdot
+       \dfrac{\partial \hat y_i}{\partial w}$.
+       Part A: $\dfrac{\partial L_i}{\partial \hat y_i}=2(\hat y_i-y_i)$.
+       Part B: $\dfrac{\partial \hat y_i}{\partial w}=x_i$ (and $=1$ for $b$).</p>
+  </details>
+  <details>
+    <summary>Step 5 — combine</summary>
+    <p>$\dfrac{\partial L_i}{\partial w}=2(\hat y_i-y_i)x_i$,
+       $\quad \dfrac{\partial L_i}{\partial b}=2(\hat y_i-y_i)$.</p>
+  </details>
+  <details>
+    <summary>Step 6 — average over all samples</summary>
+    <p>$\dfrac{\partial L}{\partial w}=\dfrac2n\sum(\hat y_i-y_i)x_i,
+       \quad \dfrac{\partial L}{\partial b}=\dfrac2n\sum(\hat y_i-y_i)$. Plug into the
+       update rule and loop.</p>
+  </details>
+
+  <h2>Play with it</h2>
+  <p>Step through training, or hit run. Then push the learning rate to the top and
+     watch it <span class="warn">diverge</span> — the single most useful intuition here.</p>
+  <div class="panel">
+    <div class="stat-row">
+      <div class="stat"><div class="k">weight w</div><div class="v" id="wv">0.00</div></div>
+      <div class="stat"><div class="k">bias b</div><div class="v" id="bv">0.00</div></div>
+      <div class="stat"><div class="k">loss</div><div class="v" id="lv">—</div></div>
+      <div class="stat"><div class="k">epoch</div><div class="v" id="ev">0</div></div>
+    </div>
+    <div class="controls">
+      <div class="ctl"><label>learning rate η</label>
+        <input type="range" id="lr" min="0.001" max="0.03" step="0.001" value="0.008"/><output id="lro">0.008</output></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="step">step ×1</button>
+      <button class="btn" id="run">▶ run ×50</button>
+      <button class="btn" id="reset">↺ reset</button>
+    </div>
+    <canvas id="fit" height="280" aria-label="Data points and current fit line"></canvas>
+    <div class="meta" style="margin:.8rem 0 .2rem">loss per epoch</div>
+    <canvas id="loss" height="120" aria-label="Loss decreasing over epochs"></canvas>
+  </div>
+
+  <h2>Run the code</h2>
+  <p>From-scratch gradient descent — no scikit-learn. Edit η or the data and run.</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false">import numpy as np
+
+x = np.array([0.5,1.2,2.0,2.8,3.5,4.3,5.0,5.9,6.7,7.4,8.2,9.0])
+y = 2.0*x + 1.0 + np.sin(x*12.9)*1.7   # noisy line
+
+w, b, lr = 0.0, 0.0, 0.008
+for epoch in range(1, 401):
+    yhat = w*x + b
+    err  = yhat - y
+    dw = (2/len(x)) * np.sum(err*x)
+    db = (2/len(x)) * np.sum(err)
+    w -= lr*dw
+    b -= lr*db
+    if epoch % 100 == 0:
+        loss = np.mean(err**2)
+        print(f"epoch {epoch:3d}  w={w:.3f}  b={b:.3f}  loss={loss:.3f}")
+
+print("learned:  y =", round(w,2), "x +", round(b,2))</textarea>
+    <div class="code-bar">
+      <button class="btn" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+
+  <h2>Test yourself</h2>
+  <p>Recall before flipping.</p>
+  <div class="cards" id="cards">
+    <div class="card"><div class="card-inner">
+      <div class="face q">Why step <em>opposite</em> the gradient?</div>
+      <div class="face a">The gradient points uphill (steepest increase); we want to reduce loss, so we go the other way.</div></div></div>
+    <div class="card"><div class="card-inner">
+      <div class="face q">What does η (learning rate) control?</div>
+      <div class="face a">Step size. Too small → slow; too large → overshoot and diverge.</div></div></div>
+    <div class="card"><div class="card-inner">
+      <div class="face q">Gradient of MSE w.r.t. w?</div>
+      <div class="face a">$\frac{2}{n}\sum(\hat y-y)x$ — error, weighted by the input, averaged.</div></div></div>
+    <div class="card"><div class="card-inner">
+      <div class="face q">Batch vs stochastic GD?</div>
+      <div class="face a">Batch uses all samples per step; SGD uses one (or a mini-batch) — noisier but faster per update.</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul>
+    <li><a href="../_template.html">Template</a> — duplicate to start the next note</li>
+    <li>Linear regression, logistic regression — same engine, different loss</li>
+    <li>Regularization — adds a penalty term to this same gradient</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> explain why we move opposite the gradient</label></li>
+    <li><label><input type="checkbox"/> derive ∂L/∂w and ∂L/∂b by hand</label></li>
+    <li><label><input type="checkbox"/> implement batch GD in NumPy from scratch</label></li>
+    <li><label><input type="checkbox"/> predict what too-large a learning rate does</label></li>
+  </ul>
+
+  <footer>Tag: <code id="ftag"></code> · built from the template · #classical-ml</footer>
+</div>
+
+<script>
+const NOTE_ID=location.pathname.split('/').pop()||'note';
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+if(localStorage.getItem('theme-'+NOTE_ID)==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');localStorage.setItem('theme-'+NOTE_ID,d?'light':'dark');draw();drawLoss();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=localStorage.getItem('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{localStorage.setItem('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};
+refreshReview();$('#ftag').textContent=root.getAttribute('data-tag');
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=localStorage.getItem(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>localStorage.setItem(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+
+const xs=[0.5,1.2,2.0,2.8,3.5,4.3,5.0,5.9,6.7,7.4,8.2,9.0];
+const ys=xs.map(x=>2.0*x+1.0+Math.sin(x*12.9)*1.7);
+let w=0,b=0,epoch=0,hist=[];
+const lr=$('#lr'),fit=$('#fit'),loss=$('#loss');
+function css(v){return getComputedStyle(document.body).getPropertyValue(v).trim()||'#888';}
+function mse(){let s=0;for(let i=0;i<xs.length;i++){const e=w*xs[i]+b-ys[i];s+=e*e;}return s/xs.length;}
+function gstep(){let dw=0,db=0;for(let i=0;i<xs.length;i++){const e=w*xs[i]+b-ys[i];dw+=2*e*xs[i];db+=2*e;}dw/=xs.length;db/=xs.length;const e=+lr.value;w-=e*dw;b-=e*db;epoch++;hist.push(mse());if(hist.length>400)hist.shift();}
+function setup(c){const r=window.devicePixelRatio||1;c.width=c.clientWidth*r;c.height=c.clientHeight*r;const x=c.getContext('2d');x.setTransform(r,0,0,r,0,0);return x;}
+function draw(){const ctx=setup(fit),W=fit.clientWidth,H=fit.clientHeight,pad=34;ctx.clearRect(0,0,W,H);
+  const xmin=0,xmax=9.6,ymin=Math.min(...ys)-2,ymax=Math.max(...ys)+2;
+  const sx=v=>pad+(v-xmin)/(xmax-xmin)*(W-2*pad),sy=v=>H-pad-(v-ymin)/(ymax-ymin)*(H-2*pad);
+  ctx.strokeStyle=css('--border');ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,H-pad);ctx.lineTo(W-pad,H-pad);ctx.moveTo(pad,pad);ctx.lineTo(pad,H-pad);ctx.stroke();
+  ctx.strokeStyle=css('--accent');ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(sx(xmin),sy(w*xmin+b));ctx.lineTo(sx(xmax),sy(w*xmax+b));ctx.stroke();
+  for(let i=0;i<xs.length;i++){const px=sx(xs[i]),py=sy(ys[i]),ly=sy(w*xs[i]+b);
+    ctx.strokeStyle='rgba(216,90,48,0.45)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,ly);ctx.stroke();
+    ctx.fillStyle='#d85a30';ctx.beginPath();ctx.arc(px,py,4,0,7);ctx.fill();}}
+function drawLoss(){const ctx=setup(loss),W=loss.clientWidth,H=loss.clientHeight,pad=10;ctx.clearRect(0,0,W,H);if(hist.length<2)return;
+  const mx=Math.max(...hist),mn=Math.min(...hist);ctx.strokeStyle=css('--accent');ctx.lineWidth=2;ctx.beginPath();
+  hist.forEach((v,i)=>{const px=pad+i/(hist.length-1)*(W-2*pad),py=H-pad-(mx===mn?.5:(v-mn)/(mx-mn))*(H-2*pad);i?ctx.lineTo(px,py):ctx.moveTo(px,py);});ctx.stroke();}
+function readout(){$('#wv').textContent=w.toFixed(2);$('#bv').textContent=b.toFixed(2);$('#lv').textContent=mse().toFixed(2);$('#ev').textContent=epoch;$('#lro').textContent=(+lr.value).toFixed(3);}
+function render(){draw();drawLoss();readout();}
+function reset(){w=0;b=0;epoch=0;hist=[mse()];render();}
+$('#step').onclick=()=>{gstep();render();};
+$('#run').onclick=()=>{let n=0;const t=setInterval(()=>{gstep();render();if(++n>=50)clearInterval(t);},16);};
+$('#reset').onclick=reset;
+lr.oninput=()=>$('#lro').textContent=(+lr.value).toFixed(3);
+addEventListener('resize',render);reset();
+
+let pyodide=null;
+$('#runBtn').onclick=async()=>{const st=$('#runStatus'),out=$('#out');
+  if(!pyodide){st.textContent='loading Python… (first run only, ~10s)';
+    await new Promise(r=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=r;document.head.appendChild(s);});
+    pyodide=await loadPyodide();await pyodide.loadPackage('numpy');st.textContent='';}
+  out.textContent='';pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});
+  try{await pyodide.runPythonAsync($('#code').value);}catch(e){out.textContent+="\n"+e;}};
+</script>
+</body>
+</html>

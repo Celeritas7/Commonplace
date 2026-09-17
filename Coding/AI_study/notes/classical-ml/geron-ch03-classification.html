@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 3 "Classification".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 3 — Classification</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+#thHist{height:200px} #thCurves{height:230px} #imCv{height:230px}
+.tw table.cm{border-collapse:collapse;width:auto;min-width:0;margin:.8rem 0 0;font-variant-numeric:tabular-nums}
+.cm td,.cm th{text-align:center;padding:.35rem .7rem}
+.cm td.good{color:var(--tip);font-weight:650} .cm td.bad{color:var(--imp);font-weight:650}
+@media (max-width:560px){#thCurves{height:200px}}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 3 · book pp. 85–110</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 3 — Classification</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    A classifier is only as good as the metric you judge it by. Look past accuracy to the confusion matrix,
+    precision, recall and the threshold that trades one for the other. Then extend binary classifiers
+    to many classes, many labels and many outputs.
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=115">MNIST <span>p. 85</span></a>
+    <a href="../geron/reader.html#p=118">Training a Binary Classifier <span>p. 88</span></a>
+    <a href="../geron/reader.html#p=118">Performance Measures <span>p. 88</span></a>
+    <a href="../geron/reader.html#p=130">Multiclass Classification <span>p. 100</span></a>
+    <a href="../geron/reader.html#p=132">Error Analysis <span>p. 102</span></a>
+    <a href="../geron/reader.html#p=136">Multilabel Classification <span>p. 106</span></a>
+    <a href="../geron/reader.html#p=137">Multioutput Classification <span>p. 107</span></a>
+    <a href="../geron/reader.html#p=138">Exercises <span>p. 108</span></a>
+  </nav>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · MNIST <a class="book" href="../geron/reader.html#p=115">book p. 85 ↗</a></h2>
+  <p><span class="def">MNIST</span> is 70,000 grayscale images of handwritten digits, each 28 × 28 pixels, which gives <b>784 features</b> per image (pixel intensity 0–255). Each image comes with a label from 0 to 9. People test new classifiers on it so often that it is the field's standard warm-up dataset.</p>
+  <ul class="tight">
+    <li>You get it with <code>fetch_openml('mnist_784', version=1)</code>. Like most scikit-learn datasets, the result is a dict-like <code>Bunch</code> with <code>data</code>, <code>target</code> and <code>DESCR</code>.</li>
+    <li class="imp">The labels come back as <b>strings</b>. Convert them to integers (<code>y.astype(np.uint8)</code>) before you compare them with numbers.</li>
+    <li>It is already split: the <b>first 60,000</b> images are the training set and the <b>last 10,000</b> are the test set. Set the test set aside before you explore.</li>
+    <li class="exp">The training set is already shuffled. That keeps cross-validation folds similar, and it helps algorithms that are sensitive to row order (SGD).</li>
+    <li class="skip">Shuffling is a bad idea for time series, where the order carries meaning. Covered in later chapters.</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book">
+    <code>fetch_openml</code> now returns a pandas DataFrame by default (<code>as_frame="auto"</code>). Pass <code>as_frame=False</code> if you want NumPy arrays so that <code>X[0].reshape(28, 28)</code> works. The download is about 55 MB. The Python cell below uses the built-in 8 × 8 <code>load_digits</code> set (1,797 images, 64 features) instead, because it works offline.
+  </span>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Training a binary classifier <a class="book" href="../geron/reader.html#p=118">book p. 88 ↗</a></h2>
+  <p>Start simple: a <span class="def">binary classifier</span> separates just two classes. Here that is a "5-detector": the target is <code>y == 5</code> (True/False).</p>
+  <ul class="tight">
+    <li><code>SGDClassifier</code> is a good first model. It is a linear model trained with stochastic gradient descent, and it handles very large datasets and <span class="def">online learning</span> because it looks at one instance at a time.</li>
+    <li class="exp">With the default <code>loss="hinge"</code> it is a linear SVM. With <code>loss="log_loss"</code> it becomes logistic regression and gains <code>predict_proba</code>.</li>
+    <li class="tip">Training is random, so set <code>random_state</code> if you want the same result every run.</li>
+  </ul>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · Performance measures <a class="book" href="../geron/reader.html#p=118">book p. 88 ↗</a></h2>
+  <p>Evaluating a classifier is harder than evaluating a regressor. Most of the chapter is about this.</p>
+
+  <h3>3.1 The accuracy trap <a class="book" href="../geron/reader.html#p=119">book p. 89 ↗</a></h3>
+  <p><span class="def">Accuracy</span> is the share of predictions that are correct. With 3-fold cross-validation (<code>cross_val_score(..., scoring="accuracy")</code>) the 5-detector scores above 93%. That sounds great until you notice that a model which <b>always answers "not 5"</b> scores about 90%, because only about 10% of images are 5s.</p>
+  <span class="k i" data-l="Important">On <span class="def">skewed datasets</span> (one class much more common than the others), accuracy mostly measures the class ratio. Always compare against a trivial baseline, for example <code>DummyClassifier(strategy="most_frequent")</code>.</span>
+  <details><summary>Writing cross-validation yourself</summary>
+    <p>When you need more control than <code>cross_val_score</code> gives, loop over <code>StratifiedKFold(...).split(X, y)</code>. In each fold, <code>clone()</code> the model, fit it on the training folds and score it on the held-out fold. <span class="def">Stratified</span> folds keep the class ratio the same in every fold.</p>
+    <p class="tip">Since scikit-learn 0.24, <code>StratifiedKFold(random_state=42)</code> raises an error unless you also pass <code>shuffle=True</code>.</p>
+  </details>
+
+  <h3>3.2 The confusion matrix <a class="book" href="../geron/reader.html#p=120">book p. 90 ↗</a></h3>
+  <p>A <span class="def">confusion matrix</span> counts how often instances of each actual class were predicted as each class. <b>Rows are actual classes, columns are predicted classes.</b></p>
+  <div class="tw"><table>
+    <tr><th></th><th>predicted negative</th><th>predicted positive</th></tr>
+    <tr><th>actually negative</th><td><b>TN</b> — true negative</td><td class="imp">FP — false positive (false alarm)</td></tr>
+    <tr><th>actually positive</th><td class="imp">FN — false negative (miss)</td><td><b>TP</b> — true positive</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li>To get honest predictions for every training row, use <code>cross_val_predict(model, X, y, cv=3)</code>. Each prediction comes from a model that never saw that row. Then call <code>confusion_matrix(y_true, y_pred)</code>.</li>
+    <li class="imp">Keep the test set untouched until the very end. Do this kind of analysis on out-of-fold predictions.</li>
+    <li class="exp">A perfect classifier has non-zero counts only on the main diagonal.</li>
+  </ul>
+
+  <h3>3.3 Precision, recall, F1 <a class="book" href="../geron/reader.html#p=122">book p. 92 ↗</a></h3>
+  <div class="math">$$\text{precision}=\frac{TP}{TP+FP}\qquad \text{recall}=\frac{TP}{TP+FN}\qquad F_1=\frac{2}{\frac{1}{\text{precision}}+\frac{1}{\text{recall}}}=\frac{TP}{TP+\frac{FN+FP}{2}}$$</div>
+  <ul class="tight">
+    <li><span class="def">Precision</span>: of everything the model flagged positive, how much really was positive.</li>
+    <li><span class="def">Recall</span> (also <span class="def">sensitivity</span> or <span class="def">true positive rate, TPR</span>): of all real positives, how many the model found.</li>
+    <li><span class="def">F1 score</span>: the <span class="def">harmonic mean</span> of the two. It is high only when <b>both</b> are high, because the harmonic mean is dragged down by the smaller value.</li>
+    <li class="exp">Precision alone can be gamed: make one confident positive prediction, get it right, and precision is 100%. That is why you always report it with recall.</li>
+    <li>scikit-learn: <code>precision_score</code>, <code>recall_score</code>, <code>f1_score</code>, or <code>classification_report</code> for all three per class.</li>
+  </ul>
+  <p>For the book's 5-detector, precision and recall are both only about 73–76%. That is far less impressive than the accuracy suggested.</p>
+  <div class="tw"><table>
+    <tr><th>Task</th><th>What matters</th><th>Why</th></tr>
+    <tr><td>Filter videos for young children</td><td class="tip">high precision</td><td>Rejecting good videos is fine. Letting one bad video through is not.</td></tr>
+    <tr><td>Flag shoplifters on camera</td><td class="tip">high recall</td><td>Guards can dismiss false alarms. Missing a thief is the costly error.</td></tr>
+    <tr><td>Comparing two models quickly</td><td>F1</td><td>One number that rewards balance.</td></tr>
+  </table></div>
+  <span class="k i" data-l="Important">The <span class="def">precision/recall trade-off</span>: for a given model you can raise one only by lowering the other.</span>
+
+  <h3>3.4 The trade-off and the decision threshold <a class="book" href="../geron/reader.html#p=123">book p. 93 ↗</a></h3>
+  <p>The classifier computes a score for each instance with its <span class="def">decision function</span>. If the score is above the <span class="def">decision threshold</span>, the instance is labelled positive. <code>SGDClassifier</code> uses a threshold of 0.</p>
+  <ul class="tight">
+    <li><span class="exp">Raise the threshold</span> → fewer positives are predicted → fewer false alarms (precision usually goes up) but more misses (recall goes down).</li>
+    <li><span class="exp">Lower the threshold</span> → the reverse.</li>
+    <li class="exp">Recall can only fall as the threshold rises, so its curve is smooth. Precision usually rises, but it can dip for a moment when a true positive drops out before a false positive does. That is why the precision curve looks bumpy.</li>
+  </ul>
+  <p>How to pick a threshold yourself:</p>
+  <ol class="tight">
+    <li>Get out-of-fold scores: <code>cross_val_predict(clf, X, y, cv=3, method="decision_function")</code>.</li>
+    <li>Get every candidate: <code>precisions, recalls, thresholds = precision_recall_curve(y, scores)</code>. <span class="exp">The first two arrays are one element longer than <code>thresholds</code>, so drop their last value when you plot against it.</span></li>
+    <li>Plot precision and recall against the threshold, or precision against recall. Look for the point just before precision starts to fall steeply.</li>
+    <li>For a target such as 90% precision, take the <b>lowest</b> threshold that reaches it: <code>thresholds[np.argmax(precisions[:-1] &gt;= 0.90)]</code>. Then predict with <code>scores &gt;= t</code>.</li>
+  </ol>
+  <p>In the book, reaching 90% precision this way costs a lot: recall drops to about 44%.</p>
+  <span class="k i" data-l="Important">Almost any precision is easy to reach: just raise the threshold. So when someone quotes a precision figure, ask what recall came with it.</span>
+  <span class="k t" data-l="Changed since the book">scikit-learn 1.5 added <code>FixedThresholdClassifier</code> (wrap a model and set its threshold) and <code>TunedThresholdClassifierCV</code> (choose the threshold by cross-validation to maximise a metric). You no longer have to apply the threshold to raw scores by hand. <code>PrecisionRecallDisplay.from_predictions(y, scores)</code> draws the PR curve in one line.</span>
+
+  <div class="panel" id="thPanel">
+    <b>Play: move the decision threshold</b>
+    <p class="hint" style="margin-top:.2rem">Classifier scores for 500 negatives and 100 positives. Everything to the right of the line is predicted positive. The dot shows where this threshold sits on the PR and ROC curves.</p>
+    <div class="controls">
+      <div class="ctl"><label>Threshold</label><input type="range" id="thT" min="-3" max="6" step="any" value="1"/><output id="thTO"></output></div>
+      <div class="ctl"><label>Class separation</label><input type="range" id="thD" min="0" max="4" step="0.1" value="2"/><output id="thDO"></output></div>
+      <div class="ctl"><label></label><button class="btn" id="thBest">Best F1</button><button class="btn" id="th90">90% precision</button><button class="btn" id="thSeed">↻ New sample</button></div>
+    </div>
+    <canvas id="thHist" height="200" aria-label="Score histograms for the two classes with the threshold line"></canvas>
+    <canvas id="thCurves" height="230" style="margin-top:.6rem" aria-label="Precision-recall curve and ROC curve with the current threshold marked"></canvas>
+    <div class="tw" style="overflow-x:auto"><table class="cm" id="thCm"></table></div>
+    <div class="stats">
+      <div class="stat"><div class="kk">precision</div><div class="v" id="thP">–</div></div>
+      <div class="stat"><div class="kk">recall (TPR)</div><div class="v" id="thR">–</div></div>
+      <div class="stat"><div class="kk">F1</div><div class="v" id="thF">–</div></div>
+      <div class="stat"><div class="kk">FPR</div><div class="v" id="thFpr">–</div></div>
+      <div class="stat"><div class="kk">accuracy</div><div class="v" id="thA">–</div></div>
+      <div class="stat"><div class="kk">ROC AUC</div><div class="v" id="thAuc">–</div></div>
+    </div>
+    <p class="hint" id="thMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Drag the threshold right: the dot moves left along the PR curve (less recall) and down-left on the ROC curve.</li>
+      <li>Click "90% precision", then read off the recall you paid for it.</li>
+      <li>Set separation to 0: the ROC curve lies on the diagonal (AUC ≈ 0.5), and precision stays near the positive share, about 17%, whatever the threshold.</li>
+    </ul>
+  </details>
+
+  <h3>3.5 The ROC curve and AUC <a class="book" href="../geron/reader.html#p=127">book p. 97 ↗</a></h3>
+  <p>The <span class="def">ROC curve</span> (receiver operating characteristic) plots the <b>true positive rate</b> (recall) against the <b>false positive rate</b> for every threshold.</p>
+  <div class="math">$$\text{FPR}=\frac{FP}{FP+TN}=1-\text{TNR}\qquad \text{TNR}=\text{specificity}=\frac{TN}{TN+FP}$$</div>
+  <ul class="tight">
+    <li>So the ROC curve is <b>sensitivity vs. 1 − specificity</b>. Compute it with <code>fpr, tpr, thresholds = roc_curve(y, scores)</code>.</li>
+    <li>The diagonal is a random classifier. A good one bends toward the <b>top-left corner</b>.</li>
+    <li><span class="def">ROC AUC</span> (area under the curve, <code>roc_auc_score</code>): 1.0 is perfect, 0.5 is random. <span class="exp">It equals the probability that a random positive gets a higher score than a random negative.</span></li>
+    <li>Models without <code>decision_function</code>, such as <code>RandomForestClassifier</code>, have <code>predict_proba</code>. Use the positive class's probability as the score: <code>cross_val_predict(..., method="predict_proba")[:, 1]</code>.</li>
+    <li>In the book the random forest clearly beats SGD: ROC AUC ≈ 0.998 vs 0.96, about 99% precision at 87% recall.</li>
+  </ul>
+  <span class="k i" data-l="Important"><b>ROC or PR curve?</b> Prefer the <b>PR curve</b> when the positive class is rare, or when false positives matter more to you than false negatives. With few positives, FPR stays small even when there are many false alarms, so the ROC curve looks flattering. Otherwise the ROC curve is fine.</span>
+  <span class="k t" data-l="Changed since the book"><code>RocCurveDisplay.from_predictions(y, scores)</code> and <code>RocCurveDisplay.from_estimator(clf, X, y)</code> replace the hand-written plotting helper. The old <code>plot_roc_curve</code> and <code>plot_precision_recall_curve</code> functions were removed in 1.2. For a single-number PR summary, use <code>average_precision_score</code>.</span>
+
+  <div class="panel" id="imPanel">
+    <b>Play: why accuracy and ROC flatter a rare class</b>
+    <p class="hint" style="margin-top:.2rem">The model's quality stays fixed. Only the share of positives changes. The threshold is set to the accuracy-maximising value for each share.</p>
+    <div class="controls">
+      <div class="ctl"><label>Positive share</label><input type="range" id="imPi" min="-2.3" max="-0.3" step="0.05" value="-1"/><output id="imPiO"></output></div>
+      <div class="ctl"><label>Class separation</label><input type="range" id="imD" min="0.5" max="4" step="0.1" value="2"/><output id="imDO"></output></div>
+    </div>
+    <canvas id="imCv" height="230" aria-label="ROC curve and precision-recall curve as the positive share changes"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">"always negative" acc.</div><div class="v" id="imDum">–</div></div>
+      <div class="stat"><div class="kk">model accuracy</div><div class="v" id="imAcc">–</div></div>
+      <div class="stat"><div class="kk">model recall</div><div class="v" id="imRec">–</div></div>
+      <div class="stat"><div class="kk">ROC AUC</div><div class="v" id="imRoc">–</div></div>
+      <div class="stat"><div class="kk">PR AUC (avg. precision)</div><div class="v" id="imAp">–</div></div>
+    </div>
+    <p class="hint" id="imMsg"></p>
+  </div>
+
+  <!-- ===================================================== 4 -->
+  <h2>4 · Multiclass classification <a class="book" href="../geron/reader.html#p=130">book p. 100 ↗</a></h2>
+  <p><span class="def">Multiclass</span> (or <span class="def">multinomial</span>) classifiers choose among more than two classes. Some algorithms handle this natively (SGD, random forests, naive Bayes, and <code>LogisticRegression</code> today). Others are binary at heart (SVMs). You can build a multiclass model from binary ones in two ways:</p>
+  <div class="tw"><table>
+    <tr><th></th><th>One-versus-the-rest (OvR / OvA)</th><th>One-versus-one (OvO)</th></tr>
+    <tr><td>Models trained</td><td><i>N</i>: one detector per class</td><td>$N(N-1)/2$: one per pair of classes (45 for 10 digits)</td></tr>
+    <tr><td>Data per model</td><td>the whole training set</td><td class="tip">only the rows of the two classes involved</td></tr>
+    <tr><td>Prediction</td><td>class with the highest score</td><td>class that wins the most duels</td></tr>
+    <tr><td>Best for</td><td class="tip">most binary algorithms (the default choice)</td><td class="tip">algorithms that scale badly with training-set size, such as kernel SVMs</td></tr>
+    <tr><td>scikit-learn</td><td><code>OneVsRestClassifier(est)</code></td><td><code>OneVsOneClassifier(est)</code></td></tr>
+  </table></div>
+  <ul class="tight">
+    <li>scikit-learn chooses automatically. <code>SVC</code> trains OvO internally, and a fitted <code>OneVsRestClassifier</code> exposes its <i>N</i> models in <code>estimators_</code>.</li>
+    <li class="exp"><code>decision_function</code> then returns one score per class, and <code>np.argmax</code> of those scores gives the prediction.</li>
+    <li class="imp">The labels live in <code>clf.classes_</code>, sorted. Map an argmax index back through <code>classes_[i]</code>. It equals the class itself only when the labels happen to be 0…N−1.</li>
+    <li class="tip">Scaling the inputs with <code>StandardScaler</code> moved the book's 10-class SGD accuracy from about 87% to about 90%. Random guessing would get 10%.</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book"><code>SVC(decision_function_shape="ovr")</code> is the default. It trains OvO but reshapes the pairwise votes into one score per class, which is why you see 10 scores rather than 45. The <code>SGDClassifier</code> loss names changed as well: <code>"log"</code> is now <code>"log_loss"</code> (the old name was removed in 1.3), and <code>"squared_loss"</code> is now <code>"squared_error"</code>.</span>
+
+  <!-- ===================================================== 5 -->
+  <h2>5 · Error analysis <a class="book" href="../geron/reader.html#p=132">book p. 102 ↗</a></h2>
+  <p>Once you have a promising model, study <b>which</b> mistakes it makes. The 10 × 10 confusion matrix is the main tool.</p>
+  <ol class="tight">
+    <li>Get out-of-fold predictions and the confusion matrix.</li>
+    <li class="imp">Divide each row by its row total, so you compare <b>error rates</b> rather than raw counts. Otherwise common classes look worse just because they are common.</li>
+    <li>Set the diagonal to zero so that only the errors remain, then display it as an image.</li>
+  </ol>
+  <ul class="tight">
+    <li><span class="exp">A bright column</span> means many different digits get <i>predicted as</i> that class. In the book this is 8. <span class="exp">A bright row</span> means that class is often misread.</li>
+    <li class="exp">The matrix is not symmetric: 3→5 and 5→3 are separate cells. In the book, 3 and 5 are confused in both directions.</li>
+    <li>Ways to fix it: collect more examples of the digits that look like 8 but aren't; <b>engineer features</b> (for example, count closed loops: 8 has two, 6 has one, 5 has none); <b>preprocess</b> the images to make such patterns stand out.</li>
+    <li class="exp">Why 3 and 5 get mixed up: a linear model like SGD gives each pixel one weight per class and adds them up. 3 and 5 differ in only a few pixels (where the top stroke meets the lower curve), so a small shift or rotation flips the answer.</li>
+    <li class="tip">Centring and deskewing the images would reduce this error and others like it.</li>
+    <li class="skip">Looking at the individual misclassified images tells you more, but it takes time. Some are messy enough to fool a human.</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book"><code>confusion_matrix(y, y_pred, normalize="true")</code> does the row division for you. <code>ConfusionMatrixDisplay.from_predictions(y, y_pred, normalize="true")</code> draws the heatmap with labelled axes in one line. <code>sample_weight=(y_pred != y)</code> keeps only the errors.</span>
+
+  <!-- ===================================================== 6 -->
+  <h2>6 · Multilabel classification <a class="book" href="../geron/reader.html#p=136">book p. 106 ↗</a></h2>
+  <p>A <span class="def">multilabel</span> classifier outputs <b>several binary tags</b> per instance. For example, a face tagger that knows Alice, Bob and Charlie outputs <code>[1, 0, 1]</code> for a photo of Alice and Charlie.</p>
+  <ul class="tight">
+    <li>The book's toy example gives each digit two labels, "is it ≥ 7?" and "is it odd?", stacked with <code>np.c_[...]</code>. It then fits a <code>KNeighborsClassifier</code>, which supports multilabel targets natively. Not every classifier does.</li>
+    <li>Evaluation: compute a binary metric per label, then average it. <code>f1_score(Y, Y_pred, average="macro")</code> weights every label equally.</li>
+    <li class="tip">If some labels are much more common, use <code>average="weighted"</code>, which weights each label by its <span class="def">support</span> (the number of instances that have that label).</li>
+  </ul>
+  <span class="k t" data-l="Tip">If a model can't do multilabel, wrap it: <code>MultiOutputClassifier(est)</code> trains one model per label. <code>ClassifierChain</code> also feeds earlier predictions into later models, so it can use correlations between labels.</span>
+
+  <!-- ===================================================== 7 -->
+  <h2>7 · Multioutput classification <a class="book" href="../geron/reader.html#p=137">book p. 107 ↗</a></h2>
+  <p><span class="def">Multioutput–multiclass classification</span> (or just <span class="def">multioutput</span>) generalises multilabel: each output can take <b>more than two values</b>.</p>
+  <ul class="tight">
+    <li>Example: <b>image denoising</b>. The input is a noisy digit and the output is the clean image: one "label" per pixel, each with values from 0 to 255.</li>
+    <li>Recipe: add random integer noise to the pixels to make the inputs, use the original images as targets, and fit a <code>KNeighborsClassifier</code> on (noisy → clean).</li>
+    <li class="exp">The boundary between classification and regression is blurry here. Predicting pixel intensities is arguably regression, and a multioutput system can mix class outputs with numeric ones.</li>
+    <li class="skip">The book peeks at a test image for the demo and admits it is cheating a little.</li>
+  </ul>
+
+  <!-- ===================================================== 8 -->
+  <h2>8 · Exercises <a class="book" href="../geron/reader.html#p=138">book p. 108 ↗</a></h2>
+  <ol class="tight">
+    <li>Get <b>over 97% test accuracy</b> on MNIST. <span class="tip">Hint: <code>KNeighborsClassifier</code> with a grid search over <code>weights</code> and <code>n_neighbors</code>.</span></li>
+    <li>Write a function that shifts an image one pixel up, down, left or right. Add four shifted copies of every training image, retrain, and compare. This is <span class="def">data augmentation</span> (<span class="def">training set expansion</span>). <span class="tip"><code>scipy.ndimage.shift(img, [dy, dx], cval=0)</code> does the shifting. The book's <code>scipy.ndimage.interpolation</code> path is deprecated.</span></li>
+    <li>Work through the <b>Titanic</b> dataset (Kaggle).</li>
+    <li>Build a <b>spam classifier</b> from the SpamAssassin corpus: split the data, write a pipeline that turns each email into a sparse word-presence or word-count vector (with options for lowercasing, stripping headers and punctuation, replacing URLs and numbers, and stemming), then try several models and aim for high precision <i>and</i> high recall.</li>
+  </ol>
+  <span class="k t" data-l="Tip">For exercise 4, <code>CountVectorizer</code> or <code>TfidfVectorizer</code> (<code>binary=True</code> for presence/absence) replaces most of the hand-written pipeline.</span>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — all of chapter 3 in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. scikit-learn downloads on the first run (≈ 20–40 s, needs internet). It uses the built-in 8 × 8 <code>load_digits</code> images instead of MNIST, because MNIST has to be downloaded.</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false" style="min-height:420px">import numpy as np
+from sklearn.datasets import load_digits
+from sklearn.model_selection import train_test_split, cross_val_score, cross_val_predict
+from sklearn.linear_model import SGDClassifier
+from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import (confusion_matrix, precision_score, recall_score, f1_score,
+                             precision_recall_curve, roc_auc_score, average_precision_score)
+
+# 8x8 digits stand in for MNIST (MNIST needs a download)
+X, y = load_digits(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.25, stratify=y, random_state=42)
+y5 = (y_tr == 5)
+print(f"train {X_tr.shape}, share of 5s = {y5.mean():.1%}")
+
+# 1) Accuracy trap: a 'never 5' model scores ~90%
+sgd = SGDClassifier(loss="hinge", random_state=42)
+print("SGD   acc:", cross_val_score(sgd, X_tr, y5, cv=3).round(3))
+print("never acc:", cross_val_score(DummyClassifier(strategy="most_frequent"), X_tr, y5, cv=3).round(3))
+
+# 2) Confusion matrix + precision / recall / F1 (clean out-of-fold predictions)
+pred = cross_val_predict(sgd, X_tr, y5, cv=3)
+print("confusion [[TN FP] [FN TP]]:\n", confusion_matrix(y5, pred))
+print(f"P={precision_score(y5, pred):.3f} R={recall_score(y5, pred):.3f} F1={f1_score(y5, pred):.3f}")
+
+# 3) Moving the threshold on decision scores
+scores = cross_val_predict(sgd, X_tr, y5, cv=3, method="decision_function")
+prec, rec, thr = precision_recall_curve(y5, scores)
+t99 = thr[np.argmax(prec[:-1] &gt;= 0.99)]          # lowest threshold with &gt;= 99% precision
+p99 = scores &gt;= t99
+print(f"threshold {t99:.1f}: P={precision_score(y5, p99):.3f} R={recall_score(y5, p99):.3f}")
+
+# 4) ROC AUC vs PR AUC (average precision), SGD vs Random Forest
+proba_rf = cross_val_predict(RandomForestClassifier(random_state=42), X_tr, y5, cv=3,
+                             method="predict_proba")[:, 1]
+for name, s in [("SGD", scores), ("RF ", proba_rf)]:
+    print(f"{name} ROC AUC={roc_auc_score(y5, s):.4f}  AP={average_precision_score(y5, s):.4f}")
+
+# 5) Multiclass: SVC uses OvO inside; OvR wrapper trains 10 models
+svc = make_pipeline(StandardScaler(), SVC()).fit(X_tr, y_tr)
+ovr = OneVsRestClassifier(SVC()).fit(X_tr, y_tr)
+print("SVC (OvO) test acc:", round(svc.score(X_te, y_te), 3),
+      "| OvR test acc:", round(ovr.score(X_te, y_te), 3), "| OvR models:", len(ovr.estimators_))
+raw = cross_val_score(SGDClassifier(random_state=42), X_tr, y_tr, cv=3).mean()
+scaled = cross_val_score(make_pipeline(StandardScaler(), SGDClassifier(random_state=42)), X_tr, y_tr, cv=3).mean()
+print(f"SGD 10-class acc: raw={raw:.3f} scaled={scaled:.3f}")
+
+# 6) Error analysis: row-normalised confusion matrix, diagonal removed
+y_pred = cross_val_predict(make_pipeline(StandardScaler(), SGDClassifier(random_state=42)), X_tr, y_tr, cv=3)
+cm = confusion_matrix(y_tr, y_pred, normalize="true")
+np.fill_diagonal(cm, 0)
+for k in np.argsort(cm, axis=None)[::-1][:3]:
+    a, b = divmod(k, 10)
+    print(f"  true {a} -&gt; predicted {b}: {cm[a, b]:.1%}")
+
+# 7) Multilabel: [is large (&gt;=7), is odd]
+y_ml = np.c_[y_tr &gt;= 7, y_tr % 2 == 1]
+knn = KNeighborsClassifier().fit(X_tr, y_ml)
+print("multilabel for a 5:", knn.predict(X_te[y_te == 5][:1]))
+print("macro F1:", round(f1_score(y_ml, cross_val_predict(knn, X_tr, y_ml, cv=3), average="macro"), 3))
+
+# 8) Multioutput: denoise images (one label per pixel, values 0..16)
+rng = np.random.default_rng(42)
+noisy_tr = X_tr + rng.integers(0, 8, X_tr.shape)
+noisy_te = X_te + rng.integers(0, 8, X_te.shape)
+clean = KNeighborsClassifier().fit(noisy_tr, X_tr).predict(noisy_te[:1])
+print("pixel error before:", np.abs(noisy_te[0] - X_te[0]).mean().round(2),
+      "after:", np.abs(clean[0] - X_te[0]).mean().round(2))</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">A fraud model is 99.5% accurate and 0.5% of transactions are fraud. Impressed?</div><div class="face a">No. Answering "not fraud" every time also scores 99.5%. Check the confusion matrix, precision and recall.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">In scikit-learn's confusion matrix, what do rows and columns mean?</div><div class="face a">Rows are the actual classes, columns are the predicted classes. For binary labels: [[TN, FP], [FN, TP]].</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Precision vs recall in one phrase each?</div><div class="face a">Precision: how many of the flagged items were right. Recall: how many of the real positives were found.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why is F1 a harmonic mean rather than an average?</div><div class="face a">The harmonic mean is pulled toward the smaller value, so F1 is high only if precision and recall are both high.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">You raise the decision threshold. What happens to recall and precision?</div><div class="face a">Recall can only fall or stay the same. Precision usually rises, but it can dip at some steps.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Positives are 1% of the data. ROC curve or PR curve?</div><div class="face a">PR curve. With so many negatives, FPR stays tiny even when there are lots of false alarms, so the ROC curve looks too good.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">10 classes with a kernel SVM: OvR or OvO, and how many models?</div><div class="face a">OvO: 45 small models. Kernel SVMs scale badly with the number of rows, so many small training sets are faster. SVC does this internally.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Multilabel vs multioutput?</div><div class="face a">Multilabel: several yes/no tags per instance. Multioutput: several outputs, each of which can have many values (for example, every pixel of a denoised image).</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="geron-ch02-end-to-end-project.html">Ch 2 — End-to-end project</a>: cross-validation, stratified splits, <code>StandardScaler</code></li>
+    <li><a href="geron-ch04-training-models.html">Ch 4 — Training models</a>: what SGD does inside, logistic and softmax regression, <code>predict_proba</code></li>
+    <li><a href="gradient-descent.html">Gradient descent note</a>: the optimiser behind <code>SGDClassifier</code></li>
+    <li><a href="geron-ch05-svm.html">Ch 5 — SVMs</a>: why <code>SVC</code> uses one-versus-one</li>
+    <li><a href="geron-ch07-ensembles.html">Ch 7 — Ensembles</a>: how the random forest that beat SGD here works</li>
+    <li><a href="../geron/reader.html#p=751">Book answers to the chapter 3 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> explain why accuracy misleads on skewed classes and name a baseline to compare against</label></li>
+    <li><label><input type="checkbox"/> read a confusion matrix and compute precision, recall and F1 from it</label></li>
+    <li><label><input type="checkbox"/> choose a threshold for a target precision using <code>precision_recall_curve</code></label></li>
+    <li><label><input type="checkbox"/> say what ROC AUC measures and when the PR curve is the better choice</label></li>
+    <li><label><input type="checkbox"/> compare OvR and OvO and say which one scikit-learn uses for SVC</label></li>
+    <li><label><input type="checkbox"/> normalise a multiclass confusion matrix and turn what it shows into fixes</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 3. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch03';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const pct=(v,d=1)=>isFinite(v)?(v*100).toFixed(d)+'%':'–';
+// standard normal CDF (Abramowitz–Stegun 7.1.26)
+function Phi(z){const s=z<0?-1:1,x=Math.abs(z)/Math.SQRT2,t=1/(1+0.3275911*x);
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return 0.5*(1+s*y);}
+// draw a unit-square plot box with axes and labels; returns mapper
+function plotBox(x,ox,oy,w,h,title,xl,yl){
+  x.strokeStyle=css('--border');x.lineWidth=1;x.strokeRect(ox,oy,w,h);
+  x.beginPath();for(let k=1;k<4;k++){x.moveTo(ox+w*k/4,oy);x.lineTo(ox+w*k/4,oy+h);x.moveTo(ox,oy+h*k/4);x.lineTo(ox+w,oy+h*k/4);}x.globalAlpha=.5;x.stroke();x.globalAlpha=1;
+  x.fillStyle=css('--muted');x.font='11px system-ui';x.textAlign='center';
+  x.fillText(xl,ox+w/2,oy+h+14);x.fillText('0',ox,oy+h+14);x.fillText('1',ox+w,oy+h+14);
+  x.save();x.translate(ox-8,oy+h/2);x.rotate(-Math.PI/2);x.fillText(yl,0,0);x.restore();
+  x.fillStyle=css('--text');x.font='600 12px system-ui';x.textAlign='left';x.fillText(title,ox+4,oy-6);
+  return{X:v=>ox+v*w,Y:v=>oy+h-v*h};
+}
+
+// lay out two square plots side by side, centred, with room for y-labels (left) and x-labels (right edge)
+function twoBoxes(W,H){const gap=34,mid=14,right=12;const w=Math.max(60,Math.min((W-2*gap-mid-right)/2,H-44));
+  const left=Math.max(0,(W-(2*gap+2*w+mid+right))/2);return{o1:left+gap,o2:left+2*gap+w+mid,w,oy:20};}
+
+/* ================= Threshold playground ================= */
+const TH={seed:5,nN:500,nP:100};
+function thData(){const r=mulberry(TH.seed);TH.zn=[];TH.zp=[];
+  for(let i=0;i<TH.nN;i++)TH.zn.push(gauss(r));for(let i=0;i<TH.nP;i++)TH.zp.push(gauss(r));}
+function thScores(){const d=+$('#thD').value;const neg=TH.zn,pos=TH.zp.map(z=>z+d);
+  // curve: sweep thresholds over all scores, descending
+  const all=neg.map(s=>[s,0]).concat(pos.map(s=>[s,1])).sort((a,b)=>b[0]-a[0]);
+  const pr=[],roc=[[0,0]];let tp=0,fp=0,auc=0,prevF=0,prevT=0;
+  for(let i=0;i<all.length;i++){all[i][1]?tp++:fp++;
+    if(i===all.length-1||all[i+1][0]!==all[i][0]){const T=tp/TH.nP,F=fp/TH.nN;auc+=(F-prevF)*(T+prevT)/2;prevF=F;prevT=T;
+      roc.push([F,T]);pr.push([T,tp/(tp+fp),all[i][0]]);}}
+  return{neg,pos,pr,roc,auc,d};}
+function thCounts(S,t){let TP=0,FP=0;for(const s of S.pos)if(s>=t)TP++;for(const s of S.neg)if(s>=t)FP++;
+  const FN=TH.nP-TP,TN=TH.nN-FP;const P=TP+FP?TP/(TP+FP):NaN,R=TP/TH.nP;
+  return{TP,FP,FN,TN,P,R,F1:(TP?2*TP/(2*TP+FP+FN):0),FPR:FP/TH.nN,A:(TP+TN)/(TH.nN+TH.nP)};}
+function drawTH(){
+  const t=+$('#thT').value;$('#thTO').textContent=t.toFixed(2);$('#thDO').textContent=(+$('#thD').value).toFixed(1);
+  const S=thScores(),c=thCounts(S,t);
+  // histogram
+  {const{x,W,H}=setupCanvas($('#thHist'));const lo=-4,hi=7,nb=44,bw=(hi-lo)/nb;
+    const px=v=>(v-lo)/(hi-lo)*W;const hn=Array(nb).fill(0),hp=Array(nb).fill(0);
+    S.neg.forEach(s=>{const k=Math.floor((s-lo)/bw);if(k>=0&&k<nb)hn[k]++;});S.pos.forEach(s=>{const k=Math.floor((s-lo)/bw);if(k>=0&&k<nb)hp[k]++;});
+    const mx=Math.max(...hn,...hp,1),base=H-20,sc=(H-40)/mx;
+    x.fillStyle=css('--accent');x.globalAlpha=.07;x.fillRect(px(t),0,W-px(t),base);x.globalAlpha=1;
+    const bar=(h,col)=>{x.fillStyle=col;x.globalAlpha=.55;h.forEach((n,k)=>{if(n)x.fillRect(px(lo+k*bw)+1,base-n*sc,W/nb-2,n*sc);});x.globalAlpha=1;};
+    bar(hn,css('--muted'));bar(hp,css('--tip'));
+    x.strokeStyle=css('--border');x.beginPath();x.moveTo(0,base);x.lineTo(W,base);x.stroke();
+    x.fillStyle=css('--muted');x.font='11px system-ui';x.textAlign='center';for(let v=-2;v<=6;v+=2)x.fillText(v,px(v),H-6);
+    x.strokeStyle=css('--def');x.lineWidth=2.5;x.beginPath();x.moveTo(px(t),4);x.lineTo(px(t),base);x.stroke();
+    x.textAlign='left';x.font='12px system-ui';x.fillStyle=css('--muted');x.fillText('■ negatives (500)',8,14);x.fillStyle=css('--tip');x.fillText('■ positives (100)',120,14);
+    x.fillStyle=css('--def');x.textAlign=px(t)>W-110?'right':'left';x.fillText(px(t)>W-110?'predicted positive →':'  predicted positive →',px(t)+(px(t)>W-110?-4:2),36);x.textAlign='left';}
+  // curves
+  {const{x,W,H}=setupCanvas($('#thCurves'));const{o1,o2,w,oy}=twoBoxes(W,H),h=w;
+    const A=plotBox(x,o1,oy,w,h,'Precision vs recall','recall','precision');
+    x.strokeStyle=css('--accent');x.lineWidth=2;x.beginPath();S.pr.forEach((p,i)=>{i?x.lineTo(A.X(p[0]),A.Y(p[1])):x.moveTo(A.X(p[0]),A.Y(p[1]));});x.stroke();
+    x.setLineDash([4,4]);x.strokeStyle=css('--muted');x.beginPath();const base=TH.nP/(TH.nP+TH.nN);x.moveTo(A.X(0),A.Y(base));x.lineTo(A.X(1),A.Y(base));x.stroke();x.setLineDash([]);
+    const B=plotBox(x,o2,oy,w,h,'ROC','FPR','TPR (recall)');
+    x.setLineDash([4,4]);x.strokeStyle=css('--muted');x.beginPath();x.moveTo(B.X(0),B.Y(0));x.lineTo(B.X(1),B.Y(1));x.stroke();x.setLineDash([]);
+    x.strokeStyle=css('--code');x.lineWidth=2;x.beginPath();S.roc.forEach((p,i)=>{i?x.lineTo(B.X(p[0]),B.Y(p[1])):x.moveTo(B.X(p[0]),B.Y(p[1]));});x.stroke();
+    const dot=(X,Y)=>{x.fillStyle=css('--def');x.strokeStyle=css('--surface');x.lineWidth=2;x.beginPath();x.arc(X,Y,6,0,7);x.fill();x.stroke();};
+    if(isFinite(c.P))dot(A.X(c.R),A.Y(c.P));dot(B.X(c.FPR),B.Y(c.R));}
+  // confusion matrix + stats
+  $('#thCm').innerHTML=`<tr><th></th><th>pred. −</th><th>pred. +</th></tr><tr><th>actual −</th><td class="good">TN ${c.TN}</td><td class="bad">FP ${c.FP}</td></tr><tr><th>actual +</th><td class="bad">FN ${c.FN}</td><td class="good">TP ${c.TP}</td></tr>`;
+  $('#thP').textContent=pct(c.P);$('#thR').textContent=pct(c.R);$('#thF').textContent=c.F1.toFixed(3);
+  $('#thFpr').textContent=pct(c.FPR);$('#thA').textContent=pct(c.A);$('#thAuc').textContent=S.auc.toFixed(3);
+  $('#thMsg').textContent=c.TP+c.FP===0?'Nothing is predicted positive: precision is undefined and recall is 0.':
+    S.d<0.3?'The classes overlap completely, so no threshold helps. Precision stays near the 17% base rate.':
+    c.R>0.97&&c.P<0.5?'Very low threshold: almost every positive is caught, but most alarms are false.':
+    c.P>0.97&&c.R<0.6?'Very strict threshold: nearly every alarm is real, but many positives are missed.':
+    `Of ${c.TP+c.FP} flagged items, ${c.TP} are real (precision). ${c.TP} of the 100 positives were found (recall).`;
+}
+function thSet(t){$('#thT').value=Math.max(-3,Math.min(6,t));drawTH();}
+$('#thBest').onclick=()=>{const S=thScores();let best=-1,bt=0;S.pr.forEach(p=>{const f=2*p[0]*p[1]/(p[0]+p[1]||1);if(f>best){best=f;bt=p[2];}});thSet(bt);};
+$('#th90').onclick=()=>{// lowest threshold whose precision reaches 90% (same rule as np.argmax(precisions >= 0.9))
+  const hit=S_asc().find(p=>p[1]>=0.9);thSet(hit?hit[2]:6);};
+const S_asc=()=>thScores().pr.slice().reverse();
+['thT','thD'].forEach(id=>$('#'+id).oninput=drawTH);
+$('#thSeed').onclick=()=>{TH.seed=Math.floor(Math.random()*1e6);thData();drawTH();};
+thData();
+
+/* ================= Imbalance playground ================= */
+function drawIM(){
+  const pi=Math.pow(10,+$('#imPi').value),d=+$('#imD').value;
+  $('#imPiO').textContent=pct(pi,1);$('#imDO').textContent=d.toFixed(1);
+  const TPR=t=>1-Phi(t-d),FPR=t=>1-Phi(t);
+  const prec=t=>{const a=pi*TPR(t),b=(1-pi)*FPR(t);return a+b>0?a/(a+b):1;};
+  const tStar=d/2+Math.log((1-pi)/pi)/d;// accuracy-optimal threshold for equal-variance Gaussians
+  const acc=pi*TPR(tStar)+(1-pi)*(1-FPR(tStar)),rec=TPR(tStar);
+  const roc=[],pr=[];let ap=0,prevR=0;
+  for(let k=0;k<=400;k++){const t=10-k*(16/400);const T=TPR(t),F=FPR(t),P=prec(t);roc.push([F,T]);pr.push([T,P]);ap+=(T-prevR)*P;prevR=T;}
+  const auc=Phi(d/Math.SQRT2);
+  const{x,W,H}=setupCanvas($('#imCv'));const{o1,o2,w,oy}=twoBoxes(W,H);
+  const A=plotBox(x,o1,oy,w,w,'ROC (ignores the class ratio)','FPR','TPR');
+  x.setLineDash([4,4]);x.strokeStyle=css('--muted');x.beginPath();x.moveTo(A.X(0),A.Y(0));x.lineTo(A.X(1),A.Y(1));x.stroke();x.setLineDash([]);
+  x.strokeStyle=css('--code');x.lineWidth=2;x.beginPath();roc.forEach((p,i)=>{i?x.lineTo(A.X(p[0]),A.Y(p[1])):x.moveTo(A.X(p[0]),A.Y(p[1]));});x.stroke();
+  const B=plotBox(x,o2,oy,w,w,'Precision vs recall','recall','precision');
+  x.setLineDash([4,4]);x.strokeStyle=css('--muted');x.beginPath();x.moveTo(B.X(0),B.Y(pi));x.lineTo(B.X(1),B.Y(pi));x.stroke();x.setLineDash([]);
+  x.strokeStyle=css('--accent');x.lineWidth=2;x.beginPath();pr.forEach((p,i)=>{i?x.lineTo(B.X(p[0]),B.Y(p[1])):x.moveTo(B.X(p[0]),B.Y(p[1]));});x.stroke();
+  const dot=(X,Y)=>{x.fillStyle=css('--def');x.strokeStyle=css('--surface');x.lineWidth=2;x.beginPath();x.arc(X,Y,5,0,7);x.fill();x.stroke();};
+  dot(A.X(FPR(tStar)),A.Y(rec));dot(B.X(rec),B.Y(prec(tStar)));
+  $('#imDum').textContent=pct(1-pi);$('#imAcc').textContent=pct(acc);$('#imRec').textContent=pct(rec);
+  $('#imRoc').textContent=auc.toFixed(3);$('#imAp').textContent=ap.toFixed(3);
+  $('#imMsg').textContent=pi<0.03?
+    `With only ${pct(pi)} positives, "always negative" scores ${pct(1-pi)} and the model barely beats it while finding ${pct(rec,0)} of positives. ROC AUC is still ${auc.toFixed(2)}, but PR AUC has fallen to ${ap.toFixed(2)}.`:
+    pi>0.3?`With balanced classes, accuracy, ROC and PR tell a similar story (ROC AUC ${auc.toFixed(2)}, PR AUC ${ap.toFixed(2)}).`:
+    `Lower the positive share: the ROC curve never moves, but the PR curve sinks toward the dashed base rate.`;
+}
+['imPi','imD'].forEach(id=>$('#'+id).oninput=drawIM);
+
+function redrawAll(){drawTH();drawIM();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+redrawAll();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

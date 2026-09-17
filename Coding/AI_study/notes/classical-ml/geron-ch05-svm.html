@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 5 "Support Vector Machines".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 5 — Support Vector Machines</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+#linCv{height:380px} #rbfCv{height:360px} #hingeCv{height:170px}
+@media (max-width:560px){#linCv{height:320px} #rbfCv{height:300px}}
+.sw{display:inline-block;width:.8em;height:.8em;border-radius:50%;vertical-align:-.05em;margin-right:.2em}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 5 · book pp. 153–174</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 5 — Support Vector Machines</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    An SVM draws the decision boundary with the widest possible gap between the classes. Only the few points
+    touching or crossing that gap (the support vectors) decide where it goes. <code>C</code> sets how many of them may cross, and a kernel
+    lets the same machinery bend the boundary without ever building the extra features.
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+  <span class="k t" data-l="Revision mode">You have already worked through margins, the kernel trick, C, gamma, SVR, PCA + SVM and GridSearchCV. This page is for sharpening what you know. The parts to slow down on are §4 (why the maths works) and the "changed since the book" notes.</span>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=183">Linear SVM Classification <span>p. 153</span></a>
+    <a href="../geron/reader.html#p=187">Nonlinear SVM Classification <span>p. 157</span></a>
+    <a href="../geron/reader.html#p=192">SVM Regression <span>p. 162</span></a>
+    <a href="../geron/reader.html#p=194">Under the Hood <span>p. 164</span></a>
+    <a href="../geron/reader.html#p=204">Exercises <span>p. 174</span></a>
+  </nav>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · Linear SVM classification <a class="book" href="../geron/reader.html#p=183">book p. 153 ↗</a></h2>
+  <p>Many straight lines can separate two linearly separable classes. An SVM picks the one that leaves the <b>widest street</b> between them.
+    This is <span class="def">large margin classification</span>. The two edges of the street sit where the decision function equals ±1.</p>
+  <ul class="tight">
+    <li><span class="def">Support vectors</span>: the training points on the edge of the street or inside it. <span class="exp">Only they define the boundary.</span> You can add or move points well outside the street and the model stays the same.</li>
+    <li class="imp">SVMs are sensitive to feature scale. If one feature has a much larger range, the widest street follows that axis, and the result is a poor boundary. Always put a <code>StandardScaler</code> in front.</li>
+    <li class="imp">SVM classifiers return a class and a score from <code>decision_function</code>, not a probability. The score is a signed distance-like value.</li>
+  </ul>
+
+  <h3>Hard margin vs soft margin</h3>
+  <div class="tw"><table>
+    <tr><th></th><th>Hard margin</th><th>Soft margin</th></tr>
+    <tr><td>Rule</td><td>no point may be inside the street or on the wrong side</td><td>some <span class="def">margin violations</span> are allowed, and each one is penalised</td></tr>
+    <tr><td>Needs linearly separable data?</td><td class="imp">yes, otherwise there is no solution</td><td class="tip">no</td></tr>
+    <tr><td>One outlier</td><td class="imp">can tilt or shrink the street a lot</td><td class="tip">mostly absorbed as a violation</td></tr>
+    <tr><td>In scikit-learn</td><td>approximated by a very large <code>C</code></td><td>any finite <code>C</code> (the default is 1)</td></tr>
+  </table></div>
+  <span class="k i" data-l="Important — C"><b>Small C</b> → wider street, more violations, stronger regularisation. <b>Large C</b> → narrower street, fewer violations, and a higher risk of overfitting. If an SVM overfits, <b>lower C</b>. C plays the same role as in <code>LogisticRegression</code>: it is the inverse of the regularisation strength.</span>
+
+  <div class="panel">
+    <b>Play: a real soft-margin SVM, trained live</b>
+    <p class="hint" style="margin-top:.2rem">This is a small SMO solver (the algorithm family behind <code>SVC</code>) with a linear kernel, run on 40 points. The solid line is the boundary ($f=0$) and the dashed lines are the street edges ($f=\pm1$). Ringed points are support vectors. A dashed ring means the point is at the bound $\alpha=C$: it sits inside the street or on the wrong side.</p>
+    <div class="controls">
+      <div class="ctl"><label>log₁₀ C</label><input type="range" id="linC" min="-2" max="3" step="0.05" value="0"/><output id="linCO"></output></div>
+      <div class="ctl"><label>Data</label><span class="seg" id="linOut"><button data-o="0" class="on">clean</button><button data-o="1">+ one outlier</button></span>
+        <button class="btn" id="linSeed">↻ New sample</button></div>
+    </div>
+    <canvas id="linCv" height="380" aria-label="Linear SVM with margin and support vectors"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">street width 2/‖w‖</div><div class="v" id="linW">–</div></div>
+      <div class="stat"><div class="kk">support vectors</div><div class="v" id="linSV">–</div></div>
+      <div class="stat"><div class="kk">margin violations</div><div class="v" id="linViol">–</div></div>
+      <div class="stat"><div class="kk">train accuracy</div><div class="v" id="linAcc">–</div></div>
+    </div>
+    <p class="hint" id="linMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Drag C from 0.01 up to 1000. The street narrows and the number of support vectors drops.</li>
+      <li>Switch on the outlier and set C to 1000. That is almost a hard margin, and the boundary swings to accommodate one point. Lower C and the boundary settles back.</li>
+      <li>At C = 1, count the rings. Only those points enter $\mathbf w=\sum\alpha_i t_i\mathbf x_i$. Every other point has α = 0 and could move (while staying off the street) without changing the line.</li>
+    </ul>
+  </details>
+
+  <h3>Three ways to train a linear SVM in scikit-learn</h3>
+<pre><code>from sklearn.svm import LinearSVC, SVC
+from sklearn.linear_model import SGDClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+a = make_pipeline(StandardScaler(), LinearSVC(C=1, loss="hinge"))   # liblinear — fast
+b = make_pipeline(StandardScaler(), SVC(kernel="linear", C=1))      # libsvm — slower, but kernels
+c = make_pipeline(StandardScaler(),
+                  SGDClassifier(loss="hinge", alpha=1/(m*C)))       # online / out-of-core</code></pre>
+  <ul class="tight">
+    <li class="exp">The <code>alpha=1/(m·C)</code> mapping comes from rescaling the SVM cost. With it, SGD minimises roughly the same objective, but it converges more slowly.</li>
+    <li class="imp"><code>LinearSVC</code> also regularises the bias term, so centre the data first. <code>StandardScaler</code> does this for you. This is why the three models above give slightly different intercepts.</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book"><b><code>LinearSVC</code> / <code>LinearSVR</code> <code>dual</code></b>: the book says to set <code>dual=False</code> by hand when rows outnumber features. Since scikit-learn 1.5 the default is <code>dual="auto"</code>, which picks the primal or dual solver based on the shape of the data and the loss/penalty combination. Note that <code>loss="hinge"</code> with an ℓ2 penalty is only available in the dual.<br/>
+  <b><code>loss</code></b>: the default is still <code>"squared_hinge"</code>. Pass <code>loss="hinge"</code> if you want the textbook SVM.<br/>
+  <b><code>max_iter</code></b> (default 1000) often triggers a <code>ConvergenceWarning</code> on unscaled or hard data. Scale the data, or raise it to about 10 000.</span>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Nonlinear SVM classification <a class="book" href="../geron/reader.html#p=187">book p. 157 ↗</a></h2>
+  <p>Most real data can't be split by a straight line. There are two families of fixes: <b>add features explicitly</b>, or <b>use a kernel</b> to get the same effect implicitly.</p>
+
+  <h3>a) Polynomial features + a linear SVM</h3>
+  <p>A 1-D set that no single threshold can split can become separable once you add $x_2 = x_1^2$. In code this is <code>PolynomialFeatures(d)</code> → <code>StandardScaler</code> → <code>LinearSVC</code>. The book demonstrates it on <code>make_moons</code>.</p>
+  <ul class="tight">
+    <li class="imp">A low degree can't follow complex shapes, and a high degree makes the feature count explode (see ch 4), so training becomes slow.</li>
+  </ul>
+
+  <h3>b) Polynomial kernel</h3>
+  <p>The <span class="def">kernel trick</span> gives the same result as training on all those polynomial features, without creating them. <code>SVC(kernel="poly", degree=3, coef0=1, C=5)</code>.</p>
+  <ul class="tight">
+    <li><span class="exp"><code>degree</code></span>: raise it if the model underfits, lower it if it overfits.</li>
+    <li><span class="exp"><code>coef0</code></span> (the $r$ in the kernel formula): how much the high-degree terms matter compared with the low-degree terms. With <code>coef0=0</code> only the degree-<i>d</i> terms remain.</li>
+  </ul>
+  <span class="k t" data-l="Tip — tuning">Grid search coarse first (powers of 10), then fine around the winner. Knowing which direction each knob pushes the model helps you pick sensible grids.</span>
+
+  <h3>c) Similarity features with landmarks</h3>
+  <p>Pick some <span class="def">landmarks</span> ℓ and give each point a new feature for each landmark: its similarity to that landmark. The usual similarity function is the <span class="def">Gaussian RBF</span>:</p>
+  <div class="math">$$\phi_\gamma(\mathbf x,\boldsymbol\ell)=\exp\!\big(-\gamma\,\lVert\mathbf x-\boldsymbol\ell\rVert^2\big)$$</div>
+  <p>It is a bell curve: 1 at the landmark, falling towards 0 far away. For example, with γ = 0.3, a point at distance 2 gets $e^{-1.2}\approx0.30$.</p>
+  <ul class="tight">
+    <li class="exp">The simplest choice is a landmark at <b>every</b> training point. Then <i>m</i> rows × <i>n</i> features become <i>m</i> × <i>m</i>. The data is very likely to become separable, but the new feature matrix is huge for big <i>m</i>.</li>
+  </ul>
+
+  <h3>d) Gaussian RBF kernel</h3>
+  <p><code>SVC(kernel="rbf", gamma=…, C=…)</code> gets the effect of "a landmark at every point" through the kernel trick. <code>kernel="rbf"</code> is the <b>default</b>.</p>
+  <div class="tw"><table>
+    <tr><th>Knob</th><th>Increase it →</th><th>If overfitting</th><th>If underfitting</th></tr>
+    <tr><td><code>gamma</code> γ</td><td>narrower bells, so each point has a smaller reach and the boundary gets wigglier</td><td class="tip">decrease γ</td><td class="tip">increase γ</td></tr>
+    <tr><td><code>C</code></td><td>fewer violations tolerated, so the boundary bends harder around individual points</td><td class="tip">decrease C</td><td class="tip">increase C</td></tr>
+  </table></div>
+  <span class="k i" data-l="Important">γ and C <b>interact</b>. Both act as <i>inverse</i> regularisers, so tune them together, for example on a log grid with <code>GridSearchCV</code>.</span>
+
+  <div class="panel">
+    <b>Play: γ, C and the kernel on a moons dataset</b>
+    <p class="hint" style="margin-top:.2rem">The same SMO solver, now with a kernel, trained on 100 standardised "moons" points. The shading shows the real decision function $f(\mathbf x)=\sum_i\alpha_i t_i K(\mathbf x_i,\mathbf x)+b$ of the trained model. The line is $f=0$, the dotted lines are $f=\pm1$, and ringed points are support vectors. Test accuracy uses 300 extra points from the same distribution. The polynomial kernel is $(\gamma\,\mathbf a^\top\mathbf b+1)^3$, and its γ is capped at 3 because larger values make the solver struggle. If the iteration counter shows "cap", the solver stopped before fully converging.</p>
+    <div class="controls">
+      <div class="ctl"><label>Kernel</label><span class="seg" id="rbfK"><button data-k="rbf" class="on">RBF</button><button data-k="poly">Poly d=3</button><button data-k="lin">Linear</button></span></div>
+      <div class="ctl" id="rbfGRow"><label>log₁₀ γ</label><input type="range" id="rbfG" min="-1.5" max="2" step="0.05" value="0"/><output id="rbfGO"></output></div>
+      <div class="ctl"><label>log₁₀ C</label><input type="range" id="rbfC" min="-2" max="3" step="0.05" value="0"/><output id="rbfCO"></output></div>
+      <div class="ctl"><label></label><button class="btn" id="rbfSeed">↻ New sample</button></div>
+    </div>
+    <canvas id="rbfCv" height="360" aria-label="Kernel SVM decision function heatmap"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">support vectors</div><div class="v" id="rbfSV">–</div></div>
+      <div class="stat"><div class="kk">train accuracy</div><div class="v" id="rbfTr">–</div></div>
+      <div class="stat"><div class="kk">test accuracy</div><div class="v" id="rbfTe">–</div></div>
+      <div class="stat"><div class="kk">SMO iterations</div><div class="v" id="rbfIt">–</div></div>
+    </div>
+    <p class="hint" id="rbfMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>RBF with γ = 100 and C = 1000: small islands around single points, train accuracy near 100%, and test accuracy drops. That is overfitting.</li>
+      <li>RBF with γ = 0.03 and C = 0.01: an almost straight boundary and nearly every point is a support vector. That is underfitting.</li>
+      <li>Linear: no C makes the moons separable. Poly d=3 with a moderate γ gets close to RBF.</li>
+      <li>Notice that the number of support vectors falls as C rises. Fewer support vectors means faster predictions.</li>
+    </ul>
+  </details>
+
+  <h3>Which kernel first?</h3>
+  <ul class="tight">
+    <li class="tip">1. <b>Linear</b> (<code>LinearSVC</code>) first, especially with many rows or many features. It is much faster than <code>SVC(kernel="linear")</code>.</li>
+    <li class="tip">2. <b>RBF</b> if the training set isn't too large. It works well on most problems.</li>
+    <li>3. Other kernels only if you have time, or if there is a kernel made for your data type.</li>
+    <li class="skip">Specialised kernels exist for structured data, e.g. string kernels for text or DNA (subsequence kernels, edit-distance-based kernels).</li>
+  </ul>
+
+  <h3>Computational complexity</h3>
+  <div class="tw"><table>
+    <tr><th>Class</th><th>Library</th><th>Training time</th><th>Out-of-core</th><th>Needs scaling</th><th>Kernel trick</th></tr>
+    <tr><td><code>LinearSVC</code></td><td>liblinear</td><td class="tip">≈ O(m × n)</td><td>no</td><td>yes</td><td>no</td></tr>
+    <tr><td><code>SGDClassifier</code></td><td>—</td><td class="tip">≈ O(m × n)</td><td class="tip">yes (<code>partial_fit</code>)</td><td>yes</td><td>no</td></tr>
+    <tr><td><code>SVC</code></td><td>libsvm</td><td class="imp">O(m² × n) to O(m³ × n)</td><td>no</td><td>yes</td><td class="tip">yes</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li class="imp"><code>SVC</code> becomes painfully slow at hundreds of thousands of rows. It is at its best on complex small-to-medium datasets.</li>
+    <li class="exp"><code>SVC</code> scales well with the number of features, especially sparse ones: its cost grows with the average number of non-zero features per row.</li>
+    <li class="exp"><code>tol</code> (the tolerance ε) trades precision for time. The default is fine for most tasks.</li>
+  </ul>
+  <span class="k t" data-l="Tip — beyond the book">Need an RBF-like model on a large dataset? Approximate the kernel with <code>Nystroem</code> or <code>RBFSampler</code> (in <code>sklearn.kernel_approximation</code>), then train a <code>LinearSVC</code> or <code>SGDClassifier</code> on the result. Training cost stays linear in <i>m</i>.</span>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · SVM regression <a class="book" href="../geron/reader.html#p=192">book p. 162 ↗</a></h2>
+  <p>Regression turns the classification goal around. Instead of keeping points <i>out of</i> the street, <b>fit as many points as possible <i>inside</i> it</b>, and penalise the ones outside.</p>
+  <ul class="tight">
+    <li><span class="def">ε (epsilon)</span> sets the half-width of the tube around the prediction. Errors smaller than ε cost nothing.</li>
+    <li><span class="def">ε-insensitive</span>: adding training points inside the tube doesn't change the model. Only points on or outside the tube are support vectors.</li>
+    <li class="exp">A larger ε gives fewer support vectors and a flatter, simpler model. A smaller ε gives more support vectors.</li>
+    <li class="exp"><code>C</code> works as before: a large C means little regularisation, so the model chases outliers. A small C means a smoother fit.</li>
+  </ul>
+  <div class="tw"><table>
+    <tr><th>Classification</th><th>Regression twin</th><th>Notes</th></tr>
+    <tr><td><code>LinearSVC</code></td><td><code>LinearSVR(epsilon=…)</code></td><td>linear time in <i>m</i>. Scale and centre the data first.</td></tr>
+    <tr><td><code>SVC</code></td><td><code>SVR(kernel="poly", degree=2, C=…, epsilon=…)</code></td><td>kernels are allowed, but it is slow for large <i>m</i>, just like <code>SVC</code></td></tr>
+  </table></div>
+  <span class="k t" data-l="Changed since the book / defaults">In <code>LinearSVR</code>, <code>epsilon</code> defaults to <b>0</b>. In <code>SVR</code> it defaults to <b>0.1</b>. ε is measured in target units, so scale <code>y</code> (for example with <code>TransformedTargetRegressor</code>) or choose ε to match your target's range.</span>
+  <p><span class="def">Outlier detection</span> with SVMs: <code>OneClassSVM</code> (kernelised) and <code>SGDOneClassSVM</code> (linear, for large data). The book only mentions these in passing.</p>
+
+  <!-- ===================================================== 4 -->
+  <h2>4 · Under the hood <a class="book" href="../geron/reader.html#p=194">book p. 164 ↗</a></h2>
+  <span class="k s" data-l="Optional depth">This is the maths behind the API. Must know: the decision function, why a small ‖w‖ means a wide margin, the soft-margin cost, the hinge loss, and why the dual enables kernels. You can skim the QP parameter mapping, the full dual derivation and Mercer's theorem.</span>
+  <p><b>Notation change:</b> the bias is now $b$ and the weights are $\mathbf w$. There is no $x_0=1$ column. Labels are $t^{(i)}\in\{-1,+1\}$.</p>
+
+  <h3>Decision function</h3>
+  <div class="math">$$\hat y=\begin{cases}0 & \text{if } \mathbf w^\top\mathbf x+b<0\\ 1 & \text{if } \mathbf w^\top\mathbf x+b\ge 0\end{cases}$$</div>
+  <ul class="tight">
+    <li class="exp">The boundary is the set $f(\mathbf x)=0$, a hyperplane of dimension <i>n</i> − 1. The street edges are $f=\pm1$.</li>
+  </ul>
+
+  <h3>Training objective — why a small ‖w‖ means a wide street</h3>
+  <p>The slope of $f$ is $\lVert\mathbf w\rVert$. If you halve the slope, $f$ needs twice the distance to climb from 0 to 1, so the street is twice as wide. In general the <span class="imp">street width is $2/\lVert\mathbf w\rVert$</span>, so maximising the margin is the same as minimising $\lVert\mathbf w\rVert$.</p>
+  <div class="math">$$\text{Hard margin:}\quad \min_{\mathbf w,b}\ \tfrac12\mathbf w^\top\mathbf w\quad\text{s.t.}\quad t^{(i)}(\mathbf w^\top\mathbf x^{(i)}+b)\ge 1\ \ \forall i$$</div>
+  <div class="math">$$\text{Soft margin:}\quad \min_{\mathbf w,b,\boldsymbol\zeta}\ \tfrac12\mathbf w^\top\mathbf w + C\sum_{i=1}^m\zeta^{(i)}\quad\text{s.t.}\quad t^{(i)}(\mathbf w^\top\mathbf x^{(i)}+b)\ge 1-\zeta^{(i)},\ \ \zeta^{(i)}\ge0$$</div>
+  <ul class="tight">
+    <li class="exp">The objective uses $\tfrac12\lVert\mathbf w\rVert^2$ rather than $\lVert\mathbf w\rVert$ because it has the same minimiser, is differentiable everywhere (its gradient is just $\mathbf w$), and is easier for optimisers.</li>
+    <li><span class="def">Slack variable</span> $\zeta^{(i)}$: how far point <i>i</i> is allowed to violate the margin. C sets the trade-off between wide street and small slack.</li>
+  </ul>
+
+  <h3>Quadratic programming <span class="skip">(skim)</span></h3>
+  <p>Both problems are <span class="def">quadratic programming (QP)</span> problems: a convex quadratic objective with linear constraints. The general form is $\min_{\mathbf p}\ \tfrac12\mathbf p^\top\mathbf H\mathbf p+\mathbf f^\top\mathbf p$ subject to $\mathbf A\mathbf p\le\mathbf b$.</p>
+  <details><summary>How the hard-margin SVM maps onto a QP solver</summary>
+    <ul class="tight">
+      <li>$\mathbf p=[b,\ w_1,\dots,w_n]$, so there are $n+1$ parameters and $m$ constraints.</li>
+      <li>$\mathbf H$ = identity with a 0 in the top-left cell (the bias is not penalised), and $\mathbf f=\mathbf 0$.</li>
+      <li>Row <i>i</i> of $\mathbf A$ is $-t^{(i)}\,[1,\ \mathbf x^{(i)}]$, and $\mathbf b=-\mathbf 1$ (this turns "≥ 1" into "≤ −1").</li>
+      <li class="skip">For the soft margin (exercise 7), add the $m$ slack variables to $\mathbf p$, put $C$ in $\mathbf f$ at the slack positions, and add the constraints $\zeta\ge0$.</li>
+    </ul>
+  </details>
+
+  <h3>The dual problem</h3>
+  <p>Every constrained <span class="def">primal problem</span> has a related <span class="def">dual problem</span>. For the SVM the two have the <b>same solution</b>, because the objective is convex and the constraints are well behaved. The linear SVM dual is:</p>
+  <div class="math">$$\min_{\boldsymbol\alpha}\ \frac12\sum_{i=1}^m\sum_{j=1}^m\alpha^{(i)}\alpha^{(j)}t^{(i)}t^{(j)}\,\mathbf x^{(i)\top}\mathbf x^{(j)}-\sum_{i=1}^m\alpha^{(i)}\quad\text{s.t.}\quad\alpha^{(i)}\ge0$$</div>
+  <div class="math">$$\hat{\mathbf w}=\sum_{i}\hat\alpha^{(i)}t^{(i)}\mathbf x^{(i)}\qquad \hat b=\frac1{n_s}\sum_{\hat\alpha^{(i)}>0}\Big(t^{(i)}-\hat{\mathbf w}^\top\mathbf x^{(i)}\Big)$$</div>
+  <ul class="tight">
+    <li class="exp">$\alpha^{(i)}>0$ exactly for the support vectors. All other points have $\alpha=0$ and drop out.</li>
+    <li class="exp">For the soft margin the constraint becomes $0\le\alpha^{(i)}\le C$, and scikit-learn's solvers also enforce $\sum_i\alpha^{(i)}t^{(i)}=0$. That is exactly what the SMO solver in the playgrounds does.</li>
+    <li class="tip">The dual is faster when <b>m &lt; n</b> (fewer rows than features). With millions of rows and hundreds of features, solve the primal (exercise 5).</li>
+    <li class="imp">The key point is that the training data appears in the dual <b>only as dot products</b> $\mathbf x^{(i)\top}\mathbf x^{(j)}$. That is what makes the kernel trick possible.</li>
+  </ul>
+
+  <h3>Kernelised SVMs</h3>
+  <p>Take the degree-2 map $\phi(\mathbf x)=\big(x_1^2,\ \sqrt2\,x_1x_2,\ x_2^2\big)$. Expanding the dot product gives:</p>
+  <div class="math">$$\phi(\mathbf a)^\top\phi(\mathbf b)=a_1^2b_1^2+2a_1b_1a_2b_2+a_2^2b_2^2=(a_1b_1+a_2b_2)^2=(\mathbf a^\top\mathbf b)^2$$</div>
+  <p>So wherever the dual needs $\phi(\mathbf x^{(i)})^\top\phi(\mathbf x^{(j)})$, you can compute $(\mathbf x^{(i)\top}\mathbf x^{(j)})^2$ directly. You never build $\phi$. A <span class="def">kernel</span> is a function $K(\mathbf a,\mathbf b)$ that returns $\phi(\mathbf a)^\top\phi(\mathbf b)$ using only the original vectors.</p>
+  <div class="tw"><table>
+    <tr><th>Kernel</th><th>$K(\mathbf a,\mathbf b)$</th><th>scikit-learn args</th></tr>
+    <tr><td>Linear</td><td>$\mathbf a^\top\mathbf b$</td><td><code>kernel="linear"</code></td></tr>
+    <tr><td>Polynomial</td><td>$(\gamma\,\mathbf a^\top\mathbf b+r)^d$</td><td><code>"poly"</code>, <code>gamma</code>, <code>coef0</code>=r, <code>degree</code>=d</td></tr>
+    <tr><td>Gaussian RBF</td><td>$\exp(-\gamma\lVert\mathbf a-\mathbf b\rVert^2)$</td><td><code>"rbf"</code>, <code>gamma</code></td></tr>
+    <tr><td>Sigmoid</td><td>$\tanh(\gamma\,\mathbf a^\top\mathbf b+r)$</td><td><code>"sigmoid"</code>, <code>gamma</code>, <code>coef0</code></td></tr>
+  </table></div>
+  <span class="k t" data-l="Changed since the book"><code>SVC</code> / <code>SVR</code> now default to <code>gamma="scale"</code>, which means $\gamma = 1/(n_\text{features}\cdot\operatorname{Var}(X))$. The old default was <code>"auto"</code>, which is $1/n_\text{features}$. The book always sets γ explicitly, so its examples are unaffected. <code>kernel</code> can also be a Python callable or <code>"precomputed"</code>.</span>
+  <p class="skip"><b>Mercer's theorem</b>: if $K$ satisfies Mercer's conditions (roughly: continuous, symmetric, and producing positive semi-definite matrices), then some $\phi$ exists with $K=\phi^\top\phi$, even if you can't write it down. For RBF, that $\phi$ maps into an <i>infinite</i>-dimensional space. The sigmoid kernel doesn't always satisfy the conditions but works in practice.</p>
+
+  <h3>Predicting without ever computing w</h3>
+  <p>With a kernel, $\mathbf w$ lives in $\phi$-space, which may be huge or infinite, so you can't store it. Substitute $\mathbf w=\sum\alpha^{(i)}t^{(i)}\phi(\mathbf x^{(i)})$ into the decision function instead:</p>
+  <div class="math">$$h(\mathbf x)=\sum_{\alpha^{(i)}>0}\alpha^{(i)}t^{(i)}K(\mathbf x^{(i)},\mathbf x)+b\qquad b=\frac1{n_s}\sum_{\alpha^{(i)}>0}\Big(t^{(i)}-\sum_{\alpha^{(j)}>0}\alpha^{(j)}t^{(j)}K(\mathbf x^{(i)},\mathbf x^{(j)})\Big)$$</div>
+  <ul class="tight">
+    <li class="imp">Each prediction costs one kernel evaluation <b>per support vector</b>, so a model with many support vectors predicts slowly.</li>
+    <li class="tip">In scikit-learn: <code>support_vectors_</code>, <code>support_</code> (indices), <code>n_support_</code> (count per class), <code>dual_coef_</code> ($=\alpha^{(i)}t^{(i)}$) and <code>intercept_</code>.</li>
+  </ul>
+
+  <h3>Online SVMs and the hinge loss</h3>
+  <p>The soft-margin primal can be written as a single unconstrained cost, which you can minimise with (sub)gradient descent, as <code>SGDClassifier</code> does:</p>
+  <div class="math">$$J(\mathbf w,b)=\tfrac12\mathbf w^\top\mathbf w+C\sum_{i=1}^m\max\!\big(0,\ 1-t^{(i)}(\mathbf w^\top\mathbf x^{(i)}+b)\big)$$</div>
+  <div class="panel" style="padding:.7rem">
+    <canvas id="hingeCv" height="170" aria-label="Hinge loss vs log loss"></canvas>
+    <p class="hint">The <span class="def">hinge loss</span> $\max(0,1-t)$ (solid) against the logistic log loss (dashed), plotted over $t\cdot f(\mathbf x)$. The hinge loss is exactly zero once a point is past the street edge, and that is why SVMs end up sparse, with few support vectors. Its slope is −1 for $t&lt;1$ and 0 for $t&gt;1$. At the kink, any subgradient in [−1, 0] works, just as with Lasso.</p>
+  </div>
+  <ul class="tight">
+    <li class="exp">The first term keeps $\mathbf w$ small (a wide street). The second term adds up the violations: zero for points on the correct side and off the street, and growing with the distance for the rest.</li>
+    <li class="imp">GD converges much more slowly than the QP-based solvers. Use it for streaming or out-of-core data.</li>
+    <li class="skip">Online <i>kernel</i> SVMs exist in research papers (incremental/decremental SVMs, LASVM), with Matlab/C++ code. For large nonlinear problems, the book suggests neural networks instead.</li>
+  </ul>
+
+  <!-- ===================================================== 5 -->
+  <h2>5 · Exercises — what they test <a class="book" href="../geron/reader.html#p=204">book p. 174 ↗</a></h2>
+  <ul class="tight">
+    <li><b>1–3</b>: the core idea, what a support vector is, and why scaling matters. §1 covers all three.</li>
+    <li><b>4</b>: confidence vs probability. <code>decision_function</code> gives a score. <code>SVC(probability=True)</code> adds Platt-scaled probabilities using an internal 5-fold CV, so training is slower and the probabilities can disagree slightly with <code>predict</code>.</li>
+    <li><b>5</b>: primal or dual? Use the primal when m ≫ n. The dual doesn't support that case well, and the kernel trick doesn't help at that scale either.</li>
+    <li><b>6</b>: an RBF model that underfits → <b>increase γ</b> and/or <b>increase C</b>.</li>
+    <li><b>7</b>: the soft-margin QP mapping (see the details box above).</li>
+    <li><b>8–10</b>: hands-on work. LinearSVC ≈ SVC(linear) ≈ SGD, one-vs-rest on MNIST, and an SVR on California housing. <span class="skip">These need downloads (<code>fetch_openml</code>, <code>fetch_california_housing</code>). In Pyodide, practise on <code>load_digits</code> and <code>load_diabetes</code> instead.</span></li>
+  </ul>
+  <span class="k t" data-l="Tip — multiclass"><code>SVC</code> handles more than two classes on its own using <b>one-vs-one</b>, and <code>decision_function_shape="ovr"</code> only reshapes the output scores. <code>LinearSVC</code> uses one-vs-rest. For exercise 9, you can wrap either model in <code>OneVsRestClassifier</code>.</span>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — all of chapter 5 in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. scikit-learn downloads on the first run (≈ 20–40 s, needs internet).</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false" style="min-height:420px">import numpy as np
+from sklearn.datasets import load_iris, make_moons
+from sklearn.svm import LinearSVC, SVC, LinearSVR, SVR
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+from sklearn.model_selection import GridSearchCV, train_test_split
+
+# 1) Linear SVM on iris petals: is it virginica?
+iris = load_iris()
+X, y = iris.data[:, 2:], (iris.target == 2).astype(int)
+for C in (0.01, 1, 100):
+    clf = make_pipeline(StandardScaler(), LinearSVC(C=C, loss="hinge", dual=True, max_iter=20_000)).fit(X, y)
+    svc = clf[-1]
+    width = 2 / np.linalg.norm(svc.coef_)          # street width in scaled units
+    print(f"LinearSVC C={C:<5} street width={width:.2f}  acc={clf.score(X, y):.3f}")
+print("decision_function:", clf.decision_function([[5.5, 1.7], [4.0, 1.0]]).round(2))
+
+# 2) Three routes to (roughly) the same linear SVM
+Xs = StandardScaler().fit_transform(X); m, C = len(Xs), 1.0
+models = {"LinearSVC": LinearSVC(C=C, loss="hinge", dual=True, max_iter=20_000),
+          "SVC(linear)": SVC(kernel="linear", C=C),
+          "SGD(hinge)": SGDClassifier(loss="hinge", alpha=1 / (m * C), max_iter=2000, random_state=0)}
+for name, mdl in models.items():
+    mdl.fit(Xs, y)
+    w, b = mdl.coef_[0], mdl.intercept_[0]
+    print(f"{name:12} w/|w|={np.round(w / np.linalg.norm(w), 3)}  b/|w|={b / np.linalg.norm(w):.3f}")
+print("SVC support vectors per class:", models["SVC(linear)"].n_support_)
+
+# 3) Nonlinear: moons with polynomial features vs kernels
+X, y = make_moons(n_samples=400, noise=0.2, random_state=42)
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, random_state=42)
+cands = {
+    "poly feats + LinearSVC": make_pipeline(PolynomialFeatures(3), StandardScaler(),
+                                            LinearSVC(C=10, dual=False, max_iter=50_000)),
+    "SVC poly d=3":           make_pipeline(StandardScaler(), SVC(kernel="poly", degree=3, coef0=1, C=5)),
+    "SVC rbf (defaults)":     make_pipeline(StandardScaler(), SVC()),   # gamma="scale", C=1
+}
+for name, mdl in cands.items():
+    mdl.fit(X_tr, y_tr)
+    print(f"{name:24} test acc={mdl.score(X_te, y_te):.3f}")
+
+# 4) gamma and C: coarse grid search
+grid = GridSearchCV(make_pipeline(StandardScaler(), SVC()),
+                    {"svc__gamma": [0.1, 1, 10, 100], "svc__C": [0.01, 1, 100]}, cv=3)
+grid.fit(X_tr, y_tr)
+print("best:", grid.best_params_, "cv acc=%.3f" % grid.best_score_,
+      "test acc=%.3f" % grid.score(X_te, y_te))
+print("#support vectors at best:", grid.best_estimator_[-1].n_support_.sum(), "of", len(X_tr))
+
+# 5) SVM regression: epsilon controls the tube width
+rng = np.random.default_rng(0)
+Xr = 2 * rng.random((100, 1)) - 1
+yr = 0.5 + 1.5 * Xr[:, 0] + 0.3 * rng.normal(size=100)
+for eps in (0.1, 0.5):
+    reg = SVR(kernel="linear", C=1, epsilon=eps).fit(Xr, yr)
+    print(f"SVR eps={eps}: support vectors={len(reg.support_):3d}  slope={reg.coef_[0,0]:.2f}")
+yq = 0.2 + 0.1 * Xr[:, 0] + 0.5 * Xr[:, 0] ** 2 + 0.05 * rng.normal(size=100)
+lin = LinearSVR(epsilon=0.0, dual=True, max_iter=10_000, random_state=0).fit(Xr, yq)
+poly = SVR(kernel="poly", degree=2, C=100, epsilon=0.05).fit(Xr, yq)
+print(f"quadratic data  R^2 LinearSVR={lin.score(Xr, yq):.2f}  SVR(poly2)={poly.score(Xr, yq):.2f}")</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+  <details><summary>What you should see (and why)</summary>
+    <ul class="tight">
+      <li>As C grows, the street width shrinks (about 3.6 → 0.7 → 0.25 in scaled units).</li>
+      <li>The three linear models point in nearly the same direction but have slightly different intercepts, because <code>LinearSVC</code> penalises the bias.</li>
+      <li>On moons, all three nonlinear models score around 95–98%. The grid search picks a mid-range γ, and roughly half the training points end up as support vectors.</li>
+      <li>SVR with a larger ε has far fewer support vectors (about 70 → 10) and nearly the same slope. The linear model fails on the quadratic data, and the degree-2 poly kernel fits it.</li>
+    </ul>
+  </details>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">You delete a training point that lies far outside the street. What changes?</div><div class="face a">Nothing. It isn't a support vector (its α is 0), so the boundary stays exactly where it is.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why must you scale features before an SVM?</div><div class="face a">The margin is measured as a Euclidean distance. A feature with a large range dominates it, and the street lines up with that axis.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">An RBF SVM overfits. Which way do you move γ and C?</div><div class="face a">Lower both. A smaller γ gives each point a wider, smoother reach, and a smaller C tolerates more violations.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Street width in terms of w?</div><div class="face a">2 / ‖w‖. That's why the objective minimises ½‖w‖²: a smaller w gives a wider street.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why does the kernel trick need the dual form?</div><div class="face a">In the dual, the data appears only inside dot products xᵢᵀxⱼ, and those can be swapped for K(xᵢ, xⱼ). The primal needs w and φ(x) explicitly.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">10 million rows, 200 features, linear problem. Which class?</div><div class="face a">LinearSVC (primal), or SGDClassifier with hinge loss if the data doesn't fit in memory. Avoid SVC, whose cost is O(m²) to O(m³).</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">What does ε do in SVR, and what happens to the support vectors when it grows?</div><div class="face a">ε is the half-width of the no-penalty tube. A larger ε puts more points inside the tube, so there are fewer support vectors and the model is simpler.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Can an SVC give you probabilities?</div><div class="face a">Not by default: it gives a decision_function score. With probability=True it fits Platt scaling using internal CV, which is slower.</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="geron-ch04-training-models.html">Ch 4 — Training Models</a>: regularisation, C in LogisticRegression, polynomial features, SGD</li>
+    <li><a href="gradient-descent.html">Gradient descent note</a>: the engine behind <code>SGDClassifier(loss="hinge")</code></li>
+    <li><a href="geron-ch03-classification.html">Ch 3 — Classification</a>: OvR/OvO, decision scores and thresholds</li>
+    <li><a href="geron-ch08-dimensionality-reduction.html">Ch 8 — Dimensionality Reduction</a>: PCA before an SVM, and kernel PCA (the same kernel trick)</li>
+    <li><a href="geron-ch06-decision-trees.html">Ch 6 — Decision Trees</a>: the next model, which needs no scaling</li>
+    <li><a href="../geron/reader.html#p=753">Book answers to the chapter 5 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> explain large-margin classification, support vectors and why scaling matters</label></li>
+    <li><label><input type="checkbox"/> say what C, γ, degree/coef0 and ε each do, and which way to move them when a model over- or underfits</label></li>
+    <li><label><input type="checkbox"/> choose between LinearSVC, SGDClassifier and SVC from the size of the data</label></li>
+    <li><label><input type="checkbox"/> write the soft-margin objective and the hinge-loss form, and show that the street width is 2/‖w‖</label></li>
+    <li><label><input type="checkbox"/> explain why the dual form enables kernels and why predictions only need the support vectors</label></li>
+    <li><label><input type="checkbox"/> derive (a·b)² = φ(a)·φ(b) for the degree-2 map</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 5. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch05';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const fmt=(v,d=3)=>!isFinite(v)?'∞':Math.abs(v)>=1e5?v.toExponential(1):v.toFixed(d);
+function tag(x,s){x.font='12px system-ui';const w=x.measureText(s).width;x.fillStyle=css('--surface');x.globalAlpha=.85;x.fillRect(4,3,w+12,19);x.globalAlpha=1;x.fillStyle=css('--muted');x.fillText(s,10,16);}
+function rgb(hex){hex=hex.replace('#','');if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');const n=parseInt(hex,16);return[(n>>16)&255,(n>>8)&255,n&255];}
+
+/* ---------- SMO solver (libsvm-style, max-violating pair) ----------
+   minimises ½ αᵀQα − Σα  s.t. 0 ≤ α ≤ C,  Σ tᵢαᵢ = 0,  Q_ij = tᵢtⱼK(xᵢ,xⱼ) */
+function smo(X,t,kern,C,eps=1e-3,maxIt=40000){
+  const n=X.length,K=[];for(let i=0;i<n;i++){K.push(new Float64Array(n));for(let j=0;j<n;j++)K[i][j]=kern(X[i],X[j]);}
+  const a=new Float64Array(n),G=new Float64Array(n).fill(-1);let it=0,gmax=0,gmin=0;
+  const up=i=>(t[i]>0&&a[i]<C)||(t[i]<0&&a[i]>0), low=i=>(t[i]>0&&a[i]>0)||(t[i]<0&&a[i]<C);
+  for(;it<maxIt;it++){
+    let i=-1,j=-1;gmax=-Infinity;gmin=Infinity;
+    for(let k=0;k<n;k++){const v=-t[k]*G[k];if(up(k)&&v>gmax){gmax=v;i=k;}if(low(k)&&v<gmin){gmin=v;j=k;}}
+    if(i<0||j<0||gmax-gmin<eps)break;
+    const Qij=t[i]*t[j]*K[i][j],ai=a[i],aj=a[j];
+    if(t[i]!==t[j]){
+      const quad=Math.max(K[i][i]+K[j][j]+2*Qij,1e-12),d=(-G[i]-G[j])/quad,diff=a[i]-a[j];
+      a[i]+=d;a[j]+=d;
+      if(diff>0){if(a[j]<0){a[j]=0;a[i]=diff;}}else{if(a[i]<0){a[i]=0;a[j]=-diff;}}
+      if(diff>0){if(a[i]>C){a[i]=C;a[j]=C-diff;}}else{if(a[j]>C){a[j]=C;a[i]=C+diff;}}
+    }else{
+      const quad=Math.max(K[i][i]+K[j][j]-2*Qij,1e-12),d=(G[i]-G[j])/quad,sum=a[i]+a[j];
+      a[i]-=d;a[j]+=d;
+      if(sum>C){if(a[i]>C){a[i]=C;a[j]=sum-C;}}else{if(a[j]<0){a[j]=0;a[i]=sum;}}
+      if(sum>C){if(a[j]>C){a[j]=C;a[i]=sum-C;}}else{if(a[i]<0){a[i]=0;a[j]=sum;}}
+    }
+    const di=a[i]-ai,dj=a[j]-aj;
+    for(let k=0;k<n;k++)G[k]+=t[k]*(t[i]*K[k][i]*di+t[j]*K[k][j]*dj);
+  }
+  // bias: average −tᵢGᵢ over free SVs, else midpoint of the feasible interval
+  let s=0,c=0;for(let k=0;k<n;k++)if(a[k]>1e-9&&a[k]<C-1e-9){s+=-t[k]*G[k];c++;}
+  const b=c?s/c:(gmax+gmin)/2;
+  const sv=[];for(let k=0;k<n;k++)if(a[k]>1e-9)sv.push(k);
+  const f=x=>{let v=b;for(const k of sv)v+=a[k]*t[k]*kern(X[k],x);return v;};
+  return{a,b,sv,f,it,C};
+}
+
+/* ================= Linear soft-margin playground ================= */
+const L={seed:5,outlier:0};
+function linData(){const r=mulberry(L.seed);L.X=[];L.t=[];
+  for(let i=0;i<40;i++){const c=i%2?1:-1;L.X.push([c*1.0+0.75*gauss(r),c*0.8+0.75*gauss(r)]);L.t.push(c);}
+  if(L.outlier){L.X.push([-2.2,-1.4]);L.t.push(1);}}
+function linDraw(){
+  const C=Math.pow(10,+$('#linC').value);$('#linCO').textContent=C<1?C.toPrecision(2):C.toFixed(C<10?1:0);
+  const m=smo(L.X,L.t,(p,q)=>p[0]*q[0]+p[1]*q[1],C);
+  let w0=0,w1=0;for(const k of m.sv){w0+=m.a[k]*L.t[k]*L.X[k][0];w1+=m.a[k]*L.t[k]*L.X[k][1];}
+  const nw=Math.hypot(w0,w1),b=m.b;
+  const {x,W,H}=setupCanvas($('#linCv'));const S=Math.min(W/8,H/6),cx=W/2,cy=H/2;
+  const px=v=>cx+v*S,py=v=>cy-v*S,ux=p=>(p-cx)/S,uy=p=>(cy-p)/S;
+  const pos=rgb(css('--accent')),neg=rgb(css('--def'));
+  // light background tint by side
+  const cell=8;for(let gx=0;gx<W;gx+=cell)for(let gy=0;gy<H;gy+=cell){const f=w0*ux(gx+cell/2)+w1*uy(gy+cell/2)+b;const c=f>=0?pos:neg;
+    x.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${Math.abs(f)<1?0.16:0.07})`;x.fillRect(gx,gy,cell,cell);}
+  // lines f = k
+  const line=k=>{x.beginPath();if(Math.abs(w1)>Math.abs(w0)){const y=X=>(k-b-w0*X)/w1;x.moveTo(0,py(y(ux(0))));x.lineTo(W,py(y(ux(W))));}
+    else{const X=Y=>(k-b-w1*Y)/w0;x.moveTo(px(X(uy(0))),0);x.lineTo(px(X(uy(H))),H);}x.stroke();};
+  x.strokeStyle=css('--text');x.lineWidth=2.2;line(0);x.setLineDash([6,5]);x.lineWidth=1.4;x.strokeStyle=css('--muted');line(1);line(-1);x.setLineDash([]);
+  let viol=0,acc=0;
+  L.X.forEach((p,i)=>{const f=w0*p[0]+w1*p[1]+b;if(L.t[i]*f<1-1e-3)viol++;if((f>=0?1:-1)===L.t[i])acc++;
+    const c=L.t[i]>0?pos:neg;x.fillStyle=`rgb(${c})`;x.beginPath();
+    if(L.t[i]>0)x.arc(px(p[0]),py(p[1]),4.5,0,7);else x.rect(px(p[0])-4,py(p[1])-4,8,8);x.fill();
+    if(m.a[i]>1e-9){x.strokeStyle=css('--text');x.lineWidth=1.5;if(m.a[i]>=C-1e-9)x.setLineDash([2,2]);x.beginPath();x.arc(px(p[0]),py(p[1]),9,0,7);x.stroke();x.setLineDash([]);}
+  });
+  tag(x,'● class +1   ■ class −1   ○ support vector');
+  const width=2/nw;$('#linW').textContent=fmt(width,2);$('#linSV').textContent=m.sv.length;$('#linViol').textContent=viol;
+  $('#linAcc').textContent=Math.round(acc/L.X.length*100)+'%';
+  const oi=L.X.length-1,ofv=L.outlier?L.t[oi]*(w0*L.X[oi][0]+w1*L.X[oi][1]+b):1;
+  $('#linMsg').textContent=C>=100?(L.outlier?`Near hard margin, but the outlier (bottom left) cannot be separated. It is stuck at α = C with slack ζ = ${(1-ofv).toFixed(1)}, and it drags the boundary. A hard margin has no solution here.`:'Near hard margin: very few violations are tolerated, so the street is narrow and set by a handful of points.'):
+    C<=0.05?'Heavy regularisation: a wide street with many violations. Almost every point is a support vector.':
+    'Balanced: some points are allowed inside the street in exchange for a wider margin.';
+  L.last={w0,w1,b};
+}
+$('#linC').oninput=linDraw;
+$$('#linOut button').forEach(bt=>bt.onclick=()=>{$$('#linOut button').forEach(q=>q.classList.toggle('on',q===bt));L.outlier=+bt.dataset.o;linData();linDraw();});
+$('#linSeed').onclick=()=>{L.seed=Math.floor(Math.random()*1e6);linData();linDraw();};
+linData();
+
+/* ================= Kernel playground (moons) ================= */
+const Rb={seed:9,kern:'rbf'};
+function moons(n,r,noise){const P=[],T=[];for(let i=0;i<n;i++){const c=i%2,u=Math.PI*r();
+  const p=c?[1-Math.cos(u),0.5-Math.sin(u)]:[Math.cos(u),Math.sin(u)];P.push([p[0]+noise*gauss(r),p[1]+noise*gauss(r)]);T.push(c?1:-1);}return{P,T};}
+function rbfData(){const r=mulberry(Rb.seed);const tr=moons(100,r,0.22),te=moons(300,r,0.22);
+  const mu=[0,1].map(d=>tr.P.reduce((s,p)=>s+p[d],0)/tr.P.length);
+  const sd=[0,1].map(d=>Math.sqrt(tr.P.reduce((s,p)=>s+(p[d]-mu[d])**2,0)/tr.P.length));
+  const z=p=>[(p[0]-mu[0])/sd[0],(p[1]-mu[1])/sd[1]];
+  Rb.X=tr.P.map(z);Rb.t=tr.T;Rb.Xte=te.P.map(z);Rb.tte=te.T;}
+function rbfDraw(){
+  const g=Math.pow(10,+$('#rbfG').value),C=Math.pow(10,+$('#rbfC').value);
+  $('#rbfGO').textContent=g<1?g.toPrecision(2):g.toFixed(g<10?1:0);$('#rbfCO').textContent=C<1?C.toPrecision(2):C.toFixed(C<10?1:0);
+  $('#rbfGRow').hidden=Rb.kern==='lin';
+  const kern=Rb.kern==='rbf'?(p,q)=>Math.exp(-g*((p[0]-q[0])**2+(p[1]-q[1])**2)):
+    Rb.kern==='poly'?(p,q)=>Math.pow(g*(p[0]*q[0]+p[1]*q[1])+1,3):(p,q)=>p[0]*q[0]+p[1]*q[1];
+  const m=smo(Rb.X,Rb.t,kern,C);
+  const {x,W,H}=setupCanvas($('#rbfCv'));const S=Math.min(W/5.6,H/4.2),cx=W/2,cy=H/2;
+  const px=v=>cx+v*S,py=v=>cy-v*S;
+  const pos=rgb(css('--accent')),neg=rgb(css('--def')),ln=rgb(css('--text'));
+  const cell=W<500?4:5,nx=Math.ceil(W/cell),ny=Math.ceil(H/cell),F=new Float64Array(nx*ny);
+  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)F[i*ny+j]=m.f([((i+.5)*cell-cx)/S,(cy-(j+.5)*cell)/S]);
+  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){const f=F[i*ny+j],c=f>=0?pos:neg;
+    x.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${0.06+0.28*Math.min(1,Math.abs(f)/1.5)})`;x.fillRect(i*cell,j*cell,cell,cell);}
+  // contours: mark cells where the sign of f−k changes towards a neighbour
+  for(const k of [-1,0,1]){x.fillStyle=k?`rgba(${ln},0.45)`:`rgb(${ln})`;
+    for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){const s=F[i*ny+j]>=k;
+      const r=i+1<nx&&(F[(i+1)*ny+j]>=k)!==s,d=j+1<ny&&(F[i*ny+j+1]>=k)!==s;
+      if(r||d){if(k&&((i+j)%2))continue;const sz=k?1.6:2.6;x.fillRect((i+1)*cell-sz/2-(r?0:cell/2),(j+1)*cell-sz/2-(d?0:cell/2),sz,sz);}}}
+  let tr=0,te=0;
+  Rb.X.forEach((p,i)=>{const f=m.f(p);if((f>=0?1:-1)===Rb.t[i])tr++;
+    const c=Rb.t[i]>0?pos:neg;x.fillStyle=`rgb(${c})`;x.strokeStyle=css('--surface');x.lineWidth=1;x.beginPath();
+    if(Rb.t[i]>0)x.arc(px(p[0]),py(p[1]),4,0,7);else x.rect(px(p[0])-3.5,py(p[1])-3.5,7,7);x.fill();x.stroke();
+    if(m.a[i]>1e-9){x.strokeStyle=css('--text');x.lineWidth=1.2;x.beginPath();x.arc(px(p[0]),py(p[1]),7.5,0,7);x.stroke();}});
+  Rb.Xte.forEach((p,i)=>{if((m.f(p)>=0?1:-1)===Rb.tte[i])te++;});
+  const trA=tr/Rb.X.length,teA=te/Rb.Xte.length;
+  $('#rbfSV').textContent=`${m.sv.length} / ${Rb.X.length}`;$('#rbfTr').textContent=(trA*100).toFixed(0)+'%';
+  $('#rbfTe').textContent=(teA*100).toFixed(1)+'%';$('#rbfIt').textContent=m.it>=40000?'40000 (cap)':m.it;
+  tag(x,'shade = decision function · line f=0 · dots f=±1 · ○ SV');
+  $('#rbfMsg').textContent=trA-teA>0.05&&trA>0.97?'Overfitting: near-perfect on the training points, clearly worse on new ones. Lower γ or C.':
+    trA<0.9?(Rb.kern==='lin'?'Underfitting: a straight line cannot follow the moons, whatever C you choose.':'Underfitting: the boundary is too simple. Raise γ or C.'):
+    m.sv.length>0.8*Rb.X.length?'Accurate, but most points are support vectors, so the street is very wide and predictions are slow. Try a larger C.':
+    'Good fit: train and test accuracy are close, and the boundary follows the moons.';
+}
+$$('#rbfK button').forEach(bt=>bt.onclick=()=>{$$('#rbfK button').forEach(q=>q.classList.toggle('on',q===bt));Rb.kern=bt.dataset.k;
+  const gs=$('#rbfG');if(Rb.kern==='poly'){gs.max=0.5;if(+gs.value>0.5)gs.value=0;}else gs.max=2;rbfDraw();});
+['rbfG','rbfC'].forEach(id=>$('#'+id).oninput=rbfDraw);
+$('#rbfSeed').onclick=()=>{Rb.seed=Math.floor(Math.random()*1e6);rbfData();rbfDraw();};
+rbfData();
+
+/* ================= Hinge vs log loss (static) ================= */
+function hingeDraw(){
+  const {x,W,H}=setupCanvas($('#hingeCv'));const x0=-2.5,x1=3,y0=-0.3,y1=3.6;
+  const px=v=>(v-x0)/(x1-x0)*W,py=v=>H-(v-y0)/(y1-y0)*H;
+  x.strokeStyle=css('--border');x.lineWidth=1;x.beginPath();x.moveTo(0,py(0));x.lineTo(W,py(0));x.moveTo(px(0),0);x.lineTo(px(0),H);x.stroke();
+  x.setLineDash([3,3]);x.beginPath();x.moveTo(px(1),0);x.lineTo(px(1),H);x.stroke();x.setLineDash([]);
+  x.strokeStyle=css('--muted');x.lineWidth=2;x.setLineDash([6,4]);x.beginPath();
+  for(let v=x0;v<=x1;v+=.02){const y=Math.log2(1+Math.exp(-v));v===x0?x.moveTo(px(v),py(y)):x.lineTo(px(v),py(y));}x.stroke();x.setLineDash([]);
+  x.strokeStyle=css('--accent');x.lineWidth=2.6;x.beginPath();x.moveTo(px(x0),py(1-x0));x.lineTo(px(1),py(0));x.lineTo(px(x1),py(0));x.stroke();
+  x.fillStyle=css('--muted');x.font='12px system-ui';
+  x.fillText('t·f(x) →',W-60,py(0)-6);x.fillText('1 = street edge',px(1)+5,14);x.fillText('0 = boundary',px(0)+5,30);
+  x.fillStyle=css('--accent');x.fillText('hinge',px(-2.2),py(3.2)+14);x.fillStyle=css('--muted');x.fillText('log loss (log₂)',px(-2.3),py(1.9)+22);
+}
+
+function redrawAll(){linDraw();rbfDraw();hingeDraw();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+redrawAll();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

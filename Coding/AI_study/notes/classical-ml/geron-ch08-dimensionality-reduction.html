@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 8 "Dimensionality Reduction".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 8 — Dimensionality Reduction</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code,td code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+#pcCv{height:360px} #cdCv{height:340px}
+@media (max-width:560px){#pcCv{height:320px} #cdCv{height:320px}}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 8 · book pp. 213–234</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 8 — Dimensionality Reduction</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    High-dimensional data is sparse and slow to learn from, but real data usually sits near a much
+    smaller subspace or curved surface. Find that structure (with PCA, or a manifold method when the surface
+    is curved) and keep only the few coordinates that matter.
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=243">Why reduce dimensions? <span>p. 213</span></a>
+    <a href="../geron/reader.html#p=244">The Curse of Dimensionality <span>p. 214</span></a>
+    <a href="../geron/reader.html#p=245">Main Approaches <span>p. 215</span></a>
+    <a href="../geron/reader.html#p=249">PCA <span>p. 219</span></a>
+    <a href="../geron/reader.html#p=256">Kernel PCA <span>p. 226</span></a>
+    <a href="../geron/reader.html#p=260">LLE <span>p. 230</span></a>
+    <a href="../geron/reader.html#p=262">Other techniques <span>p. 232</span></a>
+    <a href="../geron/reader.html#p=263">Exercises <span>p. 233</span></a>
+  </nav>
+
+  <!-- ===================================================== 0 -->
+  <h2>0 · Why reduce dimensions at all? <a class="book" href="../geron/reader.html#p=243">book p. 213 ↗</a></h2>
+  <p><span class="def">Dimensionality reduction</span> maps each instance from $n$ features to $d &lt; n$ new features while losing as little useful information as possible.</p>
+  <ul class="tight">
+    <li><span class="exp">Speed</span>: fewer features means faster training. This is the main reason to do it.</li>
+    <li><span class="exp">Visualisation (DataViz)</span>: squeeze the data to 2 or 3 dimensions so you can plot it, spot clusters and show the result to non-specialists.</li>
+    <li><span class="exp">Compression</span>: the reduced data takes less memory and disk space.</li>
+    <li class="exp">Redundant features are common: border pixels in digit images are almost always blank, and neighbouring pixels are strongly correlated.</li>
+  </ul>
+  <span class="k i" data-l="Important">Reduction always throws some information away, so the model may get a little worse, and the pipeline gets more complex. <b>Train on the original features first</b>. Reduce only if training is too slow. Sometimes it removes noise and helps accuracy, but usually it only saves time.</span>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · The curse of dimensionality <a class="book" href="../geron/reader.html#p=244">book p. 214 ↗</a></h2>
+  <p>The <span class="def">curse of dimensionality</span> is the set of problems that appear when data has many features: our 3D intuition stops working, and the data becomes very sparse.</p>
+  <ul class="tight">
+    <li><span class="exp">Almost every point is near the edge.</span> In a unit hypercube, a random point is within $\varepsilon$ of some face with probability $1-(1-2\varepsilon)^n$. For $\varepsilon=0.001$ this is about 0.4% in 2D, but it tends to 100% as $n$ grows into the thousands.</li>
+    <li><span class="exp">Random points are far apart.</span> The average distance between two random points in the unit hypercube grows roughly like $\sqrt{n/6}$: about 0.52 in 2D, 0.66 in 3D, and around 408 for a million dimensions.</li>
+    <li><span class="exp">Distances concentrate.</span> In high dimensions the nearest and farthest neighbours of a point end up at almost the same distance, so "nearest" means less.</li>
+  </ul>
+  <span class="k i" data-l="Important">Sparse data means a new instance is probably far from every training instance, so predictions become long extrapolations. <b>More dimensions → higher risk of overfitting.</b></span>
+  <p>You could, in principle, add training data until the space is densely covered. But the number of instances needed <span class="imp">grows exponentially with the number of features</span>. With only 100 uniform features you'd need more rows than there are atoms in the observable universe to keep neighbours within 0.1 of each other.</p>
+
+  <div class="panel">
+    <b>Play: what happens to random points as dimensions grow</b>
+    <p class="hint" style="margin-top:.2rem">240 points drawn uniformly in the unit hypercube $[0,1]^n$. Top: histogram of distances from one point to all the others. Bottom: the chance that a point is within ε of a face, by dimension.</p>
+    <div class="controls">
+      <div class="ctl"><label>Dimensions n</label><input type="range" id="cdD" min="0" max="4" step="0.05" value="0.3"/><output id="cdDO"></output></div>
+      <div class="ctl"><label>Border margin ε</label><input type="range" id="cdE" min="-3" max="-1" step="0.05" value="-3"/><output id="cdEO"></output></div>
+      <div class="ctl"><label></label><button class="btn" id="cdSeed">↻ New points</button></div>
+    </div>
+    <canvas id="cdCv" height="340" aria-label="Distance histogram and border-fraction curve"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">mean distance</div><div class="v" id="cdMean">–</div></div>
+      <div class="stat"><div class="kk">√(n/6) (large-n guide)</div><div class="v" id="cdTh">–</div></div>
+      <div class="stat"><div class="kk">near a face (sim / exact)</div><div class="v" id="cdB">–</div></div>
+      <div class="stat"><div class="kk">contrast (max−min)/min</div><div class="v" id="cdC">–</div></div>
+    </div>
+    <p class="hint" id="cdMsg"></p>
+  </div>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Two main approaches <a class="book" href="../geron/reader.html#p=245">book p. 215 ↗</a></h2>
+  <h3>Projection</h3>
+  <p>Real features are rarely spread evenly: many are nearly constant and many are correlated. So the instances often lie close to a lower-dimensional <span class="def">subspace</span> (a flat plane, or hyperplane, inside the full space). <span class="def">Projection</span> drops each point perpendicularly onto that subspace, and the coordinates on the subspace ($z_1, z_2, \dots$) become the new features.</p>
+  <span class="k i" data-l="Important">Projection fails when the data lies on a surface that curls back on itself, like the <span class="def">Swiss roll</span> toy dataset (<code>make_swiss_roll</code>). Flattening it by projection stacks different layers on top of each other. What you actually want is to <i>unroll</i> it.</span>
+
+  <h3>Manifold learning</h3>
+  <p>A <span class="def">$d$-dimensional manifold</span> is a shape inside $n$-dimensional space ($d&lt;n$) that looks like a flat $d$-dimensional plane <i>locally</i>, but may be bent or twisted overall. The Swiss roll is a 2D manifold in 3D.</p>
+  <ul class="tight">
+    <li><span class="def">Manifold learning</span>: algorithms that model the manifold the data lies on, then express each point in the manifold's own coordinates.</li>
+    <li>They rely on the <span class="def">manifold assumption</span> (manifold hypothesis): most real high-dimensional data lies near a much lower-dimensional manifold. <span class="exp">Example: randomly generated pixel grids almost never look like digits, so real digit images fill only a tiny, constrained region of pixel space.</span></li>
+    <li>A second, <span class="imp">hidden assumption</span> is that the task gets simpler in manifold coordinates. <b>This is not guaranteed.</b> A class boundary that is a straight plane in the original space can become a messy set of pieces after unrolling.</li>
+  </ul>
+  <span class="k t" data-l="Tip">Reducing before training almost always saves time, but whether it gives a <i>better or simpler</i> model depends on the dataset. Check it with validation, not by assuming.</span>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · PCA <a class="book" href="../geron/reader.html#p=249">book p. 219 ↗</a></h2>
+  <p><span class="def">Principal Component Analysis (PCA)</span> finds the hyperplane that lies closest to the data, then projects the data onto it. It is by far the most widely used reduction method.</p>
+
+  <h3>Preserving the variance</h3>
+  <p>Which axis should you project onto? Pick the one that <span class="imp">keeps the most variance</span>: the projected points stay as spread out as possible, so the least information is lost. Equivalently, it is the axis that <span class="imp">minimises the mean squared distance</span> between the points and their projections. The two criteria give the same axis because, for centred data,</p>
+  <div class="math">$$\underbrace{\tfrac1m\textstyle\sum_i\|\mathbf x^{(i)}\|^2}_{\text{total variance (fixed)}}=\underbrace{\tfrac1m\textstyle\sum_i(\mathbf u^\top\mathbf x^{(i)})^2}_{\text{variance kept}}+\underbrace{\tfrac1m\textstyle\sum_i\|\mathbf x^{(i)}-(\mathbf u^\top\mathbf x^{(i)})\mathbf u\|^2}_{\text{squared projection error}}$$</div>
+
+  <div class="panel">
+    <b>Play: rotate the projection axis yourself</b>
+    <p class="hint" style="margin-top:.2rem">Drag on the canvas (or use the slider) to turn the solid axis. Thin lines show each point's projection error. The dashed line is the true PC1 computed from the data, and the strip at the bottom shows the 1D result.</p>
+    <div class="controls">
+      <div class="ctl"><label>Axis angle</label><input type="range" id="pcA" min="0" max="180" step="1" value="100"/><output id="pcAO"></output></div>
+      <div class="ctl"><label>Elongation</label><input type="range" id="pcS" min="1" max="6" step="0.1" value="3"/><output id="pcSO"></output></div>
+      <div class="ctl"><label>Cloud tilt</label><input type="range" id="pcT" min="0" max="180" step="1" value="35"/><output id="pcTO"></output></div>
+      <div class="ctl"><label></label><button class="btn on" id="pcSnap">Snap to PC1</button><button class="btn" id="pcSeed">↻ New sample</button></div>
+    </div>
+    <canvas id="pcCv" height="360" aria-label="2D point cloud with rotatable projection axis"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">variance kept</div><div class="v" id="pcKeep">–</div></div>
+      <div class="stat"><div class="kk">best possible (PC1)</div><div class="v" id="pcBest">–</div></div>
+      <div class="stat"><div class="kk">reconstruction MSE</div><div class="v" id="pcErr">–</div></div>
+      <div class="stat"><div class="kk">angle off PC1</div><div class="v" id="pcOff">–</div></div>
+    </div>
+    <p class="hint" id="pcMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Turn the axis slowly: "variance kept" and "reconstruction MSE" always add up to the same total. When one is at its maximum, the other is at its minimum.</li>
+      <li>Set elongation to 1 (a round cloud). PC1 becomes unstable: a new sample can send it in a completely different direction, because every axis keeps about 50%.</li>
+      <li>Snap to PC1, then turn 90°: that is PC2, the axis that keeps the <i>least</i> variance in 2D.</li>
+    </ul>
+  </details>
+
+  <h3>Principal components</h3>
+  <ul class="tight">
+    <li>The <span class="def">first principal component (PC1)</span> is the axis with the largest variance. PC2 is orthogonal to PC1 and captures the most of what's left. PC3 is orthogonal to both, and so on. There are as many PCs as original dimensions.</li>
+    <li>For each PC, PCA returns a <span class="def">unit vector</span> $\mathbf c_i$ along the axis.</li>
+    <li class="imp">The sign of these vectors is arbitrary. Refit on slightly different data and a vector may flip to point the other way. If two PCs have nearly equal variance, they may also rotate or swap, but the plane they span stays about the same.</li>
+  </ul>
+
+  <h3>Finding them with SVD</h3>
+  <p><span class="def">Singular Value Decomposition (SVD)</span> factors the centred data matrix as $\mathbf X=\mathbf U\boldsymbol\Sigma\mathbf V^\top$. The columns of $\mathbf V$ are exactly the principal components, sorted by importance:</p>
+  <div class="math">$$\mathbf V=\begin{pmatrix}|&|&&|\\\mathbf c_1&\mathbf c_2&\cdots&\mathbf c_n\\|&|&&|\end{pmatrix}
+  \qquad \text{variance along } \mathbf c_i=\frac{\sigma_i^2}{m-1}$$</div>
+  <span class="k i" data-l="Important">PCA assumes the data is <b>centred</b> (each feature has mean 0). scikit-learn's PCA classes centre for you. If you call <code>np.linalg.svd</code> yourself, subtract the column means first. PCA does <i>not</i> scale features, so standardise first when the features have different units.</span>
+
+  <h3>Projecting down to $d$ dimensions</h3>
+  <p>Keep the first $d$ columns of $\mathbf V$ as $\mathbf W_d$ and multiply. This keeps as much variance as any $d$-dimensional projection can.</p>
+  <div class="math">$$\mathbf X_{d\text{-proj}}=\mathbf X\,\mathbf W_d$$</div>
+
+  <h3>With scikit-learn</h3>
+  <ul class="tight">
+    <li><code>PCA(n_components=2).fit_transform(X)</code> centres the data, runs SVD and projects it.</li>
+    <li><code>components_</code> holds the PCs <b>as rows</b>, so it is $\mathbf W_d^\top$ (PC1 is <code>components_[0]</code>).</li>
+    <li><code>mean_</code> is the stored centre, and <code>explained_variance_</code> is the variance along each PC.</li>
+  </ul>
+
+  <h3>Explained variance ratio</h3>
+  <p><code>explained_variance_ratio_</code> gives the <span class="def">explained variance ratio</span>: the share of the total variance that lies along each PC. For example, <code>[0.84, 0.15]</code> means that two PCs hold about 99% of the variance, so a third PC would add little.</p>
+
+  <h3>Choosing the right number of dimensions</h3>
+  <ul class="tight">
+    <li class="tip">Don't pick $d$ arbitrarily. Keep enough components to explain a target share of the variance, often 95%.</li>
+    <li>The manual way is to fit <code>PCA()</code> with no limit, take <code>np.cumsum</code> of the ratios, and find the first index where it reaches 0.95.</li>
+    <li class="tip">The easier way is to pass a float: <code>PCA(n_components=0.95)</code>. The chosen number is then in <code>n_components_</code>.</li>
+    <li>You can also plot the cumulative curve and look for the <span class="def">elbow</span>, where adding components stops helping much.</li>
+    <li class="exp">For visualisation, just use 2 or 3.</li>
+  </ul>
+
+  <h3>PCA for compression</h3>
+  <p>Keeping 95% of the variance on 28×28 digit images shrinks 784 features to roughly 150, so the data is less than 20% of its original size. Algorithms such as SVMs then train far faster.</p>
+  <p><code>inverse_transform</code> maps the reduced data back to the original space. The result is not identical, because the dropped variance is gone. The <span class="def">reconstruction error</span> is the mean squared distance between the original and the reconstruction.</p>
+  <div class="math">$$\mathbf X_{\text{recovered}}=\mathbf X_{d\text{-proj}}\,\mathbf W_d^\top \quad(\text{+ the mean, in scikit-learn})$$</div>
+
+  <h3>Randomized PCA</h3>
+  <p><code>svd_solver="randomized"</code> uses a stochastic algorithm that quickly approximates only the first $d$ components. Its cost is about $O(m\,d^2)+O(d^3)$, compared with $O(m\,n^2)+O(n^3)$ for the full SVD, so it is much faster when $d \ll n$.</p>
+
+  <h3>Incremental PCA</h3>
+  <p>Standard PCA needs the whole training set in memory. <span class="def">Incremental PCA (IPCA)</span>, <code>IncrementalPCA</code>, learns from mini-batches instead:</p>
+  <ul class="tight">
+    <li>Call <code>partial_fit(batch)</code> once per batch (for example with <code>np.array_split</code>), not <code>fit</code>. It also works <span class="def">online</span>, as new data arrives.</li>
+    <li class="tip">Or keep the data on disk in a <code>np.memmap</code> array and call <code>fit</code> with a <code>batch_size</code>. Only one batch is loaded into memory at a time.</li>
+  </ul>
+
+  <div class="tw"><table>
+    <tr><th>Variant</th><th>Use when</th><th>scikit-learn</th></tr>
+    <tr><td>Full SVD</td><td>The data fits in memory and is small to medium, or you want exact components</td><td><code>PCA(svd_solver="full")</code></td></tr>
+    <tr><td>Randomized</td><td>$d$ is much smaller than $n$ and the data fits in memory</td><td><code>PCA(svd_solver="randomized")</code></td></tr>
+    <tr><td>Incremental</td><td>The data doesn't fit in memory, or arrives as a stream</td><td><code>IncrementalPCA(n_components, batch_size)</code></td></tr>
+    <tr><td>Kernel</td><td>The structure is nonlinear</td><td><code>KernelPCA(kernel="rbf", gamma=…)</code></td></tr>
+  </table></div>
+
+  <span class="k t" data-l="Changed since the book">
+    <b><code>svd_solver</code></b> now accepts <code>"auto"</code>, <code>"full"</code>, <code>"covariance_eigh"</code> (added in 1.5), <code>"arpack"</code> and <code>"randomized"</code>. With <code>"auto"</code>, scikit-learn now picks <code>"covariance_eigh"</code> for dense data with few features (≤ 1000) and many more rows than features. Otherwise it picks <code>"randomized"</code> when the data is larger than 500×500 and you ask for fewer than 80% of the components, and <code>"full"</code> in all other cases. Recent versions also accept sparse input for some solvers. Check <code>pca._fit_svd_solver</code> to see which solver actually ran.
+  </span>
+
+  <!-- ===================================================== 4 -->
+  <h2>4 · Kernel PCA <a class="book" href="../geron/reader.html#p=256">book p. 226 ↗</a></h2>
+  <p>The <span class="def">kernel trick</span> from chapter 5 also works for PCA. <span class="def">Kernel PCA (kPCA)</span> acts as if it mapped the data into a very high-dimensional <span class="def">feature space</span> and ran linear PCA there. That gives a <b>nonlinear</b> projection in the original space. It often keeps clusters together, and can sometimes unroll a twisted manifold.</p>
+  <ul class="tight">
+    <li><code>KernelPCA(n_components=2, kernel="rbf", gamma=0.04)</code>. Common kernels are <code>"linear"</code> (the same as plain PCA), <code>"rbf"</code>, <code>"poly"</code>, <code>"sigmoid"</code> and <code>"cosine"</code>.</li>
+    <li class="exp">Its memory use grows with $m^2$ (it builds a kernel matrix between every pair of instances), so it's for small and medium datasets.</li>
+  </ul>
+
+  <h3>Selecting a kernel and tuning hyperparameters</h3>
+  <p>kPCA is unsupervised, so there is no built-in score to optimise. There are two ways to choose:</p>
+  <ol>
+    <li><span class="exp">Supervised, through the downstream task.</span> Put kPCA in a <code>Pipeline</code> before a classifier (for example <code>LogisticRegression</code>), then run <code>GridSearchCV</code> over <code>kpca__kernel</code> and <code>kpca__gamma</code>. Read the winner from <code>best_params_</code>.</li>
+    <li><span class="exp">Unsupervised, by reconstruction error.</span> Choose the settings that let you reconstruct the input best.</li>
+  </ol>
+  <p>The catch with option 2: reversing the linear PCA step lands you back in <i>feature space</i>, which can be infinite-dimensional, so you can't compare that point with the original directly. Instead you find a point in the original space whose image is close to it: the <span class="def">reconstruction pre-image</span>. Its squared distance to the original instance is the <span class="def">pre-image error</span>.</p>
+  <ul class="tight">
+    <li class="tip"><code>KernelPCA(…, fit_inverse_transform=True)</code> learns that mapping back for you, using kernel ridge regression from the reduced points to the original ones. Then <code>inverse_transform</code> works, and you can score with <code>mean_squared_error(X, X_preimage)</code>.</li>
+    <li class="imp">Without <code>fit_inverse_transform=True</code>, calling <code>inverse_transform</code> fails. (In current scikit-learn the method exists but raises <code>NotFittedError</code>.)</li>
+  </ul>
+  <span class="k t" data-l="Changed since the book"><code>KernelPCA</code> now has <code>eigen_solver="randomized"</code> (added in 1.0), which is much faster when you want only a few components from a large kernel matrix. <code>"auto"</code> picks it when that pays off.</span>
+
+  <!-- ===================================================== 5 -->
+  <h2>5 · LLE <a class="book" href="../geron/reader.html#p=260">book p. 230 ↗</a></h2>
+  <p><span class="def">Locally Linear Embedding (LLE)</span> is a <span class="def">nonlinear dimensionality reduction (NLDR)</span> method from the manifold-learning family, and it doesn't use projection. The idea: describe each point as a weighted mix of its nearest neighbours, then find low-dimensional positions where the same weights still work.</p>
+  <p><span class="exp">Step 1: learn the local weights.</span> Each point is rebuilt only from its $k$ nearest neighbours, and each point's weights add up to 1:</p>
+  <div class="math">$$\hat{\mathbf W}=\arg\min_{\mathbf W}\sum_{i=1}^{m}\Big\|\mathbf x^{(i)}-\sum_{j=1}^{m}w_{i,j}\,\mathbf x^{(j)}\Big\|^2
+  \quad\text{s.t.}\quad w_{i,j}=0 \text{ unless } \mathbf x^{(j)}\in\text{kNN}(\mathbf x^{(i)}),\;\; \sum_j w_{i,j}=1$$</div>
+  <p><span class="exp">Step 2: freeze the weights and move the points.</span> Find $d$-dimensional positions $\mathbf z^{(i)}$ that the same weights reconstruct as well as possible:</p>
+  <div class="math">$$\hat{\mathbf Z}=\arg\min_{\mathbf Z}\sum_{i=1}^{m}\Big\|\mathbf z^{(i)}-\sum_{j=1}^{m}\hat w_{i,j}\,\mathbf z^{(j)}\Big\|^2$$</div>
+  <p class="exp">Step 1 fixes the points and solves for the weights. Step 2 does the reverse.</p>
+  <ul class="tight">
+    <li><code>LocallyLinearEmbedding(n_components=2, n_neighbors=10)</code> in <code>sklearn.manifold</code>. The <code>method</code> parameter also offers <code>"modified"</code>, <code>"hessian"</code> and <code>"ltsa"</code> variants.</li>
+    <li class="tip">It is very good at unrolling twisted manifolds, especially when there isn't much noise.</li>
+    <li class="imp">It preserves distances only <i>locally</i>. On a larger scale, parts of the unrolled result can be stretched or squeezed.</li>
+    <li class="imp">Cost: $O(m\log m\;n\log k)$ to find neighbours, $O(m\,n\,k^3)$ for the weights and $O(d\,m^2)$ for the embedding. The $m^2$ term makes it scale poorly to very large datasets.</li>
+    <li class="exp">If you see errors or a collapsed result, try changing <code>n_neighbors</code>.</li>
+  </ul>
+
+  <!-- ===================================================== 6 -->
+  <h2>6 · Other techniques <a class="book" href="../geron/reader.html#p=262">book p. 232 ↗</a></h2>
+  <div class="tw"><table>
+    <tr><th>Method</th><th>What it preserves / does</th><th>Notes</th><th>scikit-learn</th></tr>
+    <tr><td><b>Random projections</b></td><td>A random linear map. Pairwise distances are kept approximately, as the <span class="def">Johnson–Lindenstrauss lemma</span> guarantees</td><td class="tip">The $d$ needed depends on the number of instances and the tolerance ε, <i>not</i> on the original $n$. Fast and needs no fitting to the data</td><td><code>GaussianRandomProjection</code>, <code>SparseRandomProjection</code></td></tr>
+    <tr><td><b>MDS</b> (multidimensional scaling)</td><td>Distances between instances</td><td>Slow for large $m$</td><td><code>MDS</code></td></tr>
+    <tr><td><b>Isomap</b></td><td><span class="def">Geodesic distances</span> along a k-nearest-neighbour graph</td><td>Good for unrolling manifolds</td><td><code>Isomap</code></td></tr>
+    <tr><td><b>t-SNE</b></td><td>Keeps similar points close and pushes dissimilar ones apart</td><td class="imp">Mainly for visualising clusters. Distances between clusters and the axes carry little meaning, and there is no <code>transform</code> for new data</td><td><code>TSNE</code></td></tr>
+    <tr><td><b>LDA</b> (linear discriminant analysis)</td><td>A classifier that learns the axes that best separate the classes. Projecting onto them keeps the classes apart</td><td class="tip">Supervised, and a good step before another classifier such as an SVM. At most (classes − 1) components</td><td><code>LinearDiscriminantAnalysis</code></td></tr>
+  </table></div>
+  <span class="k t" data-l="Changed since the book">
+    <b>Random projections:</b> <code>n_components="auto"</code> picks the dimension with <code>johnson_lindenstrauss_min_dim(n_samples, eps=…)</code> (for 10,000 rows and ε = 0.1 that's about 7,900 dimensions, so it pays off only for very wide data). Since 1.3, <code>compute_inverse_components=True</code> gives an <code>inverse_transform</code> based on the pseudo-inverse.
+    <b>t-SNE:</b> the defaults are now <code>init="pca"</code> and <code>learning_rate="auto"</code> (since 1.2), and <code>n_iter</code> was renamed <code>max_iter</code> (in 1.5).
+    <b>UMAP</b> (from the separate <code>umap-learn</code> package) is now a common, faster alternative to t-SNE. Unlike t-SNE, it can <code>transform</code> new points.
+  </span>
+  <p class="skip">The MDS, Isomap and t-SNE classes live in <code>sklearn.manifold</code>, the random projection classes in <code>sklearn.random_projection</code>, and LDA in <code>sklearn.discriminant_analysis</code>.</p>
+
+  <!-- ===================================================== 7 -->
+  <h2>7 · Exercises — the ideas they test <a class="book" href="../geron/reader.html#p=263">book p. 233 ↗</a></h2>
+  <ul class="tight">
+    <li>Why reduce (speed, visualisation, memory) and the costs (information loss, extra pipeline complexity, harder-to-interpret features).</li>
+    <li>Whether reduction can be undone: approximately for PCA (<code>inverse_transform</code>), only through a learned pre-image for kPCA, and not at all for methods like t-SNE.</li>
+    <li>How many dimensions 95% of the variance needs: <span class="imp">it depends entirely on the data</span>. It could be 1, or nearly all 1,000.</li>
+    <li>Which PCA variant fits which situation, and how to evaluate a reduction: reconstruction error, or performance on the downstream task.</li>
+    <li>Chaining methods is reasonable: for example, a fast PCA first to remove useless dimensions, then a slower method such as LLE or t-SNE.</li>
+    <li class="tip">Hands-on: time a random forest before and after PCA, and visualise digits in 2D with t-SNE compared with PCA, LLE and MDS.</li>
+  </ul>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — all of chapter 8 in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. scikit-learn downloads on the first run (≈ 20–40 s, needs internet). It uses the built-in 8×8 digits instead of MNIST.</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false" style="min-height:420px">import numpy as np
+from sklearn.datasets import load_digits, make_swiss_roll
+from sklearn.decomposition import PCA, IncrementalPCA, KernelPCA
+from sklearn.manifold import LocallyLinearEmbedding
+from sklearn.random_projection import GaussianRandomProjection
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+
+X, y = load_digits(return_X_y=True)          # 1797 images, 8x8 = 64 features
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, random_state=42)
+
+# 1) PCA by hand with SVD vs scikit-learn (signs may flip)
+Xc = X_tr - X_tr.mean(axis=0)
+_, s, Vt = np.linalg.svd(Xc, full_matrices=False)
+pca_full = PCA().fit(X_tr)
+print("PC1 same axis?", np.allclose(np.abs(Vt[0]), np.abs(pca_full.components_[0])))
+print("var ratio by hand:", (s**2 / (s**2).sum())[:3].round(3))
+print("explained ratio  :", pca_full.explained_variance_ratio_[:3].round(3))
+
+# 2) How many components keep 95% of the variance?
+cumsum = np.cumsum(pca_full.explained_variance_ratio_)
+d = np.argmax(cumsum >= 0.95) + 1
+pca95 = PCA(n_components=0.95).fit(X_tr)
+print(f"d for 95%: by cumsum={d}, PCA(0.95) -> {pca95.n_components_} of {X.shape[1]}")
+
+# 3) Compression and reconstruction error for several d
+for k in (2, 10, d, 40):
+    p = PCA(n_components=k).fit(X_tr)
+    X_rec = p.inverse_transform(p.transform(X_te))
+    err = np.mean(np.sum((X_te - X_rec) ** 2, axis=1))
+    print(f"d={k:>2}: kept {p.explained_variance_ratio_.sum():.1%}  recon err={err:7.1f}")
+
+# 4) Randomized and incremental PCA give nearly the same variance
+rnd = PCA(n_components=d, svd_solver="randomized", random_state=42).fit(X_tr)
+inc = IncrementalPCA(n_components=d)
+for batch in np.array_split(X_tr, 10):
+    inc.partial_fit(batch)
+print(f"kept var  full={pca95.explained_variance_ratio_.sum():.4f} "
+      f"rand={rnd.explained_variance_ratio_.sum():.4f} inc={inc.explained_variance_ratio_.sum():.4f}")
+
+# 5) Does reducing first help a classifier? (accuracy on the test set)
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+acc_raw = rf.fit(X_tr, y_tr).score(X_te, y_te)
+acc_pca = rf.fit(pca95.transform(X_tr), y_tr).score(pca95.transform(X_te), y_te)
+print(f"forest acc: raw={acc_raw:.3f}  after PCA(0.95)={acc_pca:.3f}")
+
+# 6) Nonlinear: Swiss roll. How well does each 2D embedding keep the roll position t?
+Xs, t = make_swiss_roll(n_samples=800, noise=0.2, random_state=42)
+embeds = {
+    "PCA": PCA(n_components=2),
+    "kPCA rbf": KernelPCA(n_components=2, kernel="rbf", gamma=0.04),
+    "LLE": LocallyLinearEmbedding(n_components=2, n_neighbors=10, random_state=42),
+    "RandProj": GaussianRandomProjection(n_components=2, random_state=42),
+}
+for name, est in embeds.items():
+    Z = est.fit_transform(Xs)
+    r = max(abs(np.corrcoef(Z[:, j], t)[0, 1]) for j in range(2))
+    print(f"{name:9}: best |corr(z, t)| = {r:.2f}")</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+  <details><summary>What you should see</summary>
+    <ul class="tight">
+      <li>The hand-made SVD and <code>PCA</code> agree (up to sign), and about 28 of the 64 pixel features keep 95% of the variance.</li>
+      <li>Reconstruction error falls steeply as <i>d</i> grows. The forest's accuracy barely changes after reduction.</li>
+      <li>On the Swiss roll, only LLE recovers the roll position (|corr| ≈ 0.99). PCA and a random projection just flatten it.</li>
+    </ul>
+  </details>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">Two good reasons to reduce dimensions, and two costs?</div><div class="face a">Faster training and 2D/3D visualisation (also less memory). Costs: some information is lost, and the pipeline is more complex, with less interpretable features.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why do high dimensions make overfitting more likely?</div><div class="face a">The space is huge, so training points are sparse and far apart. New points are far from all of them, so predictions become long extrapolations.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Maximising projected variance vs minimising projection error: which axis wins?</div><div class="face a">The same one, PC1. For centred data, kept variance plus squared error equals the fixed total variance.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">What must you do before running np.linalg.svd for PCA yourself?</div><div class="face a">Centre each feature (subtract its mean). Also standardise if the features are on different scales, because PCA doesn't do that.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">PCA(n_components=0.95) on a 1,000-feature dataset: how many dims come out?</div><div class="face a">It depends on the data: anywhere from 1 (almost collinear data) to nearly 1,000 (almost isotropic noise). Check n_components_.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">The data doesn't fit in RAM. Which PCA?</div><div class="face a">IncrementalPCA: partial_fit on mini-batches, or fit on a np.memmap array with a batch_size.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">How can you tune Kernel PCA if it's unsupervised?</div><div class="face a">Grid-search it inside a pipeline with a supervised model, or pick the settings with the lowest pre-image error (fit_inverse_transform=True).</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">LLE in two steps?</div><div class="face a">1) Write each point as a weighted sum of its k nearest neighbours (weights sum to 1). 2) Freeze the weights and find low-dimensional points that the same weights rebuild best.</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="geron-ch05-svm.html">Ch 5 — SVMs</a>: the kernel trick that Kernel PCA borrows, and why SVMs benefit from fewer features</li>
+    <li><a href="geron-ch04-training-models.html">Ch 4 — Training models</a>: SVD and the pseudoinverse show up again here</li>
+    <li><a href="geron-ch03-classification.html">Ch 3 — Classification</a>: the MNIST data that the compression examples use</li>
+    <li><a href="geron-ch07-ensembles.html">Ch 7 — Ensembles</a>: random-forest feature importance, another way to spot useless pixels</li>
+    <li><a href="geron-ch09-unsupervised.html">Ch 9 — Unsupervised learning</a>: clustering, which reduction and visualisation often come before</li>
+    <li><a href="geron-ch02-end-to-end-project.html">Ch 2 — End-to-end project</a>: pipelines and grid search, used to tune kPCA</li>
+    <li><a href="../geron/reader.html#p=757">Book answers to the chapter 8 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> explain the curse of dimensionality with the distance and border examples</label></li>
+    <li><label><input type="checkbox"/> tell projection from manifold learning, and say when projection fails</label></li>
+    <li><label><input type="checkbox"/> compute PCA with SVD, project to d dims and reconstruct</label></li>
+    <li><label><input type="checkbox"/> choose d from the explained variance ratio (or use n_components=0.95)</label></li>
+    <li><label><input type="checkbox"/> pick between full, randomized, incremental and kernel PCA</label></li>
+    <li><label><input type="checkbox"/> describe LLE's two steps and name MDS, Isomap, t-SNE, LDA and random projections</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 8. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch08';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const fmt=(v,d=3)=>!isFinite(v)?'∞':Math.abs(v)>=1e5?v.toExponential(1):v.toFixed(d);
+const pct=v=>v>0.999&&v<1?'>99.9%':(v*100).toFixed(1)+'%';
+
+/* ================= Curse of dimensionality playground ================= */
+const C={seed:5,cache:null};
+function cdCompute(){
+  const d=Math.max(1,Math.round(Math.pow(10,+$('#cdD').value))),eps=Math.pow(10,+$('#cdE').value);
+  const key=d+'|'+C.seed;
+  if(!C.cache||C.cache.key!==key){
+    const r=mulberry(C.seed*7919+d),M=240,P=new Float64Array(M*d);
+    for(let i=0;i<P.length;i++)P[i]=r();
+    const dist=[];
+    for(let j=1;j<M;j++){let s=0;const o=j*d;for(let k=0;k<d;k++){const t=P[k]-P[o+k];s+=t*t;}dist.push(Math.sqrt(s));}
+    // per-point min distance to a face (for the border test)
+    const mf=new Float64Array(M);
+    for(let i=0;i<M;i++){let m=1;const o=i*d;for(let k=0;k<d;k++){const v=P[o+k],b=v<0.5?v:1-v;if(b<m)m=b;}mf[i]=m;}
+    C.cache={key,d,dist,mf};
+  }
+  const {dist,mf}=C.cache;
+  const mean=dist.reduce((a,b)=>a+b,0)/dist.length,mn=Math.min(...dist),mx=Math.max(...dist);
+  let near=0;for(const v of mf)if(v<eps)near++;
+  return{d,eps,dist,mean,mn,mx,sim:near/mf.length,exact:1-Math.pow(1-2*eps,d)};
+}
+function drawCD(){
+  const s=cdCompute();
+  $('#cdDO').textContent=s.d.toLocaleString();$('#cdEO').textContent=s.eps.toPrecision(2);
+  const{x,W,H}=setupCanvas($('#cdCv'));
+  const H1=Math.round(H*0.55),pad=26;
+  x.font='12px system-ui';
+  // --- top: histogram of distances, x axis from 0 to max distance
+  const B=30,cnt=new Array(B).fill(0),top=s.mx*1.02||1;
+  s.dist.forEach(v=>cnt[Math.min(B-1,Math.floor(v/top*B))]++);
+  const cm=Math.max(...cnt),bw=(W-2*pad)/B,hb=H1-pad-18;
+  x.fillStyle=css('--accent');
+  cnt.forEach((c,i)=>{const h=c/cm*hb;x.fillRect(pad+i*bw+1,H1-pad-h,bw-2,h);});
+  x.strokeStyle=css('--border');x.beginPath();x.moveTo(pad,H1-pad);x.lineTo(W-pad,H1-pad);x.stroke();
+  x.fillStyle=css('--muted');x.textAlign='left';x.fillText('0',pad,H1-pad+14);
+  x.textAlign='right';x.fillText(fmt(top,2),W-pad,H1-pad+14);
+  x.textAlign='left';x.fillText('distances from one point to the other 239 (x axis starts at 0)',pad,14);
+  // nearest / farthest markers
+  [[s.mn,'nearest',css('--tip')],[s.mx,'farthest',css('--imp')]].forEach(([v,l,c])=>{const X=pad+v/top*(W-2*pad);
+    x.strokeStyle=c;x.lineWidth=2;x.beginPath();x.moveTo(X,24);x.lineTo(X,H1-pad);x.stroke();
+    x.fillStyle=c;const right=l==='nearest'?X<W-80:X<80;x.textAlign=right?'left':'right';x.fillText(l,X+(right?4:-4),l==='nearest'?34:48);});
+  x.lineWidth=1;x.textAlign='left';
+  // --- bottom: border fraction vs log10 d
+  const y0=H1+12,y1=H-pad,px=v=>pad+v/4*(W-2*pad),py=f=>y1-f*(y1-y0-8);
+  x.strokeStyle=css('--border');x.beginPath();x.moveTo(pad,y1);x.lineTo(W-pad,y1);x.moveTo(pad,py(1));x.lineTo(W-pad,py(1));x.stroke();
+  x.fillStyle=css('--muted');
+  ['1','10','100','1k','10k'].forEach((lab,k)=>{x.textAlign=k===0?'left':k===4?'right':'center';x.fillText(lab,px(k),y1+14);});
+  x.textAlign='left';x.fillText('P(within ε of a face) vs n — 100% line on top',pad+4,py(1)-4);
+  x.strokeStyle=css('--code');x.lineWidth=2.2;x.beginPath();
+  for(let i=0;i<=200;i++){const lv=i/50,n=Math.pow(10,lv),f=1-Math.pow(1-2*s.eps,n);i?x.lineTo(px(lv),py(f)):x.moveTo(px(lv),py(f));}x.stroke();
+  const lv=Math.log10(s.d);
+  x.fillStyle=css('--def');x.beginPath();x.arc(px(lv),py(s.sim),5,0,7);x.fill();
+  x.strokeStyle=css('--text');x.lineWidth=1.5;x.beginPath();x.arc(px(lv),py(s.exact),7,0,7);x.stroke();
+  x.fillStyle=css('--muted');x.textAlign='right';x.fillText('— exact  ● simulated  ○ exact at n',W-pad,y1-6);x.textAlign='left';
+  // stats
+  $('#cdMean').textContent=fmt(s.mean,3);$('#cdTh').textContent=fmt(Math.sqrt(s.d/6),3);
+  $('#cdB').textContent=pct(s.sim)+' / '+pct(s.exact);
+  const con=(s.mx-s.mn)/s.mn;$('#cdC').textContent=fmt(con,2);
+  $('#cdMsg').textContent=s.d<=3?`Low dimension: distances vary a lot (farthest is ${fmt(s.mx/s.mn,1)}× the nearest) and few points hug the border.`:
+    s.d<100?`Distances are already bunching up: the farthest neighbour is only ${fmt(s.mx/s.mn,2)}× as far as the nearest.`:
+    `n = ${s.d.toLocaleString()}: every point is about ${fmt(s.mean,1)} from every other, and ${pct(s.exact)} of points sit near a face. "Nearest neighbour" has lost its meaning.`;
+}
+['cdD','cdE'].forEach(id=>$('#'+id).oninput=drawCD);
+$('#cdSeed').onclick=()=>{C.seed=Math.floor(Math.random()*1e6);drawCD();};
+
+/* ================= PCA axis playground ================= */
+const P={seed:21};
+function pcData(){
+  const r=mulberry(P.seed),s=+$('#pcS').value,tilt=+$('#pcT').value*Math.PI/180,N=120;
+  const base=[];for(let i=0;i<N;i++)base.push([gauss(r),gauss(r)]);
+  const pts=base.map(([a,b])=>{const u=a*s*0.55,v=b*0.55;return[u*Math.cos(tilt)-v*Math.sin(tilt),u*Math.sin(tilt)+v*Math.cos(tilt)];});
+  let mx=0,my=0;pts.forEach(p=>{mx+=p[0];my+=p[1];});mx/=N;my/=N;
+  pts.forEach(p=>{p[0]-=mx;p[1]-=my;});
+  let cxx=0,cyy=0,cxy=0;pts.forEach(([a,b])=>{cxx+=a*a;cyy+=b*b;cxy+=a*b;});cxx/=N;cyy/=N;cxy/=N;
+  let pc=0.5*Math.atan2(2*cxy,cxx-cyy)*180/Math.PI;if(pc<0)pc+=180;
+  P.pts=pts;P.cov=[cxx,cyy,cxy];P.pc1=pc;
+}
+const varAlong=deg=>{const t=deg*Math.PI/180,c=Math.cos(t),s=Math.sin(t),[a,b,h]=P.cov;return a*c*c+2*h*c*s+b*s*s;};
+function drawPC(){
+  const ang=+$('#pcA').value;
+  $('#pcAO').textContent=ang+'°';$('#pcSO').textContent=(+$('#pcS').value).toFixed(1)+'×';$('#pcTO').textContent=$('#pcT').value+'°';
+  const{x,W,H}=setupCanvas($('#pcCv'));
+  const strip=46,Hm=H-strip,cx=W/2,cy=Hm/2,sc=Math.min(W,Hm)/7.2;
+  const X=v=>cx+v*sc,Y=v=>cy-v*sc;
+  const t=ang*Math.PI/180,ux=Math.cos(t),uy=Math.sin(t);
+  // grid axes
+  x.strokeStyle=css('--border');x.lineWidth=1;x.beginPath();x.moveTo(0,cy);x.lineTo(W,cy);x.moveTo(cx,0);x.lineTo(cx,Hm);x.stroke();
+  // PC1 dashed
+  const p1=P.pc1*Math.PI/180,L=Math.hypot(W,Hm);
+  x.setLineDash([6,5]);x.strokeStyle=css('--tip');x.lineWidth=1.5;x.beginPath();
+  x.moveTo(cx-Math.cos(p1)*L,cy+Math.sin(p1)*L);x.lineTo(cx+Math.cos(p1)*L,cy-Math.sin(p1)*L);x.stroke();x.setLineDash([]);
+  // residuals + points
+  const proj=[];
+  x.strokeStyle=css('--imp');x.globalAlpha=.45;x.lineWidth=1;x.beginPath();
+  P.pts.forEach(([a,b])=>{const z=a*ux+b*uy;proj.push(z);x.moveTo(X(a),Y(b));x.lineTo(X(z*ux),Y(z*uy));});x.stroke();x.globalAlpha=1;
+  x.fillStyle=css('--text');P.pts.forEach(([a,b])=>{x.beginPath();x.arc(X(a),Y(b),2.8,0,7);x.fill();});
+  // axis
+  x.strokeStyle=css('--accent');x.lineWidth=2.6;x.beginPath();x.moveTo(cx-ux*L,cy+uy*L);x.lineTo(cx+ux*L,cy-uy*L);x.stroke();
+  x.fillStyle=css('--accent');proj.forEach(z=>{x.beginPath();x.arc(X(z*ux),Y(z*uy),2.2,0,7);x.fill();});
+  // strip
+  const sy=Hm+strip/2+4;
+  x.fillStyle=css('--code-bg');x.fillRect(0,Hm,W,strip);
+  x.strokeStyle=css('--border');x.beginPath();x.moveTo(0,Hm);x.lineTo(W,Hm);x.moveTo(12,sy);x.lineTo(W-12,sy);x.stroke();
+  x.fillStyle=css('--accent');x.globalAlpha=.6;proj.forEach(z=>{x.beginPath();x.arc(cx+z*sc*0.9,sy,3,0,7);x.fill();});x.globalAlpha=1;
+  x.font='12px system-ui';x.fillStyle=css('--muted');x.textAlign='left';
+  x.fillText('1D result z = uᵀx',8,Hm+14);
+  x.fillText('— axis u   - - PC1   | projection error',8,16);
+  // stats
+  const [a,b]=P.cov,tot=a+b,keep=varAlong(ang),best=varAlong(P.pc1);
+  let off=Math.abs(ang-P.pc1)%180;if(off>90)off=180-off;
+  $('#pcKeep').textContent=pct(keep/tot);$('#pcBest').textContent=pct(best/tot);
+  $('#pcErr').textContent=fmt(tot-keep,3);$('#pcOff').textContent=off.toFixed(0)+'°';
+  const el=+$('#pcS').value;
+  $('#pcMsg').textContent=el<1.3?'Nearly round cloud: every axis keeps about half the variance, so PC1 is poorly defined.':
+    off<2?`On PC1: this axis keeps the most variance (${pct(best/tot)}) and has the smallest reconstruction error.`:
+    off>88?`This is PC2: it keeps the least variance (${pct(keep/tot)}), so the error is at its maximum.`:
+    `You're ${off.toFixed(0)}° off PC1 and losing ${pct((best-keep)/tot)} of the variance that PC1 would keep.`;
+}
+['pcS','pcT'].forEach(id=>$('#'+id).oninput=()=>{pcData();drawPC();});
+$('#pcA').oninput=drawPC;
+$('#pcSnap').onclick=()=>{$('#pcA').value=Math.round(P.pc1)%181;drawPC();};
+$('#pcSeed').onclick=()=>{P.seed=Math.floor(Math.random()*1e6);pcData();drawPC();};
+(function(){const cv=$('#pcCv');let drag=false;
+  const set=e=>{const rc=cv.getBoundingClientRect(),H=rc.height-46;const dx=e.clientX-rc.left-rc.width/2,dy=-(e.clientY-rc.top-H/2);
+    if(Math.hypot(dx,dy)<6)return;let a=Math.atan2(dy,dx)*180/Math.PI;if(a<0)a+=180;if(a>180)a-=180;$('#pcA').value=Math.round(a);drawPC();};
+  cv.addEventListener('pointerdown',e=>{drag=true;cv.setPointerCapture(e.pointerId);set(e);});
+  cv.addEventListener('pointermove',e=>{if(drag)set(e);});
+  cv.addEventListener('pointerup',()=>drag=false);cv.addEventListener('pointercancel',()=>drag=false);})();
+
+function redrawAll(){drawCD();drawPC();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+pcData();redrawAll();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 4 "Training Models".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 4 — Training Models</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.4rem 0 .5rem}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+#gdCv{height:340px} #rgCv{height:280px} #lgCv{height:220px}
+@media (max-width:560px){#gdCv{height:300px}}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 4 · book pp. 111–151</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 4 — Training Models</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    Training a model means finding the parameters that make a cost function as small as possible — either
+    in one shot with an equation, or step by step with gradient descent — and then controlling
+    how flexible the model is so it doesn't memorise the training data.
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=142">Linear Regression <span>p. 112</span></a>
+    <a href="../geron/reader.html#p=148">Gradient Descent <span>p. 118</span></a>
+    <a href="../geron/reader.html#p=158">Polynomial Regression <span>p. 128</span></a>
+    <a href="../geron/reader.html#p=160">Learning Curves <span>p. 130</span></a>
+    <a href="../geron/reader.html#p=164">Regularized Linear Models <span>p. 134</span></a>
+    <a href="../geron/reader.html#p=172">Logistic Regression <span>p. 142</span></a>
+    <a href="../geron/reader.html#p=181">Exercises <span>p. 151</span></a>
+  </nav>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · Linear regression <a class="book" href="../geron/reader.html#p=142">book p. 112 ↗</a></h2>
+  <p>A <span class="def">linear model</span> predicts by taking a weighted sum of the features plus a constant:</p>
+  <div class="math">$$\hat y = \theta_0 + \theta_1 x_1 + \dots + \theta_n x_n = \boldsymbol\theta^\top \mathbf x$$</div>
+  <p class="exp">Here $\mathbf x$ gets an extra $x_0 = 1$ so the bias $\theta_0$ fits inside the dot product.</p>
+  <p>To train it, you pick the $\boldsymbol\theta$ that minimises the <span class="def">mean squared error (MSE)</span>:</p>
+  <div class="math">$$\text{MSE}(\boldsymbol\theta)=\frac1m\sum_{i=1}^{m}\big(\boldsymbol\theta^\top\mathbf x^{(i)}-y^{(i)}\big)^2$$</div>
+  <span class="k t" data-l="Tip">The metric you report (for example RMSE) and the cost you minimise can differ. MSE is used for training because it has the same minimum as RMSE and a simpler derivative.</span>
+
+  <h3>The Normal Equation — the one-shot answer</h3>
+  <div class="math">$$\hat{\boldsymbol\theta}=(\mathbf X^\top\mathbf X)^{-1}\mathbf X^\top\mathbf y$$</div>
+  <ul class="tight">
+    <li>scikit-learn's <code>LinearRegression</code> actually uses the <span class="def">pseudoinverse</span> (computed with SVD). That still works when $\mathbf X^\top\mathbf X$ can't be inverted, for example with duplicate features or more features than rows.</li>
+    <li><span class="imp">Cost grows fast with the number of features <i>n</i></span>: about $O(n^{2.4})$ to $O(n^3)$ for the inverse, and about $O(n^2)$ for SVD. With 100,000 features this becomes very slow.</li>
+    <li class="tip">Cost is linear in the number of rows <i>m</i>, so large datasets are fine as long as they fit in memory.</li>
+    <li class="tip">Once trained, making predictions is fast. Cost is linear in both <i>m</i> and <i>n</i>.</li>
+  </ul>
+  <span class="k i" data-l="Important">Use the closed form when there are few features. Use gradient descent when there are many features or the data doesn't fit in memory.</span>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Gradient descent <a class="book" href="../geron/reader.html#p=148">book p. 118 ↗</a></h2>
+  <p><span class="def">Gradient descent (GD)</span> starts from random parameters and repeatedly steps downhill, opposite to the gradient of the cost. The step size is the <span class="def">learning rate</span> $\eta$.</p>
+  <ul class="tight">
+    <li><span class="exp">η too small</span> → many steps, slow.</li>
+    <li><span class="exp">η too large</span> → overshoots the valley and can diverge.</li>
+    <li>MSE for linear regression is <span class="def">convex</span>: a bowl with a single global minimum, so GD gets there if η is reasonable.</li>
+  </ul>
+  <span class="k i" data-l="Important">Scale your features, for example with <code>StandardScaler</code>. Unscaled features make the bowl long and narrow, so GD zig-zags and takes much longer.</span>
+  <p>The gradient of MSE for all parameters at once:</p>
+  <div class="math">$$\nabla_{\boldsymbol\theta}\,\text{MSE}(\boldsymbol\theta)=\frac{2}{m}\mathbf X^\top(\mathbf X\boldsymbol\theta-\mathbf y)
+  \qquad\qquad \boldsymbol\theta \leftarrow \boldsymbol\theta-\eta\,\nabla_{\boldsymbol\theta}\text{MSE}$$</div>
+  <h3>Three flavours</h3>
+  <div class="tw"><table>
+    <tr><th></th><th>Batch GD</th><th>Stochastic GD</th><th>Mini-batch GD</th></tr>
+    <tr><td>Data per step</td><td>all <i>m</i> rows</td><td>1 random row</td><td>a small random batch</td></tr>
+    <tr><td>Path</td><td>smooth</td><td>noisy, bounces around the minimum</td><td>in between</td></tr>
+    <tr><td>Large datasets</td><td class="imp">slow</td><td class="tip">fast, works out-of-core</td><td class="tip">fast, and gains most from GPUs</td></tr>
+    <tr><td>Escapes local minima?</td><td>no</td><td class="tip">often yes, thanks to the noise</td><td>somewhat</td></tr>
+    <tr><td>scikit-learn</td><td>—</td><td><code>SGDRegressor</code></td><td>—</td></tr>
+  </table></div>
+  <ul class="tight">
+    <li>An <span class="def">epoch</span> is one full pass over the training set.</li>
+    <li>A <span class="def">learning schedule</span> shrinks η over time, so SGD takes big steps early and settles down near the end. (This is <i>simulated annealing</i>, an idea borrowed from metallurgy.)</li>
+    <li class="imp">SGD assumes the rows are independent and identically distributed (IID). Shuffle the data, or visit rows in random order. Data sorted by label breaks SGD.</li>
+  </ul>
+
+  <div class="panel" id="gdPanel">
+    <b>Play: watch the three flavours walk down the MSE bowl</b>
+    <p class="hint" style="margin-top:.2rem">The data follows $y = 4 + 3x + \text{noise}$. The ★ is the Normal Equation answer. Click anywhere on the map to choose a new starting point.</p>
+    <div class="controls">
+      <div class="ctl"><label>Method</label>
+        <span class="seg" id="gdMethod"><button data-m="batch" class="on">Batch</button><button data-m="mini">Mini-batch</button><button data-m="sgd">Stochastic</button></span></div>
+      <div class="ctl"><label>Learning rate η</label><input type="range" id="gdEta" min="-2.3" max="0.1" step="0.05" value="-1"/><output id="gdEtaO"></output></div>
+      <div class="ctl"><label>Epochs</label><input type="range" id="gdEp" min="1" max="200" step="1" value="80"/><output id="gdEpO"></output></div>
+      <div class="ctl" id="gdBsRow" hidden><label>Batch size</label><input type="range" id="gdBs" min="2" max="50" step="1" value="10"/><output id="gdBsO"></output></div>
+      <div class="ctl"><label>Feature scale</label><span class="seg" id="gdScale"><button data-s="1" class="on">x in [0, 2]</button><button data-s="10">x in [0, 20] (unscaled)</button></span></div>
+      <div class="ctl"><label></label><button class="btn on" id="gdRun">▶ Animate</button><button class="btn" id="gdSeed">↻ New noise</button></div>
+    </div>
+    <canvas id="gdCv" height="360" aria-label="Loss surface with gradient descent path"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">θ₀ (bias)</div><div class="v" id="gdT0">–</div></div>
+      <div class="stat"><div class="kk">θ₁ (slope)</div><div class="v" id="gdT1">–</div></div>
+      <div class="stat"><div class="kk">final MSE</div><div class="v" id="gdMse">–</div></div>
+      <div class="stat"><div class="kk">steps</div><div class="v" id="gdSteps">–</div></div>
+    </div>
+    <p class="hint" id="gdMsg"></p>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Batch, η ≈ 0.1: a smooth curve straight to the ★.</li>
+      <li>Batch, η ≈ 1: it overshoots and blows up.</li>
+      <li>Stochastic: the path jitters and keeps circling the ★ instead of stopping on it.</li>
+      <li>"unscaled": the bowl becomes a long thin valley. Keep η small, then watch how slowly θ₀ moves.</li>
+    </ul>
+  </details>
+  <span class="k t" data-l="Link to your notes">Your SGD step-notes cover this hands-on: Steps 1–7 in <code>11_SGD_Gradient_Descent\Theory\Theory_SGD_1-15.docm</code>. Momentum and Nesterov (Steps 8–10) come later, in the deep-learning chapters of this book (ch 11).</span>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · Polynomial regression <a class="book" href="../geron/reader.html#p=158">book p. 128 ↗</a></h2>
+  <p>A linear model can fit curves: add powers of the features as new features, then run ordinary linear regression. <code>PolynomialFeatures(degree=d)</code> does this for you.</p>
+  <ul class="tight">
+    <li class="exp">It also adds <b>interaction</b> terms such as $x_1x_2$, which is how it captures relationships between features.</li>
+    <li class="imp">The number of features explodes: $n$ features at degree $d$ become $\frac{(n+d)!}{d!\,n!}$ features.</li>
+  </ul>
+
+  <!-- ===================================================== 4 -->
+  <h2>4 · Learning curves <a class="book" href="../geron/reader.html#p=160">book p. 130 ↗</a></h2>
+  <p>A <span class="def">learning curve</span> plots training error and validation error as the training set grows. It tells you which problem you have:</p>
+  <div class="tw"><table>
+    <tr><th>What you see</th><th>Diagnosis</th><th>What helps</th></tr>
+    <tr><td>Both errors high and close together (a plateau)</td><td class="imp">Underfitting (high bias)</td><td>A more complex model or better features. <i>More data won't help.</i></td></tr>
+    <tr><td>Training error low, a clear gap to validation error</td><td class="imp">Overfitting (high variance)</td><td>More data, regularisation, or a simpler model</td></tr>
+  </table></div>
+  <p>The <span class="def">bias/variance trade-off</span>: the generalisation error splits into</p>
+  <ul class="tight">
+    <li><span class="exp">bias</span>: wrong assumptions about the data, which cause underfitting</li>
+    <li><span class="exp">variance</span>: too much sensitivity to small changes in the data, which causes overfitting</li>
+    <li><span class="exp">irreducible error</span>: noise in the data itself. Only cleaning the data reduces it.</li>
+  </ul>
+  <span class="k t" data-l="Tip">Making a model more complex raises variance and lowers bias. The goal is the balance point between the two.</span>
+
+  <!-- ===================================================== 5 -->
+  <h2>5 · Regularised linear models <a class="book" href="../geron/reader.html#p=164">book p. 134 ↗</a></h2>
+  <p><span class="def">Regularisation</span> limits how much the weights can grow. That makes the model less flexible, so it overfits less.</p>
+  <div class="tw"><table>
+    <tr><th>Model</th><th>Penalty added to the cost</th><th>Effect</th><th>scikit-learn</th></tr>
+    <tr><td><b>Ridge</b></td><td>α × sum of <b>squared</b> weights (ℓ2)</td><td>shrinks every weight smoothly</td><td><code>Ridge(alpha=…)</code>, <code>SGDRegressor(penalty="l2")</code></td></tr>
+    <tr><td><b>Lasso</b></td><td>α × sum of <b>absolute</b> weights (ℓ1)</td><td class="tip">pushes weak weights to exactly 0 (automatic feature selection)</td><td><code>Lasso(alpha=…)</code></td></tr>
+    <tr><td><b>Elastic Net</b></td><td>a mix of ℓ1 and ℓ2, controlled by <code>l1_ratio</code></td><td>like Lasso, but steadier when features are correlated</td><td><code>ElasticNet(alpha=…, l1_ratio=…)</code></td></tr>
+    <tr><td><b>Early stopping</b></td><td>no penalty: stop when validation error starts rising</td><td>simple and very effective</td><td><code>SGDRegressor(early_stopping=True)</code></td></tr>
+  </table></div>
+  <ul class="tight">
+    <li class="imp">Scale the features before regularising. The penalty treats every weight the same way.</li>
+    <li class="exp">The bias term θ₀ is not penalised.</li>
+    <li class="exp">The penalty is used only during training. Evaluate the model with the plain metric.</li>
+    <li class="tip">Default choice: Ridge. Try Lasso or Elastic Net if you suspect only a few features matter. Prefer Elastic Net over Lasso when features are many or correlated.</li>
+    <li class="skip">The exact constants in front of the penalty (½, 1/m…) differ between the book and scikit-learn. They change the scale of α, not the idea.</li>
+  </ul>
+
+  <div class="panel">
+    <b>Play: Ridge taming a degree-12 polynomial</b>
+    <p class="hint" style="margin-top:.2rem">Twenty noisy points from a smooth curve. Increase α and watch the wiggles disappear. Too much α flattens the curve (underfitting).</p>
+    <div class="controls">
+      <div class="ctl"><label>log₁₀ α</label><input type="range" id="rgA" min="-8" max="3" step="0.1" value="-8"/><output id="rgAO"></output></div>
+      <div class="ctl"><label>Degree</label><input type="range" id="rgD" min="1" max="15" step="1" value="12"/><output id="rgDO"></output></div>
+      <div class="ctl"><label></label><button class="btn" id="rgSeed">↻ New sample</button></div>
+    </div>
+    <canvas id="rgCv" height="300" aria-label="Polynomial fit with ridge regularisation"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">train MSE</div><div class="v" id="rgTr">–</div></div>
+      <div class="stat"><div class="kk">test MSE</div><div class="v" id="rgTe">–</div></div>
+      <div class="stat"><div class="kk">‖θ‖ (size of weights)</div><div class="v" id="rgN">–</div></div>
+    </div>
+    <p class="hint" id="rgMsg"></p>
+  </div>
+
+  <!-- ===================================================== 6 -->
+  <h2>6 · Logistic &amp; softmax regression <a class="book" href="../geron/reader.html#p=172">book p. 142 ↗</a></h2>
+  <p><span class="def">Logistic regression</span> is a linear model used for classification. It computes $t=\boldsymbol\theta^\top\mathbf x$ (the <span class="def">logit</span>) and turns it into a probability with the sigmoid:</p>
+  <div class="math">$$\hat p=\sigma(t)=\frac{1}{1+e^{-t}}\qquad \hat y=\begin{cases}1 & \hat p\ge 0.5\\ 0 & \text{otherwise}\end{cases}$$</div>
+  <p>It is trained with <span class="def">log loss</span> (binary cross-entropy). The loss is convex, so GD finds the minimum, but there is <span class="imp">no closed-form solution</span>.</p>
+  <div class="math">$$J(\boldsymbol\theta)=-\frac1m\sum_{i}\Big[y^{(i)}\log\hat p^{(i)}+(1-y^{(i)})\log(1-\hat p^{(i)})\Big]
+  \qquad \nabla J=\frac1m\mathbf X^\top(\hat{\mathbf p}-\mathbf y)$$</div>
+  <span class="k t" data-l="Tip">The gradient has the same shape as the one for linear regression: (prediction − target) × input. Only the prediction changes.</span>
+
+  <div class="panel">
+    <b>Play: one feature, one sigmoid</b>
+    <div class="controls">
+      <div class="ctl"><label>θ₁ (steepness)</label><input type="range" id="lgW" min="-6" max="6" step="0.1" value="2"/><output id="lgWO"></output></div>
+      <div class="ctl"><label>θ₀ (shift)</label><input type="range" id="lgB" min="-6" max="6" step="0.1" value="-2"/><output id="lgBO"></output></div>
+    </div>
+    <canvas id="lgCv" height="240" aria-label="Sigmoid and decision boundary"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">decision boundary x</div><div class="v" id="lgBd">–</div></div>
+      <div class="stat"><div class="kk">log loss</div><div class="v" id="lgL">–</div></div>
+      <div class="stat"><div class="kk">accuracy</div><div class="v" id="lgAc">–</div></div>
+    </div>
+    <p class="hint">The boundary sits where $\theta_0+\theta_1x=0$. A larger |θ₁| gives a more confident, sharper curve. Wrong confident predictions make the log loss jump.</p>
+  </div>
+
+  <ul class="tight">
+    <li class="imp">scikit-learn's <code>LogisticRegression</code> applies ℓ2 regularisation by default, controlled by <code>C</code>, which is the <b>inverse</b> of α: <b>a smaller C means stronger regularisation</b>.</li>
+    <li><span class="def">Softmax regression</span> (multinomial logistic regression) handles more than two classes directly. It gives each class its own score and uses softmax to turn the scores into probabilities that sum to 1. It is trained with <span class="def">cross-entropy</span>.</li>
+    <li class="exp">Softmax picks exactly one class per input. It is for mutually exclusive classes, not multi-label problems.</li>
+    <li class="tip">In recent scikit-learn versions, <code>LogisticRegression</code> uses softmax automatically when there are more than two classes (with the default <code>lbfgs</code> solver).</li>
+  </ul>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — all of chapter 4 in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. scikit-learn downloads on the first run (≈ 20–40 s, needs internet).</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false">import numpy as np
+from sklearn.linear_model import LinearRegression, SGDRegressor, Ridge, Lasso, LogisticRegression
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.pipeline import make_pipeline
+
+rng = np.random.default_rng(42)
+m = 100
+X = 2 * rng.random((m, 1))
+y = 4 + 3 * X[:, 0] + rng.normal(size=m)
+
+# 1) Normal Equation by hand vs LinearRegression (SVD)
+Xb = np.c_[np.ones((m, 1)), X]
+theta = np.linalg.inv(Xb.T @ Xb) @ Xb.T @ y
+print("normal eq :", theta.round(3))
+lin = LinearRegression().fit(X, y)
+print("sklearn   :", round(lin.intercept_, 3), lin.coef_.round(3))
+
+# 2) Batch GD by hand
+eta, theta = 0.1, rng.normal(size=2)
+for _ in range(1000):
+    grad = 2 / m * Xb.T @ (Xb @ theta - y)
+    theta -= eta * grad
+print("batch GD  :", theta.round(3))
+
+# 3) SGD with scikit-learn (built-in learning schedule)
+sgd = SGDRegressor(max_iter=1000, tol=1e-5, penalty=None, eta0=0.01, random_state=42)
+sgd.fit(X, y)
+print("SGD       :", sgd.intercept_.round(3), sgd.coef_.round(3))
+
+# 4) Polynomial + Ridge vs Lasso: how many weights survive?
+Xq = 6 * rng.random((m, 1)) - 3
+yq = 0.5 * Xq[:, 0]**2 + Xq[:, 0] + 2 + rng.normal(size=m)
+for name, reg in [("ridge", Ridge(alpha=1)), ("lasso", Lasso(alpha=0.1, max_iter=10000))]:
+    model = make_pipeline(PolynomialFeatures(10, include_bias=False), StandardScaler(), reg).fit(Xq, yq)
+    w = model[-1].coef_
+    print(f"{name:6}: non-zero weights = {np.sum(np.abs(w) > 1e-6)} / {w.size}")
+
+# 5) Logistic regression: C is the INVERSE of regularisation strength
+Xc = rng.normal(size=(200, 1))
+yc = (Xc[:, 0] + 0.3 * rng.normal(size=200) > 0).astype(int)
+for C in (0.01, 1, 100):
+    clf = LogisticRegression(C=C).fit(Xc, yc)
+    print(f"C={C:<6} slope={clf.coef_[0,0]:.2f}  acc={clf.score(Xc, yc):.2f}")</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">You have 1 million rows but only 10 features. Normal Equation or GD?</div><div class="face a">Either works. With so few features the Normal Equation / SVD is cheap. Its cost grows with the number of features, and only linearly with rows.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Your GD loss curve shoots up after a few steps. What's wrong?</div><div class="face a">The learning rate is too high, so it overshoots and diverges. Lower η. Also check that the features are scaled.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Why does plain SGD never settle exactly at the minimum?</div><div class="face a">Each step uses one random row, so the gradient is noisy. Fix: a learning schedule that shrinks η over time.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Training and validation error are both high and close. More data?</div><div class="face a">No. That pattern means underfitting. Use a more complex model or better features.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Ridge vs Lasso in one sentence each?</div><div class="face a">Ridge (ℓ2) shrinks all weights smoothly. Lasso (ℓ1) sets weak weights to exactly zero, so it also selects features.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">In LogisticRegression, C goes from 1 to 0.01. What happens?</div><div class="face a">Regularisation gets stronger (C = 1/α), so the weights shrink and the model becomes simpler.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">Can softmax regression tag one photo as both "cat" and "outdoor"?</div><div class="face a">No. Softmax picks one class out of mutually exclusive classes. Multi-label needs one binary classifier per label.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">What must you do to the data before SGD and before regularisation?</div><div class="face a">Shuffle it (IID assumption for SGD) and scale the features (for GD speed and a fair penalty).</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="gradient-descent.html">Gradient descent note</a> — step the descent and vary η</li>
+    <li><code>2_Classical_ML\Topics\11_SGD_Gradient_Descent</code> — your 30-step SGD build (Steps 1–7 match this chapter)</li>
+    <li><code>2_Classical_ML\Topics\01_Linear_Regression</code>, <code>02_Logistic_Regression</code>, <code>03_Regularization</code> — your topic notebooks</li>
+    <li><a href="../geron/reader.html#p=751">Book answers to the chapter 4 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> write the Normal Equation and say when not to use it</label></li>
+    <li><label><input type="checkbox"/> code batch GD for linear regression from memory</label></li>
+    <li><label><input type="checkbox"/> explain batch vs stochastic vs mini-batch in one line each</label></li>
+    <li><label><input type="checkbox"/> read a learning curve and tell underfitting from overfitting</label></li>
+    <li><label><input type="checkbox"/> choose between Ridge, Lasso, Elastic Net and early stopping</label></li>
+    <li><label><input type="checkbox"/> explain the sigmoid, log loss and what C does</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 4. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch04';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const fmt=(v,d=3)=>!isFinite(v)?'∞':Math.abs(v)>=1e5?v.toExponential(1):v.toFixed(d);
+
+/* ================= GD playground ================= */
+const G={method:'batch',scale:1,seed:7,data:null,path:[],anim:null,start:[-1,-1]};
+function gdData(){const r=mulberry(G.seed),X=[],Y=[];for(let i=0;i<100;i++){const x=2*r()*G.scale;X.push(x);Y.push(4+3*x/G.scale+gauss(r));}
+  // normal equation (2 params)
+  const m=X.length,sx=X.reduce((a,b)=>a+b,0),sy=Y.reduce((a,b)=>a+b,0),sxx=X.reduce((a,b)=>a+b*b,0),sxy=X.reduce((a,b,i)=>a+b*Y[i],0);
+  const t1=(m*sxy-sx*sy)/(m*sxx-sx*sx),t0=(sy-t1*sx)/m;G.data={X,Y,best:[t0,t1]};}
+const mse=(t0,t1)=>{const{X,Y}=G.data;let s=0;for(let i=0;i<X.length;i++){const e=t0+t1*X[i]-Y[i];s+=e*e;}return s/X.length;};
+function gdRunPath(){
+  const{X,Y}=G.data,m=X.length,eta=Math.pow(10,+$('#gdEta').value),ep=+$('#gdEp').value,bs=+$('#gdBs').value;
+  const r=mulberry(G.seed*31+ep);let t0=G.start[0],t1=G.start[1];const path=[[t0,t1]];let steps=0;
+  const idx=[...Array(m).keys()];
+  for(let e=0;e<ep;e++){
+    if(G.method==='batch'){let g0=0,g1=0;for(let i=0;i<m;i++){const er=t0+t1*X[i]-Y[i];g0+=er;g1+=er*X[i];}
+      t0-=eta*2/m*g0;t1-=eta*2/m*g1;steps++;path.push([t0,t1]);}
+    else{
+      for(let i=m-1;i>0;i--){const j=Math.floor(r()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+      const B=G.method==='sgd'?1:bs;
+      for(let s=0;s<m;s+=B){const sl=idx.slice(s,s+B);let g0=0,g1=0;
+        for(const i of sl){const er=t0+t1*X[i]-Y[i];g0+=er;g1+=er*X[i];}
+        // simple learning schedule for SGD / mini-batch: eta_t = eta * 5/(5+epoch)
+        const lr=eta*5/(5+e);
+        t0-=lr*2/sl.length*g0;t1-=lr*2/sl.length*g1;steps++;
+        if(G.method==='mini'||s%5===0)path.push([t0,t1]);
+        if(!isFinite(t0)||Math.abs(t0)>1e6)break;}
+    }
+    if(!isFinite(t0)||Math.abs(t0)>1e6)break;
+  }
+  path.push([t0,t1]);G.path=path;G.steps=steps;
+}
+function gdView(){const b=G.data.best;const s1=3/G.scale;return{x0:b[0]-7,x1:b[0]+7,y0:b[1]-Math.max(6*s1,1.2),y1:b[1]+Math.max(6*s1,1.2)};}
+function drawGD(upto){
+  const cv=$('#gdCv');const{x,W,H}=setupCanvas(cv);const v=gdView();
+  const px=t=>(t-v.x0)/(v.x1-v.x0)*W, py=t=>H-(t-v.y0)/(v.y1-v.y0)*H;
+  // heatmap of log MSE
+  const N=110,cw=W/N,ch=H/N;let lo=Infinity,hi=-Infinity;const grid=[];
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){const t0=v.x0+(i+.5)/N*(v.x1-v.x0),t1=v.y0+(1-(j+.5)/N)*(v.y1-v.y0);const L=Math.log(mse(t0,t1)+1e-9);grid.push(L);lo=Math.min(lo,L);hi=Math.max(hi,L);}
+  const dark=root.getAttribute('data-theme')==='dark';
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){const f=(grid[i*N+j]-lo)/(hi-lo);
+    const band=Math.floor(f*14)%2;
+    const l=dark?(12+f*26+band*3):(97-f*30-band*3);
+    x.fillStyle=`hsl(250 ${dark?25:45}% ${l}%)`;x.fillRect(i*cw,j*ch,cw+1,ch+1);}
+  // axes labels
+  x.fillStyle=css('--muted');x.font='12px system-ui';x.fillText('θ₀ (bias) →',W-80,H-8);x.save();x.translate(12,70);x.rotate(-Math.PI/2);x.fillText('θ₁ (slope) →',0,0);x.restore();
+  // best
+  const b=G.data.best;x.fillStyle=css('--def');x.font='20px system-ui';x.textAlign='center';x.textBaseline='middle';x.fillText('★',px(b[0]),py(b[1]));
+  x.textAlign='left';x.textBaseline='alphabetic';
+  // path
+  const P=G.path.slice(0,upto??G.path.length);
+  x.strokeStyle=G.method==='batch'?css('--accent'):G.method==='mini'?css('--code'):css('--imp');x.lineWidth=1.8;x.beginPath();
+  P.forEach((p,i)=>{const X=Math.max(-50,Math.min(W+50,px(p[0]))),Y=Math.max(-50,Math.min(H+50,py(p[1])));i?x.lineTo(X,Y):x.moveTo(X,Y);});x.stroke();
+  x.fillStyle=x.strokeStyle;P.forEach((p,i)=>{if(G.method==='batch'||i%3===0){x.beginPath();x.arc(px(p[0]),py(p[1]),2.3,0,7);x.fill();}});
+  // start
+  x.strokeStyle=css('--text');x.lineWidth=2;x.beginPath();x.arc(px(G.start[0]),py(G.start[1]),6,0,7);x.stroke();
+  const last=P[P.length-1];
+  $('#gdT0').textContent=fmt(last[0],2);$('#gdT1').textContent=fmt(last[1]*G.scale/ (G.scale),2);
+  $('#gdMse').textContent=fmt(mse(last[0],last[1]),3);$('#gdSteps').textContent=(upto==null||upto>=G.path.length)?G.steps:'…';
+  const done=upto==null||upto>=G.path.length;
+  if(done){const L=mse(last[0],last[1]),Lb=mse(b[0],b[1]);
+    $('#gdMsg').textContent=!isFinite(L)||L>1e6?'Diverged — η is too large for this bowl.':
+      L<Lb*1.05?'Reached the minimum (within 5% of the ★).':
+      `Not there yet — MSE is ${(L/Lb).toFixed(1)}× the best. Try more epochs or a larger η.`;}
+}
+function gdCompute(){gdRunPath();drawGD();}
+function gdAnimate(){cancelAnimationFrame(G.anim);gdRunPath();let i=1;const n=G.path.length,stepPer=Math.max(1,Math.ceil(n/120));
+  const tick=()=>{i+=stepPer;drawGD(i);if(i<n)G.anim=requestAnimationFrame(tick);else drawGD();};tick();}
+function gdLabels(){$('#gdEtaO').textContent=Math.pow(10,+$('#gdEta').value).toPrecision(2);$('#gdEpO').textContent=$('#gdEp').value;$('#gdBsO').textContent=$('#gdBs').value;}
+$$('#gdMethod button').forEach(b=>b.onclick=()=>{$$('#gdMethod button').forEach(x=>x.classList.toggle('on',x===b));G.method=b.dataset.m;$('#gdBsRow').hidden=G.method!=='mini';gdAnimate();});
+$$('#gdScale button').forEach(b=>b.onclick=()=>{$$('#gdScale button').forEach(x=>x.classList.toggle('on',x===b));G.scale=+b.dataset.s;gdData();
+  if(G.scale>1){$('#gdEta').value=-3;$('#gdEta').min=-4.5;}else{$('#gdEta').min=-2.3;$('#gdEta').value=-1;}
+  const v=gdView();G.start=[v.x0+2,v.y0+(v.y1-v.y0)*0.15];gdLabels();gdAnimate();});
+['gdEta','gdEp','gdBs'].forEach(id=>$('#'+id).oninput=()=>{gdLabels();cancelAnimationFrame(G.anim);gdCompute();});
+$('#gdRun').onclick=gdAnimate;
+$('#gdSeed').onclick=()=>{G.seed=Math.floor(Math.random()*1e6);gdData();gdAnimate();};
+$('#gdCv').addEventListener('pointerdown',e=>{const cv=e.currentTarget,rc=cv.getBoundingClientRect(),v=gdView();
+  G.start=[v.x0+(e.clientX-rc.left)/rc.width*(v.x1-v.x0),v.y1-(e.clientY-rc.top)/rc.height*(v.y1-v.y0)];gdAnimate();});
+gdData();{const v=gdView();G.start=[v.x0+2,v.y0+(v.y1-v.y0)*0.15];}gdLabels();
+
+/* ================= Ridge playground ================= */
+const R={seed:3};
+const truth=x=>Math.sin(1.4*x)+0.3*x;
+function rgData(){const r=mulberry(R.seed);R.tr=[];R.te=[];
+  for(let i=0;i<20;i++){const x=-3+6*r();R.tr.push([x,truth(x)+0.35*gauss(r)]);}
+  for(let i=0;i<200;i++){const x=-3+6*r();R.te.push([x,truth(x)+0.35*gauss(r)]);}}
+function solve(A,b){const n=b.length;A=A.map((r,i)=>[...r,b[i]]);
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];
+    const d=A[c][c]||1e-12;for(let r=0;r<n;r++){if(r===c)continue;const f=A[r][c]/d;for(let k=c;k<=n;k++)A[r][k]-=f*A[c][k];}}
+  return A.map((r,i)=>r[n]/(r[i]||1e-12));}
+function rgFit(){
+  const d=+$('#rgD').value,alpha=Math.pow(10,+$('#rgA').value);
+  const feats=x=>{const f=[];for(let k=1;k<=d;k++)f.push(Math.pow(x/3,k));return f;};
+  const F=R.tr.map(p=>feats(p[0]));const mu=[],sd=[];
+  for(let k=0;k<d;k++){const c=F.map(r=>r[k]);const m=c.reduce((a,b)=>a+b,0)/c.length;mu.push(m);sd.push(Math.sqrt(c.reduce((a,b)=>a+(b-m)**2,0)/c.length)||1);}
+  const Z=f=>[1,...f.map((v,k)=>(v-mu[k])/sd[k])];
+  const X=F.map(Z),y=R.tr.map(p=>p[1]);const n=d+1;
+  const A=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>X.reduce((s,r)=>s+r[i]*r[j],0)+(i===j&&i>0?alpha*X.length:0)));
+  const b=Array.from({length:n},(_,i)=>X.reduce((s,r,k)=>s+r[i]*y[k],0));
+  const w=solve(A,b);const pred=x=>Z(feats(x)).reduce((s,v,i)=>s+v*w[i],0);
+  const err=S=>S.reduce((s,p)=>s+(pred(p[0])-p[1])**2,0)/S.length;
+  return{pred,tr:err(R.tr),te:err(R.te),norm:Math.sqrt(w.slice(1).reduce((s,v)=>s+v*v,0)),alpha,d};
+}
+function drawRG(){
+  $('#rgAO').textContent=Math.pow(10,+$('#rgA').value).toExponential(0);$('#rgDO').textContent=$('#rgD').value;
+  const f=rgFit();const{x,W,H}=setupCanvas($('#rgCv'));
+  const px=v=>(v+3.2)/6.4*W,py=v=>H-(v+2.6)/5.2*H;
+  x.strokeStyle=css('--border');x.lineWidth=1;x.beginPath();x.moveTo(0,py(0));x.lineTo(W,py(0));x.moveTo(px(0),0);x.lineTo(px(0),H);x.stroke();
+  x.setLineDash([5,5]);x.strokeStyle=css('--muted');x.beginPath();for(let v=-3.2;v<=3.2;v+=.04){const X=px(v),Y=py(truth(v));v<=-3.19?x.moveTo(X,Y):x.lineTo(X,Y);}x.stroke();x.setLineDash([]);
+  x.fillStyle=css('--muted');R.te.forEach(p=>{x.globalAlpha=.25;x.beginPath();x.arc(px(p[0]),py(p[1]),2,0,7);x.fill();});x.globalAlpha=1;
+  x.fillStyle=css('--text');R.tr.forEach(p=>{x.beginPath();x.arc(px(p[0]),py(p[1]),4,0,7);x.fill();});
+  x.strokeStyle=css('--accent');x.lineWidth=2.5;x.beginPath();let first=true;
+  for(let v=-3.2;v<=3.2;v+=.02){const Y=Math.max(-40,Math.min(H+40,py(f.pred(v))));first?x.moveTo(px(v),Y):x.lineTo(px(v),Y);first=false;}x.stroke();
+  x.font='12px system-ui';x.fillStyle=css('--muted');x.fillText('● train   · test   - - true curve',10,16);
+  $('#rgTr').textContent=fmt(f.tr);$('#rgTe').textContent=fmt(f.te);$('#rgN').textContent=fmt(f.norm,2);
+  const gap=f.te/Math.max(f.tr,1e-6);
+  $('#rgMsg').textContent=f.te>0.6&&f.tr>0.45?'Underfitting: both errors are high. Lower α or raise the degree.':
+    gap>2.5?'Overfitting: train error is tiny but test error is much larger. Raise α.':'Good balance: train and test error are close and low.';
+}
+['rgA','rgD'].forEach(id=>$('#'+id).oninput=drawRG);
+$('#rgSeed').onclick=()=>{R.seed=Math.floor(Math.random()*1e6);rgData();drawRG();};
+rgData();
+
+/* ================= Logistic playground ================= */
+const Lg={};{const r=mulberry(11);Lg.pts=[];for(let i=0;i<40;i++){const c=i%2;const xx=(c?1.6:-0.2)+0.9*gauss(r);Lg.pts.push([xx,c]);}}
+function drawLG(){
+  const w=+$('#lgW').value,b=+$('#lgB').value;$('#lgWO').textContent=w.toFixed(1);$('#lgBO').textContent=b.toFixed(1);
+  const{x,W,H}=setupCanvas($('#lgCv'));const px=v=>(v+3)/7*W,py=v=>H-18-(v)*(H-36);
+  const sig=t=>1/(1+Math.exp(-t));
+  x.strokeStyle=css('--border');x.beginPath();x.moveTo(0,py(0));x.lineTo(W,py(0));x.moveTo(0,py(1));x.lineTo(W,py(1));x.stroke();
+  x.setLineDash([4,4]);x.beginPath();x.moveTo(0,py(.5));x.lineTo(W,py(.5));x.stroke();x.setLineDash([]);
+  let loss=0,acc=0;
+  Lg.pts.forEach(([xx,c])=>{const p=Math.min(1-1e-9,Math.max(1e-9,sig(w*xx+b)));loss-=c?Math.log(p):Math.log(1-p);if((p>=.5)===!!c)acc++;
+    x.fillStyle=c?css('--tip'):css('--imp');x.beginPath();x.arc(px(xx),py(c)+(c?-6:6),4,0,7);x.fill();});
+  x.strokeStyle=css('--accent');x.lineWidth=2.5;x.beginPath();for(let v=-3;v<=4;v+=.02){const X=px(v),Y=py(sig(w*v+b));v<=-2.99?x.moveTo(X,Y):x.lineTo(X,Y);}x.stroke();
+  const bd=w!==0?-b/w:NaN;
+  if(isFinite(bd)&&bd>-3&&bd<4){x.strokeStyle=css('--def');x.lineWidth=1.5;x.beginPath();x.moveTo(px(bd),0);x.lineTo(px(bd),H);x.stroke();}
+  x.font='12px system-ui';x.fillStyle=css('--muted');x.fillText('● class 1 (top) · ● class 0 (bottom) · | boundary',8,14);
+  $('#lgBd').textContent=isFinite(bd)?bd.toFixed(2):'none';$('#lgL').textContent=(loss/Lg.pts.length).toFixed(3);$('#lgAc').textContent=Math.round(acc/Lg.pts.length*100)+'%';
+}
+['lgW','lgB'].forEach(id=>$('#'+id).oninput=drawLG);
+
+function redrawAll(){cancelAnimationFrame(G.anim);drawGD();drawRG();drawLG();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+gdRunPath();redrawAll();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

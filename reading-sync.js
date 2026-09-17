@@ -307,6 +307,10 @@
           sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY,
             { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
         } catch (e) { sb = null; }
+        // Publish the one client so pages that own their own progress (e.g. the
+        // Module 01 explorer) reuse this session instead of making a second client
+        // that never sees the magic-link login.
+        if (sb) { try { window.dispatchEvent(new Event("reading-sync-ready")); } catch (e) {} }
       }
       start();
     });
@@ -317,6 +321,8 @@
 
   // small public hook (optional use by pages)
   window.ReadingSync = {
+    get client()  { return sb; },
+    get session() { return session; },
     markPageDone: function () {
       if (MODE === "page") { setLocal("lesson", "done"); reflectPage(); if (units[0]) syncOne(units[0]); }
     },

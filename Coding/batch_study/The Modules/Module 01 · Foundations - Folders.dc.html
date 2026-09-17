@@ -797,6 +797,24 @@ const KEY = "commonplace_bat_m01";
 const CLOUD_SET = "bat_module_01";
 const CLOUD_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
 const CLOUD_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
+const MARK_KEY = KEY + "_mark";
+const MARK_FIELDS = ["view", "brief", "step", "card", "prac", "test"];
+// bookmark: remember where the reader was, so a reload does not land on the tree
+function readMark() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(MARK_KEY) || "{}") || {};
+    const out = {};
+    MARK_FIELDS.forEach(function (f) { if (raw[f] !== undefined && raw[f] !== null) out[f] = raw[f]; });
+    return out;
+  } catch (e) { return {}; }
+}
+function writeMark(st) {
+  try {
+    const out = {};
+    MARK_FIELDS.forEach(function (f) { out[f] = st[f]; });
+    localStorage.setItem(MARK_KEY, JSON.stringify(out));
+  } catch (e) {}
+}
 function doneValue(id) { return id.charAt(0) === "p" || id.charAt(0) === "t" ? "got" : id.indexOf("step") === 0 ? "done" : "read"; }
 function itemName(id) {
   const all = [].concat(PRAC, TEST);
@@ -963,36 +981,55 @@ const TEST = [
 ];
 
 class Component extends DCLogic {
-  state = {
+  state = Object.assign({
     view: "tree",
     brief: 0, step: 1, card: 0, prac: 0, test: 0,
     prog: (function () { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } })(),
     picked: {}, revealed: {}, shown: {}, running: {}, confirmReset: false
-  };
+  }, readMark());
 
   componentDidMount() { this.scrollPanes(); this.scrollStrips(); this.cloudInit(); }
-  componentDidUpdate() { this.scrollPanes(); this.scrollStrips(); }
+  componentDidUpdate() { this.scrollPanes(); this.scrollStrips(); writeMark(this.state); }
   componentWillUnmount() { if (this.timer) clearInterval(this.timer); if (this.advTimer) clearTimeout(this.advTimer); if (this.cloudPoll) clearInterval(this.cloudPoll); }
 
-  // ---- cloud save: same Supabase project/table/auth as reading-sync.js ----
+  // ---- cloud save ----
+  // Do NOT create a second Supabase client. reading-sync.js (loaded at the end of
+  // this file) already makes one with detectSessionInUrl:true, and that is the only
+  // client that can pick up the emailed magic link. A second client with
+  // detectSessionInUrl:false never sees that login, so every write was rejected.
+  // Borrow ReadingSync's client instead.
   cloudInit() {
     const self = this;
     if (location.protocol === "file:") return;
+    const attach = function (sb) {
+      if (!sb || self.sb) return true;
+      self.sb = sb;
+      sb.auth.getSession().then(function (r) {
+        self.session = (r && r.data && r.data.session) || null;
+        if (self.session) self.cloudPull();
+      }, function () {});
+      sb.auth.onAuthStateChange(function (_e, s) { self.session = s; if (s) self.cloudPull(); });
+      return true;
+    };
+    const tryNow = function () {
+      const rs = window.ReadingSync;
+      return rs && rs.client ? attach(rs.client) : false;
+    };
+    if (tryNow()) return;
+    window.addEventListener("reading-sync-ready", function () { tryNow(); }, { once: true });
     let tries = 0;
     this.cloudPoll = setInterval(function () {
       tries++;
-      if (window.supabase) {
-        clearInterval(self.cloudPoll); self.cloudPoll = null;
-        try {
-          self.sb = window.supabase.createClient(CLOUD_URL, CLOUD_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
-        } catch (e) { self.sb = null; return; }
-        self.sb.auth.getSession().then(function (r) { self.session = r.data.session || null; if (self.session) self.cloudPull(); });
-        self.sb.auth.onAuthStateChange(function (_e, s) { self.session = s; if (s) self.cloudPull(); });
-      } else if (tries > 100) { clearInterval(self.cloudPoll); self.cloudPoll = null; }
+      if (tryNow() || tries > 150) { clearInterval(self.cloudPoll); self.cloudPoll = null; }
     }, 200);
   }
   cloudPush(id, val) {
-    if (!this.sb || !this.session) return;
+    if (!this.sb || !this.session) {
+      // hold it; cloudPull() flushes the backlog once we are signed in
+      this.pending = this.pending || {};
+      this.pending[id] = val;
+      return;
+    }
     const t = new Date().toISOString();
     const done = val === "got" || val === "done" || val === "read";
     this.sb.from("commonplace_external_resources").upsert({
@@ -1018,7 +1055,9 @@ class Component extends DCLogic {
           if (changed) { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} }
           return changed ? { prog: p } : null;
         });
-        // push device-only progress the cloud has not seen
+        // push device-only progress the cloud has not seen (including anything
+        // answered before the client was ready)
+        self.pending = null;
         const p = self.state.prog;
         Object.keys(p).forEach(function (k) {
           const done = p[k] === "got" || p[k] === "done" || p[k] === "read";

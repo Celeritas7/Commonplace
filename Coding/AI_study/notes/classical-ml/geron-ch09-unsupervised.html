@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en" data-tag="classical-ml">
+<!--
+  Study note for Géron, Hands-On ML (2nd ed.), Chapter 9 "Unsupervised Learning Techniques".
+  Written as study notes in my own words — the book text itself stays in the PDF.
+  Colour tags follow the legend from Ch1_Annotated_v2:
+    .def Definition · .imp Important · .tip Tip · .exp Explains · .skip Skip · code
+-->
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Ch 9 — Unsupervised Learning</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --text:#23221f; --muted:#6b6a64;
+  --border:#e7e4dc; --code-bg:#f4f2ec; --accent:#534ab7;
+  --def:#D81B60; --imp:#DC143C; --tip:#2E7D32; --exp:#23221f; --skip:#9a9890; --code:#008080;
+  --c0:#2a78c8; --c1:#e07b1f; --c2:#2e9b5e; --c3:#c0397a; --c4:#7a56c8; --c5:#b89a16; --c6:#1a9aa6; --c7:#8a5a3a; --c8:#5f6b7a;
+}
+html[data-theme="dark"]{
+  --bg:#1a1916; --surface:#23221f; --text:#ecebe6; --muted:#a3a199;
+  --border:#3a3833; --code-bg:#2a2925;
+  --def:#f06292; --imp:#ef5350; --tip:#66bb6a; --exp:#ecebe6; --skip:#7d7b74; --code:#4db6ac;
+  --c0:#5fa4ec; --c1:#f39a4a; --c2:#5cc88a; --c3:#e46aa6; --c4:#a88af0; --c5:#e0c34a; --c6:#4cc6d0; --c7:#c08c68; --c8:#9aa6b6;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:820px;margin:0 auto;padding:2rem 1.15rem 5rem}
+h1{font-size:2rem;font-weight:650;margin:.2rem 0 .4rem;letter-spacing:-.01em}
+h2{font-size:1.3rem;font-weight:600;margin:2.6rem 0 .8rem;padding-top:.7rem;border-top:1px solid var(--border);
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
+h3{font-size:1.05rem;font-weight:600;margin:1.6rem 0 .5rem;display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+h4{font-size:.95rem;font-weight:600;margin:1.1rem 0 .3rem;color:var(--muted)}
+a{color:var(--accent)}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:5px;font-size:.88em}
+.topbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.chip{font-size:.78rem;font-weight:600;color:#fff;background:var(--accent);padding:.2rem .6rem;border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:.85rem;cursor:pointer;background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:.35rem .7rem;text-decoration:none;display:inline-block;line-height:1.4}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.book{font-size:.78rem;font-weight:500;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:.05rem .55rem;white-space:nowrap}
+.book:hover{border-color:var(--accent)}
+.callout{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:.9rem 1.1rem;margin:1.2rem 0}
+.callout .lab{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:.2rem}
+/* colour-coded study marks */
+.def{color:var(--def);font-weight:650}
+.imp{color:var(--imp);font-weight:650}
+.tip{color:var(--tip);font-weight:600}
+.exp{font-weight:650;color:var(--exp)}
+.skip{color:var(--skip)}
+.k{display:block;border-left:4px solid var(--c);background:var(--surface);border-radius:0 10px 10px 0;padding:.55rem .9rem;margin:.7rem 0;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.k::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+.k.d{--c:var(--def)} .k.i{--c:var(--imp)} .k.t{--c:var(--tip)} .k.s{--c:var(--skip);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:.3rem .9rem;font-size:.82rem;color:var(--muted);margin:.3rem 0 0}
+.legend label{display:inline-flex;align-items:center;gap:.3rem;cursor:pointer}
+.legend input{accent-color:var(--accent)}
+body.hide-skip .k.s, body.hide-skip .skip{display:none}
+ul.tight,ol.tight{margin:.3rem 0;padding-left:1.2rem} ul.tight li,ol.tight li{margin:.15rem 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.8rem 0}
+th,td{border:1px solid var(--border);padding:.45rem .55rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+.tw{overflow-x:auto;max-width:100%}
+.tw table{min-width:560px}
+p code,li code,.k code,td code{overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;padding:.8rem 1rem;overflow-x:auto;font-size:.84rem;line-height:1.55}
+pre code{background:none;padding:0}
+details{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.35rem .9rem;margin:.55rem 0}
+details[open]{padding-bottom:.8rem}
+summary{cursor:pointer;font-weight:600;padding:.35rem 0;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--accent)}
+details[open]>summary::before{content:"▾ "}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1.2rem 0}
+.controls{display:grid;gap:.55rem;margin:.2rem 0 .9rem}
+.ctl{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+.ctl>label{min-width:120px;font-size:.88rem;color:var(--muted)}
+.ctl input[type=range]{flex:1;min-width:140px;accent-color:var(--accent)}
+.ctl output{min-width:58px;font-weight:600;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.83rem;border:0;background:var(--surface);color:var(--text);padding:.3rem .65rem;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--accent);color:#fff}
+canvas{width:100%;display:block;border:1px solid var(--border);border-radius:10px;background:var(--surface);touch-action:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.5rem;margin:.8rem 0 0}
+.stat{background:var(--code-bg);border-radius:8px;padding:.45rem .7rem}
+.stat .kk{font-size:.74rem;color:var(--muted)}
+.stat .v{font-size:1.15rem;font-weight:650;font-variant-numeric:tabular-nums}
+.hint{font-size:.85rem;color:var(--muted);margin:.5rem 0 0}
+.code-cell{background:var(--code-bg);border:1px solid var(--border);border-left:4px solid var(--code);border-radius:10px;overflow:hidden;margin:1rem 0}
+.code-cell textarea{width:100%;border:0;background:transparent;color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.6;padding:.9rem 1rem;resize:vertical;min-height:260px;outline:none}
+.code-bar{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-top:1px solid var(--border)}
+.code-out{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;white-space:pre-wrap;padding:0 1rem 1rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+.card{perspective:1000px;height:150px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .card-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center;padding:.9rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);font-size:.92rem;line-height:1.45}
+.face.q{font-weight:600}
+.face.a{transform:rotateY(180deg);background:var(--code-bg);font-size:.86rem}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:.25rem 0}
+.checklist input{accent-color:var(--accent);margin-right:.5rem;transform:scale(1.15)}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.4rem;margin:.6rem 0}
+.toc a{display:flex;justify-content:space-between;gap:.5rem;text-decoration:none;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.4rem .7rem;font-size:.9rem}
+.toc a:hover{border-color:var(--accent)}
+.toc span{color:var(--muted);font-size:.8rem}
+mjx-container[display="true"]{overflow-x:auto;overflow-y:hidden}
+.math{overflow-x:auto;max-width:100%}
+#kmCv{height:340px} #elCv{height:170px} #dbCv{height:300px}
+@media (max-width:560px){#kmCv{height:300px} #dbCv{height:260px}}
+.plotlab{font-size:.8rem;color:var(--muted);margin:.8rem 0 .25rem}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a class="btn" href="../geron/index.html">‹ Géron hub</a>
+    <span class="chip">#classical-ml</span>
+    <span class="meta">Géron ch 9 · book pp. 235–276</span>
+    <span class="spacer"></span>
+    <button class="btn" id="reviewBtn">Mark reviewed</button>
+    <button class="btn" id="themeBtn">◐</button>
+  </div>
+
+  <h1>Chapter 9 — Unsupervised Learning Techniques</h1>
+  <div class="callout">
+    <div class="lab">In one line</div>
+    Most real data has no labels. Clustering (K-Means, DBSCAN) groups similar points, and Gaussian mixtures
+    model the data's density. Together they let you segment, compress, pre-label and spot anomalies
+    without anyone labelling the data first.
+  </div>
+  <div class="legend">
+    <span class="def">Definition</span><span class="imp">Important</span><span class="tip">Tip</span>
+    <span class="exp">Explains</span><span class="skip">Skip on review</span>
+    <label><input type="checkbox" id="hideSkip"> hide "skip" items</label>
+  </div>
+
+  <h3>Chapter map — opens the book at that section</h3>
+  <nav class="toc">
+    <a href="../geron/reader.html#p=266">Clustering <span>p. 236</span></a>
+    <a href="../geron/reader.html#p=268">K-Means <span>p. 238</span></a>
+    <a href="../geron/reader.html#p=285">DBSCAN <span>p. 255</span></a>
+    <a href="../geron/reader.html#p=290">Gaussian Mixtures <span>p. 260</span></a>
+    <a href="../geron/reader.html#p=296">Anomaly detection with GMMs <span>p. 266</span></a>
+    <a href="../geron/reader.html#p=305">Exercises <span>p. 275</span></a>
+  </nav>
+
+  <h3>Three unsupervised tasks in this chapter</h3>
+  <div class="tw"><table>
+    <tr><th>Task</th><th>Goal</th><th>Tools here</th></tr>
+    <tr><td><span class="def">Clustering</span></td><td>put similar instances into the same group</td><td><code>KMeans</code>, <code>DBSCAN</code>, <code>GaussianMixture</code></td></tr>
+    <tr><td><span class="def">Anomaly detection</span></td><td>learn what "normal" looks like, then flag what doesn't fit</td><td>GMM density, <code>IsolationForest</code>, <code>LocalOutlierFactor</code>…</td></tr>
+    <tr><td><span class="def">Density estimation</span></td><td>estimate the probability density function (PDF) that generated the data</td><td><code>GaussianMixture</code></td></tr>
+  </table></div>
+  <p class="skip">The chapter opens with a factory example: thousands of product photos arrive daily, but labelling them "defective / OK" by hand is slow and has to be redone whenever the product changes. That is the motivation for learning from unlabelled data.</p>
+
+  <!-- ===================================================== 1 -->
+  <h2>1 · Clustering <a class="book" href="../geron/reader.html#p=266">book p. 236 ↗</a></h2>
+  <p><span class="def">Clustering</span> assigns each instance to a group (a <span class="def">cluster</span>) of similar instances. It looks like classification, but <span class="imp">there are no target labels</span>: the algorithm has to discover the groups itself.</p>
+  <h4>What it's used for</h4>
+  <ul class="tight">
+    <li><span class="exp">Customer segmentation</span>: group users by behaviour, tailor products, feed recommender systems.</li>
+    <li><span class="exp">Data analysis</span>: cluster a new dataset first, then study each cluster separately.</li>
+    <li><span class="exp">Dimensionality reduction</span>: replace each instance with its <span class="def">affinity</span> to each of the k clusters, which gives a k-dimensional vector.</li>
+    <li><span class="exp">Anomaly (outlier) detection</span>: an instance with low affinity to every cluster is suspicious (fraud, defects).</li>
+    <li><span class="exp">Semi-supervised learning</span>: spread a few labels to the rest of their cluster.</li>
+    <li><span class="exp">Search engines</span>: find the cluster of a query image and return its members.</li>
+    <li><span class="exp">Image segmentation</span>: cluster pixel colours to simplify an image.</li>
+  </ul>
+  <span class="k i" data-l="Important">There is no single definition of a "cluster". Some algorithms look for points around a <span class="def">centroid</span>, some for connected dense regions of any shape, and some for a hierarchy of clusters within clusters. The algorithm you pick decides what counts as a cluster.</span>
+
+  <h3>K-Means <a class="book" href="../geron/reader.html#p=268">book p. 238 ↗</a></h3>
+  <p>K-Means finds <b>k</b> centroids and assigns every instance to the nearest one. It is simple, fast, and usually converges in a handful of iterations. <span class="imp">You must choose k yourself.</span></p>
+<pre><code>from sklearn.cluster import KMeans
+km = KMeans(n_clusters=5, random_state=42)
+labels = km.fit_predict(X)     # same array as km.labels_
+km.cluster_centers_            # (5, n_features) centroids
+km.predict(X_new)              # nearest centroid for new points
+km.transform(X_new)            # distance to every centroid, shape (m, 5)</code></pre>
+  <ul class="tight">
+    <li>In clustering, an instance's "label" is just the <b>index of its cluster</b>. It is not a class label.</li>
+    <li>The regions closest to each centroid form a <span class="def">Voronoi tessellation</span>, so the decision boundaries between clusters are straight lines.</li>
+    <li><span class="def">Hard clustering</span> gives each point one cluster. <span class="def">Soft clustering</span> gives each point a score per cluster, such as its distance from each centroid (<code>transform()</code>) or a similarity like a Gaussian RBF.</li>
+    <li class="tip"><code>transform()</code> turns n features into k distances. That makes it a cheap <b>nonlinear dimensionality reduction</b>.</li>
+    <li class="imp">K-Means only looks at the distance to each centroid, so it mislabels points when the blobs have very different diameters.</li>
+  </ul>
+  <span class="k s" data-l="History">Stuart Lloyd devised the method at Bell Labs in 1957 but only published it in 1982. Edward Forgy published essentially the same algorithm in 1965, so it is sometimes called Lloyd–Forgy.</span>
+
+  <h3>How the algorithm works <a class="book" href="../geron/reader.html#p=271">book p. 241 ↗</a></h3>
+  <p>If you knew the centroids, labelling would be easy. If you knew the labels, finding the centroids would be easy. K-Means starts with a guess and alternates between the two:</p>
+  <ol class="tight">
+    <li><b>Initialise</b> k centroids (for example k random instances).</li>
+    <li><b>Assign</b>: give each instance the label of its nearest centroid.</li>
+    <li><b>Update</b>: move each centroid to the mean of the instances assigned to it.</li>
+    <li>Repeat 2–3 until the centroids stop moving.</li>
+  </ol>
+  <p>Each step lowers (or keeps) the <span class="def">inertia</span>, the total squared distance from each point to its centroid:</p>
+  <div class="math">$$\text{inertia}=\sum_{i=1}^{m}\big\|\mathbf x^{(i)}-\boldsymbol\mu_{c^{(i)}}\big\|^2\qquad c^{(i)}=\arg\min_j\big\|\mathbf x^{(i)}-\boldsymbol\mu_j\big\|$$</div>
+  <ul class="tight">
+    <li class="tip">It is guaranteed to converge in a finite number of steps, because inertia can't increase and there are only finitely many labellings.</li>
+    <li class="imp">It can converge to a <b>local optimum</b>. The result depends on where the centroids started.</li>
+    <li><span class="exp">Complexity</span>: roughly linear in m, k and n when the data really has cluster structure. In pathological cases it can be exponential in m, but this is rare in practice.</li>
+  </ul>
+
+  <h3>Centroid initialisation <a class="book" href="../geron/reader.html#p=273">book p. 243 ↗</a></h3>
+  <ul class="tight">
+    <li><span class="exp">You know roughly where the centres are?</span> Pass them as an array: <code>KMeans(n_clusters=5, init=my_centres, n_init=1)</code>.</li>
+    <li><span class="exp">Multiple restarts</span>: <code>n_init</code> runs the whole algorithm several times and keeps the run with the <b>lowest inertia</b> (<code>km.inertia_</code>).</li>
+    <li><code>km.score(X)</code> returns <b>minus</b> the inertia, because scikit-learn's rule is "higher score = better".</li>
+  </ul>
+  <p><span class="def">k-means++</span> (Arthur &amp; Vassilvitskii) picks starting centroids that are spread out:</p>
+  <ol class="tight">
+    <li>Choose the first centroid uniformly at random from the data.</li>
+    <li>Choose each next centroid from the instances with probability proportional to $D(\mathbf x)^2$, the squared distance to the nearest centroid already chosen:
+      <div class="math">$$P\big(\mathbf x^{(i)}\big)=\frac{D\big(\mathbf x^{(i)}\big)^2}{\sum_{j=1}^{m}D\big(\mathbf x^{(j)}\big)^2}$$</div></li>
+    <li>Repeat until you have k centroids.</li>
+  </ol>
+  <span class="k t" data-l="Tip">k-means++ is the default (<code>init="k-means++"</code>). The extra seeding work pays off because far fewer restarts are needed. Use <code>init="random"</code> only for comparison. scikit-learn actually runs a "greedy" version: it draws a few candidates at each step and keeps the one that lowers the total $D^2$ the most.</span>
+
+  <h3>Accelerated and mini-batch K-Means <a class="book" href="../geron/reader.html#p=274">book p. 244 ↗</a></h3>
+  <ul class="tight">
+    <li><span class="def">Elkan's K-Means</span> uses the triangle inequality and keeps upper and lower distance bounds, so it can skip many distance computations. Select it with <code>algorithm="elkan"</code>.</li>
+    <li><span class="def">Mini-batch K-Means</span> (Sculley) moves the centroids a little using a small random batch at each step. It is often 3–4× faster and can handle data that doesn't fit in memory: <code>MiniBatchKMeans(n_clusters=5)</code>.</li>
+    <li class="imp">Its inertia is slightly worse, and the gap matters more as k grows.</li>
+    <li class="tip">For out-of-memory data, use a NumPy <code>memmap</code>, or feed batches to <code>partial_fit()</code>. With <code>partial_fit()</code> you must handle multiple initialisations yourself.</li>
+  </ul>
+
+  <h3>Choosing k <a class="book" href="../geron/reader.html#p=275">book p. 245 ↗</a></h3>
+  <p>A bad k gives a bad model: too small merges real clusters, and too large chops real clusters into pieces.</p>
+  <span class="k i" data-l="Important">You can't pick k by minimising inertia. Inertia <b>always</b> drops as k grows, and reaches 0 when k = m.</span>
+  <ul class="tight">
+    <li><span class="def">Elbow method</span>: plot inertia against k and look for the "elbow" where the curve stops falling steeply. It is quick but coarse.</li>
+    <li><span class="def">Silhouette score</span>: the mean <span class="def">silhouette coefficient</span> over all instances (<code>sklearn.metrics.silhouette_score(X, labels)</code>). It is more precise but costs $O(m^2)$.</li>
+  </ul>
+  <div class="math">$$s^{(i)}=\frac{b-a}{\max(a,b)}\in[-1,1]$$</div>
+  <ul class="tight">
+    <li><span class="exp">a</span> = mean distance to the other points in the <b>same</b> cluster</li>
+    <li><span class="exp">b</span> = mean distance to the points of the <b>nearest other</b> cluster</li>
+    <li>≈ +1: deep inside its cluster · ≈ 0: on a boundary · ≈ −1: probably in the wrong cluster</li>
+  </ul>
+  <p>A <span class="def">silhouette diagram</span> plots every instance's coefficient, sorted and grouped by cluster, so each cluster appears as a "knife" shape. The height of a knife shows the cluster's size and its width shows how good its members' coefficients are. A dashed line marks the mean score.</p>
+  <span class="k t" data-l="Tip">Reading a silhouette diagram: a cluster whose points mostly fall short of the mean line is weak. If two values of k have similar scores, prefer the one whose clusters are all good and of similar size.</span>
+
+  <span class="k t" data-l="Changed since the book">
+    <b><code>n_init</code></b> now defaults to <code>"auto"</code> (scikit-learn ≥ 1.4). That means <b>1 run</b> with k-means++ and 10 runs with <code>init="random"</code>. The book assumes 10. Set <code>n_init=10</code> yourself if you want several restarts.<br>
+    <b><code>algorithm</code></b> is now <code>"lloyd"</code> (the default) or <code>"elkan"</code>. The old <code>"auto"</code> and <code>"full"</code> options were removed (<code>"full"</code> is now called <code>"lloyd"</code>). Elkan is <i>not</i> the default any more.<br>
+    <b>HDBSCAN</b> is now built in: <code>sklearn.cluster.HDBSCAN</code> (≥ 1.3), so you no longer need the contrib package.
+  </span>
+  <span class="k i" data-l="Watch the definition">scikit-learn's <code>inertia_</code> is the <b>sum</b> of squared distances, not their mean, so its value grows with the size of the dataset.</span>
+
+  <div class="panel" id="kmPanel">
+    <b>Play: step through K-Means</b>
+    <p class="hint" style="margin-top:.2rem">Grey points have no cluster yet. <b>Step</b> alternates between <i>assign</i> (colour each point by its nearest ✕) and <i>update</i> (move each ✕ to the mean of its points). Faint lines show where each centroid has been.</p>
+    <div class="controls">
+      <div class="ctl"><label>k (clusters)</label><input type="range" id="kmK" min="1" max="9" step="1" value="5"/><output id="kmKO"></output></div>
+      <div class="ctl"><label>Initialisation</label>
+        <span class="seg" id="kmInit"><button data-i="random" class="on">random</button><button data-i="pp">k-means++</button></span></div>
+      <div class="ctl"><label>Data</label>
+        <span class="seg" id="kmData"><button data-d="blobs" class="on">5 blobs</button><button data-d="uneven">uneven blobs</button></span></div>
+      <div class="ctl"><label></label>
+        <button class="btn" id="kmStep">Step</button><button class="btn on" id="kmRun">▶ Run</button><button class="btn" id="kmReinit">↻ New init</button><button class="btn" id="kmNew">New data</button></div>
+    </div>
+    <canvas id="kmCv" height="340" aria-label="K-Means clustering step by step"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">iteration · next step</div><div class="v" id="kmIt">–</div></div>
+      <div class="stat"><div class="kk">inertia (sum)</div><div class="v" id="kmIn">–</div></div>
+      <div class="stat"><div class="kk">points relabelled</div><div class="v" id="kmMv">–</div></div>
+      <div class="stat"><div class="kk">best inertia (k)</div><div class="v" id="kmBest">–</div></div>
+    </div>
+    <p class="hint" id="kmMsg"></p>
+    <div class="plotlab">Elbow and silhouette: best of 8 k-means++ runs for each k = 1…9 on this data (the ring marks your k)</div>
+    <canvas id="elCv" height="170" aria-label="Inertia and silhouette score versus k"></canvas>
+  </div>
+  <details><summary>What to try</summary>
+    <ul class="tight">
+      <li>Run with <b>random</b> init and k = 5, pressing <b>New init</b> before each run. Some runs get stuck with two ✕ in one blob and one ✕ between two blobs: that's a local optimum.</li>
+      <li>Switch to <b>k-means++</b>. Bad starts become rare, because the starting ✕ are already spread out.</li>
+      <li>Look at the lower chart: inertia keeps falling as k grows, but the silhouette score peaks at the true k.</li>
+      <li>Choose <b>uneven blobs</b>: the big, spread-out blob gets split while two small, close blobs get merged. K-Means favours clusters of similar size.</li>
+    </ul>
+  </details>
+
+  <h3>Limits of K-Means <a class="book" href="../geron/reader.html#p=278">book p. 248 ↗</a></h3>
+  <ul class="tight">
+    <li class="imp">It needs several runs to avoid bad local optima, and you must choose k.</li>
+    <li class="imp">It works poorly on clusters with <b>different sizes, different densities, or non-spherical (elongated) shapes</b>. A wrong solution can even have <i>lower</i> inertia than the right one.</li>
+    <li class="tip">Gaussian mixtures handle elliptical clusters much better (section 2).</li>
+  </ul>
+  <span class="k i" data-l="Important">Scale the features before running K-Means. Otherwise the clusters get stretched along the large-scale features. Scaling doesn't make clusters round, but it usually helps.</span>
+
+  <h3>Clustering for image segmentation <a class="book" href="../geron/reader.html#p=279">book p. 249 ↗</a></h3>
+  <ul class="tight">
+    <li><span class="def">Image segmentation</span>: split an image into segments.
+      <ul class="tight">
+        <li><span class="def">Semantic segmentation</span>: every pixel of the same object <i>type</i> (for example "pedestrian") goes into one segment.</li>
+        <li><span class="def">Instance segmentation</span>: each individual object gets its own segment.</li>
+        <li>The state of the art for both uses CNNs (ch 14).</li>
+      </ul></li>
+    <li><span class="def">Colour segmentation</span> is much simpler: cluster the pixels by RGB value and paint each pixel with its cluster's mean colour. That is often enough for tasks like measuring forest area in satellite images.</li>
+  </ul>
+<pre><code>pixels = img.reshape(-1, 3)                    # (H*W, 3) list of colours
+km = KMeans(n_clusters=8, n_init=3).fit(pixels)
+seg = km.cluster_centers_[km.labels_].reshape(img.shape)</code></pre>
+  <span class="k i" data-l="Important">A small but vivid object (like a red ladybug) may not get its own colour cluster when k is small. K-Means prefers clusters of similar size, so a small colour region gets merged into a bigger one.</span>
+
+  <h3>Clustering for preprocessing <a class="book" href="../geron/reader.html#p=281">book p. 251 ↗</a></h3>
+  <p>Put <code>KMeans</code> inside a pipeline before a classifier. Its <code>transform()</code> replaces each 64-pixel digit image with its distances to k centroids.</p>
+<pre><code>pipe = Pipeline([("kmeans", KMeans(n_clusters=50)),
+                 ("clf", LogisticRegression(max_iter=5000))])
+grid = GridSearchCV(pipe, {"kmeans__n_clusters": range(2, 100)}, cv=3)</code></pre>
+  <ul class="tight">
+    <li class="tip">Here k is just a hyperparameter of the pipeline. Choose it by <b>cross-validated accuracy</b>, not by elbow or silhouette.</li>
+    <li class="exp">Use more clusters than classes (50 rather than 10), because each digit can be written in several different styles.</li>
+    <li>In the book this cut the logistic regression error on <code>load_digits</code> by roughly a third.</li>
+  </ul>
+
+  <h3>Clustering for semi-supervised learning <a class="book" href="../geron/reader.html#p=283">book p. 253 ↗</a></h3>
+  <p>Setting: plenty of unlabelled data, and a budget to label only about 50 instances.</p>
+  <ol class="tight">
+    <li><b>Label smartly</b>: cluster the data into k = 50 clusters and label only the <span class="def">representative instance</span> of each (the point closest to its centroid, <code>np.argmin(km.fit_transform(X), axis=0)</code>). In the book this beat 50 random labels by about 9 accuracy points.</li>
+    <li><span class="def">Label propagation</span>: copy each representative's label to every member of its cluster.</li>
+    <li><b>Partial propagation</b>: copy it only to the members closest to the centroid (for example the nearest 20%). Points near cluster boundaries are the ones most likely to get a wrong label.</li>
+  </ol>
+  <span class="k t" data-l="Tip">The labels propagated to the nearest 20% were about 99% correct, which is why training on them works so well. scikit-learn also provides graph-based propagation in <code>sklearn.semi_supervised</code> (<code>LabelPropagation</code>, <code>LabelSpreading</code>, <code>SelfTrainingClassifier</code>). Unlabelled points are marked with <code>-1</code>.</span>
+
+  <h4>Active learning <a class="book" href="../geron/reader.html#p=285">book p. 255 ↗</a></h4>
+  <p><span class="def">Active learning</span>: the model asks a human to label the specific instances it would learn most from. The most common strategy is <span class="def">uncertainty sampling</span>:</p>
+  <ol class="tight">
+    <li>Train on the labels you have, then predict the unlabelled pool.</li>
+    <li>Send the instances with the <b>lowest confidence</b> (lowest top probability) to the expert.</li>
+    <li>Repeat until the accuracy gain is no longer worth the labelling effort.</li>
+  </ol>
+  <p class="exp">Other strategies: label the points that would change the model most, or reduce validation error most, or that several different models disagree on.</p>
+
+  <h3>DBSCAN <a class="book" href="../geron/reader.html#p=285">book p. 255 ↗</a></h3>
+  <p><span class="def">DBSCAN</span> defines a cluster as a <b>continuous region of high density</b>, so clusters can have any shape.</p>
+  <ul class="tight">
+    <li><span class="def">ε-neighbourhood</span>: all instances within distance <code>eps</code> of a point.</li>
+    <li><span class="def">Core instance</span>: has at least <code>min_samples</code> instances in its ε-neighbourhood, <b>counting itself</b>.</li>
+    <li>Every point in a core instance's neighbourhood joins that core's cluster. Chains of neighbouring cores merge into one cluster.</li>
+    <li>A <b>border</b> point is not a core but lies near one. A point with no core in its neighbourhood is an <span class="def">anomaly</span> and gets label <code>-1</code>.</li>
+  </ul>
+<pre><code>db = DBSCAN(eps=0.2, min_samples=5).fit(X)
+db.labels_                # cluster index per point, -1 = noise
+db.core_sample_indices_   # which rows are core instances
+db.components_            # the core instances themselves</code></pre>
+  <ul class="tight">
+    <li class="imp"><code>DBSCAN</code> has <b>no <code>predict()</code></b>, only <code>fit_predict()</code>. To assign new points, train a classifier (for example <code>KNeighborsClassifier</code>) on the core instances, and treat a point as an anomaly if its nearest core is farther than some distance (use <code>knn.kneighbors()</code>).</li>
+    <li class="tip">Strengths: it finds any number of clusters of any shape, it handles outliers, and it has only two hyperparameters.</li>
+    <li class="imp">Weakness: if density varies a lot between clusters, a single eps can't capture them all.</li>
+    <li><span class="exp">Cost</span>: about $O(m\log m)$ time, but scikit-learn's version can use up to $O(m^2)$ memory when eps is large.</li>
+    <li class="tip"><span class="def">HDBSCAN</span> (hierarchical DBSCAN) tries every density level and keeps the most stable clusters, so it copes with varying density and you don't have to set eps. It is now available as <code>sklearn.cluster.HDBSCAN</code>.</li>
+  </ul>
+
+  <div class="panel" id="dbPanel">
+    <b>Play: DBSCAN on two moons</b>
+    <p class="hint" style="margin-top:.2rem">Filled dot = core point · ring = border point · ✕ = noise (label −1). Hover or drag over the plot to see the ε-circle.</p>
+    <div class="controls">
+      <div class="ctl"><label>eps (ε)</label><input type="range" id="dbE" min="0.03" max="0.5" step="0.01" value="0.1"/><output id="dbEO"></output></div>
+      <div class="ctl"><label>min_samples</label><input type="range" id="dbM" min="2" max="20" step="1" value="5"/><output id="dbMO"></output></div>
+      <div class="ctl"><label></label><button class="btn" id="dbNew">New sample</button></div>
+    </div>
+    <canvas id="dbCv" height="300" aria-label="DBSCAN core, border and noise points"></canvas>
+    <div class="stats">
+      <div class="stat"><div class="kk">clusters</div><div class="v" id="dbC">–</div></div>
+      <div class="stat"><div class="kk">core</div><div class="v" id="dbCo">–</div></div>
+      <div class="stat"><div class="kk">border</div><div class="v" id="dbBo">–</div></div>
+      <div class="stat"><div class="kk">noise</div><div class="v" id="dbNo">–</div></div>
+    </div>
+    <p class="hint" id="dbMsg"></p>
+  </div>
+
+  <h3>Other clustering algorithms <a class="book" href="../geron/reader.html#p=288">book p. 258 ↗</a></h3>
+  <div class="tw"><table>
+    <tr><th>Algorithm</th><th>Idea</th><th>Good at</th><th>Watch out</th></tr>
+    <tr><td><code>AgglomerativeClustering</code></td><td>bottom-up: start with single points and repeatedly merge the two nearest clusters, which builds a binary tree (dendrogram)</td><td>various shapes, any pairwise distance, a whole cluster hierarchy rather than one scale</td><td class="imp">scales badly unless you pass a sparse <code>connectivity</code> matrix (for example from <code>kneighbors_graph()</code>)</td></tr>
+    <tr><td><code>Birch</code></td><td>builds a compact tree summary of the data without storing every point</td><td class="tip">very large datasets with limited memory, often faster than batch K-Means</td><td>only for low-dimensional data (&lt; ~20 features)</td></tr>
+    <tr><td><code>MeanShift</code></td><td>moves a circle around each point uphill to the local mean until it stops; points whose circles end at the same spot form a cluster</td><td>any number and shape of clusters; one hyperparameter (<span class="def">bandwidth</span>)</td><td class="imp">$O(m^2)$; splits clusters that have uneven internal density</td></tr>
+    <tr><td><code>AffinityPropagation</code></td><td>points "vote" for exemplars; each exemplar and its voters form a cluster</td><td>any number of clusters, of different sizes</td><td class="imp">$O(m^2)$</td></tr>
+    <tr><td><code>SpectralClustering</code></td><td>builds a low-dimensional embedding from a similarity matrix, then runs K-Means in it</td><td>complex shapes, graph cuts (for example friend groups)</td><td class="imp">doesn't scale to large m; poor with very unequal cluster sizes</td></tr>
+  </table></div>
+
+  <!-- ===================================================== 2 -->
+  <h2>2 · Gaussian mixtures <a class="book" href="../geron/reader.html#p=290">book p. 260 ↗</a></h2>
+  <p>A <span class="def">Gaussian mixture model (GMM)</span> assumes the data came from k Gaussian distributions with unknown parameters. Each Gaussian produces an ellipsoid-shaped cluster, and each cluster can have its own <b>size, shape, density and orientation</b>.</p>
+  <p>The generative story that <code>GaussianMixture</code> assumes:</p>
+  <div class="math">$$z^{(i)}\sim\text{Categorical}(\boldsymbol\phi)\qquad \mathbf x^{(i)}\mid z^{(i)}=j\;\sim\;\mathcal N\big(\boldsymbol\mu^{(j)},\boldsymbol\Sigma^{(j)}\big)
+  \qquad p(\mathbf x)=\sum_{j=1}^{k}\phi^{(j)}\,\mathcal N\big(\mathbf x;\boldsymbol\mu^{(j)},\boldsymbol\Sigma^{(j)}\big)$$</div>
+  <ul class="tight">
+    <li>$\phi^{(j)}$ = <span class="def">cluster weight</span> (the probability of choosing cluster j). The weights sum to 1.</li>
+    <li>$\mathbf x^{(i)}$ are <span class="def">observed variables</span>. The cluster choices $z^{(i)}$ are hidden: they are <span class="def">latent variables</span>.</li>
+    <li class="skip">The book draws this as a graphical model in plate notation: circles are random variables, squares are fixed parameters, plates show repetition, shaded nodes are observed, and a squiggly arrow is a "switch" chosen by $z$.</li>
+  </ul>
+
+  <h3>Expectation-Maximization (EM)</h3>
+  <p><span class="def">EM</span> is like K-Means with <b>soft</b> assignments. It also learns each cluster's covariance (shape) and weight.</p>
+  <ul class="tight">
+    <li><span class="exp">E-step</span>: for every instance, compute the <span class="def">responsibility</span> of each cluster, i.e. the probability that the instance belongs to it:
+      <div class="math">$$\gamma_{ij}=\frac{\phi^{(j)}\,\mathcal N(\mathbf x^{(i)};\boldsymbol\mu^{(j)},\boldsymbol\Sigma^{(j)})}{\sum_{l}\phi^{(l)}\,\mathcal N(\mathbf x^{(i)};\boldsymbol\mu^{(l)},\boldsymbol\Sigma^{(l)})}$$</div></li>
+    <li><span class="exp">M-step</span>: update each cluster using <b>all</b> instances, each weighted by its responsibility:
+      <div class="math">$$\phi^{(j)}=\tfrac1m\textstyle\sum_i\gamma_{ij}\quad \boldsymbol\mu^{(j)}=\dfrac{\sum_i\gamma_{ij}\mathbf x^{(i)}}{\sum_i\gamma_{ij}}\quad \boldsymbol\Sigma^{(j)}=\dfrac{\sum_i\gamma_{ij}(\mathbf x^{(i)}-\boldsymbol\mu^{(j)})(\mathbf x^{(i)}-\boldsymbol\mu^{(j)})^\top}{\sum_i\gamma_{ij}}$$</div></li>
+  </ul>
+<pre><code>from sklearn.mixture import GaussianMixture
+gm = GaussianMixture(n_components=3, n_init=10, random_state=42).fit(X)
+gm.weights_, gm.means_, gm.covariances_
+gm.converged_, gm.n_iter_
+gm.predict(X)          # hard clustering
+gm.predict_proba(X)    # soft clustering (responsibilities)
+X_new, y_new = gm.sample(6)   # generate new points (sorted by cluster)
+gm.score_samples(X)    # log of the PDF at each point</code></pre>
+  <span class="k i" data-l="Important">EM can get stuck in poor solutions, just like K-Means, but <code>GaussianMixture</code>'s <code>n_init</code> defaults to <b>1</b>. Set it higher yourself.</span>
+  <ul class="tight">
+    <li>A GMM is a <span class="def">generative model</span>: you can sample new instances from it.</li>
+    <li class="imp"><code>score_samples()</code> returns a <b>log density</b>, not a probability. Densities can be greater than 1. To get a probability you integrate the density over a region; over the whole space the integral is 1.</li>
+    <li class="exp">With many dimensions, many clusters or few instances, EM struggles. You can help it by restricting the covariance matrices, which leaves fewer parameters to learn.</li>
+  </ul>
+  <div class="tw"><table>
+    <tr><th><code>covariance_type</code></th><th>Cluster shapes allowed</th><th>Training cost</th></tr>
+    <tr><td><code>"full"</code> (default)</td><td>any shape, size and orientation; each cluster has its own matrix</td><td>$O(kmn^2+kn^3)$</td></tr>
+    <tr><td><code>"tied"</code></td><td>all clusters share <b>one</b> covariance matrix (same shape, size and orientation)</td><td>$O(kmn^2+kn^3)$</td></tr>
+    <tr><td><code>"diag"</code></td><td>any ellipsoid, but its axes must be parallel to the feature axes</td><td class="tip">$O(kmn)$</td></tr>
+    <tr><td><code>"spherical"</code></td><td>round clusters, each with its own variance</td><td class="tip">$O(kmn)$</td></tr>
+  </table></div>
+  <span class="k t" data-l="Tip">With many features, "full" and "tied" become expensive (cubic in n). Use "diag" or "spherical", or reduce the dimensions first (ch 8).</span>
+
+  <h3>Anomaly detection with a GMM <a class="book" href="../geron/reader.html#p=296">book p. 266 ↗</a></h3>
+  <p><span class="def">Anomaly (outlier) detection</span>: find instances that deviate strongly from the norm. The normal instances are the <span class="def">inliers</span>. With a GMM, <b>a point in a low-density region is an anomaly</b>.</p>
+<pre><code>dens = gm.score_samples(X)
+threshold = np.percentile(dens, 4)   # expect about 4 % defects
+anomalies = X[dens &lt; threshold]</code></pre>
+  <ul class="tight">
+    <li class="tip">Pick the threshold from the known anomaly rate, then adjust it. Too many false positives → lower it. Too many missed anomalies → raise it. This is the usual precision/recall trade-off (ch 3).</li>
+    <li><span class="def">Novelty detection</span> assumes the training set is <b>clean</b> (no outliers) and flags new points that look different. Anomaly detection makes no such assumption, and is often used to clean a dataset.</li>
+    <li class="imp">A GMM tries to fit the outliers too. If there are many, they distort what "normal" looks like. Fix: fit, remove the most extreme outliers, then refit. Or use a robust estimator such as <code>EllipticEnvelope</code>.</li>
+  </ul>
+
+  <h3>Choosing the number of clusters <a class="book" href="../geron/reader.html#p=297">book p. 267 ↗</a></h3>
+  <p>Inertia and silhouette assume round clusters of similar size, so they are unreliable for GMMs. Instead, minimise an <span class="def">information criterion</span>:</p>
+  <div class="math">$$\text{BIC}=p\log m-2\log\hat L\qquad\qquad \text{AIC}=2p-2\log\hat L$$</div>
+  <ul class="tight">
+    <li>m = number of instances, p = number of learned parameters, $\hat L$ = the maximised likelihood of the model.</li>
+    <li>Both reward a good fit and penalise extra parameters. <span class="exp">BIC's penalty grows with log m</span>, so it tends to pick simpler models than AIC, especially on big datasets.</li>
+    <li>In scikit-learn: <code>gm.bic(X)</code> and <code>gm.aic(X)</code>. You can search over <code>covariance_type</code> the same way.</li>
+  </ul>
+  <details><summary>Probability vs likelihood, MLE vs MAP <a class="book" href="../geron/reader.html#p=298">book p. 268 ↗</a></summary>
+    <ul class="tight">
+      <li><span class="def">Probability</span>: θ is fixed and x varies. How plausible is an outcome x? A PDF integrates to 1 over x.</li>
+      <li><span class="def">Likelihood</span> $\mathcal L(\theta\mid x)=f(x;\theta)$: x is fixed (already observed) and θ varies. How plausible are these parameter values? <span class="imp">It is not a distribution over θ</span>, and its integral over θ can be any positive number.</li>
+      <li><span class="def">MLE</span> (maximum likelihood estimation): choose the θ that maximises $\mathcal L$. <span class="def">MAP</span> (maximum a-posteriori): maximise $\mathcal L(\theta\mid x)\,g(\theta)$ with a prior g, which acts like regularised MLE.</li>
+      <li class="tip">In practice you maximise the <b>log</b>-likelihood: it has the same maximiser, and it turns a product over independent instances into a sum.</li>
+    </ul>
+  </details>
+
+  <h3>Bayesian Gaussian mixtures <a class="book" href="../geron/reader.html#p=300">book p. 270 ↗</a></h3>
+  <p><code>BayesianGaussianMixture</code> removes unneeded clusters for you. Set <code>n_components</code> to a number you are sure is <b>too large</b>, and the weights of the extra clusters shrink to about 0.</p>
+<pre><code>from sklearn.mixture import BayesianGaussianMixture
+bgm = BayesianGaussianMixture(n_components=10, n_init=10, random_state=42).fit(X)
+np.round(bgm.weights_, 2)   # most weights end up at 0.0</code></pre>
+  <ul class="tight">
+    <li>Here the cluster parameters (weights, means, covariances) are <b>latent random variables</b> with <span class="def">priors</span>, not fixed values.</li>
+    <li><code>weight_concentration_prior</code> encodes your prior belief: low → few clusters, high → many clusters. <span class="exp">The more data you have, the less the prior matters.</span></li>
+    <li class="skip">The default weight prior is a <span class="def">stick-breaking process</span> (Dirichlet process). Break off a Beta-distributed fraction of the remaining "stick" for each successive cluster, so big clusters tend to keep growing. A Wishart prior generates the covariance matrices.</li>
+  </ul>
+  <p>By <span class="def">Bayes' theorem</span>, the <span class="def">posterior</span> over the latent variables is:</p>
+  <div class="math">$$p(\mathbf z\mid\mathbf X)=\frac{p(\mathbf X\mid\mathbf z)\,p(\mathbf z)}{p(\mathbf X)}\qquad p(\mathbf X)=\int p(\mathbf X\mid\mathbf z)\,p(\mathbf z)\,d\mathbf z\ \ (\text{intractable})$$</div>
+  <ul class="tight">
+    <li><span class="def">Variational inference</span>: choose a family $q(\mathbf z;\boldsymbol\lambda)$ and tune λ to make q close to the posterior, i.e. minimise $D_{KL}(q\,\|\,p)$.</li>
+    <li>Because $D_{KL}(q\|p)=\log p(\mathbf X)-\text{ELBO}$ and the evidence is constant, this means <b>maximising the ELBO</b> (evidence lower bound):
+      <div class="math">$$\text{ELBO}=\mathbb E_q\big[\log p(\mathbf z,\mathbf X)\big]-\mathbb E_q\big[\log q(\mathbf z)\big]$$</div></li>
+    <li class="skip"><span class="def">Mean-field VI</span> (what scikit-learn uses) needs carefully chosen q and priors so the ELBO has a usable closed form, which gives EM-like update rules. It is often much slower than <code>GaussianMixture</code>. <span class="def">Black-box stochastic VI</span> instead estimates ELBO gradients from samples of q, which works for any differentiable model (the basis of Bayesian deep learning).</li>
+  </ul>
+  <span class="k i" data-l="Important">GMMs only know ellipsoids. On the two-moons data a Bayesian GMM uses many ellipses to tile each moon. The density estimate is fine (so it can still work for anomaly detection), but the clusters don't match the moons. For shapes like these, use DBSCAN or HDBSCAN.</span>
+
+  <h3>Other anomaly and novelty detectors <a class="book" href="../geron/reader.html#p=304">book p. 274 ↗</a></h3>
+  <div class="tw"><table>
+    <tr><th>Method</th><th>How it flags anomalies</th><th>Best for</th></tr>
+    <tr><td>PCA (any reducer with <code>inverse_transform()</code>)</td><td>anomalies have a much larger <b>reconstruction error</b></td><td>a simple, often effective baseline</td></tr>
+    <tr><td><code>EllipticEnvelope</code> (Fast-MCD)</td><td>fits <b>one</b> Gaussian while ignoring the likeliest outliers, which gives a robust elliptic envelope</td><td>cleaning a contaminated dataset</td></tr>
+    <tr><td><code>IsolationForest</code></td><td>random trees with random features and split values; anomalies get isolated in <b>fewer splits</b> on average</td><td class="tip">efficient, including in high dimensions</td></tr>
+    <tr><td><code>LocalOutlierFactor</code></td><td>compares a point's local density with that of its k nearest neighbours</td><td>outlier detection (use <code>novelty=True</code> to score new data)</td></tr>
+    <tr><td><code>OneClassSVM</code></td><td>in kernel space, separates the data from the origin, which encloses the data in a small region; outside that region = novel</td><td>novelty detection, high dimensions; <span class="imp">doesn't scale to large m</span>; <code>nu</code> ≈ allowed rate of false alarms</td></tr>
+  </table></div>
+
+  <!-- ===================================================== 3 -->
+  <h2>3 · Exercises <a class="book" href="../geron/reader.html#p=305">book p. 275 ↗</a></h2>
+  <p>Questions 1–9 check the concepts: definitions, choosing k, label propagation, which algorithms scale or are density-based, active learning, anomaly vs novelty, and GMMs. Questions 10–13 are a project on the <b>Olivetti faces</b> dataset: cluster the faces, use K-Means as features for a classifier, generate faces with a GMM, and detect altered images using GMM density and PCA reconstruction error.</p>
+  <span class="k t" data-l="Offline tip">Olivetti needs <code>fetch_olivetti_faces()</code> (a download). To practise the same workflow offline, use <code>load_digits()</code>: 8×8 images, 10 classes.</span>
+
+  <!-- ===================================================== code -->
+  <h2>Run it — all of chapter 9 in one cell</h2>
+  <p class="hint" style="margin-top:0">Real Python in your browser. scikit-learn downloads on the first run (≈ 20–40 s, needs internet).</p>
+  <div class="code-cell">
+    <textarea id="code" spellcheck="false">import numpy as np
+from sklearn.datasets import make_blobs, make_moons, load_digits
+from sklearn.cluster import KMeans, MiniBatchKMeans, DBSCAN
+from sklearn.metrics import silhouette_score
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+
+# 1) K-Means on 5 blobs: inertia always falls, silhouette peaks
+X, _ = make_blobs(n_samples=1000, centers=5, cluster_std=0.8, random_state=7)
+for k in range(2, 9):
+    km = KMeans(n_clusters=k, n_init=10, random_state=42).fit(X)
+    print(f"k={k}  inertia={km.inertia_:8.1f}  silhouette={silhouette_score(X, km.labels_):.3f}")
+mb = MiniBatchKMeans(n_clusters=5, n_init=3, random_state=42).fit(X)
+print("mini-batch inertia (k=5):", round(mb.inertia_, 1))
+
+# 2) K-Means as preprocessing: distances to 50 centroids -> logistic regression
+Xd, yd = load_digits(return_X_y=True)
+X_tr, X_te, y_tr, y_te = train_test_split(Xd, yd, random_state=42)
+base = LogisticRegression(max_iter=5000).fit(X_tr, y_tr)
+pipe = make_pipeline(KMeans(n_clusters=50, n_init=3, random_state=42),
+                     LogisticRegression(max_iter=5000)).fit(X_tr, y_tr)
+print(f"\ndigits  raw pixels: {base.score(X_te, y_te):.3f}   k-means features: {pipe.score(X_te, y_te):.3f}")
+
+# 3) Semi-supervised: label only 50 representative images, then propagate
+k = 50
+km = KMeans(n_clusters=k, n_init=3, random_state=42)
+dist = km.fit_transform(X_tr)
+rep = np.argmin(dist, axis=0)            # closest image to each centroid
+y_rep = y_tr[rep]                        # pretend a human labelled these 50
+rand = LogisticRegression(max_iter=5000).fit(X_tr[:k], y_tr[:k])
+repr_ = LogisticRegression(max_iter=5000).fit(X_tr[rep], y_rep)
+y_prop = y_rep[km.labels_]               # every image gets its cluster's label
+own = dist[np.arange(len(X_tr)), km.labels_]
+keep = np.zeros(len(X_tr), bool)
+for c in range(k):                       # keep the 20% closest to each centroid
+    m = km.labels_ == c
+    keep |= m & (own <= np.percentile(own[m], 20))
+part = LogisticRegression(max_iter=5000).fit(X_tr[keep], y_prop[keep])
+print(f"50 random labels: {rand.score(X_te, y_te):.3f}  50 representative: {repr_.score(X_te, y_te):.3f}"
+      f"  + partial propagation: {part.score(X_te, y_te):.3f}")
+print(f"propagated-label accuracy: {np.mean(y_prop[keep] == y_tr[keep]):.3f}")
+
+# 4) DBSCAN on moons: eps matters
+print()
+Xm, _ = make_moons(n_samples=1000, noise=0.05, random_state=42)
+for eps in (0.05, 0.2):
+    lab = DBSCAN(eps=eps, min_samples=5).fit(Xm).labels_
+    print(f"DBSCAN eps={eps}: clusters={lab.max() + 1}, noise points={np.sum(lab == -1)}")
+
+# 5) Gaussian mixture: BIC picks k, low density = anomaly
+Xc = make_blobs(n_samples=600, centers=3, random_state=1)[0]
+bics = {k: GaussianMixture(k, n_init=3, random_state=42).fit(Xc).bic(Xc) for k in range(1, 7)}
+print("\nBIC by k:", {k: round(v) for k, v in bics.items()}, "-> best k =", min(bics, key=bics.get))
+Xg = np.r_[Xc, np.random.default_rng(0).uniform(-15, 15, size=(20, 2))]   # + 20 outliers
+gm = GaussianMixture(3, n_init=5, random_state=42).fit(Xg)
+dens = gm.score_samples(Xg)
+flag = dens < np.percentile(dens, 4)
+print(f"flagged {flag.sum()} points; {flag[600:].sum()} of the 20 injected outliers caught")
+bgm = BayesianGaussianMixture(n_components=10, n_init=3, random_state=42).fit(Xg)
+print("Bayesian GMM weights:", np.round(bgm.weights_, 2))</textarea>
+    <div class="code-bar">
+      <button class="btn on" id="runBtn">▶ Run</button>
+      <span class="meta" id="runStatus"></span>
+    </div>
+    <div class="code-out" id="out"></div>
+  </div>
+  <p class="hint">Things to notice in the output: the silhouette score peaks at k = 5 while inertia keeps falling. Partial propagation labels are about 99% correct. eps = 0.05 breaks the moons into many pieces, while 0.2 finds exactly 2. BIC picks 3 components. The Bayesian GMM leaves most of its 10 weights near 0 (it may keep a small component for the injected outliers).</p>
+
+  <!-- ===================================================== recall -->
+  <h2>Test yourself</h2>
+  <p class="hint" style="margin-top:0">Answer out loud first, then click the card.</p>
+  <div class="cards">
+    <div class="card"><div class="card-inner"><div class="face q">Why can't you pick k by choosing the lowest inertia?</div><div class="face a">Inertia always falls as k grows (it is 0 when every point is its own cluster). Use the elbow, the silhouette score, or downstream CV accuracy.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">What does a silhouette coefficient near −1 tell you?</div><div class="face a">The point is on average closer to another cluster than to its own (b &lt; a), so it was probably assigned to the wrong cluster.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">How does k-means++ choose the next starting centroid?</div><div class="face a">At random, with probability proportional to the squared distance from the nearest centroid already chosen. Far-away points are much more likely to be picked.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">You can afford 50 labels. Which 50 instances should you label, and what next?</div><div class="face a">Cluster into 50 groups and label the point nearest each centroid. Then propagate each label to the closest members of its cluster (not the boundary points).</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">DBSCAN: what makes a point core, border or noise?</div><div class="face a">Core: at least min_samples points (itself included) within eps. Border: not core, but within eps of a core point. Noise (−1): neither.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">How do you assign a new point to a DBSCAN cluster?</div><div class="face a">DBSCAN has no predict(). Train e.g. KNeighborsClassifier on the core instances, and call a point an anomaly if its nearest core is too far away.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">EM vs K-Means: what are the two big differences?</div><div class="face a">EM makes soft assignments (responsibilities), and it learns each cluster's covariance (shape and orientation) and weight, not just its centre.</div></div></div>
+    <div class="card"><div class="card-inner"><div class="face q">BIC vs AIC: which one prefers simpler models, and why?</div><div class="face a">BIC. Its penalty is p·log m, which exceeds AIC's 2p once m &gt; e² ≈ 7, so it punishes extra parameters harder on real datasets.</div></div></div>
+  </div>
+
+  <h2>Connections</h2>
+  <ul class="tight">
+    <li><a href="geron-ch08-dimensionality-reduction.html">Ch 8 — Dimensionality reduction</a>: PCA, used here for reconstruction-error anomaly detection and to speed up GMMs</li>
+    <li><a href="geron-ch05-svm.html">Ch 5 — SVMs</a>: kernels and the RBF similarity behind the one-class SVM</li>
+    <li><a href="geron-ch03-classification.html">Ch 3 — Classification</a>: the precision/recall trade-off when setting an anomaly threshold</li>
+    <li><a href="geron-ch07-ensembles.html">Ch 7 — Ensembles</a>: random forests, the idea behind Isolation Forest</li>
+    <li><a href="geron-ch04-training-models.html">Ch 4 — Training models</a>: logistic regression, used as the downstream classifier here</li>
+    <li><a href="geron-ch02-end-to-end-project.html">Ch 2 — End-to-end project</a>: pipelines and <code>GridSearchCV</code>, reused to tune k</li>
+    <li><a href="../geron/reader.html#p=759">Book answers to the chapter 9 exercises ↗</a> (Appendix A)</li>
+  </ul>
+
+  <h2>I can…</h2>
+  <ul class="checklist" id="checklist">
+    <li><label><input type="checkbox"/> describe the K-Means assign/update loop and why it can get stuck in a local optimum</label></li>
+    <li><label><input type="checkbox"/> choose k with the elbow, silhouette score/diagram, or downstream CV, and explain why raw inertia fails</label></li>
+    <li><label><input type="checkbox"/> use clustering for colour segmentation, preprocessing and label propagation</label></li>
+    <li><label><input type="checkbox"/> explain DBSCAN's eps and min_samples, and core / border / noise points</label></li>
+    <li><label><input type="checkbox"/> fit a GaussianMixture, pick k with BIC/AIC, and flag anomalies with score_samples</label></li>
+    <li><label><input type="checkbox"/> choose between IsolationForest, LOF, EllipticEnvelope and OneClassSVM</label></li>
+  </ul>
+
+  <footer>
+    Study notes written for Géron, <i>Hands-On Machine Learning</i> (2nd ed.), ch 9. Page links open your own PDF in the private reader.
+  </footer>
+</div>
+
+<script>
+const NOTE_ID='geron-ch09';
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const root=document.documentElement;
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+if((ls.get('theme-'+NOTE_ID)||ls.get('gr-theme'))==='dark')root.setAttribute('data-theme','dark');
+$('#themeBtn').onclick=()=>{const d=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',d?'light':'dark');ls.set('theme-'+NOTE_ID,d?'light':'dark');redrawAll();};
+const rb=$('#reviewBtn');
+function refreshReview(){const t=ls.get('reviewed-'+NOTE_ID);rb.textContent=t?('Reviewed '+t):'Mark reviewed';}
+rb.onclick=()=>{ls.set('reviewed-'+NOTE_ID,new Date().toISOString().slice(0,10));refreshReview();};refreshReview();
+$$('.card').forEach(c=>c.onclick=()=>c.classList.toggle('flip'));
+$$('#checklist input').forEach((c,i)=>{c.checked=ls.get(`chk-${NOTE_ID}-${i}`)==='1';c.onchange=()=>ls.set(`chk-${NOTE_ID}-${i}`,c.checked?'1':'0');});
+const hs=$('#hideSkip');hs.checked=ls.get('hideskip-'+NOTE_ID)==='1';document.body.classList.toggle('hide-skip',hs.checked);
+hs.onchange=()=>{document.body.classList.toggle('hide-skip',hs.checked);ls.set('hideskip-'+NOTE_ID,hs.checked?'1':'0');};
+
+/* ---------- helpers ---------- */
+const css=v=>getComputedStyle(root).getPropertyValue(v).trim()||'#888';
+function setupCanvas(cv){const r=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight||+cv.getAttribute('height');
+  cv.width=Math.round(W*r);cv.height=Math.round(H*r);const x=cv.getContext('2d');x.setTransform(r,0,0,r,0,0);return{x,W,H};}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+const fmt=(v,d=3)=>!isFinite(v)?'∞':Math.abs(v)>=1e5?v.toExponential(1):v.toFixed(d);
+const pal=i=>css('--c'+(i%9));
+const d2=(a,b)=>{const dx=a[0]-b[0],dy=a[1]-b[1];return dx*dx+dy*dy;};
+/* aspect-preserving map from data box to canvas */
+function fitBox(W,H,b,pad=14){const s=Math.min((W-2*pad)/(b.x1-b.x0),(H-2*pad)/(b.y1-b.y0));
+  const ox=(W-s*(b.x1-b.x0))/2,oy=(H-s*(b.y1-b.y0))/2;
+  return{s,px:v=>ox+(v-b.x0)*s,py:v=>H-oy-(v-b.y0)*s,ix:X=>b.x0+(X-ox)/s,iy:Y=>b.y0+(H-oy-Y)/s};}
+
+/* ================= K-Means playground ================= */
+const KM={dataSeed:5,initSeed:1,init:'random',layout:'blobs',pts:[],cent:[],trail:[],lab:null,phase:'assign',iter:0,moved:null,done:false,anim:null,elbow:null};
+const KBOX={x0:0,x1:10,y0:0,y1:6};
+function kmData(){
+  const r=mulberry(KM.dataSeed*977+(KM.layout==='blobs'?0:13));const P=[];
+  let specs;
+  if(KM.layout==='blobs'){
+    // five well separated blobs, jittered centres
+    const base=[[2,1.6],[2.2,4.4],[5,3],[7.9,1.5],[7.8,4.5]];
+    specs=base.map(c=>({c:[c[0]+(r()-.5)*.8,c[1]+(r()-.5)*.6],sd:.45,n:50}));
+  }else{
+    specs=[{c:[3,3],sd:1.05,n:170},{c:[7.6,4.3],sd:.28,n:30},{c:[8.4,3.3],sd:.28,n:30},{c:[7.8,1.2],sd:.35,n:30}];
+  }
+  specs.forEach(s=>{for(let i=0;i<s.n;i++){const p=[s.c[0]+s.sd*gauss(r),s.c[1]+s.sd*gauss(r)];
+    p[0]=Math.min(9.9,Math.max(.1,p[0]));p[1]=Math.min(5.9,Math.max(.1,p[1]));P.push(p);}});
+  KM.pts=P;KM.elbow=null;
+}
+function seedCentroids(P,k,mode,r){
+  const C=[];
+  if(mode==='random'){const idx=new Set();while(idx.size<Math.min(k,P.length))idx.add(Math.floor(r()*P.length));idx.forEach(i=>C.push(P[i].slice()));}
+  else{
+    C.push(P[Math.floor(r()*P.length)].slice());
+    const D=P.map(p=>d2(p,C[0]));
+    // "greedy" k-means++ as in scikit-learn: draw 2+ln(k) candidates ∝ D², keep the one that lowers total D² most
+    const trials=2+Math.floor(Math.log(k));
+    while(C.length<k){const tot=D.reduce((a,b)=>a+b,0);let bestJ=0,bestPot=Infinity;
+      for(let t=0;t<trials;t++){let u=r()*tot,j=0;for(;j<P.length-1;j++){u-=D[j];if(u<=0)break;}
+        let pot=0;for(let i=0;i<P.length;i++)pot+=Math.min(D[i],d2(P[i],P[j]));
+        if(pot<bestPot){bestPot=pot;bestJ=j;}}
+      C.push(P[bestJ].slice());for(let i=0;i<P.length;i++)D[i]=Math.min(D[i],d2(P[i],C[C.length-1]));}
+  }
+  return C;
+}
+function assign(P,C){const L=new Int16Array(P.length);let inert=0;
+  for(let i=0;i<P.length;i++){let b=0,bd=Infinity;for(let j=0;j<C.length;j++){const d=d2(P[i],C[j]);if(d<bd){bd=d;b=j;}}L[i]=b;inert+=bd;}
+  return{L,inert};}
+function update(P,L,C){const S=C.map(()=>[0,0,0]);for(let i=0;i<P.length;i++){const s=S[L[i]];s[0]+=P[i][0];s[1]+=P[i][1];s[2]++;}
+  return C.map((c,j)=>S[j][2]?[S[j][0]/S[j][2],S[j][1]/S[j][2]]:c.slice());}
+const inertiaOf=(P,C)=>assign(P,C).inert;
+function fullKMeans(P,k,r){let C=seedCentroids(P,k,'pp',r),L=null;
+  for(let it=0;it<100;it++){const a=assign(P,C);let ch=!L;if(L)for(let i=0;i<P.length;i++)if(L[i]!==a.L[i]){ch=true;break;}
+    L=a.L;if(!ch)break;C=update(P,L,C);}
+  return{C,L,inert:assign(P,C).inert};}
+function silhouette(P,L,k){
+  if(k<2)return NaN;const m=P.length;const D=new Float64Array(m*m);
+  for(let i=0;i<m;i++)for(let j=i+1;j<m;j++){const v=Math.sqrt(d2(P[i],P[j]));D[i*m+j]=v;D[j*m+i]=v;}
+  const cnt=new Array(k).fill(0);for(let i=0;i<m;i++)cnt[L[i]]++;
+  let tot=0;const sums=new Float64Array(k);
+  for(let i=0;i<m;i++){sums.fill(0);for(let j=0;j<m;j++)sums[L[j]]+=D[i*m+j];
+    const own=L[i];if(cnt[own]<=1)continue;const a=sums[own]/(cnt[own]-1);let b=Infinity;
+    for(let c=0;c<k;c++)if(c!==own&&cnt[c]>0)b=Math.min(b,sums[c]/cnt[c]);
+    if(isFinite(b))tot+=(b-a)/Math.max(a,b);}
+  return tot/m;}
+function kmElbow(){
+  if(KM.elbow)return KM.elbow;const out=[];
+  for(let k=1;k<=9;k++){let best=null;const r=mulberry(KM.dataSeed*31+k);
+    for(let t=0;t<8;t++){const res=fullKMeans(KM.pts,k,r);if(!best||res.inert<best.inert)best=res;}
+    out.push({k,inert:best.inert,sil:silhouette(KM.pts,best.L,k)});}
+  return KM.elbow=out;}
+function kmReset(){
+  cancelAnimationFrame(KM.anim);KM.anim=null;
+  const k=+$('#kmK').value;const r=mulberry(KM.initSeed*7919+k*101+(KM.init==='pp'?5:0));
+  KM.cent=seedCentroids(KM.pts,k,KM.init,r);KM.trail=KM.cent.map(c=>[c.slice()]);
+  KM.lab=null;KM.phase='assign';KM.iter=0;KM.moved=null;KM.done=false;$('#kmRun').textContent='▶ Run';drawKM();
+}
+function kmStep(){
+  if(KM.done)return;
+  if(KM.phase==='assign'){const a=assign(KM.pts,KM.cent);let mv=0;
+    if(KM.lab){for(let i=0;i<a.L.length;i++)if(a.L[i]!==KM.lab[i])mv++;}else mv=a.L.length;
+    KM.lab=a.L;KM.moved=mv;KM.iter++;
+    if(mv===0&&KM.iter>1){KM.done=true;}else KM.phase='update';}
+  else{KM.cent=update(KM.pts,KM.lab,KM.cent);KM.cent.forEach((c,j)=>KM.trail[j].push(c.slice()));KM.phase='assign';}
+  drawKM();
+}
+function kmRun(){
+  if(KM.anim){cancelAnimationFrame(KM.anim);KM.anim=null;$('#kmRun').textContent='▶ Run';return;}
+  if(KM.done)kmReset();
+  $('#kmRun').textContent='❚❚ Pause';let last=0;
+  const tick=t=>{if(t-last>260){last=t;kmStep();}
+    if(!KM.done&&KM.iter<200)KM.anim=requestAnimationFrame(tick);else{KM.anim=null;$('#kmRun').textContent='▶ Run';}};
+  KM.anim=requestAnimationFrame(tick);
+}
+function drawKM(){
+  const k=+$('#kmK').value;$('#kmKO').textContent=k;
+  const cv=$('#kmCv');const{x,W,H}=setupCanvas(cv);const m=fitBox(W,H,KBOX);
+  // Voronoi shading once labels exist
+  if(KM.lab){const N=Math.max(40,Math.round(W/7)),M=Math.round(N*H/W),cw=W/N,ch=H/M;x.globalAlpha=.09;
+    for(let i=0;i<N;i++)for(let j=0;j<M;j++){const p=[m.ix((i+.5)*cw),m.iy((j+.5)*ch)];let b=0,bd=Infinity;
+      KM.cent.forEach((c,q)=>{const d=d2(p,c);if(d<bd){bd=d;b=q;}});x.fillStyle=pal(b);x.fillRect(i*cw,j*ch,cw+.6,ch+.6);}
+    x.globalAlpha=1;}
+  // points
+  KM.pts.forEach((p,i)=>{x.fillStyle=KM.lab?pal(KM.lab[i]):css('--muted');x.globalAlpha=KM.lab?.9:.55;
+    x.beginPath();x.arc(m.px(p[0]),m.py(p[1]),3.2,0,7);x.fill();});x.globalAlpha=1;
+  // trails
+  KM.trail.forEach((tr,j)=>{if(tr.length<2)return;x.strokeStyle=pal(j);x.globalAlpha=.55;x.lineWidth=1.5;x.setLineDash([4,3]);x.beginPath();
+    tr.forEach((c,q)=>q?x.lineTo(m.px(c[0]),m.py(c[1])):x.moveTo(m.px(c[0]),m.py(c[1])));x.stroke();});x.setLineDash([]);x.globalAlpha=1;
+  // centroids
+  KM.cent.forEach((c,j)=>{const X=m.px(c[0]),Y=m.py(c[1]);
+    x.lineWidth=5;x.strokeStyle=css('--surface');x.beginPath();x.moveTo(X-7,Y-7);x.lineTo(X+7,Y+7);x.moveTo(X+7,Y-7);x.lineTo(X-7,Y+7);x.stroke();
+    x.lineWidth=2.6;x.strokeStyle=KM.lab?pal(j):css('--text');x.beginPath();x.moveTo(X-7,Y-7);x.lineTo(X+7,Y+7);x.moveTo(X+7,Y-7);x.lineTo(X-7,Y+7);x.stroke();});
+  // stats
+  const inert=KM.lab?(()=>{let s=0;KM.pts.forEach((p,i)=>s+=d2(p,KM.cent[KM.lab[i]]));return s;})():inertiaOf(KM.pts,KM.cent);
+  const E=kmElbow(),best=E[k-1].inert;
+  $('#kmIt').textContent=KM.done?`${KM.iter} · done`:`${KM.iter} · ${KM.phase}`;
+  $('#kmIn').textContent=fmt(inert,1);$('#kmMv').textContent=KM.moved==null?'–':KM.moved;$('#kmBest').textContent=fmt(best,1);
+  const ratio=inert/best;
+  $('#kmMsg').textContent=!KM.lab?`Centroids placed with ${KM.init==='pp'?'k-means++':'random instances'}. Press Step to assign points.`:
+    KM.done?(ratio<1.02?`Converged after ${KM.iter} iterations, matching the best solution found for k = ${k}.`:
+      `Converged, but to a local optimum: inertia is ${((ratio-1)*100).toFixed(0)}% above the best for k = ${k}. Try New init.`):
+    KM.phase==='update'?`${KM.moved} point(s) changed cluster. Next: move each ✕ to the mean of its points.`:
+    'Centroids moved (inertia can only go down). Next: reassign points to the nearest ✕.';
+  drawElbow();
+}
+function drawElbow(){
+  const E=kmElbow(),k=+$('#kmK').value;const{x,W,H}=setupCanvas($('#elCv'));
+  const L=40,R=W-40,T=14,B=H-26;const maxI=E[0].inert;
+  const px=kk=>L+(kk-1)/8*(R-L),pyI=v=>B-(v/maxI)*(B-T),pyS=v=>B-Math.max(0,v)*(B-T);
+  x.strokeStyle=css('--border');x.lineWidth=1;x.beginPath();x.moveTo(L,B);x.lineTo(R,B);x.stroke();
+  x.fillStyle=css('--muted');x.font='11px system-ui';x.textAlign='center';
+  E.forEach(e=>x.fillText(e.k,px(e.k),B+14));
+  x.textAlign='left';x.fillStyle=css('--accent');x.fillText('inertia',4,T+2);
+  x.textAlign='right';x.fillStyle=css('--tip');x.fillText('silhouette',W-4,T+2);x.fillStyle=css('--muted');x.fillText('1.0',W-4,T+14);x.fillText('0',W-4,B);
+  x.textAlign='left';
+  // highlight ring
+  x.strokeStyle=css('--def');x.lineWidth=2;x.beginPath();x.arc(px(k),pyI(E[k-1].inert),8,0,7);x.stroke();
+  // inertia
+  x.strokeStyle=css('--accent');x.lineWidth=2.2;x.beginPath();E.forEach((e,i)=>i?x.lineTo(px(e.k),pyI(e.inert)):x.moveTo(px(e.k),pyI(e.inert)));x.stroke();
+  x.fillStyle=css('--accent');E.forEach(e=>{x.beginPath();x.arc(px(e.k),pyI(e.inert),3,0,7);x.fill();});
+  // silhouette
+  x.strokeStyle=css('--tip');x.setLineDash([5,4]);x.beginPath();let st=false;
+  E.forEach(e=>{if(!isFinite(e.sil))return;st?x.lineTo(px(e.k),pyS(e.sil)):x.moveTo(px(e.k),pyS(e.sil));st=true;});x.stroke();x.setLineDash([]);
+  x.fillStyle=css('--tip');E.forEach(e=>{if(isFinite(e.sil)){x.beginPath();x.arc(px(e.k),pyS(e.sil),3,0,7);x.fill();}});
+  if(isFinite(E[k-1].sil)){x.strokeStyle=css('--def');x.beginPath();x.arc(px(k),pyS(E[k-1].sil),8,0,7);x.stroke();}
+}
+$('#kmK').oninput=()=>{$('#kmKO').textContent=$('#kmK').value;kmReset();};
+$$('#kmInit button').forEach(b=>b.onclick=()=>{$$('#kmInit button').forEach(x=>x.classList.toggle('on',x===b));KM.init=b.dataset.i;kmReset();});
+$$('#kmData button').forEach(b=>b.onclick=()=>{$$('#kmData button').forEach(x=>x.classList.toggle('on',x===b));KM.layout=b.dataset.d;kmData();kmReset();});
+$('#kmStep').onclick=()=>{if(KM.anim){cancelAnimationFrame(KM.anim);KM.anim=null;$('#kmRun').textContent='▶ Run';}if(KM.done)kmReset();else kmStep();};
+$('#kmRun').onclick=kmRun;
+$('#kmReinit').onclick=()=>{KM.initSeed++;kmReset();};
+$('#kmNew').onclick=()=>{KM.dataSeed=Math.floor(Math.random()*1e6);kmData();kmReset();};
+kmData();
+
+/* ================= DBSCAN playground ================= */
+const DB={seed:4,pts:[],hover:null};
+const DBOX={x0:-1.35,x1:2.35,y0:-.75,y1:1.25};
+function dbData(){const r=mulberry(DB.seed*131);const P=[];
+  for(let i=0;i<260;i++){const up=i%2===0,t=Math.PI*r();
+    const p=up?[Math.cos(t),Math.sin(t)]:[1-Math.cos(t),.5-Math.sin(t)];
+    P.push([p[0]+.06*gauss(r),p[1]+.06*gauss(r)]);}
+  for(let i=0;i<12;i++)P.push([DBOX.x0+.1+r()*(DBOX.x1-DBOX.x0-.2),DBOX.y0+.1+r()*(DBOX.y1-DBOX.y0-.2)]);
+  DB.pts=P;}
+function dbscan(P,eps,minS){
+  const n=P.length,e2=eps*eps,nb=[];
+  for(let i=0;i<n;i++){const a=[];for(let j=0;j<n;j++)if(d2(P[i],P[j])<=e2)a.push(j);nb.push(a);}
+  const core=nb.map(a=>a.length>=minS);const lab=new Int32Array(n).fill(-1);let c=0;
+  for(let i=0;i<n;i++){if(!core[i]||lab[i]!==-1)continue;lab[i]=c;const st=[i];
+    while(st.length){const p=st.pop();for(const q of nb[p]){if(lab[q]===-1){lab[q]=c;if(core[q])st.push(q);}}}c++;}
+  return{lab,core,nC:c};}
+function drawDB(){
+  const eps=+$('#dbE').value,minS=+$('#dbM').value;$('#dbEO').textContent=eps.toFixed(2);$('#dbMO').textContent=minS;
+  const{x,W,H}=setupCanvas($('#dbCv'));const m=fitBox(W,H,DBOX);
+  const res=dbscan(DB.pts,eps,minS);let nCore=0,nB=0,nN=0;
+  DB.pts.forEach((p,i)=>{const X=m.px(p[0]),Y=m.py(p[1]);
+    if(res.lab[i]===-1){nN++;x.strokeStyle=css('--muted');x.lineWidth=1.4;x.beginPath();x.moveTo(X-3,Y-3);x.lineTo(X+3,Y+3);x.moveTo(X+3,Y-3);x.lineTo(X-3,Y+3);x.stroke();}
+    else if(res.core[i]){nCore++;x.fillStyle=pal(res.lab[i]);x.beginPath();x.arc(X,Y,3.4,0,7);x.fill();}
+    else{nB++;x.strokeStyle=pal(res.lab[i]);x.lineWidth=1.6;x.beginPath();x.arc(X,Y,3.6,0,7);x.stroke();}});
+  if(DB.hover){const h=DB.hover;const cnt=DB.pts.filter(p=>d2(p,h)<=eps*eps).length;
+    x.strokeStyle=css('--text');x.lineWidth=1.3;x.setLineDash([4,3]);x.beginPath();x.arc(m.px(h[0]),m.py(h[1]),eps*m.s,0,7);x.stroke();x.setLineDash([]);
+    const txt=`${cnt} in ε ${cnt>=minS?'≥':'<'} ${minS} → ${cnt>=minS?'dense (core-level)':'too sparse'}`;x.font='12px system-ui';
+    const tw=x.measureText(txt).width,tx=Math.max(4,Math.min(W-tw-8,m.px(h[0])+eps*m.s+6)),ty=Math.max(30,m.py(h[1]));
+    x.fillStyle=css('--surface');x.globalAlpha=.9;x.fillRect(tx-3,ty-12,tw+6,16);x.globalAlpha=1;
+    x.fillStyle=css('--text');x.fillText(txt,tx,ty);}
+  x.fillStyle=css('--muted');x.font='12px system-ui';x.fillText('● core   ○ border   ✕ noise',10,16);
+  $('#dbC').textContent=res.nC;$('#dbCo').textContent=nCore;$('#dbBo').textContent=nB;$('#dbNo').textContent=nN;
+  const noiseFrac=nN/DB.pts.length;
+  $('#dbMsg').textContent=res.nC===0?'No core points at all: eps is too small or min_samples too large for this density.':
+    res.nC===1&&noiseFrac<.2?'One cluster: eps is so wide that the two moons join into one dense region.':
+    res.nC===2&&noiseFrac<.1?'Two clusters: both moons found, and only the scattered points are noise.':
+    noiseFrac>.25?`${Math.round(noiseFrac*100)}% of points are noise: the neighbourhoods are too small. Raise eps or lower min_samples.`:
+    `${res.nC} clusters: the moons are split into pieces. A slightly larger eps would join them.`;
+}
+function dbPointer(e){const cv=$('#dbCv'),rc=cv.getBoundingClientRect(),m=fitBox(rc.width,rc.height,DBOX);
+  DB.hover=[m.ix(e.clientX-rc.left),m.iy(e.clientY-rc.top)];drawDB();}
+$('#dbCv').addEventListener('pointermove',dbPointer);
+$('#dbCv').addEventListener('pointerdown',dbPointer);
+$('#dbCv').addEventListener('pointerleave',()=>{DB.hover=null;drawDB();});
+['dbE','dbM'].forEach(id=>$('#'+id).oninput=drawDB);
+$('#dbNew').onclick=()=>{DB.seed=Math.floor(Math.random()*1e6);dbData();drawDB();};
+dbData();
+
+function redrawAll(){drawKM();drawDB();}
+let rzT;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(redrawAll,120);});
+kmReset();drawDB();
+
+/* ================= Python runner ================= */
+let pyodide=null;
+$('#runBtn').onclick=async()=>{
+  const st=$('#runStatus'),out=$('#out');
+  try{
+    if(!pyodide){st.textContent='loading Python + scikit-learn… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Pyodide — are you online?'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage(['numpy','scikit-learn']);}
+    st.textContent='running…';out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});pyodide.setStderr({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);st.textContent='done';
+  }catch(e){out.textContent+="\n"+e;st.textContent='error';}
+};
+</script>
+</body>
+</html>

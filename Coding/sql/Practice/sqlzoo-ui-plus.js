@@ -62,6 +62,8 @@
     "#ex-list .ex-title{font-size:19px;line-height:1.3;flex:1 1 100%;order:3;text-wrap:pretty}",
     "#ex-list .ex-id{font-size:10px;letter-spacing:1px;padding:3px 7px;color:#6b5d45;background:transparent;border:1px solid #cdbfa3;border-radius:6px}",
     "#ex-list .ex-card.done .ex-id{color:#fff;background:#1f8a4e;border-color:#1f8a4e}",
+    "#ex-list .ex-star{margin-left:auto;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;font-size:19px;line-height:1;color:#8a7c63;background:transparent;border:0;cursor:pointer;padding:0}",
+    "#ex-list .ex-star[aria-pressed=\"true\"]{color:#b5892a}",
     "#ex-list .ex-prompt{margin:0;font-size:16.5px;line-height:1.55}",
     "#ex-list .ex-editor{min-height:110px;font-size:13px;line-height:1.6;padding:12px 14px;border-radius:11px;background:#fff;color:" + INK + ";border:1px solid #cdbfa3}",
     "#ex-list .ex-actions{margin:0;gap:10px}",
