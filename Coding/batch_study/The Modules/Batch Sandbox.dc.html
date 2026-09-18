@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="../../../_lib/fonts/gf-135340b0.css" rel="stylesheet" />
+<style>
+  body { margin:0; background:#070a0f; color:#d7dee9;
+    font-family:"JetBrains Mono",ui-monospace,Consolas,monospace; font-size:14px; line-height:1.65;
+    -webkit-font-smoothing:antialiased; }
+  * { box-sizing:border-box; }
+  a { color:#e8b64c; text-decoration:none; }
+  a:hover { color:#f5cd77; }
+  input { outline:none; }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline:2px solid #e8b64c; outline-offset:2px; }
+  [data-term]::-webkit-scrollbar, [data-side]::-webkit-scrollbar { width:8px; }
+  [data-term]::-webkit-scrollbar-thumb, [data-side]::-webkit-scrollbar-thumb { background:#28313f; }
+  @media (max-width:820px) {
+    [data-split] { grid-template-columns:1fr !important; }
+    [data-side] { max-height:none !important; order:2; }
+    [data-term] { height:56vh !important; }
+    [data-shell] { padding:12px 9px 60px !important; }
+  }
+</style>
+</helmet>
+<div data-shell="1" style="max-width:1180px;margin:0 auto;padding:20px 18px 70px">
+  <div style="border:1px solid #28313f;border-radius:7px;overflow:hidden;box-shadow:0 30px 70px -40px rgba(0,0,0,1)">
+
+    <div style="display:flex;align-items:center;gap:9px;padding:9px 13px;background:#1b2230;border-bottom:1px solid #28313f;height:39px">
+      <span style="width:10px;height:10px;border-radius:50%;background:#e5674b"></span>
+      <span style="width:10px;height:10px;border-radius:50%;background:#e8b64c"></span>
+      <span style="width:10px;height:10px;border-radius:50%;background:#6ee29a"></span>
+      <span style="margin-left:6px;font-size:11px;color:#8592a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ winTitle }}</span>
+      <span style="margin-left:auto;font-size:11px;color:#e8b64c;white-space:nowrap">{{ meter }}</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 14px;background:#0f141c;border-bottom:1px solid #28313f;font-size:11px;letter-spacing:1.1px">
+      <a href="../index.html" style="color:#8592a6" style-hover="color:#e8b64c">BATCH SCRIPTS</a>
+      <span style="color:#28313f">\</span>
+      <span style="color:#f5cd77">SANDBOX</span>
+      <span style="margin-left:auto;display:flex;gap:8px">
+        <a href="Batch Command Reference.dc.html" style="color:#8592a6;border:1px solid #28313f;padding:5px 11px" style-hover="color:#e8b64c;border-color:#e8b64c">COMMAND REFERENCE</a>
+      </span>
+    </div>
+
+    <div style="padding:20px 20px 8px;background:#070a0f">
+      <h1 style="margin:0;font-size:22px;letter-spacing:1px;color:#f2f6fb;font-weight:700">TYPING SANDBOX</h1>
+      <p style="margin:8px 0 0;max-width:72ch;color:#9aa7b8;font-size:13px">A fake C: drive that answers like cmd.exe. Type a real command, see the real reply — including the real error messages. Nothing here touches your computer, so try the dangerous ones.</p>
+    </div>
+
+    <div data-split="1" style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:0;background:#070a0f">
+
+      <div style="border-right:1px solid #28313f;min-width:0">
+        <div data-term="1" ref="{{ termRef }}" onClick="{{ focusIn }}" style="height:470px;overflow-y:auto;padding:14px 16px;background:#050709;cursor:text">
+          <sc-for list="{{ lines }}" as="l" hint-placeholder-count="6">
+            <div style="{{ l.style }}">{{ l.t }}</div>
+          </sc-for>
+          <div style="display:flex;align-items:baseline;gap:7px;margin-top:2px">
+            <span style="color:#6ee29a;font-size:13px;white-space:pre">{{ prompt }}</span>
+            <input ref="{{ inRef }}" value="{{ input }}" onInput="{{ onIn }}" onKeyDown="{{ onKey }}" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="{{ ph }}" style="flex:1;min-width:40px;background:transparent;border:none;color:#e8eef7;font-family:inherit;font-size:13px;padding:0" />
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;background:#0f141c;border-top:1px solid #28313f">
+          <span style="font-size:10.5px;letter-spacing:1px;color:#6b7788">TRY</span>
+          <sc-for list="{{ quick }}" as="q" hint-placeholder-count="5">
+            <button style="{{ q.style }}" onClick="{{ q.go }}">{{ q.label }}</button>
+          </sc-for>
+          <button style="{{ resetStyle }}" onClick="{{ reset }}">RESET DRIVE</button>
+        </div>
+      </div>
+
+      <div data-side="1" style="max-height:519px;overflow-y:auto;min-width:0;background:#070a0f">
+        <sc-if value="{{ showTasks }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:14px 15px;border-bottom:1px solid #1b2230">
+            <div style="font-size:10.5px;letter-spacing:1.4px;color:#6b7788;margin-bottom:9px">MISSION · {{ taskCount }}</div>
+            <div style="border:1px solid #28313f;border-left:2px solid #e8b64c;background:#0b0f16;padding:12px 13px">
+              <div style="color:#f5cd77;font-size:13.5px;line-height:1.5">{{ curTask }}</div>
+              <sc-if value="{{ showHint }}">
+                <div style="color:#6b7788;font-size:12px;margin-top:7px">{{ curHint }}</div>
+              </sc-if>
+              <div style="color:#6ee29a;font-size:12px;margin-top:7px">{{ allDone }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;margin-top:10px">
+              <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="6">
+                <div style="{{ t.style }}"><span style="{{ t.markStyle }}">{{ t.mark }}</span> {{ t.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="padding:14px 15px;border-bottom:1px solid #1b2230">
+          <div style="font-size:10.5px;letter-spacing:1.4px;color:#6b7788;margin-bottom:9px">DRIVE · C:</div>
+          <div style="display:flex;flex-direction:column;gap:1px;font-size:12.5px">
+            <sc-for list="{{ tree }}" as="n" hint-placeholder-count="8">
+              <div style="{{ n.style }}">{{ n.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="padding:14px 15px">
+          <div style="font-size:10.5px;letter-spacing:1.4px;color:#6b7788;margin-bottom:8px">KEYS</div>
+          <div style="color:#9aa7b8;font-size:12.5px;line-height:1.8">
+            <div><span style="color:#56b6c2">&uarr; &darr;</span> &nbsp;walk back through what you typed</div>
+            <div><span style="color:#56b6c2">HELP</span> &nbsp;list every command this sandbox knows</div>
+            <div><span style="color:#56b6c2">CLS</span> &nbsp;clear the screen</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:760},&quot;showTasks&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sandbox&quot;},&quot;showHints&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sandbox&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#e8b64c&quot;,&quot;options&quot;:[&quot;#e8b64c&quot;,&quot;#6ee29a&quot;,&quot;#56b6c2&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Sandbox&quot;}}">
+const KEY = "bat_sandbox_v1";
+
+/* ---------------- fake drive ---------------- */
+function dir(ch) { return { d: true, ch: ch || {}, at: "" }; }
+function file(text, at) { return { d: false, text: text == null ? "" : text, at: at || "A" }; }
+
+function freshFS() {
+  return dir({
+    "Users": dir({
+      "VaishM": dir({
+        "Desktop": dir({}),
+        "module01": dir({
+          "report.txt": file("Q3 summary\r\nRevenue up 12 percent\r\nerror: one invoice missing\r\n"),
+          "data.csv": file("name,score\r\nAsha,91\r\nRavi,74\r\n"),
+          "old.log": file("start\r\nerror: disk full\r\ndone\r\n"),
+          "archive": dir({})
+        })
+      })
+    }),
+    "Windows": dir({ "System32": dir({}) })
+  });
+}
+const START_CWD = ["Users", "VaishM", "module01"];
+
+/* ---------------- paths ---------------- */
+function pathOf(segs) { return "C:\\" + segs.join("\\"); }
+function node(fs, segs) {
+  let n = fs;
+  for (const s of segs) {
+    if (!n || !n.d || !n.ch[s]) return null;
+    n = n.ch[s];
+  }
+  return n;
+}
+function parentOf(fs, segs) { return node(fs, segs.slice(0, -1)); }
+
+// returns segment array, or null if the written path is nonsense
+function resolve(raw, cwd) {
+  let s = String(raw || "").trim().replace(/^"|"$/g, "");
+  if (!s) return null;
+  s = s.replace(/\//g, "\\");
+  let segs;
+  if (/^[a-z]:\\/i.test(s)) {
+    if (s[0].toLowerCase() !== "c") return null;
+    segs = s.slice(3).split("\\");
+  } else if (/^[a-z]:$/i.test(s)) {
+    return s[0].toLowerCase() === "c" ? [] : null;
+  } else if (s[0] === "\\") {
+    segs = s.slice(1).split("\\");
+  } else {
+    segs = cwd.concat(s.split("\\"));
+  }
+  const out = [];
+  for (const p of segs) {
+    if (p === "" || p === ".") continue;
+    if (p === "..") { out.pop(); continue; }
+    out.push(p);
+  }
+  return out;
+}
+function leaf(raw) {
+  const s = String(raw || "").trim().replace(/^"|"$/g, "").replace(/\//g, "\\");
+  const bits = s.split("\\");
+  return bits[bits.length - 1];
+}
+function hasWild(s) { return /[*?]/.test(s); }
+function wildRe(pat) {
+  const esc = pat.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+  return new RegExp("^" + esc + "$", "i");
+}
+// every name in `d` matching pat (pat may be a plain name)
+function matchNames(d, pat, wantDirs) {
+  if (!d || !d.d) return [];
+  const re = hasWild(pat) ? wildRe(pat) : null;
+  return Object.keys(d.ch).filter(function (k) {
+    const isDir = d.ch[k].d;
+    if (wantDirs === true && !isDir) return false;
+    if (wantDirs === false && isDir) return false;
+    return re ? re.test(k) : k.toLowerCase() === pat.toLowerCase();
+  });
+}
+
+/* ---------------- lexing a command line ---------------- */
+// splits on spaces but keeps "quoted strings" together
+function tokens(s) {
+  const out = []; let cur = ""; let q = false;
+  for (const c of s) {
+    if (c === '"') { q = !q; cur += c; continue; }
+    if (c === " " && !q) { if (cur) { out.push(cur); cur = ""; } continue; }
+    cur += c;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function unq(s) { return String(s || "").replace(/^"|"$/g, ""); }
+function pad(s, n) { s = String(s); while (s.length < n) s += " "; return s; }
+function padL(s, n) { s = String(s); while (s.length < n) s = " " + s; return s; }
+
+const HELP_LINES = [
+  ["ECHO",    "print a line of text, or write one into a file with > and >>"],
+  ["REM",     "a note the computer ignores"],
+  ["CLS",     "clear the screen"],
+  ["TITLE",   "rename the window"],
+  ["CD",      "change folder — CD .. goes up, CD \\ goes to the root"],
+  ["DIR",     "list a folder — /B bare, /S including subfolders, /A shows hidden"],
+  ["TREE",    "draw the folder structure — /F adds file names"],
+  ["MD",      "make a folder (MKDIR)"],
+  ["RD",      "remove a folder — /S takes the contents too, /Q stops it asking"],
+  ["COPY",    "copy a file, leaving the original"],
+  ["MOVE",    "move a file or folder"],
+  ["REN",     "rename in place (RENAME)"],
+  ["DEL",     "delete files — /S reaches subfolders, /Q stops it asking (ERASE)"],
+  ["TYPE",    "print a text file"],
+  ["FIND",    "print the lines of a file containing some text"],
+  ["ATTRIB",  "set or clear a file's flags — +H hidden, +R read-only"],
+  ["SET",     "make a variable — SET /A does arithmetic, SET /P asks you"],
+  ["IF EXIST","run the rest of the line only if that path is there"],
+  ["PAUSE",   "wait for a key press"],
+  ["VER",     "print the Windows version"],
+  ["HELP",    "this list"],
+  ["EXIT",    "clear the screen and start over"]
+];
+
+/* ---------------- missions ---------------- */
+// each check gets (fs, cwd, ctx) and returns true once satisfied
+const TASKS = [
+  { label: "Print a line of your own",
+    prompt: "Print something on screen with ECHO.",
+    hint: "ECHO Hello from the sandbox",
+    check: function (fs, cwd, c) { return c.echoed; } },
+  { label: "Make a folder called backup",
+    prompt: "Make a new folder named backup inside module01.",
+    hint: "MD backup",
+    check: function (fs) { const n = node(fs, START_CWD.concat("backup")); return !!(n && n.d); } },
+  { label: "Write notes.txt with >",
+    prompt: "Create a file called notes.txt that contains one line of text — without opening an editor.",
+    hint: "ECHO first pass done > notes.txt",
+    check: function (fs) { const n = node(fs, START_CWD.concat("notes.txt")); return !!(n && !n.d && n.text.trim()); } },
+  { label: "Add a second line with >>",
+    prompt: "Add another line to notes.txt, keeping the first one.",
+    hint: "ECHO second pass done >> notes.txt  — one > would wipe it",
+    check: function (fs) {
+      const n = node(fs, START_CWD.concat("notes.txt"));
+      return !!(n && !n.d && n.text.replace(/\r/g, "").trim().split("\n").length >= 2);
+    } },
+  { label: "Copy notes.txt into backup",
+    prompt: "Copy notes.txt into the backup folder.",
+    hint: "COPY notes.txt backup\\",
+    check: function (fs) { const n = node(fs, START_CWD.concat(["backup", "notes.txt"])); return !!(n && !n.d); } },
+  { label: "Rename the copy to notes_old.txt",
+    prompt: "Go into backup and rename the copy to notes_old.txt.",
+    hint: "CD backup  then  REN notes.txt notes_old.txt",
+    check: function (fs) { const n = node(fs, START_CWD.concat(["backup", "notes_old.txt"])); return !!(n && !n.d); } },
+  { label: "Hide it with ATTRIB",
+    prompt: "Make notes_old.txt hidden.",
+    hint: "ATTRIB +H notes_old.txt  — then plain DIR will not show it, DIR /A will",
+    check: function (fs) {
+      const n = node(fs, START_CWD.concat(["backup", "notes_old.txt"]));
+      return !!(n && n.at.indexOf("H") >= 0);
+    } },
+  { label: "Find the error line in old.log",
+    prompt: "Print only the lines of old.log that mention an error.",
+    hint: 'FIND "error" old.log  — the text must be in double quotes',
+    check: function (fs, cwd, c) { return c.found; } },
+  { label: "Delete every .log file",
+    prompt: "Delete all .log files in module01 using a wildcard.",
+    hint: "DEL *.log",
+    check: function (fs) { return matchNames(node(fs, START_CWD), "*.log").length === 0; } },
+  { label: "Remove the archive folder",
+    prompt: "Remove the empty archive folder.",
+    hint: "RD archive  — RD refuses a folder with anything in it unless you add /S",
+    check: function (fs) { return !node(fs, START_CWD.concat("archive")); } }
+];
+
+class Component extends DCLogic {
+  state = (function () {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) {}
+    return {
+      fs: freshFS(),
+      cwd: START_CWD.slice(),
+      vars: {},
+      title: "C:\\WINDOWS\\system32\\cmd.exe",
+      lines: [
+        { t: "Microsoft Windows [Version 10.0.19045.4529]", c: "#9aa7b8" },
+        { t: "(c) Microsoft Corporation. All rights reserved. This one is a fake.", c: "#6b7788" },
+        { t: "", c: "#9aa7b8" },
+        { t: "REM  type HELP for the command list. RESET DRIVE puts the files back.", c: "#6b7788" },
+        { t: "", c: "#9aa7b8" }
+      ],
+      input: "",
+      hist: [],
+      hi: -1,
+      done: saved.done || {},
+      ctx: {}
+    };
+  })();
+
+  componentDidMount() { this.focusIn(); }
+  componentDidUpdate() {
+    const t = this.term;
+    if (t) t.scrollTop = t.scrollHeight;
+  }
+
+  termRef = (el) => { this.term = el; };
+  inRef = (el) => { this.inEl = el; };
+  focusIn = () => { if (this.inEl) this.inEl.focus(); };
+  onIn = (e) => { this.setState({ input: e.target.value }); };
+
+  onKey = (e) => {
+    const st = this.state;
+    if (e.key === "Enter") { e.preventDefault(); this.submit(st.input); return; }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!st.hist.length) return;
+      const i = st.hi < 0 ? st.hist.length - 1 : Math.max(0, st.hi - 1);
+      this.setState({ hi: i, input: st.hist[i] });
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (st.hi < 0) return;
+      const i = st.hi + 1;
+      if (i >= st.hist.length) { this.setState({ hi: -1, input: "" }); return; }
+      this.setState({ hi: i, input: st.hist[i] });
+    }
+  };
+
+  run = (cmd) => { this.submit(cmd); };
+
+  reset = () => {
+    this.setState({
+      fs: freshFS(), cwd: START_CWD.slice(), vars: {}, input: "", hi: -1, ctx: {},
+      lines: [{ t: "REM  drive restored to its starting state.", c: "#6b7788" }, { t: "", c: "#9aa7b8" }]
+    });
+    this.focusIn();
+  };
+
+  prompt() { return pathOf(this.state.cwd) + ">"; }
+
+  submit(raw) {
+    const st = this.state;
+    const line = String(raw || "");
+    const out = st.lines.concat([{ t: this.prompt() + line, c: "#6ee29a" }]);
+    const fs = st.fs;
+    const ctx = Object.assign({}, st.ctx);
+    const patch = { cwd: st.cwd.slice(), vars: Object.assign({}, st.vars), title: st.title, clear: false };
+
+    if (line.trim()) this.exec(line, fs, patch, out, ctx);
+
+    const lines = patch.clear ? [] : out.concat([{ t: "", c: "#9aa7b8" }]);
+    const done = Object.assign({}, st.done);
+    TASKS.forEach(function (t, i) {
+      if (!done[i]) { try { if (t.check(fs, patch.cwd, ctx)) done[i] = 1; } catch (e) {} }
+    });
+    try { localStorage.setItem(KEY, JSON.stringify({ done: done })); } catch (e) {}
+
+    const hist = line.trim() ? st.hist.concat([line]) : st.hist;
+    this.setState({
+      lines: lines, fs: fs, cwd: patch.cwd, vars: patch.vars, title: patch.title,
+      input: "", hist: hist, hi: -1, done: done, ctx: ctx
+    });
+    this.focusIn();
+  }
+
+  expand(s, patch) {
+    const self = this;
+    return String(s).replace(/%([A-Za-z_][A-Za-z0-9_]*)%/g, function (m, name) {
+      const k = name.toLowerCase();
+      if (k === "cd") return pathOf(patch.cwd);
+      if (k === "date") return "18/09/2026";
+      if (k === "time") return "21:14:07.42";
+      const v = patch.vars[k];
+      return v === undefined ? m : v;
+    });
+  }
+
+  /* one command line → output lines + mutations */
+  exec(rawLine, fs, patch, out, ctx) {
+    const say = function (t, c) { out.push({ t: t, c: c || "#d7dee9" }); };
+    const err = function (t) { out.push({ t: t, c: "#e5674b" }); };
+
+    let line = this.expand(rawLine.trim(), patch);
+
+    // IF EXIST <path> <command>
+    const ifm = line.match(/^if\s+(not\s+)?exist\s+("[^"]+"|\S+)\s+(.+)$/i);
+    if (ifm) {
+      const there = !!node(fs, resolve(ifm[2], patch.cwd) || ["\u0000"]);
+      const wanted = ifm[1] ? !there : there;
+      if (wanted) this.exec(ifm[3], fs, patch, out, ctx);
+      return;
+    }
+
+    // redirection:  cmd > file   |   cmd >> file
+    let redir = null;
+    const rm = line.match(/^(.*?)\s*(>>|>)\s*("[^"]+"|\S+)\s*$/);
+    if (rm && !/^rem\b/i.test(line)) {
+      line = rm[1];
+      redir = { append: rm[2] === ">>", path: rm[3] };
+    }
+
+    const tk = tokens(line);
+    if (!tk.length) return;
+    const cmd = tk[0].toLowerCase().replace(/^@/, "");
+    const args = tk.slice(1);
+    const flags = args.filter(function (a) { return a[0] === "/"; }).map(function (a) { return a.toLowerCase(); });
+    const rest = args.filter(function (a) { return a[0] !== "/"; });
+    const has = function (f) { return flags.indexOf(f) >= 0; };
+    const captured = [];
+    const emit = redir
+      ? function (t, c) { captured.push(t); }
+      : say;
+
+    const writeRedir = function () {
+      if (!redir) return;
+      const segs = resolve(redir.path, patch.cwd);
+      const p = segs && parentOf(fs, segs);
+      if (!segs || !p || !p.d) { err("The system cannot find the path specified."); return; }
+      const name = segs[segs.length - 1];
+      const body = captured.join("\r\n") + "\r\n";
+      const ex = p.ch[name];
+      if (ex && ex.d) { err("Access is denied."); return; }
+      if (ex && redir.append) ex.text += body;
+      else p.ch[name] = file(body);
+    };
+
+    switch (cmd) {
+      case "rem":
+      case "::":
+        return;
+
+      case "cls":
+        patch.clear = true; return;
+
+      case "exit":
+        patch.clear = true; return;
+
+      case "ver":
+        emit(""); emit("Microsoft Windows [Version 10.0.19045.4529]"); writeRedir(); return;
+
+      case "title":
+        patch.title = unq(args.join(" ")) || patch.title; return;
+
+      case "color":
+        if (!rest.length) { say("REM  colour reset (the sandbox keeps one theme)", "#6b7788"); return; }
+        say("REM  COLOR " + rest[0] + " accepted — this window keeps its own palette.", "#6b7788");
+        return;
+
+      case "pause":
+        say("Press any key to continue . . .", "#9aa7b8"); return;
+
+      case "help":
+        emit("For more information on a specific command, type HELP command-name");
+        emit("");
+        HELP_LINES.forEach(function (h) { emit(pad(h[0], 10) + h[1]); });
+        writeRedir(); return;
+
+      case "echo": {
+        const body = rawLine.trim().replace(/^@?echo\s*/i, "");
+        const bodyEx = redir ? this.expand(rm[1].trim().replace(/^@?echo\s*/i, ""), patch) : this.expand(body, patch);
+        const low = bodyEx.trim().toLowerCase();
+        if (low === "off" || low === "on") { say("REM  command echo is already " + low + " in this sandbox.", "#6b7788"); return; }
+        if (!bodyEx) { emit("ECHO is on."); writeRedir(); return; }
+        const text = bodyEx.replace(/^\./, "");
+        emit(text);
+        if (text.trim()) ctx.echoed = true;
+        writeRedir(); return;
+      }
+
+      case "set": {
+        if (has("/a")) {
+          const m = args.join(" ").replace(/^\/a\s*/i, "").match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+          if (!m) { err("The syntax of the command is incorrect."); return; }
+          let expr = m[2].replace(/[^0-9+\-*/%() ]/g, "");
+          let v;
+          try { v = Math.trunc(eval(expr)); } catch (e) { v = NaN; }
+          if (!isFinite(v)) { err("Missing operator."); return; }
+          patch.vars[m[1].toLowerCase()] = String(v);
+          say(String(v));
+          return;
+        }
+        if (has("/p")) {
+          const m2 = args.join(" ").replace(/^\/p\s*/i, "").match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$/);
+          if (m2) say(m2[2] + "  (SET /P waits for typing — not available in the sandbox)", "#6b7788");
+          return;
+        }
+        const joined = args.join(" ");
+        const m3 = joined.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=(.*)$/);
+        if (m3) { patch.vars[m3[1].toLowerCase()] = m3[2]; return; }
+        const keys = Object.keys(patch.vars);
+        if (!keys.length) { emit("Environment variable " + (joined || "") + " not defined"); writeRedir(); return; }
+        keys.forEach(function (k) { emit(k.toUpperCase() + "=" + patch.vars[k]); });
+        writeRedir(); return;
+      }
+
+      case "cd":
+      case "chdir": {
+        const target = rest.filter(function (r) { return r.toLowerCase() !== "/d"; })[0];
+        if (!target) { emit(pathOf(patch.cwd)); writeRedir(); return; }
+        const segs = resolve(target, patch.cwd);
+        const n = segs && node(fs, segs);
+        if (!segs || !n || !n.d) { err("The system cannot find the path specified."); return; }
+        patch.cwd = segs; return;
+      }
+
+      case "dir": {
+        const where = rest[0] || "";
+        let base = patch.cwd, pat = "*";
+        if (where) {
+          const segs = resolve(where, patch.cwd);
+          if (!segs) { err("The system cannot find the path specified."); return; }
+          const n = node(fs, segs);
+          if (n && n.d) base = segs;
+          else { base = segs.slice(0, -1); pat = segs[segs.length - 1]; }
+        }
+        const d = node(fs, base);
+        if (!d || !d.d) { err("The system cannot find the path specified."); return; }
+        const self2 = this;
+        const listDir = function (segs) {
+          const dd = node(fs, segs);
+          let names = matchNames(dd, pat);
+          if (!has("/a")) names = names.filter(function (k) { return dd.ch[k].at.indexOf("H") < 0; });
+          names.sort();
+          if (has("/b")) {
+            names.forEach(function (k) { emit(has("/s") ? pathOf(segs.concat(k)) : k); });
+          } else {
+            emit(" Directory of " + pathOf(segs));
+            emit("");
+            if (segs.length) { emit("18/09/2026  21:14    <DIR>          ."); emit("18/09/2026  21:14    <DIR>          .."); }
+            let files = 0, bytes = 0, dirs = 0;
+            names.forEach(function (k) {
+              const nn = dd.ch[k];
+              if (nn.d) { dirs++; emit("18/09/2026  21:14    <DIR>          " + k); }
+              else { files++; bytes += nn.text.length; emit("18/09/2026  21:14    " + padL(nn.text.length, 14) + " " + k); }
+            });
+            emit(padL(files, 15) + " File(s)" + padL(bytes, 15) + " bytes");
+            emit(padL(dirs + (segs.length ? 2 : 0), 15) + " Dir(s)   24,113,807,360 bytes free");
+            if (!files && !dirs) { captured.length = 0; err("File Not Found"); return; }
+          }
+          if (has("/s")) {
+            Object.keys(dd.ch).sort().forEach(function (k) { if (dd.ch[k].d) listDir(segs.concat(k)); });
+          }
+        };
+        emit(" Volume in drive C has no label.");
+        emit(" Volume Serial Number is 9C41-2F0A");
+        emit("");
+        listDir(base);
+        writeRedir(); return;
+      }
+
+      case "tree": {
+        const segs = rest[0] ? resolve(rest[0], patch.cwd) : patch.cwd;
+        const root = segs && node(fs, segs);
+        if (!root || !root.d) { err("The system cannot find the path specified."); return; }
+        emit("Folder PATH listing for volume C");
+        emit("Volume serial number is 9C41-2F0A");
+        emit(pathOf(segs));
+        const walk = function (d, pre) {
+          let keys = Object.keys(d.ch).sort();
+          if (!has("/f")) keys = keys.filter(function (k) { return d.ch[k].d; });
+          keys.forEach(function (k, i) {
+            const last = i === keys.length - 1;
+            emit(pre + (last ? "\u2514\u2500\u2500\u2500" : "\u251C\u2500\u2500\u2500") + k);
+            if (d.ch[k].d) walk(d.ch[k], pre + (last ? "    " : "\u2502   "));
+          });
+        };
+        walk(root, "");
+        writeRedir(); return;
+      }
+
+      case "md":
+      case "mkdir": {
+        if (!rest.length) { err("The syntax of the command is incorrect."); return; }
+        const segs = resolve(rest[0], patch.cwd);
+        if (!segs || !segs.length) { err("The syntax of the command is incorrect."); return; }
+        if (node(fs, segs)) { err("A subdirectory or file " + unq(rest[0]) + " already exists."); return; }
+        let n = fs;
+        for (const s of segs) {
+          if (!n.ch[s]) n.ch[s] = dir({});
+          if (!n.ch[s].d) { err("A subdirectory or file " + unq(rest[0]) + " already exists."); return; }
+          n = n.ch[s];
+        }
+        return;
+      }
+
+      case "rd":
+      case "rmdir": {
+        if (!rest.length) { err("The syntax of the command is incorrect."); return; }
+        const segs = resolve(rest[0], patch.cwd);
+        const n = segs && node(fs, segs);
+        if (!segs || !segs.length || !n) { err("The system cannot find the file specified."); return; }
+        if (!n.d) { err("The directory name is invalid."); return; }
+        if (Object.keys(n.ch).length && !has("/s")) { err("The directory is not empty."); return; }
+        if (pathOf(patch.cwd).toLowerCase().indexOf(pathOf(segs).toLowerCase()) === 0) {
+          err("The process cannot access the file because it is being used by another process."); return;
+        }
+        delete parentOf(fs, segs).ch[segs[segs.length - 1]];
+        return;
+      }
+
+      case "copy":
+      case "xcopy": {
+        if (rest.length < 1) { err("The syntax of the command is incorrect."); return; }
+        const srcSegs = resolve(rest[0], patch.cwd);
+        const srcDir = srcSegs && parentOf(fs, srcSegs);
+        const pat = srcSegs && srcSegs[srcSegs.length - 1];
+        if (!srcSegs || !srcDir || !srcDir.d) { err("The system cannot find the path specified."); return; }
+        const names = matchNames(srcDir, pat, false);
+        if (!names.length) { err("The system cannot find the file specified."); return; }
+        const dstRaw = rest[1] || ".";
+        const endsSlash = /[\\/]$/.test(unq(dstRaw)) || unq(dstRaw) === ".";
+        const dstSegs = resolve(dstRaw, patch.cwd);
+        if (!dstSegs) { err("The system cannot find the path specified."); return; }
+        const dstNode = node(fs, dstSegs);
+        const intoFolder = endsSlash || (dstNode && dstNode.d) || names.length > 1;
+        if (intoFolder) {
+          const d = node(fs, dstSegs);
+          if (!d || !d.d) { err("The system cannot find the path specified."); return; }
+          names.forEach(function (k) { d.ch[k] = file(srcDir.ch[k].text, srcDir.ch[k].at); });
+        } else {
+          const p = parentOf(fs, dstSegs);
+          if (!p || !p.d) { err("The system cannot find the path specified."); return; }
+          p.ch[dstSegs[dstSegs.length - 1]] = file(srcDir.ch[names[0]].text, srcDir.ch[names[0]].at);
+        }
+        emit(padL(names.length, 8) + " file(s) copied.");
+        writeRedir(); return;
+      }
+
+      case "move": {
+        if (rest.length < 2) { err("The syntax of the command is incorrect."); return; }
+        const srcSegs = resolve(rest[0], patch.cwd);
+        const srcDir = srcSegs && parentOf(fs, srcSegs);
+        const pat = srcSegs && srcSegs[srcSegs.length - 1];
+        if (!srcSegs || !srcDir || !srcDir.d) { err("The system cannot find the path specified."); return; }
+        const names = matchNames(srcDir, pat);
+        if (!names.length) { err("The system cannot find the file specified."); return; }
+        const dstSegs = resolve(rest[1], patch.cwd);
+        if (!dstSegs) { err("The system cannot find the path specified."); return; }
+        const dstNode = node(fs, dstSegs);
+        const intoFolder = /[\\/]$/.test(unq(rest[1])) || (dstNode && dstNode.d) || names.length > 1;
+        if (intoFolder) {
+          const d = node(fs, dstSegs);
+          if (!d || !d.d) { err("The system cannot find the path specified."); return; }
+          names.forEach(function (k) { d.ch[k] = srcDir.ch[k]; delete srcDir.ch[k]; });
+        } else {
+          const p = parentOf(fs, dstSegs);
+          if (!p || !p.d) { err("The system cannot find the path specified."); return; }
+          p.ch[dstSegs[dstSegs.length - 1]] = srcDir.ch[names[0]];
+          delete srcDir.ch[names[0]];
+        }
+        emit(padL(names.length, 8) + " file(s) moved.");
+        writeRedir(); return;
+      }
+
+      case "ren":
+      case "rename": {
+        if (rest.length < 2) { err("The syntax of the command is incorrect."); return; }
+        const segs = resolve(rest[0], patch.cwd);
+        const p = segs && parentOf(fs, segs);
+        if (!segs || !p || !p.d) { err("The system cannot find the path specified."); return; }
+        const pat = segs[segs.length - 1];
+        const names = matchNames(p, pat);
+        if (!names.length) { err("The system cannot find the file specified."); return; }
+        const newName = leaf(rest[1]);
+        if (unq(rest[1]).indexOf("\\") >= 0 || unq(rest[1]).indexOf("/") >= 0) {
+          err("The syntax of the command is incorrect."); return;
+        }
+        if (names.length > 1) { err("The syntax of the command is incorrect."); return; }
+        if (p.ch[newName]) { err("A duplicate file name exists, or the file cannot be found."); return; }
+        p.ch[newName] = p.ch[names[0]];
+        delete p.ch[names[0]];
+        return;
+      }
+
+      case "del":
+      case "erase": {
+        if (!rest.length) { err("The syntax of the command is incorrect."); return; }
+        const self3 = this;
+        let n = 0, locked = 0;
+        const killIn = function (segs, pat) {
+          const d = node(fs, segs);
+          if (!d || !d.d) return;
+          matchNames(d, pat, false).forEach(function (k) {
+            if (d.ch[k].at.indexOf("R") >= 0) { locked++; err("  " + pathOf(segs.concat(k)) + " - Access is denied."); return; }
+            delete d.ch[k]; n++;
+          });
+          if (has("/s")) Object.keys(d.ch).forEach(function (k) { if (d.ch[k].d) killIn(segs.concat(k), pat); });
+        };
+        rest.forEach(function (r) {
+          const segs = resolve(r, patch.cwd);
+          if (!segs || !segs.length) return;
+          const nn = node(fs, segs);
+          if (nn && nn.d) {
+            if (!has("/q")) say(pathOf(segs) + "\\*, Are you sure (Y/N)? Y  — the sandbox answers Y for you", "#e8b64c");
+            const d = nn;
+            Object.keys(d.ch).forEach(function (k) { if (!d.ch[k].d) { delete d.ch[k]; n++; } });
+            return;
+          }
+          killIn(segs.slice(0, -1), segs[segs.length - 1]);
+        });
+        if (!n && !locked) err("Could Not Find " + pathOf(resolve(rest[0], patch.cwd) || []));
+        return;
+      }
+
+      case "type": {
+        if (!rest.length) { err("The syntax of the command is incorrect."); return; }
+        const segs = resolve(rest[0], patch.cwd);
+        const n = segs && node(fs, segs);
+        if (!segs || !n) { err("The system cannot find the file specified."); return; }
+        if (n.d) { err("Access is denied."); return; }
+        n.text.replace(/\r/g, "").split("\n").forEach(function (l, i, a) {
+          if (i === a.length - 1 && l === "") return;
+          emit(l);
+        });
+        writeRedir(); return;
+      }
+
+      case "more": {
+        if (!rest.length) { err("The syntax of the command is incorrect."); return; }
+        this.exec("type " + rest[0], fs, patch, out, ctx);
+        say("-- More  (the sandbox shows it all at once) --", "#6b7788");
+        return;
+      }
+
+      case "find":
+      case "findstr": {
+        const needle = args.filter(function (a) { return a[0] === '"'; })[0];
+        const fileArg = rest.filter(function (a) { return a[0] !== '"'; })[0];
+        if (!needle) { err("FIND: Parameter format not correct"); return; }
+        if (!fileArg) { err("FIND: Parameter format not correct"); return; }
+        const segs = resolve(fileArg, patch.cwd);
+        const n = segs && node(fs, segs);
+        if (!segs || !n || n.d) { err("File not found - " + unq(fileArg)); return; }
+        const needleTxt = unq(needle);
+        const ci = has("/i") || cmd === "findstr";
+        const hitLines = n.text.replace(/\r/g, "").split("\n").filter(function (l) {
+          return ci ? l.toLowerCase().indexOf(needleTxt.toLowerCase()) >= 0 : l.indexOf(needleTxt) >= 0;
+        });
+        if (cmd === "find") { emit(""); emit("---------- " + leaf(fileArg).toUpperCase()); }
+        hitLines.forEach(function (l) { emit(l); });
+        if (hitLines.length) ctx.found = true;
+        writeRedir(); return;
+      }
+
+      case "attrib": {
+        const targets = rest.length ? rest : ["*"];
+        const setters = args.filter(function (a) { return /^[+\-][hrasHRAS]$/.test(a); });
+        const plain = rest.filter(function (a) { return !/^[+\-][hrasHRAS]$/.test(a); });
+        const tgt = plain.length ? plain : ["*"];
+        tgt.forEach(function (r) {
+          const segs = resolve(r, patch.cwd);
+          const p = segs && parentOf(fs, segs);
+          if (!segs || !p || !p.d) { err("The system cannot find the path specified."); return; }
+          const names = matchNames(p, segs[segs.length - 1]);
+          if (!names.length) { err("File not found - " + pathOf(segs)); return; }
+          names.forEach(function (k) {
+            const nn = p.ch[k];
+            if (setters.length) {
+              setters.forEach(function (s) {
+                const f = s[1].toUpperCase();
+                if (s[0] === "+") { if (nn.at.indexOf(f) < 0) nn.at += f; }
+                else nn.at = nn.at.split(f).join("");
+              });
+            } else {
+              const flag = function (f) { return nn.at.indexOf(f) >= 0 ? f : " "; };
+              emit(flag("A") + "  " + flag("S") + flag("H") + flag("R") + "     " + pathOf(segs.slice(0, -1).concat(k)));
+            }
+          });
+        });
+        writeRedir(); return;
+      }
+
+      default:
+        err("'" + tk[0] + "' is not recognized as an internal or external command,");
+        err("operable program or batch file.");
+        return;
+    }
+  }
+
+  renderVals() {
+    const self = this, st = this.state;
+    const accent = this.props.accent || "#e8b64c";
+    const showTasks = this.props.showTasks !== false;
+    const showHint = this.props.showHints !== false;
+
+    const lines = st.lines.map(function (l) {
+      return {
+        t: l.t === "" ? "\u00A0" : l.t,
+        style: "white-space:pre-wrap;word-break:break-word;font-size:13px;color:" + (l.c || "#d7dee9")
+      };
+    });
+
+    const qStyle = "flex:0 0 auto;background:#0b0f16;border:1px solid #28313f;color:#9aa7b8;font-family:inherit;font-size:10.5px;letter-spacing:0.6px;padding:6px 10px;cursor:pointer;white-space:nowrap";
+    const quick = ["DIR", "TREE /F", "TYPE report.txt", 'FIND "error" old.log', "HELP"].map(function (c) {
+      return { label: c, style: qStyle, go: function () { self.run(c); } };
+    });
+
+    // flattened drive view, module01 opened
+    const tree = [];
+    const walk = function (d, segs, depth) {
+      Object.keys(d.ch).sort(function (a, b) {
+        const ad = d.ch[a].d ? 0 : 1, bd = d.ch[b].d ? 0 : 1;
+        return ad - bd || a.localeCompare(b);
+      }).forEach(function (k) {
+        const n = d.ch[k];
+        const here = pathOf(segs.concat(k));
+        const isCwd = here.toLowerCase() === pathOf(st.cwd).toLowerCase();
+        const hidden = n.at.indexOf("H") >= 0;
+        tree.push({
+          label: "\u00A0".repeat(depth * 2) + (n.d ? (isCwd ? "\u25B8 " : "\u25AA ") : "  ") + k + (hidden ? "  (hidden)" : ""),
+          style: "white-space:pre;overflow:hidden;text-overflow:ellipsis;color:" +
+            (isCwd ? accent : n.d ? "#9aa7b8" : hidden ? "#4a5468" : "#6b7788") +
+            (isCwd ? ";font-weight:700" : "")
+        });
+        if (n.d && (depth < 1 || pathOf(st.cwd).toLowerCase().indexOf(here.toLowerCase()) === 0 || segs.length >= 2)) {
+          walk(n, segs.concat(k), depth + 1);
+        }
+      });
+    };
+    walk(st.fs, [], 0);
+
+    const nDone = Object.keys(st.done).length;
+    const tasks = TASKS.map(function (t, i) {
+      const on = !!st.done[i];
+      return {
+        label: t.label,
+        mark: on ? "\u2713" : "\u00B7",
+        markStyle: "color:" + (on ? "#6ee29a" : "#3b465a"),
+        style: "font-size:12px;color:" + (on ? "#6ee29a" : "#6b7788") + (on ? ";text-decoration:line-through" : "")
+      };
+    });
+    let cur = TASKS.length;
+    for (let i = 0; i < TASKS.length; i++) { if (!st.done[i]) { cur = i; break; } }
+    const finished = cur === TASKS.length;
+
+    return {
+      winTitle: st.title,
+      meter: "[ " + nDone + " / " + TASKS.length + " done ]",
+      lines: lines,
+      prompt: this.prompt(),
+      input: st.input,
+      ph: st.lines.length < 7 ? "type a command and press Enter" : "",
+      onIn: this.onIn, onKey: this.onKey,
+      termRef: this.termRef, inRef: this.inRef, focusIn: this.focusIn,
+      quick: quick,
+      resetStyle: "flex:0 0 auto;margin-left:auto;background:transparent;border:1px solid #28313f;color:#6b7788;font-family:inherit;font-size:10.5px;letter-spacing:1px;padding:6px 10px;cursor:pointer",
+      reset: this.reset,
+      showTasks: showTasks,
+      showHint: showHint && !finished,
+      taskCount: finished ? "ALL CLEAR" : (cur + 1) + " OF " + TASKS.length,
+      curTask: finished ? "Every mission done. The drive is yours — try DEL /S *.txt and see what it says." : TASKS[cur].prompt,
+      curHint: finished ? "" : TASKS[cur].hint,
+      allDone: finished ? "\u2713 " + TASKS.length + " of " + TASKS.length : "",
+      tasks: tasks,
+      tree: tree
+    };
+  }
+}
+
+</script>
+</body>
+</html>

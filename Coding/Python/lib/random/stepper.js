@@ -82,10 +82,10 @@
 
       '<div class="block ' + (ran ? "live cleared" : "live") + '" id="blk1"><span class="block-kick">Run it</span>' +
         '<div class="cell"><div class="cell-bar"><span class="kick">' + F.name.replace(/ /g, "_") + '.py</span>' +
-        '<button class="cell-run" id="run" type="button"' + (ran ? " disabled" : "") + ">" + (ran ? "ran ✓" : "▶ Run") + "</button></div>" +
+        '<button class="cell-run" id="run" type="button">' + (ran ? "▶ Run again" : "▶ Run") + "</button></div>" +
         "<pre>" + F.code + "</pre>" +
-        '<div class="cell-out" id="out"' + (ran ? "" : " hidden") + '><span class="kick">out</span><span>' + F.out + "</span></div>" +
-        '<div class="cav">Example only — random values differ each run unless you seed with <code>random.seed()</code>.</div></div></div>' +
+        '<div class="cell-out" id="out"' + (ran ? "" : " hidden") + '><span class="kick" id="outk">out</span><span id="outv">' + F.out + "</span></div>" +
+        '<div class="cav" id="cav">Real CPython in your browser — first run downloads ~10&nbsp;MB. Values differ every run unless you seed with <code>random.seed()</code>.</div></div></div>' +
 
       '<div class="block ' + (ran ? "live" : "shut") + '" id="blk2"><span class="block-kick">Drill 1 · ' + F.d1.kind + "</span>" +
         '<p class="shut-note" id="n2"' + (ran ? " hidden" : "") + ">Run the cell to open this</p>" +
@@ -104,20 +104,52 @@
 
     beat(ran ? 2 : 1);
 
-    var runBtn = document.getElementById("run");
-    if (runBtn && !ran) runBtn.addEventListener("click", function () {
-      this.disabled = true; this.textContent = "ran ✓";
-      document.getElementById("out").hidden = false;
+    /* unlocking is independent of whether CPython answers — a failed fetch
+       must never block the drills */
+    function unlock() {
       document.getElementById("blk1").classList.add("cleared");
-      st.ran[F.name] = 1; save(); rail();
+      if (!st.ran[F.name]) { st.ran[F.name] = 1; save(); rail(); }
       var b2 = document.getElementById("blk2");
-      b2.classList.remove("shut"); b2.classList.add("live");
-      document.getElementById("n2").hidden = true;
-      document.getElementById("w1").hidden = false;
+      if (!b2.classList.contains("live")) {
+        b2.classList.remove("shut"); b2.classList.add("live");
+        document.getElementById("n2").hidden = true;
+        document.getElementById("w1").hidden = false;
+        beat(2); nudge(b2);
+        openDrill1();
+      }
       var fwd = stage.querySelector('[data-nav="1"]');
       if (fwd) { fwd.disabled = false; fwd.classList.add("pri"); }
-      beat(2); nudge(b2);
-      openDrill1();
+    }
+
+    var runBtn = document.getElementById("run");
+    if (runBtn) runBtn.addEventListener("click", async function () {
+      var btn = this, out = document.getElementById("out"),
+          outv = document.getElementById("outv"), outk = document.getElementById("outk");
+      btn.disabled = true; btn.textContent = "running…";
+      out.hidden = false; out.classList.remove("is-err");
+      outk.textContent = "out";
+
+      if (!window.PyRun) {                                  /* runner absent */
+        outv.textContent = F.out;
+        document.getElementById("cav").innerHTML =
+          "Canned example — the CPython runner did not load. Values differ every run.";
+        btn.disabled = false; btn.textContent = "▶ Run again";
+        return unlock();
+      }
+
+      try {
+        var res = await window.PyRun.run(F.code, function (s) { outv.textContent = s; });
+        outv.textContent = res.out || "(no output)";
+        outk.textContent = res.err ? "error" : "out";
+        if (res.err) out.classList.add("is-err");
+      } catch (e) {
+        outv.textContent = F.out;
+        outk.textContent = "out · offline";
+        document.getElementById("cav").innerHTML =
+          "Showing the saved example — CPython could not be fetched (offline?). Values differ every run.";
+      }
+      btn.disabled = false; btn.textContent = "▶ Run again";
+      unlock();
     });
 
     var d2Mounted = false;
