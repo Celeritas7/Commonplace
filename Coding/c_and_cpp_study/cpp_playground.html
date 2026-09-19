@@ -2803,18 +2803,43 @@ sb.auth.getSession().then(function(res){
 (function(){
   var PFX = "cpp.draft.", WAIT = 400, MAX = 200000;
 
+  /* A draft is text PLUS the mode it was written in. In slot mode the editor
+     holds only the inside of main(), so restoring that text into classic mode
+     compiles a headless program — g++ answers "'cout' does not name a type".
+     v2 drafts are a JSON record; a bare string is a v1 draft and still loads. */
+  function mode(){
+    if (typeof window.__cpx2Mode === "function") return window.__cpx2Mode();
+    try { return localStorage.getItem("commonplace_cpp_editor_mode") === "classic" ? "classic" : "slots"; }
+    catch(e){ return "classic"; }
+  }
+  function setMode(m){
+    if (m && m !== mode() && typeof window.__cpx2SetMode === "function") {
+      try { return window.__cpx2SetMode(m) === m; } catch(e){}
+    }
+    return false;
+  }
+
   function key(){
     if (window.activeExercise) return "problem:" + window.activeExercise.id;
     if (window.__synIdx != null) return "card:" + (window.__synTitle || window.__synIdx);
     return "free";
   }
   function read(k){
-    try { return localStorage.getItem(PFX + k) || ""; } catch(e){ return ""; }
+    var raw = "";
+    try { raw = localStorage.getItem(PFX + k) || ""; } catch(e){ return { code: "", mode: null }; }
+    if (raw.charAt(0) === "{") {
+      try {
+        var o = JSON.parse(raw);
+        if (o && o.v === 2) return { code: String(o.code || ""), mode: o.mode || null };
+      } catch(e){}
+    }
+    return { code: raw, mode: null };
   }
   function write(k, v){
     try {
-      if (!v || !v.trim()) localStorage.removeItem(PFX + k);
-      else if (v.length < MAX) localStorage.setItem(PFX + k, v);
+      if (!v || !v.trim()) { localStorage.removeItem(PFX + k); return; }
+      var rec = JSON.stringify({ v: 2, mode: mode(), code: v });
+      if (rec.length < MAX) localStorage.setItem(PFX + k, rec);
     } catch(e){}   /* quota / private mode: drafts degrade, nav still works */
   }
 
@@ -2829,12 +2854,17 @@ sb.auth.getSession().then(function(res){
   function land(){
     cur = key();
     var d = read(cur);
-    if (window.cm && d && d.trim() && d !== cm.getValue()) {
-      cm.setValue(d);
+    if (!window.cm || !d.code || !d.code.trim()) return;
+    /* Switch mode BEFORE writing the draft in: going to slot mode parses whatever
+       is in the editor, and the loader's full program parses — a bare body would not. */
+    var switched = setMode(d.mode);
+    if (d.code !== cm.getValue()) {
+      cm.setValue(d.code);
       var last = cm.lastLine();
       cm.setCursor({ line: last, ch: cm.getLine(last).length });
       cm.refresh();
-      if (window.toast) toast("Picked up your draft where you left it");
+      if (window.toast) toast(switched ? ("Picked up your draft — back in " + (d.mode === "slots" ? "slot" : "classic") + " mode")
+                                       : "Picked up your draft where you left it");
     }
   }
   /* leaving an item -> flush under the OLD key, then run the loader, then land */
@@ -3414,6 +3444,187 @@ html[data-theme="midnight"] #editor-panel .panel-head .cpx2-asmbtn{background:#1
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
+})();
+</script>
+
+<style id="v4p1-skip-css">
+/* -- Phase 1 polish: Skip sits next to Change problem, same quiet link weight,
+   but red so it reads as "this one comes back". -- */
+#ae-skip{background:none;border:none;padding:0;font:inherit;font-size:12.5px;font-weight:700;
+  color:#b3261e;cursor:pointer;text-decoration:underline;font-family:"JetBrains Mono",monospace;}
+#ae-skip:disabled{opacity:.45;text-decoration:none;cursor:default;}
+</style>
+
+<script src="lib/cpp-error-phrasebook.js"></script>
+<script id="v4p2-error-coach-js">
+/* ---------- v4 Phase 2: the error coach ---------------------------------------
+   The terminal used to hand over the whole g++ dump and leave the reading to you.
+   Now every failure is rewritten as: one plain-language headline, the rule in one
+   sentence, the fix as a one-line diff, and "show all" for the raw text — which is
+   kept verbatim, never edited, just folded away.
+
+   It works by rewriting #term after the run renders, so both surfaces get it: the
+   desktop output panel and the v4 peek sheet, which mirrors #term's innerHTML.
+   An unmatched error keeps its raw text open and queues its normalised signature
+   in localStorage (cpp.errq) — Phase 3 flushes that queue into Supabase. -- */
+(function(){
+  var QKEY = "cpp.errq", QMAX = 60;
+
+  var css = document.createElement("style");
+  css.id = "v4p2-coach-css";
+  css.textContent = [
+    ".cx-coach{white-space:normal;display:block;margin:0 0 12px;padding:12px 13px;border-radius:12px;",
+      "background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.14);}",
+    ".cx-coach .cx-kick{display:flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;",
+      "font-size:9.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#f4a9a9;margin-bottom:7px;}",
+    ".cx-coach .cx-kick i{width:6px;height:6px;border-radius:50%;background:#f87171;font-style:normal;flex:0 0 auto;}",
+    ".cx-coach.cx-unknown .cx-kick{color:#c9bdf0;} .cx-coach.cx-unknown .cx-kick i{background:#8b7ec8;}",
+    ".cx-coach .cx-h{font-family:inherit;font-size:14px;font-weight:700;line-height:1.35;color:#fff;margin:0 0 5px;}",
+    ".cx-coach .cx-r{font-size:12.5px;line-height:1.55;color:#cdc6e8;margin:0;text-wrap:pretty;}",
+    ".cx-coach .cx-d{display:flex;flex-direction:column;gap:3px;margin-top:10px;padding:9px 10px;border-radius:9px;",
+      "background:rgba(0,0,0,.28);font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.5;",
+      "white-space:pre-wrap;word-break:break-word;}",
+    ".cx-coach .cx-d .del{color:#f4a9a9;} .cx-coach .cx-d .add{color:#8ee6b0;}",
+    ".cx-coach .cx-ln{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.4px;color:#9c8fc0;margin-top:8px;}",
+    ".cx-coach .cx-all{margin-top:10px;background:none;border:1px solid rgba(255,255,255,.22);color:#cdc6e8;",
+      "font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;",
+      "padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;line-height:1.2;}",
+    ".cx-coach .cx-all:hover{border-color:rgba(255,255,255,.4);color:#fff;}",
+    ".cx-raw{display:none;white-space:pre-wrap;word-break:break-word;}",
+    ".cx-raw.on{display:block;}"
+  ].join("");
+  document.head.appendChild(css);
+
+  function esc(s){
+    return String(s == null ? "" : s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  /* ---- unknown shapes: one row per signature, hit_count bumped on repeat ---- */
+  function queue(v){
+    try {
+      var q = JSON.parse(localStorage.getItem(QKEY) || "[]");
+      if (!Array.isArray(q)) q = [];
+      var now = new Date().toISOString(), hit = null;
+      for (var i = 0; i < q.length; i++) if (q[i].signature === v.signature) { hit = q[i]; break; }
+      if (hit) { hit.hit_count = (hit.hit_count || 1) + 1; hit.last_seen = now; }
+      else {
+        q.unshift({
+          signature: v.signature, raw: (v.raw || "").slice(0, 4000), line: v.line || null,
+          code: (v.code || "").slice(0, 8000), item: v.item || "", hit_count: 1,
+          first_seen: now, last_seen: now
+        });
+        q = q.slice(0, QMAX);
+      }
+      localStorage.setItem(QKEY, JSON.stringify(q));
+    } catch(e){}   /* quota / private mode: coaching still works, the queue just doesn't persist */
+  }
+  window.__cppErrQueue = function(){
+    try { return JSON.parse(localStorage.getItem(QKEY) || "[]"); } catch(e){ return []; }
+  };
+
+  function itemLabel(){
+    if (window.activeExercise) return "problem:" + window.activeExercise.id;
+    if (window.__synIdx != null) return "card:" + (window.__synTitle || window.__synIdx);
+    return "free";
+  }
+
+  function card(v){
+    var h = '<div class="cx-coach' + (v.matched ? "" : " cx-unknown") + '" data-cx="1">' +
+      '<div class="cx-kick"><i></i>' + (v.matched ? "what went wrong" : "unknown error") + '</div>' +
+      '<div class="cx-h">' + esc(v.headline) + '</div>' +
+      '<div class="cx-r">' + esc(v.rule) + '</div>';
+    if (v.diff) {
+      h += '<div class="cx-d"><span class="del">- ' + esc(v.diff.before) + '</span>' +
+           '<span class="add">+ ' + esc(v.diff.after) + '</span></div>';
+    }
+    if (v.line) h += '<div class="cx-ln">line ' + v.line + (v.hint ? ' &middot; ' + esc(v.hint) : '') + '</div>';
+    else if (v.hint) h += '<div class="cx-ln">' + esc(v.hint) + '</div>';
+    h += '<button type="button" class="cx-all">' + (v.matched ? "show all &rarr;" : "hide raw &uarr;") + '</button>' +
+      '</div>';
+    return h;
+  }
+
+  /* ---- rewrite #term once per run ---- */
+  var term = null, busy = false;
+
+  function errText(el){
+    var out = [];
+    Array.prototype.forEach.call(el.querySelectorAll(".err"), function(s){ out.push(s.textContent); });
+    return out.join("\n");
+  }
+  function statusText(){
+    var s = document.getElementById("status");
+    return s ? (s.textContent || "").trim() : "";
+  }
+
+  /* The source the compiler saw is NOT always what sits in the editor: in slot
+     mode the editor holds only the main body, and Run composes includes +
+     helpers + main before firing. g++'s line numbers count that ASSEMBLED
+     program, so the diff has to read the same text. This mirrors composeFrom()
+     in cpp-practice-sections.js — same order, same blank lines, same implicit
+     `return 0;` — so line n here is line n there. */
+  function sourceForDiff(){
+    var body = window.cm ? cm.getValue() : "";
+    var wrap = document.getElementById("cpx2-slots");
+    var incEl = document.getElementById("cpx2-inc"), fnEl = document.getElementById("cpx2-fn");
+    var slots = wrap && wrap.style.display !== "none" && incEl;
+    if (!slots) return body;
+    var inc = (incEl.value || "").replace(/\s+$/, "");
+    var helpers = ((fnEl && fnEl.value) || "").replace(/^\s+|\s+$/g, "");
+    var ret = /(^|\n)\s*return\s/.test(body) ? "" : "\n    return 0;";
+    return inc + "\n\n" + (helpers ? helpers + "\n\n" : "") + "int main() {\n" + body + ret + "\n}\n";
+  }
+
+  function coach(){
+    if (busy || !term || !window.CppErrorPhrasebook) return;
+    if (term.querySelector("[data-cx]")) return;              /* already coached */
+    var st = statusText();
+    var bad = /error/i.test(st);
+    if (!bad) return;
+    var raw = errText(term);
+    if (!raw.trim() && !/runtime/i.test(st)) return;
+
+    var code = sourceForDiff();
+    var compile = /error\s*:/i.test(raw);
+    var v = window.CppErrorPhrasebook.explain(compile ? raw : "", code, {
+      runtime: !compile, status: st
+    });
+    if (!compile && !v.matched) return;                       /* nothing to say, nothing to queue */
+    v.code = code; v.item = itemLabel();
+    if (!v.matched) queue(v);
+
+    busy = true;
+    var keep = term.innerHTML;
+    term.innerHTML = card(v) + '<span class="cx-raw' + (v.matched ? "" : " on") + '">' + keep + '</span>';
+    busy = false;
+  }
+
+  document.addEventListener("click", function(e){
+    var b = e.target && e.target.closest ? e.target.closest(".cx-all") : null;
+    if (!b) return;
+    var box = b.closest("[data-cx]");
+    var raw = box && box.parentNode ? box.parentNode.querySelector(".cx-raw") : null;
+    if (!raw) return;
+    var on = raw.classList.toggle("on");
+    b.innerHTML = on ? "hide raw &uarr;" : "show all &rarr;";
+    /* the peek sheet is a snapshot of #term — refresh it so the toggle sticks there too */
+    var body = document.getElementById("v4-body"), t = document.getElementById("term");
+    if (body && t && box.closest("#term")) body.innerHTML = t.innerHTML;
+  }, false);
+
+  var t = setInterval(function(){
+    term = document.getElementById("term");
+    if (!term) return;
+    clearInterval(t);
+    new MutationObserver(function(){ setTimeout(coach, 0); }).observe(term, {childList:true, subtree:true, characterData:true});
+    /* the run renders the terminal BEFORE it stamps the status chip (and the
+       reverse on a transport failure), so both have to wake the coach */
+    var st = document.getElementById("status");
+    if (st) new MutationObserver(function(){ setTimeout(coach, 0); }).observe(st, {childList:true, attributes:true, characterData:true, subtree:true});
+    coach();
+  }, 150);
+  setTimeout(function(){ clearInterval(t); }, 15000);
 })();
 </script>
 </body>

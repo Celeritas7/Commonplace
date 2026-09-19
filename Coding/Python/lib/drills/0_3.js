@@ -1,0 +1,38 @@
+/* drills/0_3.js — Lesson 0.3 · Script, REPL, notebook. Loaded by lib/lesson-reader.js. */
+window.LESSON_DRILL_DATA = [
+{ name:"script", title:"A script remembers nothing",
+  concept:"A <code>.py</code> file runs start to finish and ends empty. It also shows you <b>nothing</b> unless you ask — the free display of values is a REPL feature, not a Python one.",
+  d1:{ kind:"Fill the blank", ask:"This ran fine in a notebook cell but goes silent as a script. Fix it.",
+    code:"total = 0\nfor n in range(1, 11):\n    total += n\n{{1}}({{2}})",
+    blanks:[{a:"print",lures:["return","show"]},{a:"total",lures:["n","range"]}],
+    why:"A notebook displays the last expression of a cell automatically. A script does not — moving code out of a cell means adding the <code>print()</code> calls you were getting for free." },
+  d2:{ kind:"Spot the bug", ask:"Why does running <code>python count.py</code> twice give 55 both times, when running the same cell twice in a notebook gave 55 then 110?",
+    code:"total = 0\nfor n in range(1, 11):\n    total += n\nprint(total)",
+    options:["The script caches its result after the first run.","Each script run starts with an empty memory, so <code>total = 0</code> happens again; a notebook cell re-runs against state the last run left behind.","<code>range</code> behaves differently outside a notebook."],
+    answer:1,
+    why:"Nothing survives between script runs — that is the whole point of a script. In a notebook <code>total</code> was already 55 when the cell ran the second time, so the loop added another 55." } },
+
+{ name:"REPL", title:"The P in REPL",
+  concept:"<i>Read, evaluate, print, loop.</i> The prompt prints the value of whatever you type and keeps everything until you close the window. <code>&gt;&gt;&gt;</code> is the prompt; <code>...</code> means it wants the rest of an indented block.",
+  d1:{ kind:"Fill the blank", ask:"You are at the REPL and want to see 2 + 2. Type the shortest thing that shows the answer.",
+    code:">>> {{1}}",
+    blanks:[{a:"2 + 2",lures:["print(2 + 2)","return 2 + 2"]}],
+    why:"The REPL prints the value of any expression, so <code>2 + 2</code> alone shows <code>4</code>. <code>print(2 + 2)</code> also works — it is just longer, and it is what the <i>script</i> version would need." },
+  d2:{ kind:"Spot the bug", ask:"You paste a <code>for</code> loop into the REPL and it sits on <code>...</code> doing nothing. What is missing?",
+    code:">>> for n in range(3):\n...     print(n)\n... ",
+    options:["A colon at the end of the print line.","An empty line — press Enter on the blank <code>...</code> prompt to close the block and run it.","<code>exit()</code>, to make the REPL flush its output."],
+    answer:1,
+    why:"The REPL cannot know whether more indented lines are coming. A blank line ends the block and the loop runs. (<code>exit()</code>, or Ctrl-Z then Enter on Windows, quits entirely — and everything you defined vanishes.)" } },
+
+{ name:"notebook", title:"When the text and the state disagree",
+  concept:"A notebook is a REPL whose history is an editable document. Editing a cell changes the <b>text</b>; nothing in memory changes until you run it. The <code>[1] [2] [3]</code> counters record the order cells were <i>run</i>, not the order they appear.",
+  d1:{ kind:"Fill the blank", ask:"Name the menu action that proves a notebook actually works, top to bottom, from a clean slate.",
+    code:"Kernel → {{1}} & {{2}}",
+    blanks:[{a:"Restart",lures:["Reconnect","Interrupt"]},{a:"Run All",lures:["Run Cell","Clear Output"]}],
+    why:"<b>Restart & Run All</b> throws away every variable and re-runs every cell in page order. If a result does not survive that, it was never really working." },
+  d2:{ kind:"Spot the bug", ask:"You edit cell 1 to <code>price = 250</code> but do not re-run it, then re-run only cell 3. It prints 110. Why?",
+    code:"[1]  price = 100      # text now reads 250, never re-run\n[2]  tax = price * 0.1\n[3]  print(price + tax)   # re-run → 110",
+    options:["A caching bug — restart the kernel and it will print 275.","Memory still holds price = 100 and tax = 10, because editing a cell changes only the text until you run it.","Cell 3 reads the saved file rather than memory."],
+    answer:1,
+    why:"This is the notebook's defining hazard: the document you read and the state you compute with can silently disagree. Someone opening the saved file later sees <code>price = 250</code> above an output of 110 and cannot explain it." } }
+];

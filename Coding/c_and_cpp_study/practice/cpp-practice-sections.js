@@ -462,6 +462,17 @@
     paintMode();
   }
 
+  /* Drafts need to know, and be able to change, which mode the editor is in:
+     a slot-mode draft is only the inside of main(), so restoring it into classic
+     mode compiles a headless program. See #v4-drafts-js. */
+  window.__cpx2Mode = function(){ return slotMode ? "slots" : "classic"; };
+  window.__cpx2SetMode = function(m){
+    var want = m === "slots";
+    if (want === slotMode) return slotMode ? "slots" : "classic";
+    setSlotMode(want, false);
+    return slotMode ? "slots" : "classic";
+  };
+
   /* ------------------------- palette targeting (capture before plus.js fires) */
   var PAL_RAW = {};
   [

@@ -1,0 +1,38 @@
+/* drills/0_2.js — Lesson 0.2 · Installing Python. Loaded by lib/lesson-reader.js. */
+window.LESSON_DRILL_DATA = [
+{ name:"which python", title:"Asking which Python is speaking",
+  concept:"A package installs into <b>one interpreter</b>, not into the machine. Before you debug a <code>ModuleNotFoundError</code>, find out which <code>python.exe</code> answered.",
+  d1:{ kind:"Fill the blank", ask:"Ask Windows for every python.exe on the PATH, in search order.",
+    code:"{{1}} {{2}}",
+    blanks:[{a:"where",lures:["which","find"]},{a:"python",lures:["python.exe","--version"]}],
+    why:"<code>where python</code> lists them all; the <b>first line</b> is the one that runs. Several lines is a future <code>ModuleNotFoundError</code>." },
+  d2:{ kind:"Spot the bug", ask:"You ran <code>pip install requests</code> in plain Command Prompt, it said success, and Anaconda's Python still cannot import it. What happened?",
+    code:"C:\\> pip install requests\nSuccessfully installed requests-2.32.3\n\n(base) C:\\> python\n>>> import requests\nModuleNotFoundError: No module named 'requests'",
+    options:["The install silently failed — run it again as administrator.","Two different Pythons: plain Command Prompt used another <code>pip</code>, so requests landed in that interpreter's site-packages.","<code>requests</code> is not compatible with Anaconda and needs <code>conda install</code> first."],
+    answer:1,
+    why:"Nothing broke. The two prompts have different PATHs, so <code>pip</code> and <code>python</code> were different installations. Install and run from the <b>same prompt</b> — for you, Anaconda Prompt." } },
+
+{ name:"sys.executable", title:"The command that settles arguments",
+  concept:"<code>where python</code> tells you what Windows <i>would</i> run. <code>sys.executable</code> tells you what <b>is</b> running. When they disagree, believe the second.",
+  d1:{ kind:"Fill the blank", ask:"Make Python report its own location in one line, without opening the REPL.",
+    code:"python -c \"import {{1}}; print({{2}})\"",
+    blanks:[{a:"sys",lures:["os","platform"]},{a:"sys.executable",lures:["sys.path","os.getcwd()"]}],
+    why:"<code>sys.executable</code> is the full path of the interpreter currently running — the ground truth. <code>sys.path</code> would show where it looks for modules, which is the follow-up question." },
+  d2:{ kind:"Spot the bug", ask:"<code>where python</code> lists Anaconda first, but a script still cannot see pandas. What should you check next?",
+    code:"(base) C:\\> where python\nC:\\Users\\me\\anaconda3\\python.exe\nC:\\Users\\me\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe",
+    options:["Nothing more — Anaconda is first, so pandas must be broken.","What the editor or scheduler actually launches: <code>where</code> only describes this prompt's PATH, not the one your script ran under.","The second entry must be uninstalled before Python will work."],
+    answer:1,
+    why:"An editor, a task scheduler or a notebook kernel can launch a different interpreter entirely. Have the failing script print <code>sys.executable</code> — then you know, rather than infer. And never uninstall the Store Python; multiple Pythons are normal." } },
+
+{ name:"conda vs pip", title:"Two installers, one folder",
+  concept:"<code>conda</code> and <code>pip</code> both write into the same site-packages and neither tells the other. Prefer <code>conda install</code>; fall back to <code>pip</code> only when conda hasn't got the package.",
+  d1:{ kind:"Fill the blank", ask:"List everything already installed for this interpreter, the Anaconda way.",
+    code:"{{1}} {{2}}",
+    blanks:[{a:"conda",lures:["pip","python"]},{a:"list",lures:["install","freeze"]}],
+    why:"<code>conda list</code> shows the ~250 packages Anaconda shipped — numpy, pandas, matplotlib, jupyter are all already there. Nothing to install for most of this book." },
+  d2:{ kind:"Spot the bug", ask:"Which habit is most likely to quietly wreck an environment?",
+    code:"conda install numpy\npip install --upgrade numpy\nconda install pandas",
+    options:["Nothing — conda and pip are interchangeable.","Upgrading a conda-installed package with pip: conda's records now describe a version that is no longer on disk.","Installing pandas after numpy — the order matters."],
+    answer:1,
+    why:"Both tools write to the same folder without coordinating. pip overwrites files conda still believes it manages, and the next <code>conda install</code> can resolve against stale information. Pick one tool per package." } }
+];

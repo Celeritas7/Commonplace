@@ -84,7 +84,7 @@
       ".rs-who{color:#374151;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
       ".rs-note{color:#9ca3af;}",
       ".rs-btn{font:inherit;font-size:11px;border:1px solid #d1d5db;background:#fff;color:#374151;",
-      "border-radius:6px;padding:3px 9px;cursor:pointer;}",
+      "border-radius:6px;padding:3px 9px;cursor:pointer;white-space:nowrap;}",
       ".rs-btn:hover{border-color:#4f46e5;color:#4f46e5;}",
       ".rs-email{font:inherit;font-size:11px;border:1px solid #d1d5db;border-radius:6px;",
       "padding:3px 8px;width:140px;background:#fff;color:#111827;}",
@@ -93,7 +93,24 @@
       "cursor:pointer;margin:2px 0 10px;transition:.15s;vertical-align:middle;}",
       ".rs-mark:hover{border-color:#16a34a;color:#15803d;}",
       ".rs-mark.rs-on{background:#dcfce7;border-color:#bbf7d0;color:#15803d;font-weight:600;}",
-      "@media(max-width:600px){.rs-bar.rs-float{top:auto;bottom:10px;right:8px;}.rs-email{width:118px;}}"
+      /* the collapse chip: only ever shown on narrow screens */
+      ".rs-toggle{display:none;align-items:center;justify-content:center;width:34px;height:34px;padding:0;",
+      "border:1px solid #e5e7eb;border-radius:999px;background:rgba(255,255,255,.94);color:#16a34a;",
+      "font:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.08);}",
+      /* Narrow screens: a fixed bar across the bottom buries the text it sits on and
+         covers whatever else is anchored there, so collapse it to a chip that the
+         reader opens on demand. Sign-out is a once-a-month action. */
+      "@media(max-width:600px){",
+      ".rs-bar.rs-float{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:10px;right:auto;",
+      "padding:0;border:0;background:none;box-shadow:none;backdrop-filter:none;gap:0;max-width:calc(100vw - 20px);}",
+      ".rs-bar.rs-float>*{display:none;}",
+      ".rs-bar.rs-float>.rs-toggle{display:inline-flex;}",
+      ".rs-bar.rs-float.rs-open{left:8px;right:8px;gap:7px;padding:8px 12px;border:1px solid #e5e7eb;",
+      "border-radius:16px;background:rgba(255,255,255,.97);box-shadow:0 8px 26px rgba(0,0,0,.16);}",
+      ".rs-bar.rs-float.rs-open>*{display:inline-flex;}",
+      ".rs-who{max-width:52vw;}",
+      ".rs-email{width:118px;}",
+      "}"
     ].join("");
     var s = document.createElement("style");
     s.setAttribute("data-reading-sync", "");
@@ -148,6 +165,29 @@
       if (inp) inp.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
     }
     if (MODE === "page") reflectPage(); // re-apply the read flag (innerHTML reset clears it)
+    addToggle();                        // innerHTML reset also drops the collapse chip
+  }
+
+  /* The bar is rebuilt with innerHTML on every auth change, so the collapse chip
+     has to be re-attached each time. It is inert (display:none) above 600px. */
+  function addToggle() {
+    var b = ensureBar();
+    if (b.querySelector(".rs-toggle")) return;
+    var t = document.createElement("button");
+    t.type = "button";
+    t.className = "rs-toggle";
+    t.setAttribute("aria-label", "Sync status");
+    t.textContent = session ? "\u2713" : "\u25CB";
+    t.onclick = function (e) { e.stopPropagation(); b.classList.toggle("rs-open"); };
+    b.insertBefore(t, b.firstChild);
+    if (!b.__rsOutside) {
+      b.__rsOutside = 1;
+      document.addEventListener("click", function (ev) {
+        if (!b.classList.contains("rs-open")) return;
+        if (b.contains(ev.target)) return;
+        b.classList.remove("rs-open");
+      }, true);
+    }
   }
 
   /* ------------------------------------------------------------- units ----- */
