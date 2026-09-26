@@ -2,7 +2,7 @@
  * Scope is the batch_study folder, but the module pulls React, support.js and the
  * fonts from ../../_lib, so those are precached too. Bump CACHE on any change.
  */
-const CACHE = "batch-study-v3";
+const CACHE = "batch-study-v10";
 const MODULE = "The%20Modules/Module%2001%20%C2%B7%20Foundations%20-%20Folders.dc.html";
 
 const PRECACHE = [
@@ -12,6 +12,7 @@ const PRECACHE = [
   "./The%20Modules/support.js",
   "./The%20Modules/Batch%20Sandbox.dc.html",
   "./The%20Modules/Batch%20Command%20Reference.dc.html",
+  "./The%20Modules/Batch%20Practice.dc.html",
   "./pwa/manifest.json",
   "./pwa/icon-192.png",
   "./pwa/icon-512.png",

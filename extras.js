@@ -4,6 +4,9 @@
 (function () {
   'use strict';
   if (window.__cpx) return; window.__cpx = 1;
+  /* Marks are PAINTED, never inserted: every highlight/bookmark is an absolutely-positioned box in
+     #cpx-layer, placed over the text with Range.getClientRects(). The page's own DOM is untouched,
+     so React-rendered pages (the .dc.html modules) can re-render freely without crashing. */
   var PAGE = decodeURIComponent(location.pathname);
   var IS_HOME = PAGE === '/' || PAGE === '/index.html';
   var LSB = 'cpx.bookmarks', LSM = 'cpx.marks', LSR = 'cpx.resume';
@@ -19,12 +22,14 @@
   /* ---------- styles ---------- */
   var css = document.createElement('style');
   css.textContent =
-    '.cpx-hl{background:#fef08a;border-radius:2px;cursor:pointer;box-shadow:0 1px 0 #eab308 inset}' +
-    '.cpx-unclear{background:#fee2e2;text-decoration:underline wavy #dc2626 2px;text-underline-offset:3px;border-radius:2px;cursor:pointer}' +
-    '.cpx-hl.cpx-noted,.cpx-unclear.cpx-noted{outline:1px dashed #7c3aed;outline-offset:1px}' +
-    '.cpx-ribbon{position:absolute;z-index:9990;width:16px;height:26px;clip-path:polygon(0 0,100% 0,100% 100%,50% 74%,0 100%);cursor:pointer;transition:transform .15s}' +
+    '#cpx-layer{position:absolute;left:0;top:0;width:0;height:0;z-index:9989;pointer-events:none}' +
+    '.cpx-r{position:absolute;pointer-events:none;border-radius:2px;box-sizing:border-box}' +
+    '.cpx-r.cpx-hl{background:rgba(250,204,21,.32);box-shadow:inset 0 -2px 0 #eab308}' +
+    '.cpx-r.cpx-unclear{background:rgba(239,68,68,.18);border-bottom:2px dashed #dc2626}' +
+    '.cpx-r.cpx-noted{outline:1px dashed #7c3aed;outline-offset:1px}' +
+    '.cpx-r.cpx-rsline{border-radius:3px}' +
+    '.cpx-ribbon{position:absolute;pointer-events:auto;z-index:9990;width:16px;height:26px;clip-path:polygon(0 0,100% 0,100% 100%,50% 74%,0 100%);cursor:pointer;transition:transform .15s}' +
     '.cpx-ribbon:hover{transform:scale(1.15)}' +
-    '.cpx-rsflag{display:inline-block;font-size:.85em;line-height:1;margin-right:4px;padding:1px 5px 2px;border-radius:4px;color:#fff!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:600;letter-spacing:.3px;vertical-align:baseline;cursor:pointer;user-select:none}' +
     '#cpx-fab{position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;' + FONT + '}' +
     '#cpx-fab button{width:44px;height:44px;border-radius:50%;border:1px solid #e5e7eb;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.12);font-size:19px;cursor:pointer;line-height:1;color:#4b5563;position:relative}' +
     '#cpx-fab button:hover{border-color:#4f46e5;color:#4f46e5}' +
@@ -81,8 +86,8 @@
     '#cpx-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:10002;background:#064e3b;color:#fff;border-radius:999px;padding:9px 10px 9px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 26px rgba(0,0,0,.28);' + FONT + 'font-size:13px}' +
     '#cpx-toast button{border:0;border-radius:999px;padding:6px 12px;font-size:12.5px;cursor:pointer;background:#10b981;color:#fff}' +
     '#cpx-toast button.cpx-ghost{background:rgba(255,255,255,.14);color:#d1fae5;padding:6px 10px}' +
-    '.cpx-flash{animation:cpxflash 1.2s ease 2}' +
-    '@keyframes cpxflash{50%{background:#c7d2fe}}';
+    '.cpx-r.cpx-flash{animation:cpxflash 1.2s ease 2}' +
+    '@keyframes cpxflash{50%{background:rgba(129,140,248,.55)}}';
   css.id = 'cpx-css';
   document.head.appendChild(css);
   function ensureCss() { if (!css.isConnected && document.head) document.head.appendChild(css); }
@@ -93,7 +98,7 @@
       acceptNode: function (n) {
         var p = n.parentElement;
         if (!p) return NodeFilter.FILTER_REJECT;
-        if (p.closest('script,style,textarea,#cpx-panel,#cpx-tools,#cpx-pop,#cpx-fab,#cpx-rsmenu,#cpx-toast,.cpx-ribbon,.cpx-rsflag,.katex')) return NodeFilter.FILTER_REJECT;
+        if (p.closest('script,style,textarea,#cpx-panel,#cpx-tools,#cpx-pop,#cpx-fab,#cpx-rsmenu,#cpx-toast,#cpx-layer,.cpx-ribbon,.katex')) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -115,25 +120,69 @@
     }
     return segs.length ? segs : null;
   }
-  function splitWrap(sg) { // isolate the segment in its own text node, wrap in a span, return span
-    var target = sg.node, len = target.nodeValue.length;
-    if (sg.end < len) target.splitText(sg.end);
-    if (sg.start > 0) target = target.splitText(sg.start);
-    var span = document.createElement('span');
-    target.parentNode.insertBefore(span, target); span.appendChild(target);
-    return span;
-  }
-  function wrapSegs(segs, mark) {
+  /* ---------- paint layer ---------- */
+  var layer = document.createElement('div'); layer.id = 'cpx-layer';
+  layer.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;z-index:9989;pointer-events:none';
+  function ensureLayer() { if (!layer.isConnected && document.body) document.body.appendChild(layer); }
+  var painted = {}; // id -> { rects:[{l,t,w,h}], els:[div], block:{l,t} }
+  function rectsOf(segs) { // page-coordinate boxes for a set of text segments
+    // Measure word by word and merge words on the same line: whitespace at a soft wrap
+    // otherwise yields a stray empty box at the end of the previous line.
+    var raw = [], blockRect = null;
     segs.forEach(function (sg) {
-      var span = splitWrap(sg);
-      span.className = mark.kind === 'unclear' ? 'cpx-unclear' : 'cpx-hl';
-      if (mark.note) span.classList.add('cpx-noted');
-      span.dataset.cpxId = mark.id;
-      span.title = mark.note ? mark.note : (mark.kind === 'unclear' ? 'Marked: concept unclear' : 'Highlight');
+      if (!sg.node.isConnected) return;
+      var v = sg.node.nodeValue, s0 = Math.min(sg.start, v.length), s1 = Math.min(sg.end, v.length);
+      var part = v.slice(s0, s1), re = /\S+/g, m;
+      while ((m = re.exec(part))) {
+        var r = document.createRange();
+        try { r.setStart(sg.node, s0 + m.index); r.setEnd(sg.node, s0 + m.index + m[0].length); } catch (e) { continue; }
+        var rs = r.getClientRects();
+        for (var i = 0; i < rs.length; i++) { var b = rs[i]; if (b.width < 1 || !b.height) continue; raw.push({ l: b.left + window.scrollX, t: b.top + window.scrollY, w: b.width, h: b.height }); }
+      }
+      if (!blockRect && sg.node.parentElement) {
+        var blk = sg.node.parentElement.closest('p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote,dd,pre,div') || sg.node.parentElement;
+        var bb = blk.getBoundingClientRect(); blockRect = { l: bb.left + window.scrollX, t: bb.top + window.scrollY };
+      }
     });
+    raw.sort(function (a, b) { return Math.abs(a.t - b.t) < 3 ? a.l - b.l : a.t - b.t; });
+    var out = [];
+    raw.forEach(function (b) {
+      var c = out[out.length - 1];
+      if (c && Math.abs(c.t - b.t) < 3 && b.l <= c.l + c.w + Math.max(8, b.h * 0.8)) {
+        var right = Math.max(c.l + c.w, b.l + b.w); c.w = right - c.l; c.h = Math.max(c.h, b.h);
+      } else out.push({ l: b.l, t: b.t, w: b.w, h: b.h });
+    });
+    return { rects: out, block: blockRect };
   }
-  function unwrapEl(s) { while (s.firstChild) s.parentNode.insertBefore(s.firstChild, s); s.remove(); }
-  function unwrap(id) { document.querySelectorAll('[data-cpx-id="' + id + '"]').forEach(unwrapEl); document.body.normalize(); }
+  function clearDrawn(id) { var p = painted[id]; if (!p) return; p.els.forEach(function (e) { e.remove(); }); delete painted[id]; }
+  function drawRects(id, geo, cls, style, title) {
+    clearDrawn(id); ensureLayer();
+    var els = [];
+    geo.rects.forEach(function (b) {
+      var d = document.createElement('div'); d.className = 'cpx-r ' + cls; d.dataset.cpxOf = id;
+      d.style.cssText = 'position:absolute;pointer-events:none;left:' + b.l + 'px;top:' + b.t + 'px;width:' + b.w + 'px;height:' + b.h + 'px;' + (style || '');
+      if (title) d.title = title;
+      layer.appendChild(d); els.push(d);
+    });
+    painted[id] = { rects: geo.rects, els: els, block: geo.block };
+    return painted[id];
+  }
+  function hitAt(x, y) { // which painted mark sits under a page-coordinate point?
+    var ids = Object.keys(painted);
+    for (var i = 0; i < ids.length; i++) {
+      var rs = painted[ids[i]].rects;
+      for (var j = 0; j < rs.length; j++) { var b = rs[j]; if (x >= b.l && x <= b.l + b.w && y >= b.t && y <= b.t + b.h) return { id: ids[i], kind: ids[i].charAt(0) === 'r' ? 'rs' : 'mark' }; }
+    }
+    return null;
+  }
+  function flash(id) { var p = painted[id]; if (!p) return; p.els.forEach(function (e) { e.classList.add('cpx-flash'); }); setTimeout(function () { p.els.forEach(function (e) { e.classList.remove('cpx-flash'); }); }, 2600); }
+  function paintMark(m) {
+    var segs = findOccurrence(m.text, m.occ) || findOccurrence(m.text, 0);
+    if (!segs) { clearDrawn(m.id); return false; }
+    var geo = rectsOf(segs); if (!geo.rects.length) { clearDrawn(m.id); return false; }
+    drawRects(m.id, geo, (m.kind === 'unclear' ? 'cpx-unclear' : 'cpx-hl') + (m.note ? ' cpx-noted' : ''), '', m.note ? m.note : (m.kind === 'unclear' ? 'Marked: concept unclear' : 'Highlight'));
+    return true;
+  }
   function occurrenceOfRange(range, text) { // which occurrence of `text` is this selection?
     var pre = document.createRange();
     pre.setStart(document.body, 0); pre.setEnd(range.startContainer, range.startOffset);
@@ -149,8 +198,7 @@
   function addMark(kind, text, occ) {
     var m = { id: 'm' + Date.now() + Math.floor(Math.random() * 1e4), kind: kind, text: text, occ: occ, note: '', ts: Date.now(), title: pageTitle() };
     var arr = pageMarks(); arr.push(m); setPageMarks(arr);
-    var segs = findOccurrence(text, occ); if (segs) wrapSegs(segs, m);
-    positionRibbons();
+    paintMark(m);
     return m;
   }
   function updateMark(id, patch) {
@@ -158,13 +206,11 @@
     for (var i = 0; i < arr.length; i++) if (arr[i].id === id) { Object.assign(arr[i], patch); break; }
     setPageMarks(arr);
   }
-  function removeMark(id) { unwrap(id); setPageMarks(pageMarks().filter(function (m) { return m.id !== id; })); refreshPanel(); positionRibbons(); }
-  function restoreMarks() {
-    pageMarks().forEach(function (m) {
-      if (document.querySelector('[data-cpx-id="' + m.id + '"]')) return; // already painted
-      var segs = findOccurrence(m.text, m.occ) || findOccurrence(m.text, 0);
-      if (segs) wrapSegs(segs, m);
-    });
+  function removeMark(id) { clearDrawn(id); setPageMarks(pageMarks().filter(function (m) { return m.id !== id; })); refreshPanel(); }
+  function restoreMarks() { // repaint every highlight; returns how many found no text
+    var missing = 0;
+    pageMarks().forEach(function (m) { if (!paintMark(m)) missing++; });
+    return missing;
   }
 
   /* ---------- reading bookmarks (multiple per page, coloured) ---------- */
@@ -213,52 +259,46 @@
     if (range.startContainer.parentElement && range.startContainer.parentElement.closest('#cpx-panel,#cpx-rsmenu,#cpx-pop,.katex')) return;
     pendingSel = { text: text.trim().slice(0, 90), occ: occurrenceOfRange(range, text) };
   }
-  var ribAnchors = {}; // id -> {span, rib}
+  var ribbons = {}; // id -> ribbon div (lives in the paint layer, never in the page's own DOM)
   var paintTimer = null;
   function paintResume() {
-    document.querySelectorAll('[data-cpx-rs]').forEach(function (s) { if (s.classList.contains('cpx-rsline')) unwrapEl(s); else s.remove(); });
-    document.body.normalize(); ribAnchors = {};
+    var keep = {};
     var missing = 0;
     pageResume().forEach(function (r) {
-      var segs = findOccurrence(r.text, r.occ) || findOccurrence(r.text, 0); if (!segs) { missing++; return; }
-      var c = rsColor(r), first = null, tip = (r.label ? r.label + ' — ' : '') + 'Bookmark, ' + new Date(r.ts).toLocaleString() + ' (click to edit)';
-      segs.forEach(function (sg) {
-        var span = splitWrap(sg);
-        span.dataset.cpxRs = r.id; span.className = 'cpx-rsline';
-        span.style.setProperty('background', hexA(c, .22), 'important');
-        span.style.setProperty('box-shadow', 'inset 0 -3px 0 ' + c, 'important');
-        span.style.setProperty('border-radius', '3px', 'important');
-        span.style.setProperty('cursor', 'pointer', 'important');
-        span.style.setProperty('color', 'inherit', 'important');
-        span.title = tip;
-        if (!first) first = span;
-      });
-      // inline flag right before the sentence — unmissable even when the page restyles spans
-      var flag = document.createElement('span'); flag.className = 'cpx-rsflag'; flag.dataset.cpxRs = r.id;
-      flag.textContent = '🔖' + (r.label ? ' ' + r.label : ''); flag.style.setProperty('background', c, 'important'); flag.title = tip;
-      first.parentNode.insertBefore(flag, first);
-      var rib = document.createElement('div'); rib.className = 'cpx-ribbon'; rib.dataset.cpxRs = r.id;
-      rib.style.background = c; rib.title = tip;
-      document.body.appendChild(rib);
-      ribAnchors[r.id] = { span: first, rib: rib };
+      keep[r.id] = 1;
+      var segs = findOccurrence(r.text, r.occ) || findOccurrence(r.text, 0);
+      var geo = segs ? rectsOf(segs) : { rects: [] };
+      if (!geo.rects.length) { clearDrawn(r.id); if (ribbons[r.id]) ribbons[r.id].style.display = 'none'; missing++; return; }
+      var c = rsColor(r), tip = (r.label ? r.label + ' — ' : '') + 'Bookmark, ' + new Date(r.ts).toLocaleString() + ' (click to edit)';
+      drawRects(r.id, geo, 'cpx-rsline', 'background:' + hexA(c, .22) + ';box-shadow:inset 0 -3px 0 ' + c, tip);
+      var rib = ribbons[r.id];
+      if (!rib) { rib = document.createElement('div'); rib.className = 'cpx-ribbon'; rib.dataset.cpxRs = r.id; ribbons[r.id] = rib; }
+      ensureLayer(); if (!rib.isConnected) layer.appendChild(rib);
+      rib.style.display = ''; rib.style.background = c; rib.title = tip;
+      var left = (geo.block ? geo.block.l : geo.rects[0].l) - 28; if (left < 4) left = 4;
+      rib.style.left = left + 'px'; rib.style.top = (geo.rects[0].t - 3) + 'px';
     });
-    positionRibbons();
+    Object.keys(ribbons).forEach(function (id) { if (!keep[id]) { ribbons[id].remove(); delete ribbons[id]; clearDrawn(id); } });
     // page JS (mascots, typewriter text, KaTeX) may render late — retry until every bookmark is anchored
     clearTimeout(paintTimer);
     if (missing) { var n = (paintResume.tries = (paintResume.tries || 0) + 1); if (n <= 4) paintTimer = setTimeout(paintResume, 700 * n); }
     else paintResume.tries = 0;
+    return missing;
   }
-  function positionRibbons() {
-    Object.keys(ribAnchors).forEach(function (id) {
-      var a = ribAnchors[id]; if (!a.span.isConnected) { a.rib.style.display = 'none'; return; }
-      var block = a.span.closest('p,li,h1,h2,h3,h4,h5,h6,td,th,blockquote,dd,pre,div') || a.span;
-      var br = block.getBoundingClientRect(), sr = a.span.getBoundingClientRect();
-      var left = br.left + window.scrollX - 28; if (left < 4) left = 4;
-      a.rib.style.left = left + 'px'; a.rib.style.top = (sr.top + window.scrollY - 3) + 'px';
-    });
+  /* one repaint for everything — cheap enough to run after layout changes */
+  var rpTimer = null, rpLast = 0;
+  function repaintAll() { rpLast = Date.now(); try { ensureCss(); restoreMarks(); paintResume(); } catch (e) {} }
+  function scheduleRepaint(ms) {
+    if (rpTimer) return;
+    var wait = Math.max(ms || 0, 250 - (Date.now() - rpLast));
+    rpTimer = setTimeout(function () { rpTimer = null; repaintAll(); }, wait);
   }
-  window.addEventListener('resize', positionRibbons);
-  window.addEventListener('load', function () { setTimeout(positionRibbons, 300); });
+  function positionRibbons() { scheduleRepaint(0); }
+  window.addEventListener('resize', function () { scheduleRepaint(120); });
+  window.addEventListener('load', function () { scheduleRepaint(300); });
+  // inner scroll panes move the text under the paint; the window itself scrolling does not
+  document.addEventListener('scroll', function (e) { if (e.target !== document && e.target !== document.documentElement && e.target !== document.body) scheduleRepaint(60); }, true);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { scheduleRepaint(50); });
   function addResume(text, occ, color) {
     var a = (text != null) ? { text: text, occ: occ } : anchorFromScroll();
     if (!a) { alert('Nothing to bookmark on this page yet.'); return; }
@@ -276,9 +316,10 @@
   function jumpResume(id) {
     var list = pageResume(); if (!list.length) return;
     var r = id ? rsById(id) : list.slice().sort(function (a, b) { return b.ts - a.ts; })[0]; if (!r) return;
-    var el = document.querySelector('.cpx-rsline[data-cpx-rs="' + r.id + '"]'); if (!el) return;
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 110, behavior: 'smooth' });
-    el.classList.add('cpx-flash'); setTimeout(function () { el.classList.remove('cpx-flash'); }, 2600);
+    var p = painted[r.id]; if (!p || !p.rects.length) { paintResume(); p = painted[r.id]; }
+    if (!p || !p.rects.length) { cpxNote('That line is not on screen right now — open the section it was in.'); return; }
+    window.scrollTo({ top: p.rects[0].t - 110, behavior: 'smooth' });
+    flash(r.id);
   }
   function cpxNote(msg) {
     var t = document.createElement('div'); t.id = 'cpx-toast';
@@ -333,7 +374,7 @@
   function openRsPop(id) {
     closePop();
     var r = rsById(id); if (!r) return;
-    var el = document.querySelector('.cpx-rsline[data-cpx-rs="' + id + '"]');
+    var pr = painted[id] && painted[id].rects[0];
     pop = document.createElement('div'); pop.id = 'cpx-pop';
     pop.innerHTML = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:' + rsColor(r) + ';margin-bottom:6px">🔖 Reading bookmark</div>' +
       '<div style="color:#6b7280;font-size:12px;margin-bottom:8px;max-height:60px;overflow:hidden">“' + esc(r.text.slice(0, 120)) + '…”</div>' +
@@ -344,9 +385,9 @@
     var inp = pop.querySelector('input'); inp.value = r.label || '';
     var color = r.color;
     pop.querySelectorAll('[data-c]').forEach(function (d) { d.classList.toggle('cpx-sel', d.dataset.c === color); d.onclick = function () { color = d.dataset.c; pop.querySelectorAll('[data-c]').forEach(function (x) { x.classList.toggle('cpx-sel', x === d); }); }; });
-    var rect = el ? el.getBoundingClientRect() : { left: window.innerWidth / 2 - 140, bottom: window.innerHeight / 2 };
-    pop.style.left = Math.max(8, Math.min(window.innerWidth - 296, rect.left + window.scrollX)) + 'px';
-    pop.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+    var px = pr ? pr.l : window.innerWidth / 2 - 140 + window.scrollX, py = pr ? pr.t + pr.h : window.innerHeight / 2 + window.scrollY;
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - 296, px)) + 'px';
+    pop.style.top = (py + 8) + 'px';
     pop.querySelector('.cpx-save').onclick = function () { updateResume(id, { color: color, label: inp.value.trim() }); closePop(); };
     pop.querySelector('.cpx-del').onclick = function () { removeResume(id); closePop(); };
     inp.focus();
@@ -406,26 +447,23 @@
   function openPop(id) {
     closePop();
     var m = pageMarks().find(function (x) { return x.id === id; }); if (!m) return;
-    var el = document.querySelector('[data-cpx-id="' + id + '"]');
+    var pr = painted[id] && painted[id].rects[0];
     pop = document.createElement('div'); pop.id = 'cpx-pop';
     pop.innerHTML = '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:' + (m.kind === 'unclear' ? '#dc2626' : '#a16207') + ';margin-bottom:6px">' + (m.kind === 'unclear' ? 'Concept unclear' : 'Highlight') + '</div>' +
       '<div style="color:#6b7280;font-size:12px;margin-bottom:8px;max-height:60px;overflow:hidden">“' + esc(m.text.slice(0, 160)) + (m.text.length > 160 ? '…' : '') + '”</div>' +
       '<textarea placeholder="Add an annotation…">' + esc(m.note || '') + '</textarea>' +
       '<div class="cpx-row"><button class="cpx-save">Save</button><button class="cpx-toggle">' + (m.kind === 'unclear' ? 'Mark as highlight' : 'Mark as unclear') + '</button><button class="cpx-del">Delete</button></div>';
     document.body.appendChild(pop);
-    var r = el ? el.getBoundingClientRect() : { left: window.innerWidth / 2 - 140, bottom: window.innerHeight / 2 };
-    pop.style.left = Math.max(8, Math.min(window.innerWidth - 296, r.left + window.scrollX)) + 'px';
-    pop.style.top = (r.bottom + window.scrollY + 8) + 'px';
+    var px = pr ? pr.l : window.innerWidth / 2 - 140 + window.scrollX, py = pr ? pr.t + pr.h : window.innerHeight / 2 + window.scrollY;
+    pop.style.left = Math.max(8, Math.min(window.innerWidth - 296, px)) + 'px';
+    pop.style.top = (py + 8) + 'px';
     pop.querySelector('.cpx-save').onclick = function () {
       var v = pop.querySelector('textarea').value.trim();
-      updateMark(id, { note: v });
-      document.querySelectorAll('[data-cpx-id="' + id + '"]').forEach(function (s) { s.classList.toggle('cpx-noted', !!v); s.title = v || ''; });
+      updateMark(id, { note: v }); paintMark(m);
       closePop(); refreshPanel();
     };
     pop.querySelector('.cpx-toggle').onclick = function () {
-      var nk = m.kind === 'unclear' ? 'hl' : 'unclear';
-      updateMark(id, { kind: nk });
-      document.querySelectorAll('[data-cpx-id="' + id + '"]').forEach(function (s) { s.className = (nk === 'unclear' ? 'cpx-unclear' : 'cpx-hl') + (m.note ? ' cpx-noted' : ''); });
+      updateMark(id, { kind: m.kind === 'unclear' ? 'hl' : 'unclear' }); paintMark(m);
       closePop(); refreshPanel();
     };
     pop.querySelector('.cpx-del').onclick = function () { removeMark(id); closePop(); };
@@ -434,10 +472,15 @@
   document.addEventListener('click', function (e) {
     var t = e.target instanceof Element ? e.target : (e.target && e.target.parentElement);
     if (!t) return;
-    var s = t.closest('[data-cpx-id]');
-    if (s) { e.preventDefault(); openPop(s.dataset.cpxId); return; }
     var rs = t.closest('[data-cpx-rs]');
     if (rs) { e.preventDefault(); openRsPop(rs.dataset.cpxRs); return; }
+    if (!t.closest('#cpx-pop,#cpx-rsmenu,#cpx-tools,#cpx-fab,#cpx-panel,a,button,input,textarea,select')) {
+      var sel = window.getSelection();
+      if (!sel || sel.isCollapsed) {
+        var hit = hitAt(e.pageX, e.pageY);
+        if (hit) { if (hit.kind === 'rs') openRsPop(hit.id); else openPop(hit.id); return; }
+      }
+    }
     if (pop && !t.closest('#cpx-pop')) closePop();
     if (rsmenu && !t.closest('#cpx-rsmenu,#cpx-rs')) closeRsMenu();
   });
@@ -470,50 +513,28 @@
   /* Repaint marks after a host re-render. A plain debounce is wrong here: pages with a live
      console or animation mutate the DOM constantly, so the timer never settles. Instead only
      schedule when a mark is genuinely missing, and throttle so it always fires. */
-  function marksMissing() {
-    var m = pageMarks(), r = pageResume(), i, out = { hl: false, rs: false };
-    for (i = 0; i < m.length; i++) if (!document.querySelector('[data-cpx-id="' + m[i].id + '"]')) { out.hl = true; break; }
-    for (i = 0; i < r.length; i++) if (!document.querySelector('.cpx-rsline[data-cpx-rs="' + r[i].id + '"]')) { out.rs = true; break; }
-    out.any = out.hl || out.rs;
-    return out;
-  }
   if (window.MutationObserver) {
-    var reTimer = null, reBusy = false, lastPaint = 0, failStreak = 0;
-    var repaint = function () {
-      var miss = marksMissing();
-      reBusy = true;
-      try {
-        ensureCss();
-        if (miss.hl) restoreMarks();
-        if (miss.rs) paintResume(); else positionRibbons();
-        syncFab();
-      } catch (e) {}
-      lastPaint = Date.now();
-      failStreak = marksMissing().any ? failStreak + 1 : 0; // text really is gone -> stop retrying
-      setTimeout(function () { reBusy = false; }, 80);
-    };
-    var schedule = function () {
-      if (reTimer || failStreak > 5) return;
-      reTimer = setTimeout(function () { reTimer = null; repaint(); }, Math.max(150, 600 - (Date.now() - lastPaint)));
-    };
-    new MutationObserver(function () {
-      if (reBusy) return;
-      ensureCss();
+    function ours(n) { var el = n && (n.nodeType === 1 ? n : n.parentElement); return !!(el && el.closest && el.closest('#cpx-layer,#cpx-fab,#cpx-panel,#cpx-tools,#cpx-pop,#cpx-rsmenu,#cpx-toast,#cpx-css')); }
+    new MutationObserver(function (recs) {
+      var foreign = false;
+      for (var i = 0; i < recs.length; i++) { if (!ours(recs[i].target)) { foreign = true; break; } }
+      if (!foreign) return;
+      ensureCss(); ensureLayer();
       if (!fab.isConnected) { ensureFab(); syncFab(); }
       if (panel && !panel.isConnected) document.body.appendChild(panel);
-      if (marksMissing().any) schedule();
-    }).observe(document.documentElement, { childList: true, subtree: true });
+      if (pageMarks().length || pageResume().length) scheduleRepaint(120);
+    }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   }
 
   /* ---------- side panel ---------- */
   var panel = null;
   function togglePanel() { if (panel) { panel.remove(); panel = null; } else { panel = document.createElement('div'); panel.id = 'cpx-panel'; document.body.appendChild(panel); refreshPanel(); } }
   function scrollToMark(id) {
-    var el = document.querySelector('[data-cpx-id="' + id + '"]');
-    if (!el) { try { restoreMarks(); } catch (e) {} el = document.querySelector('[data-cpx-id="' + id + '"]'); }
-    if (!el) { cpxNote('That passage is no longer on this page.'); return; }
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - window.innerHeight / 3, behavior: 'smooth' });
-    el.classList.add('cpx-flash'); setTimeout(function () { el.classList.remove('cpx-flash'); }, 2600);
+    var p = painted[id];
+    if (!p || !p.rects.length) { try { restoreMarks(); } catch (e) {} p = painted[id]; }
+    if (!p || !p.rects.length) { cpxNote('That passage is not on screen right now — open the section it was in.'); return; }
+    window.scrollTo({ top: p.rects[0].t - window.innerHeight / 3, behavior: 'smooth' });
+    flash(id);
   }
   function allResumeFlat() {
     var out = [];
@@ -621,7 +642,7 @@
     if (IS_HOME) renderHomeSection();
     // Wait a beat so KaTeX finishes rewriting the DOM before we anchor marks to text.
     setTimeout(function () {
-      restoreMarks(); paintResume(); syncFab();
+      ensureLayer(); repaintAll(); syncFab();
       var h = /^#cpx-resume(?:=(.+))?$/.exec(location.hash);
       if (h) { history.replaceState(null, '', location.pathname); jumpResume(h[1]); setTimeout(function () { jumpResume(h[1]); }, 700); }
       else resumeToast();
