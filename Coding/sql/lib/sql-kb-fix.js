@@ -1,28 +1,28 @@
-/* sql-kb-fix.js — v2 — mobile keyboard behaviour for the SQL app.
-   Replace sql/lib/sql-kb-fix.js with this file. Tag stays as-is, loaded LAST:
-     <script src="../lib/sql-kb-fix.js"></script>
+/* sql-kb-fix.js — v3 — mobile keyboard behaviour for the SQL app.
+   Replace sql/lib/sql-kb-fix.js with this file, loaded LAST:
+     <script src="../lib/sql-kb-fix.js?v=3"></script>
 
-   Fix 1 — the soft keyboard opens ONLY on a real finger/mouse tap inside a query
-           box. Key-palette / schema / example taps never summon it, but they do
-           keep it open (and the caret alive) if you were already typing.
-   Fix 2 — no auto-capitalised first letter, no autocorrect/autocomplete/spellcheck
-           in any SQL textarea, including ones created later.
+   Rule: the soft keyboard opens ONLY on a real tap inside a query box. Nothing else
+   (key-palette chips, schema sheet, examples, Clear, restored code) can open it.
 
-   v2 changes (why v1 still popped the keyboard):
-   - v1 treated ANY focusin as "user opened the keyboard", so any focus route that
-     bypassed the patched focus() (setSelectionRange side-effects on WebKit, .select(),
-     native activation, autofocus) flipped the gate open. The gate is now driven only
-     by a genuine pointer tap, and unauthorised focus is actively reverted.
-   - inputmode="none" while the gate is shut, so Android/Chromium cannot even flash
-     the keyboard; flipped to "text" on the tap, before focus lands.
+   v3 changes (why v2 still popped the keyboard after palette taps):
+   - v2 had a 450 ms "still typing" grace after the editor lost focus. A chip tap blurred
+     the editor, then insertKey() called focus() inside that window → keyboard reopened.
+     If you had hidden the keyboard (Back / hide gesture) the editor stayed focused, so
+     EVERY later chip tap reopened it. The grace window is gone: focus() is honoured only
+     for a genuine tap on that textarea in the last 1.2 s.
+   - When the user hides the keyboard while the editor keeps focus, the editor is switched
+     back to inputmode="none", so value / caret changes from chips can't bring it back.
+   Also: no auto-capitalise / autocorrect / autocomplete / spellcheck in any SQL textarea.
 */
 (function () {
   if (window.__sqlKbFix) return; window.__sqlKbFix = true;
 
-  var GRACE = 450;   // ms after leaving the editor that palette taps still count as "typing"
-  var TAP_MS = 1200; // ms a pointer tap stays valid as the reason for a focus
+  var TAP_MS = 1200; // a tap stays valid as the reason for a focus this long
 
-  /* ---------- Fix 2 ---------- */
+  function shut(ta) { try { ta.setAttribute("inputmode", "none"); } catch (e) {} }
+  function unshut(ta) { try { ta.setAttribute("inputmode", "text"); } catch (e) {} }
+
   function tame(ta) {
     if (!ta || ta.__tamed) return; ta.__tamed = 1;
     ta.setAttribute("autocapitalize", "off");
@@ -30,7 +30,7 @@
     ta.setAttribute("autocomplete", "off");
     ta.setAttribute("spellcheck", "false");
     ta.setAttribute("enterkeyhint", "enter");
-    shut(ta);
+    if (document.activeElement !== ta) shut(ta);
   }
   function tameAll(root) {
     var r = root || document;
@@ -39,61 +39,55 @@
     for (var i = 0; i < list.length; i++) tame(list[i]);
   }
 
-  /* ---------- gate ---------- */
-  var open = false;      // is the keyboard legitimately up?
-  var closeTimer = 0;    // grace timer after focusout
-  var tapAt = 0;         // when the last genuine tap inside a textarea happened
-  var tapEl = null;      // which textarea it was on
-
-  function shut(ta) { try { ta.setAttribute("inputmode", "none"); } catch (e) {} }
-  function unshut(ta) { try { ta.setAttribute("inputmode", "text"); } catch (e) {} }
-
-  function allowed(ta) {
-    if (open) return true;                                   // already typing / inside grace
-    return tapEl === ta && (Date.now() - tapAt) < TAP_MS;    // a real tap asked for this
-  }
+  var tapAt = 0, tapEl = null;
+  function tapped(ta) { return tapEl === ta && (Date.now() - tapAt) < TAP_MS; }
 
   function noteTap(e) {
     var t = e.target, ta = t && t.closest ? t.closest("textarea") : null;
     if (!ta) return;
-    clearTimeout(closeTimer);
-    tapAt = Date.now(); tapEl = ta; open = true;
-    unshut(ta); // must happen before focus lands, or Chromium keeps the keyboard down
+    tapAt = Date.now(); tapEl = ta;
+    unshut(ta); // before focus lands, or Chromium keeps the keyboard down
   }
   document.addEventListener("pointerdown", noteTap, true);
   document.addEventListener("touchstart", noteTap, true);
   document.addEventListener("mousedown", noteTap, true);
 
-  // Enforcement: a focus we did not authorise is reverted immediately.
+  // a focus that no tap asked for is reverted, caret kept
   document.addEventListener("focusin", function (e) {
     var ta = e.target;
     if (!ta || ta.tagName !== "TEXTAREA") return;
-    if (allowed(ta)) { clearTimeout(closeTimer); open = true; unshut(ta); return; }
+    if (tapped(ta)) { unshut(ta); return; }
     shut(ta);
-    var s = ta.selectionStart, en = ta.selectionEnd;   // keep the caret the caller set
+    var s = ta.selectionStart, en = ta.selectionEnd;
     try { ta.blur(); } catch (err) {}
     try { ta.setSelectionRange(s, en); } catch (err) {}
   }, true);
 
   document.addEventListener("focusout", function (e) {
     var ta = e.target;
-    if (!ta || ta.tagName !== "TEXTAREA") return;
-    clearTimeout(closeTimer);
-    closeTimer = setTimeout(function () { open = false; tapEl = null; shut(ta); }, GRACE);
+    if (ta && ta.tagName === "TEXTAREA") shut(ta);
   }, true);
 
-  // Programmatic focus() is honoured only while the gate is open / a tap authorised it.
+  // keyboard hidden by the user while the editor keeps focus → lock it down again
+  var vv = window.visualViewport, fullH = vv ? vv.height : 0;
+  if (vv) vv.addEventListener("resize", function () {
+    var ta = document.activeElement;
+    if (vv.height > fullH) fullH = vv.height;
+    var kbUp = vv.height < fullH - 120;
+    if (!kbUp && ta && ta.tagName === "TEXTAREA" && !tapped(ta)) shut(ta);
+  });
+  window.addEventListener("orientationchange", function () { fullH = 0; setTimeout(function () { if (vv) fullH = vv.height; }, 400); });
+
   var proto = HTMLTextAreaElement.prototype;
   var nativeFocus = proto.focus;
   proto.focus = function (opts) {
-    if (allowed(this) || document.activeElement === this) return nativeFocus.call(this, opts);
-    // keyboard stays down; the caret the caller set with setSelectionRange is preserved
+    if (tapped(this)) return nativeFocus.call(this, opts);
+    // already focused or not: do nothing — the caret set via setSelectionRange is kept
   };
-  // .select() is a focus route too
   var nativeSelect = proto.select;
   if (nativeSelect) {
     proto.select = function () {
-      if (allowed(this) || document.activeElement === this) return nativeSelect.call(this);
+      if (tapped(this) || document.activeElement === this) return nativeSelect.call(this);
       try { this.setSelectionRange(0, this.value.length); } catch (e) {}
     };
   }

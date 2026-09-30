@@ -7,7 +7,8 @@
 //   THEN  — the clause-ending keyword waiting in the wings (e.g. FROM while you list columns)
 //   bar   — ⌫ (delete last token), ↵, and a digit pad when a number is expected
 // "All" switches back to the full v2 palette. Choice is remembered per device (localStorage "zk-mode").
-// No focus() is needed for any of this: sql-kb-fix.js keeps the keyboard down on chip taps.
+// v3.1: chips NEVER focus the textarea (no focus() call) and never steal focus from it (mousedown is
+// cancelled on the palette), so a chip tap can't summon the soft keyboard. Only a tap in the code does.
 (function () {
   "use strict";
 
@@ -60,7 +61,6 @@
     ta.value = before + ins + v.slice(e);
     var pos = s + ins.length - (opt.back != null ? opt.back : (kind === "pair" ? 1 : 0));
     ta.setSelectionRange(pos, pos);
-    ta.focus();
     ta.dispatchEvent(new Event("input", { bubbles: true })); // keeps progress autosave working
   }
 
@@ -75,7 +75,6 @@
     }
     ta.value = v.slice(0, s) + v.slice(e);
     ta.setSelectionRange(s, s);
-    ta.focus();
     ta.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
@@ -87,7 +86,7 @@
   var CMP = { "=": 1, ">": 1, "<": 1, ">=": 1, "<=": 1, "<>": 1, "!=": 1, "LIKE": 1, "NOT LIKE": 1 };
 
   function lex(src) {
-    var out = [], re = /--[^\n]*|'(?:[^']|'')*'?|>=|<=|<>|!=|[A-Za-z_]\w*(?:\.\w*)?|\d+(?:\.\d*)?|\S/g, m;
+    var out = [], re = /--[^\n]*|'(?:[^']|'')*'?|"[^"]*"?|>=|<=|<>|!=|[A-Za-z_]\w*(?:\.\w*)?|\d+(?:\.\d*)?|\S/g, m;
     while ((m = re.exec(src))) {
       if (m[0].slice(0, 2) === "--") continue;
       var t = m[0], u = t.toUpperCase(), last = out[out.length - 1];
@@ -95,7 +94,7 @@
       if (last && u === "JOIN" && /^(INNER|LEFT|RIGHT|FULL|OUTER)$/.test(last.u)) { last.u = "JOIN"; last.t += " JOIN"; continue; }
       if (last && (u === "NULL" || u === "LIKE") && last.u === "NOT" ) { last.u = "NOT " + u; last.t += " " + t; continue; }
       if (last && u === "NOT" && last.u === "IS") { last.u = "IS NOT"; last.t += " NOT"; continue; }
-      out.push({ t: t, u: u });
+      out.push({ t: t, u: u, i: m.index });
     }
     return out;
   }
@@ -347,6 +346,143 @@
     return r;
   }
 
+  // ---------- live checks: definite mistakes only (red) + strong tips (amber) ----------
+  // Correctness of the ANSWER is graded elsewhere by comparing result rows, so any valid
+  // alternative query passes. These checks only catch SQL that can't be right.
+  var EXTRA = { CASE: 1, WHEN: 1, THEN: 1, ELSE: 1, END: 1, OFFSET: 1, UNION: 1, ALL: 1, EXISTS: 1, ANY: 1, GROUP: 1, ORDER: 1,
+                BY: 1, INTERSECT: 1, EXCEPT: 1, CAST: 1, INTEGER: 1, TEXT: 1, REAL: 1, TRUE: 1, FALSE: 1, ESCAPE: 1, OUTER: 1,
+                FULL: 1, CROSS: 1, NATURAL: 1, USING: 1 };
+  var RANK = { SELECT: 0, FROM: 1, JOIN: 2, ON: 2, WHERE: 3, "GROUP BY": 4, HAVING: 5, "ORDER BY": 6, LIMIT: 7 };
+  var AGG = { COUNT: 1, SUM: 1, AVG: 1, MIN: 1, MAX: 1 };
+  var NEEDS = { WHERE: "a condition", ON: "a condition", HAVING: "a condition", "GROUP BY": "a column",
+                "ORDER BY": "a column", LIMIT: "a number", SELECT: "a column", FROM: "a table name", JOIN: "a table name" };
+  var KWLIST = ["select", "from", "where", "having", "limit", "distinct", "join", "like", "between", "and", "desc", "asc"];
+
+  function dist(a, b) {
+    var m = [], i, j;
+    for (i = 0; i <= a.length; i++) m[i] = [i];
+    for (j = 1; j <= b.length; j++) m[0][j] = j;
+    for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++)
+      m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return m[a.length][b.length];
+  }
+  function near(w, list) {
+    var best = null, bd = w.length > 3 ? 3 : 2;
+    list.forEach(function (c) { var d = dist(w, c); if (d < bd) { bd = d; best = c; } });
+    return best;
+  }
+
+  function lint(full, caret, ds) {
+    var sc = schema(ds), out = [];
+    var allTabs = sc.tabs.map(function (t) { return t.t; });
+    var parts = [], start = 0, q = false;
+    for (var i = 0; i < full.length; i++) {
+      if (full[i] === "'") q = !q;
+      else if (full[i] === ";" && !q) { parts.push({ s: start, text: full.slice(start, i), done: true }); start = i + 1; }
+    }
+    parts.push({ s: start, text: full.slice(start), done: false });
+
+    parts.forEach(function (pt) {
+      var toks = lex(pt.text);
+      if (!toks.length) return;
+      toks.forEach(function (k) { k.i += pt.s; });
+      var st = walk(toks, sc);
+      var asAlias = {};
+      toks.forEach(function (k, j) { if (j && toks[j - 1].u === "AS") asAlias[k.t.toLowerCase()] = 1; });
+      function add(sev, msg, k) { out.push({ sev: sev, msg: msg, at: k ? k.i : null, len: k ? k.t.length : 0 }); }
+      var ranks = [-1], dc = [null], hasFrom = false, grouped = false, aggSel = false, plainSel = [], hasCol = false;
+      var scopeName = st.tables.length ? st.tables.join(" / ") : allTabs.join(" / ");
+
+      toks.forEach(function (k, j) {
+        var u = k.u, nx = toks[j + 1], pv = toks[j - 1], lo = k.t.toLowerCase(), d = ranks.length - 1;
+        var atCaret = k.i + k.t.length === caret;
+        var lastOpen = !nx && !pt.done;           // still being written — don't nag
+        if (u === "(") { ranks.push(-1); dc.push(dc[d]); return; }
+        if (u === ")") {
+          if (d === 0) add("err", "Extra \u201C)\u201D \u2014 there's no \u201C(\u201D for it to close", k);
+          else { ranks.pop(); dc.pop(); }
+          return;
+        }
+        if (RANK[u] != null) {
+          var r = RANK[u], cur = ranks[d];
+          if (u === "SELECT" && cur >= 0) add("err", "A second SELECT needs \u201C;\u201D before it", k);
+          else if (r < cur) add("err", u + " must come before " + dc[d], k);
+          else if (r === cur && u !== "JOIN" && u !== "ON") add("err", "Only one " + u + " per query" + (u === "WHERE" ? " \u2014 join conditions with AND" : ""), k);
+          if (r >= cur) { ranks[d] = r; dc[d] = u; }
+          if (d === 0 && u === "FROM") hasFrom = true;
+          if (d === 0 && u === "GROUP BY") grouped = true;
+          if ((nx && ((RANK[nx.u] != null && nx.u !== "SELECT") || nx.u === ",")) || (!nx && pt.done))
+            add("err", u + " needs " + NEEDS[u] + " after it", k);
+          return;
+        }
+        if (u === ",") {
+          if (pv && (RANK[pv.u] != null || pv.u === "(" || pv.u === ",")) add("err", "Extra comma after " + pv.t, k);
+          else if (nx && (RANK[nx.u] != null || nx.u === ")")) add("err", "Extra comma before " + nx.t, k);
+          else if (!nx && pt.done) add("err", "Extra comma at the end", k);
+          return;
+        }
+        if (CMP[u]) {
+          if (nx && (nx.u === "NULL") && u !== "LIKE") add("tip", "Use IS NULL (or IS NOT NULL) \u2014 \u201C" + k.t + " NULL\u201D never matches", k);
+          else if ((nx && (RANK[nx.u] != null || nx.u === "AND" || nx.u === "OR" || nx.u === ")")) || (!nx && pt.done))
+            add("err", "Value missing after " + k.t, k);
+          return;
+        }
+        if (k.t.charAt(0) === '"') { add("tip", "Use 'single quotes' for text \u2014 \"double\" means a column name", k); return; }
+        if (k.t.charAt(0) === "'" && pt.done && (k.t.length < 2 || k.t.slice(-1) !== "'")) { add("err", "Missing closing \u2019", k); return; }
+        if (AGG[u] && nx && nx.u === "(") {
+          if (dc[d] === "WHERE") add("err", k.t + "() can't go in WHERE \u2014 filter groups with HAVING after GROUP BY", k);
+          if (d === 0 && dc[0] === "SELECT") aggSel = true;
+          return;
+        }
+        if (!/^[a-z_]/i.test(k.t) || WORDS[u] || FNS[u] || EXTRA[u] || /^(IS NOT|NOT NULL|NOT LIKE)$/.test(u)) return;
+        if (nx && nx.u === "(") return;                                   // some other function
+        if (k.kind === "col") {
+          hasCol = true;
+          var c = lo.split(".").pop(), own = sc.owners[c] || [];
+          if (d === 0 && dc[0] === "SELECT") plainSel.push(k.t);
+          if (lo.indexOf(".") > 0) {
+            var tq = lo.split(".")[0], tn = sc.byT[tq] ? tq : st.alias[tq];
+            if (!tn) { if (!atCaret) add("err", "No table or alias called \u201C" + tq + "\u201D", k); return; }
+            if (own.indexOf(sc.byT[tn].t) < 0) { add("err", "\u201C" + c + "\u201D isn't a column of " + tn, k); return; }
+          }
+          if (st.tables.length && !own.some(function (o) { return st.tables.indexOf(o) >= 0; }))
+            add("err", "\u201C" + c + "\u201D is in " + own.join(" / ") + " \u2014 add JOIN " + own[0], k);
+          return;
+        }
+        if (k.kind === "alias" && pv && pv.u !== "AS" && nx && /^[a-z_]/i.test(nx.t) && !WORDS[nx.u] && RANK[nx.u] == null && !EXTRA[nx.u]) {
+          var gka = near(lo, KWLIST);   // "FROM world wher area" — a typo'd keyword, not an alias
+          add("err", gka ? "\u201C" + k.t + "\u201D \u2014 did you mean " + gka.toUpperCase() + "?" : "Missing a keyword between \u201C" + k.t + "\u201D and \u201C" + nx.t + "\u201D", k);
+          return;
+        }
+        if (k.kind === "table" || k.kind === "alias" || asAlias[lo] || atCaret || lastOpen && lo.indexOf(".") < 0 && atCaret) return;
+        if (pv && pv.u === "AS") return;
+        if (lo.indexOf(".") > 0) {
+          var tq2 = lo.split(".")[0], c2 = lo.split(".")[1], tn2 = sc.byT[tq2] ? tq2 : st.alias[tq2];
+          if (!tn2) add("err", "No table or alias called \u201C" + tq2 + "\u201D", k);
+          else if (c2) { var g2 = near(c2, sc.byT[tn2].cols); add("err", "\u201C" + c2 + "\u201D isn't a column of " + tn2 + (g2 ? " \u2014 did you mean " + g2 + "?" : ""), k); }
+          return;
+        }
+        if (pv && (pv.u === "FROM" || pv.u === "JOIN" || (pv.u === "," && dc[d] === "FROM"))) {
+          var gt = near(lo, allTabs);
+          add("err", "No table called \u201C" + k.t + "\u201D" + (gt ? " \u2014 did you mean " + gt + "?" : " here"), k);
+          return;
+        }
+        var cols = [];
+        (st.tables.length ? st.tables : allTabs).forEach(function (t) { cols = cols.concat(sc.byT[t.toLowerCase()].cols); });
+        var gk = near(lo, KWLIST), gc = near(lo, cols);
+        var guess = gk && (!gc || dist(lo, gk) <= dist(lo, gc)) ? gk.toUpperCase() : gc;
+        add("err", "\u201C" + k.t + "\u201D isn't a column of " + scopeName + (guess ? " \u2014 did you mean " + guess + "?" : ""), k);
+      });
+
+      var endTok = toks[toks.length - 1];
+      if (pt.done && ranks.length > 1) add("err", "Missing \u201C)\u201D", endTok);
+      if (pt.done && hasCol && !hasFrom) add("err", "Missing FROM \u2014 which table?", endTok);
+      if (aggSel && plainSel.length && hasFrom && !grouped)
+        add("tip", "Mixing COUNT/SUM\u2026 with plain columns needs GROUP BY " + plainSel.join(", "), null);
+    });
+    return out;
+  }
+
   function stmtOf(full, caret) {
     var a = full.lastIndexOf(";", caret - 1), b = full.indexOf(";", caret);
     return full.slice(a + 1, b < 0 ? full.length : b);
@@ -428,17 +564,24 @@
   function build(ds, ta) {
     var host = el("div", "margin:0 0 12px;");
     host.className = "zk-host";
+    // keep focus where it is: a chip tap must not blur the editor (no blur → no refocus → no keyboard)
+    host.addEventListener("mousedown", function (ev) { if (ev.target.closest && ev.target.closest("button")) ev.preventDefault(); });
     var state = { open: true, mode: getMode(), openTable: (TABLES[ds] && TABLES[ds][0]) ? TABLES[ds][0].t : null };
-    var raf = 0, lastKey = "";
-    // re-render only when the prediction actually changes — keeps row scroll positions and saves DOM churn
+    var raf = 0, lastKey = "", baseShadow = ta.style.boxShadow;
+    function caretPos() { return ta.selectionStart == null ? ta.value.length : ta.selectionStart; }
+    function issueNow() {
+      var all = lint(ta.value, caretPos(), ds), e = null, t = null;
+      all.forEach(function (x) { if (x.sev === "err" && !e) e = x; if (x.sev === "tip" && !t) t = x; });
+      return e || t;
+    }
+    function stateKey() {
+      var c = caretPos();
+      return JSON.stringify([issueNow(), state.mode === "smart" && state.open ? predict(ta.value.slice(0, c), ta.value, ds) : 0]);
+    }
+    // re-render only when the prediction or the warning actually changes — keeps row scroll positions
     function schedule() {
-      if (state.mode !== "smart" || !state.open) return;
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(function () {
-        var caret = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
-        var key = JSON.stringify(predict(ta.value.slice(0, caret), ta.value, ds));
-        if (key !== lastKey) render();
-      });
+      raf = requestAnimationFrame(function () { if (stateKey() !== lastKey) render(); });
     }
     ["input", "click", "keyup", "select"].forEach(function (ev) { ta.addEventListener(ev, schedule); });
     function onSel() {
@@ -450,7 +593,7 @@
     return host;
 
     function render() {
-      lastKey = "";
+      lastKey = stateKey();
       host.innerHTML = "";
       var card = el("div", "background:#faf6ec;border:1px solid #cdbfa3;border-radius:10px;padding:" +
         (state.open ? "10px 12px 12px" : "6px 8px 6px 12px") + ";");
@@ -475,8 +618,33 @@
         state.open = !state.open; render();
       }));
       card.appendChild(head);
+      var is = issueNow();
+      ta.style.boxShadow = !is ? baseShadow : is.sev === "err" ? "0 0 0 2px #c0392b" : "0 0 0 2px #d9a93a";
+      if (is) card.appendChild(banner(is));
       if (!state.open) return;
       if (state.mode === "smart") renderSmart(card); else renderAll(card);
+    }
+
+    // red = can't be right · amber = probably not what you want. Tap → selects the word, so ⌫ removes it.
+    function banner(is) {
+      var err = is.sev === "err";
+      var b = el("button",
+        "display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;margin-top:8px;padding:8px 10px;" +
+        "text-align:left;cursor:pointer;" + MONO + "font-size:12px;line-height:1.4;border-radius:8px;" +
+        "color:" + (err ? "#8c1d13" : "#5e4100") + ";background:" + (err ? "#fbe9e6" : "#fdf3dc") + ";" +
+        "border:1px solid " + (err ? "#e3aba3" : "#e8cf93") + ";",
+        '<span style="flex:0 0 auto;width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;' +
+        'justify-content:center;font-weight:700;font-size:11px;color:#fff;background:' + (err ? "#c0392b" : "#a8790a") + ';">' +
+        (err ? "!" : "i") + '</span><span style="flex:1;min-width:0;">' + esc(is.msg) + "</span>" +
+        (is.at != null ? '<span style="flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:1px;">SHOW \u203A</span>' : ""));
+      b.type = "button";
+      b.setAttribute("role", "alert");
+      b.addEventListener("click", function () {
+        if (is.at == null) return;
+        ta.setSelectionRange(is.at, is.at + is.len);
+        schedule();
+      });
+      return b;
     }
 
     function row(card, css) {
@@ -515,9 +683,8 @@
     }
 
     function renderSmart(card) {
-      var caret = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+      var caret = caretPos();
       var r = predict(ta.value.slice(0, caret), ta.value, ds);
-      lastKey = JSON.stringify(r);
 
       var nr = row(card);
       laneLabel(nr, "NEXT");
@@ -579,5 +746,5 @@
     }
   }
 
-  window.SQLZOO_KEYS = { build: build, insertKey: insertKey, TABLES: TABLES, predict: predict };
+  window.SQLZOO_KEYS = { build: build, insertKey: insertKey, TABLES: TABLES, predict: predict, lint: lint };
 })();
