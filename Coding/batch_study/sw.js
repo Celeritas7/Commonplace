@@ -2,7 +2,7 @@
  * Scope is the batch_study folder, but the module pulls React, support.js and the
  * fonts from ../../_lib, so those are precached too. Bump CACHE on any change.
  */
-const CACHE = "batch-study-v10";
+const CACHE = "batch-study-v13";
 const MODULE = "The%20Modules/Module%2001%20%C2%B7%20Foundations%20-%20Folders.dc.html";
 
 const PRECACHE = [
@@ -13,6 +13,17 @@ const PRECACHE = [
   "./The%20Modules/Batch%20Sandbox.dc.html",
   "./The%20Modules/Batch%20Command%20Reference.dc.html",
   "./The%20Modules/Batch%20Practice.dc.html",
+  "./The%20Modules/bat-keys.js",
+  "./The%20Modules/My%20Scripts.dc.html",
+  "./my_scripts/",
+  "./my_scripts/index.html",
+  "./my_scripts/scripts.json",
+  "./my_scripts/log.md",
+  "./my_scripts/01_pull/original.bat",
+  "./my_scripts/02_launch_app/original.bat",
+  "./my_scripts/03_git_auto_sync/original.bat",
+  "./my_scripts/04_run_akatsuki_local/original.bat",
+  "./my_scripts/05_git_upload/original.bat",
   "./pwa/manifest.json",
   "./pwa/icon-192.png",
   "./pwa/icon-512.png",
@@ -49,6 +60,22 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+
+  // my_scripts/ holds files I edit by hand (notes, .bat) — always try the
+  // network first so a fresh save shows up, and fall back to cache offline.
+  if (url.pathname.indexOf("/my_scripts/") !== -1) {
+    e.respondWith((async () => {
+      const c = await caches.open(CACHE);
+      try {
+        const r = await fetch(req, { cache: "no-store" });
+        if (r && r.ok) c.put(req, r.clone());
+        return r;
+      } catch (err) {
+        return (await c.match(req, { ignoreSearch: true })) || Response.error();
+      }
+    })());
+    return;
+  }
 
   e.respondWith((async () => {
     const c = await caches.open(CACHE);

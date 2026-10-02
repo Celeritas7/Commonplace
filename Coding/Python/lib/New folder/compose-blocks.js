@@ -64,6 +64,12 @@
 ".cb-stamp{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;color:"+GREEN_DK+";border:1px solid "+GREEN+";background:rgba(47,107,79,.08);padding:3px 6px;border-radius:6px;transform:rotate(-1.5deg);white-space:nowrap;flex:0 0 auto}"+
 ".cb-card.cb-err .cb-stamp{color:"+VERM+";border-color:"+VERM+";background:rgba(162,59,43,.07)}"+
 ".cb-sp{flex:1}"+
+".cb-head{min-width:0}"+
+".cb-head>.cb-name{flex:0 1 auto;min-width:0;text-overflow:ellipsis}"+
+".cb-head>.cb-stamp{flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}"+
+".cb-head>.cb-lines{flex:0 1 auto;overflow:hidden}"+
+".cb-head>.cb-hbtn{flex:0 0 40px}"+
+"@media(max-width:420px){.cb-head{gap:6px;padding:0 2px 0 8px}.cb-head>.cb-lines{display:none}.cb-head>.cb-hbtn{flex:0 0 34px;width:34px}}"+
 ".cb-hbtn{width:40px;height:46px;display:flex;align-items:center;justify-content:center;color:rgba(26,40,32,.6);background:none;border:none;cursor:pointer;font-size:15px;padding:0}"+
 ".cb-hbtn.cb-x{font-size:17px}"+
 ".cb-chev{transition:transform .15s}.cb-card.cb-closed .cb-chev{transform:rotate(-90deg)}"+
@@ -157,7 +163,11 @@
     /* --- model --- */
     var blocks=null;
     if(!isDrill){ try{ blocks=JSON.parse(localStorage.getItem(storeKey)||"null"); }catch(e){ blocks=null; } }
-    if(!blocks || !blocks.length){
+    /* A single empty auto block is not saved work — it is what an earlier visit wrote when the
+       exercise had no starter. Treat it as absent so a starter added later can still seed.
+       Anything the user actually typed (content, or extra blocks) always wins. */
+    var cbBlank = blocks && blocks.length===1 && !(blocks[0].c||"").trim();
+    if(!blocks || !blocks.length || (cbBlank && initialCode)){
       blocks=[{ n:"main", c:initialCode||"", col:false, auto:true }];
     }
     var focusedIdx=-1, lastAsm=null, errBlockIdx=-1, errLine=-1;
@@ -166,9 +176,9 @@
     var block=document.createElement("div"); block.className="cb-wrap";
     block.innerHTML=
       '<div class="cb-kickrow"><span class="cb-kick">COMPOSE · PYTHON</span><span class="cb-kick cb-count"></span></div>'+
-      '<div class="cb-pal"></div>'+
       '<div class="cb-stack"></div>'+
       '<button type="button" class="cb-add">+ Add block</button>'+
+      '<div class="cb-pal"></div>'+
       '<div class="cb-actions">'+
         '<button type="button" class="cb-run">▶&nbsp; Assemble &amp; run</button>'+
         '<button type="button" class="cb-fs">⤢ Fullscreen</button>'+
@@ -257,13 +267,16 @@
 
         var head=document.createElement("div"); head.className="cb-head";
         var grip=document.createElement("span"); grip.className="cb-grip"; grip.textContent="⠿";
-        var name=document.createElement("input"); name.className="cb-name"; name.value=b.n; name.spellcheck=false;
+        var name=document.createElement("input"); name.className="cb-name"; name.value=b.n; name.spellcheck=false; name.setAttribute("autocapitalize","off"); name.setAttribute("autocorrect","off"); name.setAttribute("autocomplete","off");
         name.addEventListener("input",function(){ b.n=name.value; b.auto=false; sync(); });
         name.addEventListener("focus",function(){ setFocus(i,false); });
         head.appendChild(grip); head.appendChild(name);
         if(i===errBlockIdx){
           var stamp=document.createElement("span"); stamp.className="cb-stamp";
-          stamp.textContent = errStamp || "ERROR HERE"; head.appendChild(stamp);
+          stamp.textContent = errStamp || "ERROR HERE";
+          stamp.style.cursor="pointer"; stamp.title="Open this block";
+          stamp.addEventListener("click",function(){ b.col=false; renderStack(); });
+          head.appendChild(stamp);
         } else if(i===focusedIdx && keysOpen){
           var kstamp=document.createElement("span"); kstamp.className="cb-stamp"; kstamp.textContent="KEYS INSERT HERE";
           head.appendChild(kstamp);
@@ -392,10 +405,13 @@
 
     /* --- add block --- */
     addBtn.addEventListener("click",function(){
-      blocks.push({ n:"block "+(blocks.length+1), c:"", col:false, auto:true });
+      /* insert ABOVE main (imports/functions go first; main stays last) */
+      var mi=-1; for(var i=blocks.length-1;i>=0;i--){ if((blocks[i].n||"").trim().toLowerCase()==="main"){ mi=i; break; } }
+      var nb={ n:"block "+(blocks.length+1), c:"", col:false, auto:true }, ni;
+      if(mi>=0){ blocks.splice(mi,0,nb); ni=mi; } else { blocks.push(nb); ni=blocks.length-1; }
       errBlockIdx=-1; sync(); renderStack();
-      var last=stackEl.querySelector('[data-i="'+(blocks.length-1)+'"] .cb-ta');
-      if(last) last.focus();
+      var last=stackEl.querySelector('[data-i="'+ni+'"] .cb-ta');
+      if(last && !(window.matchMedia && window.matchMedia("(hover:none) and (pointer:coarse)").matches)) last.focus();
     });
 
     /* --- run / fullscreen --- */
@@ -416,7 +432,13 @@
         if(ex&&ex.prompt){ var q=document.createElement("div"); q.className="cb-full-q"; q.innerHTML='<span class="cb-full-qkick">PROBLEM</span><p>'+ex.prompt+'</p>'; overlay.appendChild(head); overlay.appendChild(q); overlay.appendChild(body); }
         else { overlay.appendChild(head); overlay.appendChild(body); }
         document.body.appendChild(overlay);
-        relocate(block,body); relocate(fb,body); relocate(out,body);
+        /* capture the card BEFORE moving block out of it */
+        var card=block.closest ? block.closest(".pmb-card") : null;
+        relocate(block,body);
+        if(card){ [".pmb-hr",".pmb-hint",".pmb-reveal"].forEach(function(sel){ var n=card.querySelector(sel); if(n) relocate(n,body); }); }
+        relocate(fb,body); relocate(out,body);
+        if(card){ var at=card.querySelector(".pmb-att"); if(at) relocate(at,body); }
+        if(card){ var nw=card.querySelector(".pmb-next-wrap"); if(nw) relocate(nw,body); }
         document.body.style.overflow="hidden"; fsBtn.textContent="✕ Exit"; api.isFull=true;
       } else {
         restoreAll(); if(overlay){ overlay.parentNode.removeChild(overlay); overlay=null; }
@@ -458,8 +480,9 @@
       var isErr=!!o.isErr;
       var orderHint = isErr ? guiltyFromError(o.text) : (errBlockIdx=-1, errStamp="", null);
 
-      /* auto-collapse blocks after a run to make room for output */
-      blocks.forEach(function(b){ b.col=true; });
+      /* Auto-collapse after a run to make room for output — but never the block that just
+         failed. Sealing the error shut is the one block the user needs open to fix it. */
+      blocks.forEach(function(b,i){ b.col = (i!==errBlockIdx); });
       focusedIdx=-1; renderStack(); renderPal();
       runBtn.innerHTML="▶&nbsp; Run again";
 
@@ -489,7 +512,7 @@
       out.style.display=""; out.innerHTML=html;
     }
 
-    var api={ block:block, ta:ta, fb:fb, out:out, isFull:false,
+    var api={ block:block, ta:ta, fb:fb, out:out, isFull:false, setFull:setFull,
               setRunning:setRunning, showFeedback:showFeedback, showOutput:showOutput };
 
     /* --- boot --- */

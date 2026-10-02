@@ -171,6 +171,8 @@ window.CommonplacePractice = (function () {
       toggle.querySelector(".pmb-kt-label").textContent= open?"Hide keys":"Insert keywords & builtins";
       toggle.querySelector(".pmb-caret").textContent= open?"⌃":"⌄";
     });
+    /* Smart keys (phase SK-1): predictive palette replaces the static tray when py-keys.js is loaded */
+    if(window.PY_KEYS){ tray=window.PY_KEYS.build({lang:"py"}, ta); tray.classList.add("pmb-smart"); }
 
     var wrap=document.createElement("div"); wrap.className="pmb-edwrap";
     var pre=document.createElement("pre"); pre.className="pmb-hl"; pre.setAttribute("aria-hidden","true");

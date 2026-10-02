@@ -7,7 +7,7 @@
  *      is already handled by the browser's own HTTP cache)
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v1";
+var VERSION = "cp-py-v2";
 var CORE = [
   "./",
   "index.html",
@@ -57,6 +57,22 @@ self.addEventListener("fetch", function (e) {
   try { url = new URL(req.url); } catch (err) { return; }
   if (url.origin !== self.location.origin) return;          /* CDNs: network only */
   if (url.search.indexOf("nocache") >= 0) return;
+
+  /* my_scripts/ holds files I edit by hand (notes, .py) — network first so a
+     fresh save shows up at once; fall back to the cached copy offline. */
+  if (url.pathname.indexOf("/my_scripts/") !== -1) {
+    e.respondWith(
+      caches.open(VERSION).then(function (cache) {
+        return fetch(req, { cache: "no-store" }).then(function (res) {
+          if (res && res.ok && res.type === "basic") cache.put(req, res.clone());
+          return res;
+        }).catch(function () {
+          return cache.match(req, { ignoreSearch: true }).then(function (hit) { return hit || Response.error(); });
+        });
+      })
+    );
+    return;
+  }
 
   e.respondWith(
     caches.open(VERSION).then(function (cache) {

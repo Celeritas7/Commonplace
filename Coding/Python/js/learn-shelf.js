@@ -84,13 +84,16 @@ function build() {
     return fcard({ id: f.id, name: f.t, sub: f.sub, href: "shelf.html?s=" + f.id, written: 1, read: 0, total: 0,
       tag: "runnable", count: '<b>' + f.n + '</b> notebooks' });
   }).join("");
+  var mine = fcard({ id: "my-scripts", name: "Rebuild my scripts", sub: "my own tools &middot; notes, rewrite, feature, new",
+    href: "my_scripts/index.html", written: 1, read: 0, total: 0, tag: "by hand", count: '<b>5</b> scripts' });
 
   pane.innerHTML =
       '<a class="mark" href="' + b.href + '"><span class="mark-k">' + b.kick + '</span>'
     + '<span><span class="mark-t">' + b.title + '</span><span class="mark-m">' + b.meta + '</span></span>'
     + '<span class="mark-go">' + b.cta + '</span></a>'
     + '<div class="shelf-block"><div class="shelf-kick"><b>The book</b> <i>written from your own notebooks and notes</i></div><div class="folders">' + books + '</div></div>'
-    + '<div class="shelf-block"><div class="shelf-kick"><b>Notebooks</b> <i>runnable, no reading</i></div><div class="folders">' + nbs + '</div></div>';
+    + '<div class="shelf-block"><div class="shelf-kick"><b>Notebooks</b> <i>runnable, no reading</i></div><div class="folders">' + nbs + '</div></div>'
+    + '<div class="shelf-block"><div class="shelf-kick"><b>My scripts</b> <i>your own tools, rebuilt by hand</i></div><div class="folders">' + mine + '</div></div>';
 
 }
 

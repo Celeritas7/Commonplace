@@ -221,6 +221,14 @@
 
     /* --- key palette --- */
     var keysOpen=true;
+    /* Smart keys (phase SK-1): one predictive palette, bound to whichever block is focused */
+    var smartPal=null;
+    function cbFocused(){ return focusedIdx>=0 ? stackEl.querySelector('[data-i="'+focusedIdx+'"] .cb-ta') : null; }
+    function cbTarget(){
+      var t=cbFocused();
+      if(!t){ focusedIdx=blocks.length-1; renderStack(); t=cbFocused(); }
+      return t;
+    }
     function pillBtn(t,kind){
       var b=document.createElement("button"); b.type="button"; b.className="cb-pill cb-pill-"+kind;
       b.textContent = t==='"  "' ? '" "' : t.trim();
@@ -236,6 +244,15 @@
       return b;
     }
     function renderPal(){
+      if(window.PY_KEYS){
+        if(!smartPal) smartPal=window.PY_KEYS.build({ lang:"py", getTarget:cbTarget, peekTarget:cbFocused,
+          accepts:function(el){ return !!(el && el.classList && el.classList.contains("cb-ta") && stackEl.contains(el)); },
+          fullText:function(){ return ta.value; } }, null);
+        palEl.className="cb-pal-smart";
+        if(smartPal.parentNode!==palEl){ palEl.innerHTML=""; palEl.appendChild(smartPal); }
+        smartPal.refresh();
+        return;
+      }
       palEl.className="cb-pal"+(keysOpen?"":" cb-hidden")+(keysOpen&&focusedIdx>=0?" cb-target":"");
       if(!keysOpen){
         palEl.innerHTML='<span class="cb-kick">KEYS HIDDEN</span>';

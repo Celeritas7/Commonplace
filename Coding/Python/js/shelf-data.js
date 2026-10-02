@@ -160,6 +160,7 @@ var SHELF = {
  "python-book":{accent:"#16352a", tint:"#dde7dd", mark:SVG('<path d="M20 11v20"/><path d="M20 11c-3-2.2-7-3-11-2.6v19.2c4-.4 8 .4 11 2.6"/><path d="M20 11c3-2.2 7-3 11-2.6v19.2c-4-.4-8 .4-11 2.6"/><path d="M12.5 14.5h4.5M12.5 18.5h4.5M23 14.5h4.5M23 18.5h4.5" stroke-width="1"/>')},
  "nb-fundamentals":{accent:"#16352a", tint:"#dde7dd", mark:SVG('<rect x="7" y="11" width="26" height="18" rx="2.5"/><path d="M7 15.5h26" stroke-width="1"/><path d="M13 20l2.5 2.5L13 25M18.5 25.5h6"/><circle cx="10.2" cy="13.2" r=".8" fill="currentColor" stroke="none"/>')},
  "nb-libraries":{accent:"#2f6b4f", tint:"#dde7dd", mark:SVG('<path d="M20 8l11 5-11 5-11-5 11-5z"/><path d="M9 19l11 5 11-5"/><path d="M9 25l11 5 11-5"/>')},
+ "my-scripts":{accent:"#a23b2b", tint:"#f3e6e1", mark:SVG('<path d="M11 8h13l5 5v19H11z"/><path d="M24 8v5h5" stroke-width="1"/><path d="M14.5 17l2.5 2.5-2.5 2.5M19 22h5" stroke-width="1.2"/>')},
  "nb-practice":{accent:"#a98a4b", tint:"#f4f5ec", mark:SVG('<rect x="10" y="7" width="20" height="26" rx="2"/><path d="M14 14h12M14 18.5h12M14 23h7" stroke-width="1"/><path d="M20 27.5l2.2 2.2 4.8-5"/>')}
 };
 function shelfMeta(id){ return SHELF[id] || {accent:"#2f6b4f", tint:"#dde7dd", mark:""}; }

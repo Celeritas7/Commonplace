@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PY_KEYS · harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f4f5ec;color:#1a2820;font-family:'EB Garamond',Georgia,serif}
+a{color:#2f6b4f}a:hover{color:#16352a}
+.h-wrap{max-width:760px;margin:0 auto;padding:24px 16px 60px;display:flex;flex-direction:column;gap:22px}
+.h-kick{font:700 10px 'JetBrains Mono',monospace;letter-spacing:2px;color:rgba(26,40,32,.55)}
+h1{font-size:30px;font-weight:600;margin:4px 0 0;letter-spacing:-.5px}
+.h-sum{font:700 13px 'JetBrains Mono',monospace}
+.h-sum.ok{color:#1f8a4e}.h-sum.bad{color:#a23b2b}
+.h-ta{width:100%;min-height:150px;box-sizing:border-box;font:13px/1.6 'JetBrains Mono',monospace;background:#fbfcf6;border:1px solid #d2dacb;border-radius:12px;padding:12px 14px;color:#1a2820;resize:vertical;outline:none;tab-size:4}
+.h-ta:focus{border-color:#2f6b4f}
+.h-out{font:11px/1.5 'JetBrains Mono',monospace;background:#fbfcf6;border:1px solid #d2dacb;border-radius:8px;padding:10px 12px;margin:0;white-space:pre-wrap;color:#41564a}
+table{width:100%;border-collapse:collapse;font:11.5px/1.45 'JetBrains Mono',monospace}
+td{border-top:1px solid #d2dacb;padding:6px 6px;vertical-align:top}
+td.st{font-weight:700;width:40px}td.st.ok{color:#1f8a4e}td.st.bad{color:#a23b2b}
+td.in{white-space:pre;color:#1a2820;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+td.gt{color:#41564a;word-break:break-word}
+</style>
+</head>
+<body>
+<div class="h-wrap">
+<div><div class="h-kick">PHASE SK-1 · SMART KEYS · PYTHON</div><h1>Key palette harness</h1></div>
+<section style="display:flex;flex-direction:column;gap:10px">
+<div class="h-kick">§ LIVE EDITOR</div>
+<textarea id="ta" class="h-ta" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="Tap keys below — the palette predicts from the caret."></textarea>
+<div id="pal"></div>
+<pre id="out" class="h-out"></pre>
+</section>
+<section style="display:flex;flex-direction:column;gap:10px">
+<div class="h-kick">§ HEADLESS TABLE</div>
+<div id="sum" class="h-sum"></div>
+<table><tbody id="rows"></tbody></table>
+</section>
+</div>
+<script src="py-keys.js"></script>
+<script src="py-keys.test.js"></script>
+<script>
+(function(){
+  var ta=document.getElementById("ta"), out=document.getElementById("out");
+  document.getElementById("pal").appendChild(PY_KEYS.build({lang:"py"}, ta));
+  function show(){ var s=ta.selectionStart; out.textContent=JSON.stringify(PY_KEYS.predict(ta.value.slice(0,s), ta.value)); }
+  ["input","click","keyup"].forEach(function(n){ ta.addEventListener(n,show); }); show();
+  var r=PY_KEYS_TESTS.run(PY_KEYS), sum=document.getElementById("sum"), body=document.getElementById("rows");
+  sum.textContent=r.pass+" passed · "+r.fail+" failed"; sum.className="h-sum "+(r.fail?"bad":"ok");
+  function e(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+  body.innerHTML=r.rows.map(function(x){
+    var g=x.kind==="indent" ? "indent "+x.got.n+" (want "+x.want.n+")" : "NEXT "+JSON.stringify(x.got.now.slice(0,6))+" · THEN "+JSON.stringify(x.got.then)+(x.got.replace?" · replace "+x.got.replace:"")+(x.got.pad?" · pad":"");
+    return '<tr><td class="st '+(x.ok?"ok":"bad")+'">'+(x.ok?"PASS":"FAIL")+'</td><td class="in">'+e(JSON.stringify(x.input))+'</td><td class="gt">'+(x.ok?"":"["+x.why+"] ")+e(g)+'</td></tr>';
+  }).join("");
+})();
+</script>
+</body>
+</html>

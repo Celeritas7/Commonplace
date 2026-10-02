@@ -49,7 +49,8 @@ window.CommonplacePractice = (function () {
   var C={ brass:"#a98a4b", ok:"#2f8f5b", err:"#b3261e" };
 
   /* ===================== shared Pyodide engine ===================== */
-  var PY_BASE="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/";
+  var PY_BASES=["https://cdn.jsdelivr.net/pyodide/v0.26.4/full/","https://fastly.jsdelivr.net/pyodide/v0.26.4/full/","https://unpkg.com/pyodide@0.26.4/"];
+  var PY_BASE=PY_BASES[0];
   var py=null, pyState="idle", pyPromise=null, enginePills=[], engineSubs=[];
   var ENGINE_MAP={ idle:[C.brass,"CPython idle"], boot:[C.brass,"loading CPython…"], ready:[C.ok,"CPython ready"],
                    nodb:[C.err,"offline — connect to load Python"], err:[C.err,"engine failed to load"] };
@@ -61,12 +62,27 @@ window.CommonplacePractice = (function () {
   }
   function setEngine(state){ pyState=state; enginePills.forEach(function(p){ applyPill(p,state); }); engineSubs.forEach(function(cb){ try{ cb(state); }catch(e){} }); }
   function registerPill(id){ if(!id) return; var p=document.getElementById(id); if(p && enginePills.indexOf(p)<0){ enginePills.push(p); applyPill(p,pyState); } }
+  var __sc={};
   function loadScript(src){
-    return new Promise(function(res,rej){
-      if(document.querySelector('script[data-pmb="'+src+'"]')) return res();
-      var s=document.createElement("script"); s.src=src; s.setAttribute("data-pmb",src);
-      s.onload=res; s.onerror=function(){ rej(new Error("load fail")); };
+    if(__sc[src]) return __sc[src];
+    __sc[src]=new Promise(function(res,rej){
+      var s=document.createElement("script"); s.src=src; s.async=true; s.crossOrigin="anonymous"; s.setAttribute("data-pmb",src);
+      var done=false, t=setTimeout(function(){ if(!done){done=true;rej(new Error("timeout"));} },45000);
+      s.onload=function(){ if(done)return; done=true; clearTimeout(t); res(); };
+      s.onerror=function(){ if(done)return; done=true; clearTimeout(t); rej(new Error("load fail")); };
       document.head.appendChild(s);
+    });
+    __sc[src].catch(function(){ delete __sc[src]; });
+    return __sc[src];
+  }
+  function waitForGlobal(ms){
+    return new Promise(function(res,rej){
+      var t0=Date.now();
+      (function poll(){
+        if(typeof window.loadPyodide==="function") return res();
+        if(Date.now()-t0>ms) return rej(new Error("loadPyodide missing"));
+        setTimeout(poll,60);
+      })();
     });
   }
   function ensurePy(){
@@ -74,13 +90,17 @@ window.CommonplacePractice = (function () {
     if(pyPromise) return pyPromise;
     setEngine("boot");
     pyPromise=(async function(){
-      try{
-        if(typeof window.loadPyodide!=="function") await loadScript(PY_BASE+"pyodide.js");
-        py=await window.loadPyodide({ indexURL: PY_BASE });
-        setEngine("ready"); return py;
-      }catch(e){
-        setEngine(navigator.onLine===false?"nodb":"err"); pyPromise=null; throw e;
+      var lastErr=null;
+      for(var i=0;i<PY_BASES.length;i++){
+        var base=PY_BASES[i];
+        try{
+          if(typeof window.loadPyodide!=="function"){ await loadScript(base+"pyodide.js"); await waitForGlobal(8000); }
+          py=await window.loadPyodide({ indexURL: base });
+          PY_BASE=base; setEngine("ready"); return py;
+        }catch(e){ lastErr=e; try{ delete window.loadPyodide; }catch(_){ window.loadPyodide=undefined; } }
       }
+      setEngine(navigator.onLine===false?"nodb":"err"); pyPromise=null;
+      throw new Error("Python runtime could not load — check your connection and reload. ("+(lastErr&&lastErr.message||"unknown")+")");
     })();
     return pyPromise;
   }
@@ -121,6 +141,7 @@ window.CommonplacePractice = (function () {
     ta.dispatchEvent(new Event("input",{bubbles:true}));
     ta.focus(); var p=s+ins.length-back; ta.setSelectionRange(p,p);
   }
+  function PMB_TOUCH(){ try{ return !!(window.matchMedia && window.matchMedia("(hover:none) and (pointer:coarse)").matches); }catch(e){ return false; } }
   function makeEditor(ex, initialCode, onCodeChange, onCheck, placeholder){
     /* Compose Blocks replaces the flat textarea when compose-blocks.js is loaded */
     if(window.ComposeBlocks && window.ComposeBlocks.enabled){
@@ -194,8 +215,10 @@ window.CommonplacePractice = (function () {
         var body=document.createElement("div"); body.className="pmb-full-body";
         overlay.appendChild(head); overlay.appendChild(q); overlay.appendChild(body);
         document.body.appendChild(overlay);
+        var pcard=block.closest?block.closest(".pmb-card"):null;
         relocate(block,body); relocate(fb,body); relocate(out,body);
-        document.body.style.overflow="hidden"; fullBtn.textContent="✕ Exit fullscreen  (Esc)"; api.isFull=true; ta.focus();
+        if(pcard){ [".pmb-hr",".pmb-hint",".pmb-reveal",".pmb-att",".pmb-next-wrap"].forEach(function(sel){ var n=pcard.querySelector(sel); if(n) relocate(n,body); }); }
+        document.body.style.overflow="hidden"; fullBtn.textContent="✕ Exit fullscreen  (Esc)"; api.isFull=true; if(!PMB_TOUCH()) ta.focus();
       } else {
         restoreAll(); if(overlay){ overlay.parentNode.removeChild(overlay); overlay=null; }
         document.body.style.overflow=""; fullBtn.textContent="⤢ Fullscreen"; api.isFull=false;
@@ -239,11 +262,17 @@ window.CommonplacePractice = (function () {
     PANELS = PANELS.filter(function(p){ return p.storePrefix !== cfg.storePrefix; });
     PANELS.push({ label: cfg.label || cfg.storePrefix, storePrefix: cfg.storePrefix, exercises: EX, store: store });
     var els={};
-    var activeId=null, allDone=false;
+    var activeId=null, allDone=false, secFilter="all";
     var drillMode="list", drillQueue=[], drillIdx=0;
 
     function computeAllDone(){ allDone=EX.every(function(e){return !!store.solved[e.id];}); return allDone; }
-    function makeNextBtn(){ var b=document.createElement("button"); b.type="button"; b.className="pmb-next"; b.textContent="Next →"; b.addEventListener("click",advance); return b; }
+    function makeNextBtn(){ var b=document.createElement("button"); b.type="button"; b.className="pmb-next"; b.textContent="Next →"; b.addEventListener("click",function(){
+      var prev=els.card?els.card.querySelector(".pmb-card"):null;
+      var wasFull=!!(prev&&prev._ed&&prev._ed.isFull);
+      if(wasFull&&prev._ed.setFull) prev._ed.setFull(false);
+      advance();
+      if(wasFull){ var nc=els.card?els.card.querySelector(".pmb-card"):null; if(nc&&nc._ed&&nc._ed.setFull) nc._ed.setFull(true); }
+    }); return b; }
 
     function renderCard(){
       var ex=EX.filter(function(e){return e.id===activeId;})[0]||EX[0];
@@ -257,8 +286,14 @@ window.CommonplacePractice = (function () {
         +'<span class="pmb-dots">'+dots(ex.diff)+'</span>'+(solved?'<span class="pmb-chk">✓</span>':'');
       card.appendChild(head);
       var prompt=document.createElement("p"); prompt.className="pmb-prompt"; prompt.innerHTML=ex.prompt; card.appendChild(prompt);
+      /* Real Problems carry a requirements checklist; syntax drills do not. */
+      if(ex.reqs && ex.reqs.length){
+        var rq=document.createElement("div"); rq.className="pmb-reqs";
+        rq.innerHTML='<span class="pmb-reqs-kick">REQUIREMENTS</span><ul>'+ex.reqs.map(function(r){ return "<li>"+r+"</li>"; }).join("")+"</ul>";
+        card.appendChild(rq);
+      }
 
-      var ed=makeEditor(ex, store.code[ex.id]||"",
+      var ed=makeEditor(ex, store.code[ex.id]||ex.starter||"",
         function(v){ store.code[ex.id]=v; store.saveCode(); },
         function(){ check(ex,card,ed); }, "Write your Python here…  ⌘/Ctrl + Enter to run");
       card.appendChild(ed.block);
@@ -268,7 +303,19 @@ window.CommonplacePractice = (function () {
       var revB=document.createElement("button"); revB.type="button"; revB.className="pmb-btn pmb-btn-ghost"; revB.textContent="Reveal answer";
       hr.appendChild(hintB); hr.appendChild(revB); card.appendChild(hr);
       var hintBox=document.createElement("div"); hintBox.className="pmb-hint"; hintBox.style.display="none"; hintBox.textContent=ex.hint||""; card.appendChild(hintBox);
-      var revBox=document.createElement("pre"); revBox.className="pmb-reveal"; revBox.style.display="none"; revBox.innerHTML=hl(ex.sol); card.appendChild(revBox);
+      var revBox=document.createElement("div"); revBox.className="pmb-reveal"; revBox.style.display="none";
+      var revHead=document.createElement("div"); revHead.className="pmb-reveal-head";
+      revHead.innerHTML='<span class="pmb-reveal-kick">ANSWER \u00b7 FOR REFERENCE</span>';
+      var copyB=document.createElement("button"); copyB.type="button"; copyB.className="pmb-copy"; copyB.textContent="Copy";
+      copyB.addEventListener("click",function(){
+        var code=ex.sol||"";
+        function done(){ copyB.textContent="Copied \u2713"; copyB.classList.add("done"); setTimeout(function(){ copyB.textContent="Copy"; copyB.classList.remove("done"); },1600); }
+        function fallback(){ var x=document.createElement("textarea"); x.value=code; x.style.position="fixed"; x.style.opacity="0"; document.body.appendChild(x); x.select(); try{ document.execCommand("copy"); done(); }catch(e){} document.body.removeChild(x); }
+        if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done,fallback); else fallback();
+      });
+      revHead.appendChild(copyB);
+      var revPre=document.createElement("pre"); revPre.className="pmb-reveal-pre"; revPre.innerHTML=hl(ex.sol);
+      revBox.appendChild(revHead); revBox.appendChild(revPre); card.appendChild(revBox);
       hintB.addEventListener("click",function(){ var o=hintBox.style.display==="none"; hintBox.style.display=o?"":"none"; hintB.textContent=o?"Hide hint":"Hint"; });
       revB.addEventListener("click",function(){ var o=revBox.style.display==="none"; revBox.style.display=o?"":"none"; revB.textContent=o?"Hide answer":"Reveal answer"; });
 
@@ -285,7 +332,8 @@ window.CommonplacePractice = (function () {
 
     function advance(){
       var idx=-1,i; for(i=0;i<EX.length;i++) if(EX[i].id===activeId){ idx=i; break; }
-      for(var k=1;k<=EX.length;k++){ var e=EX[(idx+k)%EX.length]; if(!store.solved[e.id]){ activeId=e.id; renderCard(); renderTabs(true); scrollToTabs(); return; } }
+      for(var k=1;k<=EX.length;k++){ var e=EX[(idx+k)%EX.length]; if(store.solved[e.id]) continue; if(secFilter!=="all" && (e.sec||"Other")!==secFilter) continue; activeId=e.id; renderCard(); renderTabs(true); scrollToTabs(); return; }
+      if(secFilter!=="all"){ secFilter="all"; for(var j=1;j<=EX.length;j++){ var e2=EX[(idx+j)%EX.length]; if(!store.solved[e2.id]){ activeId=e2.id; renderCard(); renderTabs(true); scrollToTabs(); return; } } }
       renderCard(); renderTabs();
     }
 
@@ -347,14 +395,49 @@ window.CommonplacePractice = (function () {
       });
     }
 
+    function secOrder(){
+      var seen=[]; EX.forEach(function(e){ var s=e.sec||"Other"; if(seen.indexOf(s)<0) seen.push(s); }); return seen;
+    }
     function renderTabs(scroll){
       var host=els.tabs; computeAllDone();
-      var tabs= allDone ? EX : EX.filter(function(e){ return !store.solved[e.id] || e.id===activeId; });
-      var track=tabs.map(function(e){
-        var isA=e.id===activeId, isD=!!store.solved[e.id];
-        return '<button class="pmb-tab'+(isA?" active":"")+'" data-id="'+esc(e.id)+'"><span class="pmb-tab-id">'+esc(e.id.toUpperCase())+'</span><span class="pmb-tab-t">'+esc(e.title)+'</span>'+(isD?'<span class="pmb-tab-chk">✓</span>':'')+'</button>';
+      var order=secOrder();
+      if(secFilter!=="all" && order.indexOf(secFilter)<0) secFilter="all";
+      var pool= allDone ? EX : EX.filter(function(e){ return !store.solved[e.id] || e.id===activeId; });
+      // group by module, keeping each module's problems together and in order
+      var byS={}; pool.forEach(function(e){ var s=e.sec||"Other"; (byS[s]=byS[s]||[]).push(e); });
+      var groups=order.filter(function(s){ return byS[s] && (secFilter==="all"||s===secFilter); });
+      // A separator per tab is noise: only label groups when grouping actually buys something.
+      var worthGrouping = order.length>1 && order.length<EX.length && groups.some(function(s){ return byS[s].length>1; });
+
+      var chips=['<button type="button" class="pmb-mod'+(secFilter==="all"?" active":"")+'" data-sec="all">All <span class="pmb-mod-n">'+pool.length+'</span></button>'];
+      order.forEach(function(s){
+        var left=(byS[s]||[]).length, total=EX.filter(function(e){return (e.sec||"Other")===s;}).length;
+        var doneAll=left===0;
+        chips.push('<button type="button" class="pmb-mod'+(secFilter===s?" active":"")+(doneAll?" done":"")+'" data-sec="'+esc(s)+'">'+esc(s)+'<span class="pmb-mod-n">'+(doneAll?"✓":left+"/"+total)+'</span></button>');
+      });
+
+      var track=groups.map(function(s){
+        var inner=byS[s].map(function(e){
+          var isA=e.id===activeId, isD=!!store.solved[e.id];
+          return '<button class="pmb-tab'+(isA?" active":"")+'" data-id="'+esc(e.id)+'"><span class="pmb-tab-id">'+esc(e.id.toUpperCase())+'</span><span class="pmb-tab-t">'+esc(e.title)+'</span>'+(isD?'<span class="pmb-tab-chk">✓</span>':'')+'</button>';
+        }).join("");
+        var sep=(secFilter==="all" && worthGrouping)?'<span class="pmb-tab-sep">'+esc(s)+'</span>':'';
+        return sep+inner;
       }).join("");
-      host.innerHTML='<span class="pmb-tabs-label">'+(allDone?"all solved":"remaining")+'</span><div class="pmb-tabs-track">'+track+'</div>';
+
+      host.innerHTML=(worthGrouping?'<div class="pmb-mods">'+chips.join("")+'</div>':'')
+        +'<div class="pmb-tabs-row"><span class="pmb-tabs-label">'+(allDone?"all solved":"remaining")+'</span><div class="pmb-tabs-track">'+(track||'<span class="pmb-tab-sep">nothing left in this module</span>')+'</div></div>';
+      Array.prototype.forEach.call(host.querySelectorAll(".pmb-mod"),function(b){
+        b.addEventListener("click",function(){
+          secFilter=b.getAttribute("data-sec");
+          if(secFilter!=="all"){
+            var first=EX.filter(function(e){ return (e.sec||"Other")===secFilter && (allDone||!store.solved[e.id]); })[0]
+                   || EX.filter(function(e){ return (e.sec||"Other")===secFilter; })[0];
+            if(first){ activeId=first.id; renderCard(); }
+          }
+          renderTabs(true);
+        });
+      });
       Array.prototype.forEach.call(host.querySelectorAll(".pmb-tab"),function(b){
         b.addEventListener("click",function(){ activeId=b.getAttribute("data-id"); renderCard(); renderTabs(true); });
       });
@@ -569,6 +652,16 @@ window.CommonplacePractice = (function () {
 ".pmb-progfill{height:100%;background:#2f6b4f;transition:width .3s;}",
 ".pmb-progtext{font-family:'JetBrains Mono',monospace;font-size:12px;color:#41564a;white-space:nowrap;}",
 ".pmb-tabs{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;background:rgba(236,238,228,.92);backdrop-filter:blur(8px);border-top:1px solid #cdbfa3;border-bottom:1px solid #cdbfa3;margin:0 0 18px;}",
+".pmb-tabs{flex-direction:column;align-items:stretch;gap:0;}",
+".pmb-tabs-row{display:flex;align-items:center;gap:12px;}",
+".pmb-mods{display:flex;flex-wrap:wrap;gap:6px;padding:9px 0 7px;border-bottom:1px dashed #d9cdb4;}",
+".pmb-mod{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.4px;color:#41564a;background:#f3f2e7;border:1px solid #d9cdb4;}",
+".pmb-mod:hover{border-color:#2f6b4f;}",
+".pmb-mod .pmb-mod-n{font-size:10px;color:#7a8c80;}",
+".pmb-mod.done{opacity:.55;}.pmb-mod.done .pmb-mod-n{color:#2f8f5b;}",
+".pmb-mod.active{background:#211b13;border-color:#211b13;color:#efe7d6;}.pmb-mod.active .pmb-mod-n{color:#8fe0b0;}",
+".pmb-tab-sep{flex:0 0 auto;align-self:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#6b5f49;padding:0 4px 0 8px;border-left:1px solid #d9cdb4;white-space:nowrap;}",
+".pmb-tabs-track>.pmb-tab-sep:first-child{border-left:0;padding-left:0;}",
 ".pmb-tabs-label{flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#7a8c80;}",
 ".pmb-tabs-track{display:flex;gap:8px;overflow-x:auto;padding:9px 0;}",
 ".pmb-tab{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:20px;cursor:pointer;max-width:240px;font-family:'JetBrains Mono',monospace;border:1px solid #cdbfa3;background:#fbfcf6;}",
@@ -586,6 +679,12 @@ window.CommonplacePractice = (function () {
 ".pmb-dots{display:inline-flex;gap:3px;}.pmb-dot{width:6px;height:6px;border-radius:50%;background:#cdbfa3;}.pmb-dot.on{background:#2f6b4f;}",
 ".pmb-chk{color:#2f8f5b;font-weight:700;margin-left:4px;}",
 ".pmb-prompt{margin:10px 0 12px;color:#41564a;font-family:'EB Garamond',serif;font-size:16px;}.pmb-prompt code{font-family:'JetBrains Mono',monospace;font-size:.92em;}",
+".pmb-reqs{margin:0 0 12px;padding:10px 14px;background:#f4f5ec;border:1px solid #e0e3d4;border-left:3px solid #b0612f;border-radius:4px;}",
+".pmb-reqs-kick{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#8a7a5c;margin-bottom:6px;}",
+".pmb-reqs ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;}",
+".pmb-reqs li{font-family:'EB Garamond',serif;font-size:15px;color:#41564a;padding-left:14px;position:relative;}",
+".pmb-reqs li:before{content:'\\203A';position:absolute;left:0;color:#b0612f;}",
+".pmb-reqs code{font-family:'JetBrains Mono',monospace;font-size:.9em;}",
 ".pmb-tray{margin:10px 0 0;}",
 ".pmb-keys-toggle{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#41564a;background:#f4f5ec;border:1px solid #d2dacb;border-radius:8px;padding:8px 13px;cursor:pointer;min-height:38px;}",
 ".pmb-tray.open .pmb-keys-toggle{border-color:#2f6b4f;}.pmb-caret{color:#7a8c80;font-size:11px;}",
@@ -607,7 +706,12 @@ window.CommonplacePractice = (function () {
 ".pmb-stdin{font-family:'JetBrains Mono',monospace;font-size:11px;color:#7a8c80;}.pmb-stdin span{color:#2f6b4f;}",
 ".pmb-hr{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}",
 ".pmb-hint{margin-top:12px;font-size:14.5px;color:#7a5a17;background:#faf3df;border:1px solid #e7d6a8;border-radius:8px;padding:9px 12px;font-family:'EB Garamond',serif;}",
-".pmb-reveal{margin-top:12px;background:#16352a;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:12px;border-radius:8px;overflow:auto;white-space:pre;color:#d7e8dd;}",
+".pmb-reveal{margin-top:12px;background:#fbfcf6;border:1px solid #d2dacb;border-radius:9px;overflow:hidden;}",
+".pmb-reveal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 9px 7px 12px;border-bottom:1px solid #d2dacb;}",
+".pmb-reveal-kick{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:#7a8c80;}",
+".pmb-copy{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;background:#f4f5ec;border:1px solid #d2dacb;border-radius:7px;padding:6px 11px;color:#234f3b;cursor:pointer;white-space:nowrap;}",
+".pmb-copy:hover{border-color:#7fa68b;}.pmb-copy.done{color:#2f8f5b;border-color:#b6dcc4;background:#e9f5ee;}",
+".pmb-reveal-pre{margin:0;background:#16352a;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;padding:12px;overflow:auto;white-space:pre;color:#d7e8dd;}",
 ".pmb-fb{margin-top:11px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 12px;border-radius:8px;}",
 ".pmb-fb.ok{color:#2f8f5b;background:#e9f5ee;border:1px solid #b6dcc4;}.pmb-fb.err{color:#b3261e;background:#f8ebe6;border:1px solid #e7c3b4;}",
 ".pmb-out{margin-top:10px;}.pmb-out-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:#7a8c80;margin-bottom:5px;}",
