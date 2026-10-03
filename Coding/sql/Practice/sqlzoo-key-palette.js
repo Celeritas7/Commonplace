@@ -710,6 +710,31 @@
           ur.appendChild(keycap(k, CAP_PUNCT, function () { insertKey(ta, k, "p"); }, true));
         });
       }
+
+      // table layout lookup — opens schema & first rows, types nothing
+      var tabs = TABLES[ds] || [];
+      if (tabs.length) {
+        var sr = row(card);
+        sr.appendChild(el("span", "display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;margin-right:3px;",
+          '<span style="width:8px;height:8px;border-radius:50%;background:' + (DS_COLOR[ds] || "#564b3a") + ';"></span>' +
+          '<span style="' + LABEL + '">TABLES</span>'));
+        tabs.forEach(function (tb) {
+          var b = el("button",
+            "display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 11px;flex:0 0 auto;" + MONO +
+            "font-size:12px;font-weight:600;color:" + TEAL_DEEP + ";background:#cfded7;border:1px solid #b6cdc3;" +
+            "border-radius:10px;cursor:pointer;white-space:nowrap;",
+            '<span style="font-size:12px;">\u2922</span>' + esc(tb.t));
+          b.type = "button";
+          b.className = "zk-schema";
+          b.setAttribute("data-table", tb.t);
+          b.title = "Schema & first rows";
+          b.addEventListener("click", function (ev) {
+            ev.preventDefault(); ev.stopPropagation();
+            if (window.SQLZOO_SCHEMA && window.SQLZOO_SCHEMA.open) window.SQLZOO_SCHEMA.open(tb.t, ta, ds);
+          });
+          sr.appendChild(b);
+        });
+      }
     }
 
     function renderAll(card) {
