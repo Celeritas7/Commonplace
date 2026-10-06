@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Sheet Metal Module</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Martian+Mono:wdth,wght@75..112.5,300..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap">
+<style>
+/* Layout concept: the module is a flat blank. Sections are flanges separated by bend lines,
+   progress is a progressive-die strip that gets punched one station per sheet studied.
+   Surfaces: galvanized zinc (spangle texture), brushed steel parts, machinist's blue layout fluid for marks,
+   heat-tint colours (straw → bronze → violet → blue) only where something has been "worked". */
+:root{
+  --paper:#e4e8eb; --sheet:#f3f5f6; --sheet-2:#eceff1;
+  --ink:#151a20; --ink-soft:#3e4752; --mute:#6c7681; --rule:#c2c9d0; --rule-soft:#d5dadf;
+  --layout:#1d4da6; --layout-ink:#153a80; --layout-wash:rgba(29,77,166,.08);
+  --heat-1:#c99a3c; --heat-2:#b0602a; --heat-3:#7b3f80; --heat-4:#2e5da6;
+  --comp:#6d92d0; --tens:#c8742d; --neutral:#f7f3e8;
+  --steel-a:#c9d0d6; --steel-b:#a9b2ba; --steel-c:#e6eaed; --steel-edge:rgba(20,26,32,.22);
+  --hole:#aeb6bd; --hole-deep:#5d6670;
+  --emboss-hi:rgba(255,255,255,.75); --emboss-lo:rgba(0,0,0,.16);
+  --ok-bg:#edf6f0; --ok-line:#b5d3bf; --ok-ink:#1d6741; --ok-head:#dcece2;
+  --bad-bg:#f8efed; --bad-line:#deb6ae; --bad-ink:#a1311f; --bad-head:#f1dcd7;
+  --bar:#151a20; --bar-ink:#e4e8eb;
+  --f-display:'Archivo','Arial Narrow',system-ui,sans-serif;
+  --f-body:'Newsreader',Georgia,'Times New Roman',serif;
+  --f-mono:'Martian Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#13171b; --sheet:#1c2126; --sheet-2:#181d22;
+  --ink:#e3e7ea; --ink-soft:#adb6bf; --mute:#7e8994; --rule:#323a43; --rule-soft:#272e35;
+  --layout:#7fa6f2; --layout-ink:#a9c3f7; --layout-wash:rgba(127,166,242,.10);
+  --heat-1:#dcb05a; --heat-2:#d0804a; --heat-3:#a46aa8; --heat-4:#6b93d6;
+  --comp:#6f93d6; --tens:#d98a45; --neutral:#d9d4c6;
+  --steel-a:#59626b; --steel-b:#3f474f; --steel-c:#707a84; --steel-edge:rgba(0,0,0,.5);
+  --hole:#262c32; --hole-deep:#0b0e11;
+  --emboss-hi:rgba(255,255,255,.07); --emboss-lo:rgba(0,0,0,.65);
+  --ok-bg:#18261e; --ok-line:#2d5a3f; --ok-ink:#8fd1a9; --ok-head:#1f3529;
+  --bad-bg:#2a1d1b; --bad-line:#6b3a33; --bad-ink:#f0a092; --bad-head:#382320;
+  --bar:#e3e7ea; --bar-ink:#13171b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#13171b; --sheet:#1c2126; --sheet-2:#181d22;
+  --ink:#e3e7ea; --ink-soft:#adb6bf; --mute:#7e8994; --rule:#323a43; --rule-soft:#272e35;
+  --layout:#7fa6f2; --layout-ink:#a9c3f7; --layout-wash:rgba(127,166,242,.10);
+  --heat-1:#dcb05a; --heat-2:#d0804a; --heat-3:#a46aa8; --heat-4:#6b93d6;
+  --comp:#6f93d6; --tens:#d98a45; --neutral:#d9d4c6;
+  --steel-a:#59626b; --steel-b:#3f474f; --steel-c:#707a84; --steel-edge:rgba(0,0,0,.5);
+  --hole:#262c32; --hole-deep:#0b0e11;
+  --emboss-hi:rgba(255,255,255,.07); --emboss-lo:rgba(0,0,0,.65);
+  --ok-bg:#18261e; --ok-line:#2d5a3f; --ok-ink:#8fd1a9; --ok-head:#1f3529;
+  --bad-bg:#2a1d1b; --bad-line:#6b3a33; --bad-ink:#f0a092; --bad-head:#382320;
+  --bar:#e3e7ea; --bar-ink:#13171b; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background-color:var(--paper);background-image:var(--spangle,none);color:var(--ink);
+  font-family:var(--f-body);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--layout);text-decoration:none}
+a:hover{color:var(--layout-ink)}
+:focus-visible{outline:2px solid var(--layout);outline-offset:3px}
+::selection{background:var(--layout-wash)}
+button{font:inherit;color:inherit}
+.mono{font-family:var(--f-mono);font-stretch:87.5%}
+
+/* ---------- review bar (mockup only) ---------- */
+.review{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bar);color:var(--bar-ink);
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:9px 16px;
+  font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase}
+.review .tag{opacity:.6}
+.review .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.review button{letter-spacing:inherit;text-transform:inherit;font-family:inherit;font-size:inherit;background:transparent;border:1px solid currentColor;border-radius:3px;padding:5px 10px;cursor:pointer;opacity:.62}
+.review button[aria-pressed="true"]{opacity:1;background:var(--bar-ink);color:var(--bar)}
+
+.page{max-width:1080px;margin:0 auto;padding-inline:32px;padding-block:28px 96px}
+@media (max-width:640px){.page{padding-inline:16px}}
+
+.kicker{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;font-weight:500;letter-spacing:2.6px;text-transform:uppercase;color:var(--layout)}
+.kicker::before{content:"";width:28px;height:0;border-top:1.5px dashed currentColor}
+.crumbs{display:flex;flex-wrap:wrap;gap:8px;font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--mute);margin-bottom:30px}
+.crumbs a{color:var(--mute)} .crumbs a:hover{color:var(--layout)} .crumbs .sep{opacity:.5} .crumbs .here{color:var(--ink)}
+
+/* ---------- hero ---------- */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:24px 40px;align-items:center;padding-block:18px 26px}
+@media (max-width:880px){.hero{grid-template-columns:1fr}}
+.hero-text{min-width:0}
+.plate{font-family:var(--f-display);font-stretch:125%;font-weight:800;font-size:clamp(50px,8.4vw,96px);line-height:.92;letter-spacing:-.02em;margin:18px 0 0;
+  color:var(--ink);text-shadow:0 1px 0 var(--emboss-hi),0 -1px 0 var(--emboss-lo);text-wrap:balance}
+.thesis{font-style:italic;font-weight:400;font-size:clamp(24px,3.2vw,32px);line-height:1.2;margin:16px 0 0;color:var(--ink-soft);font-variation-settings:"opsz" 48}
+.hero .lede{margin:18px 0 0;max-width:56ch;color:var(--ink-soft);font-size:18px;text-wrap:pretty}
+
+.tblock{display:grid;grid-template-columns:repeat(4,1fr);margin:26px 0 0;border:1.5px solid var(--ink);background:var(--sheet)}
+.tblock div{padding:10px 14px 12px;border-right:1px solid var(--rule)}
+.tblock div:last-child{border-right:0}
+.tblock dt{font-family:var(--f-mono);font-stretch:87.5%;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)}
+.tblock dd{margin:2px 0 0;font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+@media (max-width:520px){.tblock{grid-template-columns:1fr 1fr}.tblock div:nth-child(2){border-right:0}.tblock div:nth-child(-n+2){border-bottom:1px solid var(--rule)}}
+
+/* folding part */
+.hero-art{min-width:0;display:grid;gap:8px}
+.stage{height:330px;perspective:1100px;display:grid;place-items:center;overflow:hidden}
+.scaler{transform-style:preserve-3d;transform:scale(var(--sc,1))}
+@media (max-width:560px){.stage{height:260px}.scaler{--sc:.74}}
+.part{position:relative;width:220px;height:130px;transform-style:preserve-3d;transform:rotateX(56deg) rotateZ(-34deg) translateZ(-10px)}
+.panel{position:absolute;border:1px solid var(--steel-edge);
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 1px,transparent 1px 3px,rgba(0,0,0,.035) 3px 4px),
+  linear-gradient(155deg,var(--steel-c),var(--steel-a) 48%,var(--steel-b));
+  transition:transform 1.1s cubic-bezier(.55,.05,.25,1),filter 1.1s ease;backface-visibility:visible}
+.base{inset:0}
+.fl-l{left:-74px;top:7px;width:74px;height:116px;transform-origin:right center;transform:rotateY(90deg);filter:brightness(.8);transition-delay:.45s}
+.fl-r{left:220px;top:7px;width:74px;height:116px;transform-origin:left center;transform:rotateY(-90deg);filter:brightness(.92);transition-delay:.8s}
+.fl-b{left:9px;top:-62px;width:202px;height:62px;transform-origin:center bottom;transform:rotateX(-90deg);filter:brightness(1.06);transition-delay:.1s}
+.part.flat .fl-l,.part.flat .fl-r,.part.flat .fl-b{transform:none;filter:none}
+.hole{position:absolute;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 50% 35%,var(--hole-deep),var(--hole));box-shadow:inset 0 2px 3px rgba(0,0,0,.45),0 1px 0 var(--emboss-hi)}
+.slot{width:30px;border-radius:8px}
+.bl{position:absolute;border-color:var(--layout);border-style:dashed;border-width:0;opacity:0;transition:opacity .5s}
+.part.flat .bl{opacity:.9}
+.bl.l{left:0;top:7px;bottom:7px;border-left-width:1.5px}
+.bl.r{right:0;top:7px;bottom:7px;border-right-width:1.5px}
+.bl.b{left:9px;right:9px;top:0;border-top-width:1.5px}
+.shadow{position:absolute;inset:-10px -40px -24px -40px;background:radial-gradient(closest-side,rgba(0,0,0,.28),transparent);transform:translateZ(-14px);filter:blur(6px);pointer-events:none}
+.art-cap{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--mute);border-top:1px solid var(--rule);padding-top:10px}
+.art-cap b{color:var(--layout);font-weight:600}
+.btn-line{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;background:transparent;border:1px solid var(--rule);border-radius:3px;padding:6px 10px;cursor:pointer;color:var(--ink)}
+.btn-line:hover{border-color:var(--layout);color:var(--layout)}
+
+/* ---------- strip progress ---------- */
+.strip{margin-top:10px;border-top:2px solid var(--ink);padding-top:18px}
+.strip-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px 20px;flex-wrap:wrap}
+.strip-head h2{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:20px;margin:0;letter-spacing:-.01em}
+.strip-head p{margin:0;font-size:15.5px;color:var(--mute);font-style:italic}
+.strip-count{font-family:var(--f-mono);font-stretch:87.5%;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft)}
+.strip-count b{font-family:var(--f-display);font-stretch:112%;font-size:22px;color:var(--ink);letter-spacing:0;margin-right:4px}
+.strip-draw{overflow-x:auto;margin-top:10px}
+.strip-draw svg{display:block;width:100%;min-width:780px;height:auto}
+.st-strip{fill:url(#stripGrad);stroke:var(--steel-edge);stroke-width:1}
+.st-pilot{fill:var(--hole-deep);opacity:.75}
+.st-mark{fill:none;stroke:var(--layout);stroke-width:1.1;stroke-dasharray:2.4 2.4;opacity:.75}
+.st-hole{fill:var(--hole-deep)}
+.st-hi{fill:none;stroke:var(--emboss-hi);stroke-width:1}
+.st-lab{font-family:'Martian Mono',monospace;font-size:9.5px;letter-spacing:1px;fill:var(--mute)}
+.st-tick{stroke:var(--layout);stroke-width:1;stroke-dasharray:3 3}
+
+/* ---------- contents: flat pattern ---------- */
+.contents{margin-top:44px}
+.contents-head{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}
+.contents-head h2{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:20px;margin:0}
+.contents-head i{flex:1;height:0;border-top:1px solid var(--rule)}
+.contents-head span{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--mute)}
+.sec{display:grid;grid-template-columns:240px 1fr;gap:10px 36px;padding:26px 0 22px}
+@media (max-width:760px){.sec{grid-template-columns:1fr}}
+.sec-head{min-width:0}
+.sec-num{font-family:var(--f-display);font-stretch:125%;font-weight:900;font-size:64px;line-height:.9;color:transparent;-webkit-text-stroke:1.4px var(--layout);letter-spacing:-.02em}
+.sec-head h3{font-family:var(--f-display);font-stretch:108%;font-weight:700;font-size:21px;line-height:1.2;margin:12px 0 4px;text-wrap:balance}
+.sec-desc{margin:0;font-style:italic;font-size:16.5px;color:var(--ink-soft);line-height:1.45}
+.sec-src{margin:10px 0 0;font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--mute);line-height:1.7}
+.sec-prog{margin-top:14px;height:3px;background:var(--rule-soft);border-radius:2px;overflow:hidden}
+.sec-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--heat-1),var(--heat-2) 40%,var(--heat-3) 70%,var(--heat-4));transition:width .5s ease}
+.rows{list-style:none;margin:0;padding:0;min-width:0;border-top:1px solid var(--rule)}
+.row{display:grid;grid-template-columns:26px 60px 1fr auto;gap:12px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--rule-soft)}
+.row:hover{background:var(--layout-wash)}
+.rid{font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;letter-spacing:.8px;color:var(--mute)}
+.rt{font-family:var(--f-display);font-stretch:100%;font-weight:500;font-size:16px;line-height:1.35;color:var(--ink);min-width:0}
+a.rt{color:var(--ink)} a.rt:hover{color:var(--layout)}
+.rt .open{font-family:var(--f-mono);font-stretch:87.5%;font-size:9px;letter-spacing:1.5px;color:var(--layout);margin-left:6px;white-space:nowrap}
+.row.done .rt{color:var(--ink-soft)}
+.chip{font-family:var(--f-mono);font-stretch:87.5%;font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:var(--mute);border:1px solid var(--rule);border-radius:3px;padding:3px 7px;white-space:nowrap}
+.chip.k-calculator{background:var(--layout);border-color:var(--layout);color:var(--sheet)}
+.chip.k-pitfall{color:var(--bad-ink);border-color:var(--bad-line)}
+.chip.k-exercise,.chip.k-checklist{color:var(--heat-2);border-color:currentColor}
+@media (max-width:560px){.row{grid-template-columns:26px 52px 1fr}.chip{display:none}}
+.punch{width:20px;height:20px;border-radius:50%;border:1.5px dashed var(--layout);background:transparent;cursor:pointer;padding:0;display:block}
+.punch:hover{background:var(--layout-wash)}
+.punch[aria-pressed="true"]{border:0;background:radial-gradient(circle at 50% 35%,var(--hole-deep) 0 55%,var(--hole));box-shadow:inset 0 2px 4px rgba(0,0,0,.5),0 1px 0 var(--emboss-hi)}
+@media (prefers-reduced-motion:reduce){.panel,.bl{transition:none}}
+@media (prefers-reduced-motion:no-preference){.punch[aria-pressed="true"]{animation:thunk .28s ease-out}
+  @keyframes thunk{0%{transform:scale(.6)}60%{transform:scale(1.12)}100%{transform:scale(1)}}}
+.bend{display:flex;align-items:center;gap:12px;color:var(--layout);font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:2px;text-transform:uppercase}
+.bend::before,.bend::after{content:"";flex:1;border-top:1.5px dashed var(--layout);opacity:.55}
+.note{margin-top:34px;border:1px solid var(--rule);border-left:3px solid var(--heat-2);background:var(--sheet);padding:14px 18px;font-size:15.5px;color:var(--ink-soft)}
+.note b{color:var(--ink);font-family:var(--f-display);font-weight:600}
+
+/* ---------- sheet (reading) ---------- */
+.tb-head{display:grid;grid-template-columns:1fr auto;gap:22px 36px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:22px}
+@media (max-width:820px){.tb-head{grid-template-columns:1fr}}
+.tb-head h1{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:clamp(36px,5.6vw,60px);line-height:.98;letter-spacing:-.02em;margin:14px 0 0;text-wrap:balance;text-shadow:0 1px 0 var(--emboss-hi),0 -1px 0 var(--emboss-lo)}
+.tb-grid{display:grid;grid-template-columns:repeat(4,auto);border:1.5px solid var(--ink);background:var(--sheet);margin:0;min-width:0}
+.tb-grid div{padding:7px 12px 8px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.tb-grid div:nth-child(4){border-right:0}
+.tb-grid .wide{grid-column:1/-1;border-right:0;border-bottom:0}
+.tb-grid dt{font-family:var(--f-mono);font-stretch:87.5%;font-size:8.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mute)}
+.tb-grid dd{margin:1px 0 0;font-family:var(--f-display);font-stretch:108%;font-weight:600;font-size:15px;white-space:nowrap}
+.tb-grid .wide dd{white-space:normal;font-weight:500;font-size:13.5px}
+.read{max-width:68ch}
+.read .lede{font-size:22px;line-height:1.5;color:var(--ink);margin:28px 0 0;font-variation-settings:"opsz" 30;text-wrap:pretty}
+.read p{margin:16px 0 0;color:var(--ink-soft);text-wrap:pretty}
+.read p b{color:var(--ink);font-weight:600}
+.h2{display:flex;align-items:baseline;gap:14px;margin:52px 0 18px}
+.h2 h2{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:22px;margin:0;letter-spacing:-.01em;white-space:nowrap}
+.h2 i{flex:1;border-top:1px solid var(--rule)}
+.h2 span{font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mute)}
+
+.lab{margin:34px 0 0;border:1.5px solid var(--ink);background:var(--sheet)}
+.lab-cap{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px 16px;border-bottom:1px solid var(--rule);font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mute)}
+.lab-cap b{color:var(--ink);font-weight:600}
+.lab-body{display:grid;grid-template-columns:1fr 300px}
+@media (max-width:860px){.lab-body{grid-template-columns:1fr}}
+.lab-draw{min-width:0;overflow-x:auto;background-image:linear-gradient(var(--rule-soft) 1px,transparent 1px),linear-gradient(90deg,var(--rule-soft) 1px,transparent 1px);background-size:20px 20px;background-position:-1px -1px}
+.lab-draw svg{display:block;width:100%;min-width:520px;height:auto}
+.lab-ctrl{border-left:1px solid var(--rule);padding:16px 18px;display:grid;gap:12px;align-content:start;min-width:0}
+@media (max-width:860px){.lab-ctrl{border-left:0;border-top:1px solid var(--rule)}}
+.ctl{display:grid;gap:4px}
+.ctl .lbl{display:flex;justify-content:space-between;gap:8px;font-family:var(--f-display);font-size:14px;color:var(--ink-soft)}
+.ctl output{font-family:var(--f-mono);font-stretch:87.5%;font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--steel-b),var(--steel-c));border:1px solid var(--steel-edge)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--steel-b),var(--steel-c));border:1px solid var(--steel-edge)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-8px;border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--steel-c),var(--steel-b));border:2px solid var(--layout);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--steel-c),var(--steel-b));border:2px solid var(--layout)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.num{display:grid;gap:4px;font-family:var(--f-display);font-size:13.5px;color:var(--ink-soft)}
+.num input{font-family:var(--f-mono);font-stretch:87.5%;font-size:13px;width:100%;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.lab-out{display:grid;grid-template-columns:repeat(4,1fr) 1.4fr;border-top:1px solid var(--rule)}
+.lab-out div{padding:10px 14px;border-right:1px solid var(--rule);min-width:0}
+.lab-out div:last-child{border-right:0;background:var(--layout-wash)}
+.lab-out dt{font-family:var(--f-mono);font-stretch:87.5%;font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.lab-out dd{margin:2px 0 0;font-family:var(--f-mono);font-stretch:87.5%;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.lab-out .big dd{font-family:var(--f-display);font-stretch:112%;font-size:26px;font-weight:800;color:var(--layout)}
+@media (max-width:700px){.lab-out{grid-template-columns:1fr 1fr}.lab-out div{border-bottom:1px solid var(--rule)}.lab-out div:nth-child(2n){border-right:0}.lab-out .big{grid-column:1/-1}}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;padding:10px 16px;border-top:1px solid var(--rule);font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:.6px;color:var(--ink-soft)}
+.legend .ramp{display:inline-block;width:130px;height:9px;border:1px solid var(--steel-edge);background:linear-gradient(90deg,var(--comp),var(--neutral) 50%,var(--tens))}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.verdict{margin-left:auto;font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;padding:4px 10px;border-radius:3px}
+.verdict.ok-p{background:var(--ok-head);color:var(--ok-ink);border:1px solid var(--ok-line)}
+.verdict.bad-p{background:var(--bad-head);color:var(--bad-ink);border:1px solid var(--bad-line)}
+
+.formula{font-family:var(--f-mono);font-stretch:87.5%;font-size:14.5px;line-height:2;color:var(--ink);background:var(--sheet);border:1px solid var(--rule);border-left:3px solid var(--layout);padding:14px 18px;overflow-x:auto;white-space:nowrap}
+.formula span{color:var(--mute);margin:0 10px}
+.hold{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--rule);background:var(--sheet)}
+@media (max-width:760px){.hold{grid-template-columns:1fr}}
+.hold div{padding:18px 20px;border-right:1px solid var(--rule);min-width:0}
+.hold div:last-child{border-right:0}
+@media (max-width:760px){.hold div{border-right:0;border-bottom:1px solid var(--rule)}.hold div:last-child{border-bottom:0}}
+.hold .tag{font-family:var(--f-mono);font-stretch:87.5%;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--layout)}
+.hold .big{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:22px;margin:6px 0 0}
+.hold p{margin:6px 0 0;font-size:15.5px;color:var(--ink-soft);line-height:1.5}
+.ktable{overflow-x:auto;border:1px solid var(--rule);background:var(--sheet)}
+.ktable table{border-collapse:collapse;width:100%;min-width:480px;font-variant-numeric:tabular-nums}
+.ktable th{font-family:var(--f-mono);font-stretch:87.5%;font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mute);text-align:left;padding:10px 16px;border-bottom:1px solid var(--rule);font-weight:500}
+.ktable td{padding:9px 16px;border-bottom:1px solid var(--rule-soft);font-size:16px;color:var(--ink-soft)}
+.ktable td.n{font-family:var(--f-mono);font-stretch:87.5%;font-size:14px;color:var(--ink)}
+.ktable tr:last-child td{border-bottom:0}
+.ktable .foot{font-size:14.5px;font-style:italic;color:var(--mute);padding:10px 16px;border-top:1px solid var(--rule)}
+.verdicts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.verdicts{grid-template-columns:1fr}}
+.ok,.bad{min-width:0}
+.ok{border:1px solid var(--ok-line);background:var(--ok-bg)} .bad{border:1px solid var(--bad-line);background:var(--bad-bg)}
+.ok h4,.bad h4{margin:0;font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;font-weight:600;letter-spacing:2px;padding:8px 16px}
+.ok h4{color:var(--ok-ink);background:var(--ok-head)} .bad h4{color:var(--bad-ink);background:var(--bad-head)}
+.ok p,.bad p{margin:0;padding:14px 16px;font-size:16px;color:var(--ink-soft)}
+.recall{display:grid;gap:10px}
+.recall details{border:1px solid var(--rule);background:var(--sheet)}
+.recall summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:baseline;padding:14px 18px;font-family:var(--f-display);font-weight:500;font-size:17px;line-height:1.4}
+.recall summary::-webkit-details-marker{display:none}
+.recall summary .q{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.5px;color:var(--layout)}
+.recall summary .show{font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.recall details[open] summary .show{color:var(--heat-2)}
+.recall details p{margin:0;padding:0 18px 16px 18px;color:var(--ink-soft);font-size:16.5px;border-top:1px dashed var(--rule);padding-top:12px}
+.finish{margin-top:56px;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;border:1.5px solid var(--ink);background:var(--sheet);padding:18px 20px}
+.finish p{margin:0;color:var(--ink-soft);font-size:16px}
+.finish p b{color:var(--ink);font-family:var(--f-display);font-weight:600}
+.big-punch{display:flex;align-items:center;gap:12px;background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:12px 18px;cursor:pointer;font-family:var(--f-mono);font-stretch:87.5%;font-size:11px;letter-spacing:1.6px;text-transform:uppercase}
+.big-punch i{width:16px;height:16px;border-radius:50%;border:1.5px dashed currentColor;display:block}
+.big-punch[aria-pressed="true"] i{border:0;background:radial-gradient(circle at 50% 35%,var(--hole-deep) 0 55%,var(--hole));box-shadow:inset 0 2px 3px rgba(0,0,0,.6)}
+@media (max-width:560px){.finish{grid-template-columns:1fr}}
+.pager{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;border-top:1px solid var(--rule);padding-top:18px;margin-top:28px;font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase}
+
+/* ---------- interaction additions ---------- */
+.stage{cursor:grab;touch-action:none;user-select:none}
+.stage.grabbing{cursor:grabbing}
+.part{transition:transform .6s cubic-bezier(.3,.7,.3,1)}
+.part.live{transition:none}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.fchip{font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;background:transparent;border:1px solid var(--rule);border-radius:3px;padding:5px 9px;cursor:pointer;color:var(--ink-soft)}
+.fchip:hover{border-color:var(--layout);color:var(--layout)}
+.fchip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.row.hide{display:none}
+.sec.empty,.sec.empty+.bend{display:none}
+.row.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:var(--layout-wash);box-shadow:inset 3px 0 0 var(--layout)}100%{background:transparent}}
+.resume{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--layout);border:1px solid var(--layout);border-radius:3px;padding:6px 10px;background:transparent;cursor:pointer}
+.resume:hover{background:var(--layout-wash)}
+.st-station{cursor:pointer}
+.st-station:hover .st-mark{stroke-width:2;opacity:1}
+.st-station:hover .st-hole{filter:brightness(1.4)}
+.lab-draw svg{touch-action:none}
+.lab-draw.dragging{cursor:grabbing}
+.handle{cursor:grab}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.seg button{font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;background:transparent;border:0;padding:5px 10px;cursor:pointer;color:var(--ink-soft)}
+.seg button[aria-pressed="true"]{background:var(--layout);color:var(--sheet)}
+.ktable tbody tr{cursor:pointer}
+.ktable tbody tr:hover td{background:var(--layout-wash)}
+.ktable tbody tr.on td{background:var(--layout-wash);box-shadow:inset 3px 0 0 var(--layout)}
+.ktable tbody tr.on td:first-child{font-weight:600}
+.ktable .foot .use{color:var(--layout);font-style:normal;font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.2px;text-transform:uppercase}
+.qz{border:1px solid var(--rule);background:var(--sheet)}
+.qz .qh{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:baseline;padding:14px 18px 10px;font-family:var(--f-display);font-weight:500;font-size:17px;line-height:1.4}
+.qz .q{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.5px;color:var(--layout)}
+.qz .qa{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:0 18px 14px}
+.qz input[type=number]{font-family:var(--f-mono);font-stretch:87.5%;font-size:14px;width:120px;padding:7px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink);text-align:right}
+.qz .unit{font-family:var(--f-mono);font-stretch:87.5%;font-size:11px;color:var(--mute)}
+.qz .go{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:8px 12px;cursor:pointer}
+.qz .go.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--rule)}
+.qz .fb{padding:0 18px 14px;font-size:16px;color:var(--ink-soft);background:transparent}
+.qz .fb.ok{color:var(--ok-ink)} .qz .fb.bad{color:var(--bad-ink)}
+.lab-out+.legend .verdict{margin-left:auto}
+.prob .fb{background:transparent}
+.qz .fb:empty{display:none}
+.qz .fb,.prob .fb{border:0;box-shadow:none}
+.qz details{border-top:1px dashed var(--rule)}
+.qz summary{list-style:none;cursor:pointer;padding:10px 18px;font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mute)}
+.qz summary::-webkit-details-marker{display:none}
+.qz details p{margin:0;padding:0 18px 14px;color:var(--ink-soft);font-size:16px}
+.prob{margin-top:26px;border:1.5px solid var(--ink);background:var(--sheet)}
+.prob .ph{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 16px;border-bottom:1px solid var(--rule);font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mute)}
+.prob .ph b{color:var(--ink);font-weight:600}
+.prob .pb{display:grid;grid-template-columns:1fr 1fr}
+@media (max-width:760px){.prob .pb{grid-template-columns:1fr}}
+.prob .given{padding:16px 18px;border-right:1px solid var(--rule);min-width:0}
+@media (max-width:760px){.prob .given{border-right:0;border-bottom:1px solid var(--rule)}}
+.prob .given p{margin:0 0 10px;color:var(--ink-soft);font-size:16.5px}
+.prob .gv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0}
+.prob .gv div{border:1px solid var(--rule);padding:8px 10px;background:var(--paper)}
+.prob .gv dt{font-family:var(--f-mono);font-stretch:87.5%;font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--mute)}
+.prob .gv dd{margin:2px 0 0;font-family:var(--f-mono);font-stretch:87.5%;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.prob .ans{padding:16px 18px;display:grid;gap:10px;align-content:start}
+.prob .ans label{font-family:var(--f-display);font-size:14.5px;color:var(--ink-soft);display:grid;gap:6px}
+.prob .ans .in{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.prob .ans input{font-family:var(--f-mono);font-stretch:87.5%;font-size:16px;width:150px;padding:8px 10px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink);text-align:right}
+.prob .fb{font-size:16px;color:var(--ink-soft);min-height:1.4em}
+.prob .fb.ok{color:var(--ok-ink)} .prob .fb.bad{color:var(--bad-ink)}
+.prob .steps{font-family:var(--f-mono);font-stretch:87.5%;font-size:12.5px;line-height:1.9;color:var(--ink-soft);border-top:1px dashed var(--rule);padding-top:10px}
+.prob .steps:empty{display:none}
+.prob .steps b{color:var(--ink)}
+.prob .score{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft)}
+.prob .score b{color:var(--heat-2);font-size:14px}
+.kbd{font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;border:1px solid var(--rule);border-bottom-width:2px;border-radius:3px;padding:1px 5px;color:var(--ink-soft)}
+
+/* ---------- sources ---------- */
+.src-head h1{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:clamp(34px,5vw,52px);line-height:1;letter-spacing:-.02em;margin:14px 0 0;text-wrap:balance}
+.src-head{border-bottom:2px solid var(--ink);padding-bottom:20px}
+.src-lede{font-size:20px;color:var(--ink-soft);max-width:62ch;margin:22px 0 26px}
+.srcs{display:grid;gap:16px}
+.srcbox{border:1px solid var(--rule);background:var(--sheet);min-width:0}
+.srcbox .h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;padding:13px 18px;border-bottom:1px solid var(--rule)}
+.srcbox .h b{font-family:var(--f-display);font-stretch:108%;font-size:18px;font-weight:700}
+.srcbox .h span{font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--mute)}
+.srcbox .role{padding:12px 18px 2px;margin:0;font-size:16px;font-style:italic;color:var(--ink-soft)}
+.map{overflow-x:auto;padding:6px 18px 14px}
+.map table{border-collapse:collapse;width:100%;min-width:460px}
+.map td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule-soft);font-size:15.5px;vertical-align:baseline}
+.map tr:last-child td{border-bottom:0}
+.map td:first-child{font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;color:var(--mute);white-space:nowrap;width:1%}
+.map td:last-child{font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;color:var(--layout);text-align:right;white-space:nowrap}
+</style>
+</head>
+<body>
+
+
+<div class="review" role="toolbar" aria-label="Mockup review">
+  <span>Mockup v3 for review</span><span class="tag">Commonplace · Mechanical</span>
+  <div class="tabs">
+    <button id="tab-index" type="button" aria-pressed="true" data-view="index">Sheet Metal</button>
+    <button id="tab-sheet" type="button" aria-pressed="false" data-view="sheet">Sample sheet</button>
+    <button id="tab-sources" type="button" aria-pressed="false" data-view="sources">Sources</button>
+  </div>
+</div>
+
+<!-- ======================= INDEX ======================= -->
+<main class="page" id="view-index">
+  <nav class="crumbs"><a href="../../index.html">Commonplace</a><span class="sep">/</span><a href="../index.html">Mechanical</a><span class="sep">/</span><span class="here">Sheet Metal</span></nav>
+
+  <section class="hero">
+    <div class="hero-text">
+      <div class="kicker">Module index · Sheet set SM</div>
+      <h1 class="plate">Sheet Metal</h1>
+      <p class="thesis">Every part starts flat.</p>
+      <p class="lede">Brackets, covers and panels are cut from a flat blank and bent into shape. This set follows the same path: material, cutting, bending, forming, tooling, and the checks a designer makes before release. Theory comes from Marciniak's <i>Mechanics of Sheet Metal Forming</i>; tool-room detail from Suchy's <i>Handbook of Die Design</i>.</p>
+      <dl class="tblock" id="tblock"></dl>
+    </div>
+    <div class="hero-art" aria-label="A sheet metal bracket folding from its flat blank">
+      <div class="stage">
+        <div class="scaler">
+          <div class="part flat" id="part">
+            <div class="shadow"></div>
+            <div class="panel base">
+              <span class="bl l"></span><span class="bl r"></span><span class="bl b"></span>
+              <span class="hole" style="left:52px;top:58px"></span>
+              <span class="hole" style="left:153px;top:58px"></span>
+            </div>
+            <div class="panel fl-l"><span class="hole slot" style="left:22px;top:50px"></span></div>
+            <div class="panel fl-r"><span class="hole slot" style="left:22px;top:50px"></span></div>
+            <div class="panel fl-b">
+              <span class="hole" style="left:40px;top:24px"></span>
+              <span class="hole" style="left:147px;top:24px"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="art-cap"><span id="art-state"><b>Blank</b> · t 1.6 · SPCC · 3 bend lines</span><span>Drag to turn · click a flange to fold it</span><button class="btn-line" id="fold-btn" type="button">Unfold to blank</button></div>
+    </div>
+  </section>
+
+  <section class="strip" aria-labelledby="strip-h">
+    <div class="strip-head">
+      <div>
+        <h2 id="strip-h">Your strip</h2>
+        <p>One station per sheet, like a progressive die. Punch a station when you finish its sheet.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div class="strip-count" id="strip-count"></div><button class="resume" id="resume" type="button">Resume →</button></div>
+    </div>
+    <div class="strip-draw"><svg id="strip" role="img" aria-label="Progress strip"></svg></div>
+  </section>
+
+  <section class="contents">
+    <div class="contents-head"><h2>Contents</h2><i></i><span>Flat pattern · 11 flanges</span></div>
+    <div class="filters" id="filters" role="group" aria-label="Filter sheets by kind"></div>
+    <div id="secs"></div>
+  </section>
+
+  <div class="note"><b>Kept generic.</b> Commonplace syncs to GitHub, so sheets explain each idea in their own words and cite chapter numbers. The books stay in your local reference folder.</div>
+</main>
+
+<!-- ======================= SAMPLE SHEET ======================= -->
+<main class="page" id="view-sheet" hidden>
+  <nav class="crumbs"><a href="../../index.html">Commonplace</a><span class="sep">/</span><a href="../index.html">Mechanical</a><span class="sep">/</span><a href="#index">Sheet Metal</a><span class="sep">/</span><span class="here">§03 · SM-11</span></nav>
+
+  <header class="tb-head">
+    <div>
+      <div class="kicker">§03 Bending</div>
+      <h1>Bend allowance and K-factor</h1>
+    </div>
+    <dl class="tb-grid">
+      <div><dt>Sheet</dt><dd>SM-11</dd></div>
+      <div><dt>Kind</dt><dd>Calculator</dd></div>
+      <div><dt>Read</dt><dd>8 min</dd></div>
+      <div><dt>Rev</dt><dd>A</dd></div>
+      <div class="wide"><dt>Source</dt><dd>Course L31–36 · Marciniak ch 6.2, 6.7 · Suchy ch 8</dd></div>
+    </dl>
+  </header>
+
+  <div class="read">
+    <p class="lede">Bend a flat strip and its outside stretches while its inside is squeezed. Somewhere between the two is a layer that keeps its original length. That layer, the neutral axis, decides how long the blank must be.</p>
+    <p>In a gentle bend the neutral axis sits near mid-thickness. In a tight bend the sheet thins a little and the neutral axis moves toward the inside of the bend. The <b>K-factor</b> records where it ends up: K = δ / t, where δ is its distance from the inside surface. K = 0.5 is the middle; real bends sit between about 0.3 and 0.5.</p>
+  </div>
+
+  <figure class="lab" aria-label="Interactive bend section">
+    <div class="lab-cap"><span><b>Fig. 1</b> · Live bend section</span><span class="seg" role="group" aria-label="View"><button type="button" id="vw-bent" aria-pressed="true">Bent</button><button type="button" id="vw-flat" aria-pressed="false">Flat blank</button></span><span>Drag the flange to set θ</span></div>
+    <div class="lab-body">
+      <div class="lab-draw"><svg id="bend" viewBox="0 0 640 340" role="img" aria-label="Section through a bend. The bend zone is coloured blue on the inside where the metal is compressed and bronze on the outside where it is stretched, with a dashed neutral axis between."></svg></div>
+      <div class="lab-ctrl">
+        <label class="ctl" for="s-t"><span class="lbl">Thickness t <output id="v-t" for="s-t"></output></span><input id="s-t" type="range" min="0.5" max="6" step="0.1" value="2"></label>
+        <label class="ctl" for="s-r"><span class="lbl">Inside radius R <output id="v-r" for="s-r"></output></span><input id="s-r" type="range" min="0" max="16" step="0.5" value="2"></label>
+        <label class="ctl" for="s-th"><span class="lbl">Bend angle θ <output id="v-th" for="s-th"></output></span><input id="s-th" type="range" min="10" max="150" step="1" value="90"></label>
+        <label class="ctl" for="s-k"><span class="lbl">K-factor <output id="v-k" for="s-k"></output></span><input id="s-k" type="range" min="0.25" max="0.5" step="0.01" value="0.40"></label>
+        <div class="pair">
+          <label class="num" for="n-a">Flange A to sharp<input id="n-a" type="number" value="50" min="0" step="0.5"></label>
+          <label class="num" for="n-b">Flange B to sharp<input id="n-b" type="number" value="30" min="0" step="0.5"></label>
+        </div>
+      </div>
+    </div>
+    <dl class="lab-out" aria-live="polite">
+      <div><dt>BA</dt><dd id="o-ba">–</dd></div>
+      <div><dt>OSSB</dt><dd id="o-ossb">–</dd></div>
+      <div><dt>BD</dt><dd id="o-bd">–</dd></div>
+      <div><dt>Creo Y</dt><dd id="o-y">–</dd></div>
+      <div class="big"><dt>Flat blank = A + B − BD</dt><dd id="o-flat">–</dd></div>
+    </dl>
+    <div class="legend">
+      <span><span class="ramp"></span>compressed · unchanged · stretched</span>
+      <span id="verdict" class="verdict"></span>
+    </div>
+  </figure>
+
+  <div class="h2"><h2>The four lengths</h2><i></i><span>mm · θ in radians</span></div>
+  <div class="formula">BA = θ · (R + K·t)<span>·</span>OSSB = tan(θ/2) · (R + t)<span>·</span>BD = 2·OSSB − BA<span>·</span>Flat = A + B − BD</div>
+  <div class="read"><p>Drawings usually dimension flanges to the <b>virtual sharp</b>, the point where the two outside surfaces would meet if the corner were sharp. Measured that way, the corner is counted twice. The real metal takes the shorter path round the arc, so the blank is shorter than A + B by the <b>bend deduction</b>.</p></div>
+
+  <div class="h2"><h2>Three things to hold</h2><i></i></div>
+  <div class="hold">
+    <div><div class="tag">Definition</div><div class="big">K = δ / t</div><p>δ is the distance from the inside surface to the neutral axis. K stays at or below 0.5.</p></div>
+    <div><div class="tag">Angle</div><div class="big">θ is the bend</div><p>Use the angle the sheet turns through, not the angle between the flanges. A 120° part angle is a 60° bend.</p></div>
+    <div><div class="tag">Creo</div><div class="big">Y = K · π/2</div><p>Creo asks for a Y-factor. Its default, Y = 0.5, means K ≈ 0.32. Set it from your shop's test bends.</p></div>
+  </div>
+
+  <div class="h2"><h2>Typical K</h2><i></i><span>Rule of thumb</span></div>
+  <div class="ktable">
+    <table>
+      <thead><tr><th>Radius vs thickness</th><th>K-factor</th><th>Creo Y</th><th>Typical case</th></tr></thead>
+      <tbody>
+        <tr data-k="0.33"><td class="n">R &lt; t</td><td class="n">0.33</td><td class="n">0.52</td><td>Air bend with a sharp punch</td></tr>
+        <tr data-k="0.40"><td class="n">t ≤ R ≤ 3t</td><td class="n">0.40</td><td class="n">0.63</td><td>Most brackets</td></tr>
+        <tr data-k="0.50"><td class="n">R &gt; 3t</td><td class="n">0.50</td><td class="n">0.79</td><td>Large-radius rolled bends</td></tr>
+      </tbody>
+    </table>
+    <div class="foot"><span class="use">Click a row to use its K in Fig. 1.</span> Starting values only. Material, tooling and grain direction all move K. Your course notes give 0.3 to 0.5 as the working range.</div>
+  </div>
+
+  <div class="h2"><h2>In practice</h2><i></i></div>
+  <div class="verdicts">
+    <div class="ok"><h4>✓ CORRECT</h4><p>Thickness, radius and Y-factor set in the Creo part from test bends on the real press brake. The flat pattern matches the formed part, and the drawing states the K used.</p></div>
+    <div class="bad"><h4>✗ INCORRECT</h4><p>Cutting the blank at A + B. For 2 mm steel, R 2, a 90° bend, that blank is 3.6 mm too long, and every flange after the first bend comes out long.</p></div>
+  </div>
+
+  <div class="h2"><h2>Check yourself</h2><i></i><span>Answer, then check</span></div>
+  <div class="recall">
+    <div class="qz">
+      <div class="qh"><span class="q">Q1</span><span>A drawing shows 120° between two flanges. What bend angle θ goes into the bend allowance?</span></div>
+      <div class="qa"><input id="q1" type="number" step="1" placeholder="θ" aria-label="Answer in degrees"><span class="unit">°</span><button class="go" type="button" data-q="1">Check</button></div>
+      <div class="fb" id="q1-fb"></div>
+      <details><summary>Show working</summary><p>The bend angle is how far the sheet turns, so θ = 180° − 120° = 60°.</p></details>
+    </div>
+    <div class="qz">
+      <div class="qh"><span class="q">Q2</span><span>Creo is left at its default Y-factor of 0.5. What K-factor is that?</span></div>
+      <div class="qa"><input id="q2" type="number" step="0.01" placeholder="K" aria-label="Answer K"><button class="go" type="button" data-q="2">Check</button></div>
+      <div class="fb" id="q2-fb"></div>
+      <details><summary>Show working</summary><p>Y = K·π/2, so K = 2Y/π = 1/π ≈ 0.32. That suits tight bends; larger radii usually need a higher value.</p></details>
+    </div>
+    <div class="qz">
+      <div class="qh"><span class="q">Q3</span><span>With the values in Fig. 1 right now, what is the flat blank? Change the sliders and try again.</span></div>
+      <div class="qa"><input id="q3" type="number" step="0.01" placeholder="Flat" aria-label="Answer in mm"><span class="unit">mm</span><button class="go" type="button" data-q="3">Check</button><button class="go ghost" type="button" id="q3-peek">Peek at Fig. 1</button></div>
+      <div class="fb" id="q3-fb"></div>
+    </div>
+  </div>
+
+  <div class="prob" aria-labelledby="prob-h">
+    <div class="ph"><span><b id="prob-h">Practice</b> · One-bend blank</span><span class="score" id="prob-score"></span><button class="go" type="button" id="prob-new" style="font-family:var(--f-mono);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;background:transparent;border:1px solid var(--rule);border-radius:3px;padding:6px 10px;cursor:pointer;color:var(--ink)">New problem</button></div>
+    <div class="pb">
+      <div class="given">
+        <p id="prob-text"></p>
+        <dl class="gv" id="prob-given"></dl>
+      </div>
+      <div class="ans">
+        <label for="prob-in">Flat blank length<div class="in"><input id="prob-in" type="number" step="0.01" placeholder="mm"><button class="go" type="button" id="prob-check" style="font-family:var(--f-mono);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:9px 12px;cursor:pointer">Check</button><button class="go" type="button" id="prob-show" style="font-family:var(--f-mono);font-size:10px;letter-spacing:1.4px;text-transform:uppercase;background:transparent;border:1px solid var(--rule);border-radius:3px;padding:8px 10px;cursor:pointer;color:var(--ink-soft)">Show steps</button></div></label>
+        <div class="fb" id="prob-fb">Within ±0.05 mm counts as correct. Press <span class="kbd">Enter</span> to check.</div>
+        <div class="steps" id="prob-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="finish">
+    <button class="big-punch" id="finish-btn" type="button" aria-pressed="false"><i></i><span id="finish-label">Punch SM-11</span></button>
+    <p><b>Done with this sheet?</b> Punching it marks its station on your strip and in the contents.</p>
+  </div>
+
+  <nav class="pager"><a href="#index">← SM-10 · Bend terms</a><a href="#index">Contents</a><a href="#index">SM-12 · Setbacks and bend deduction →</a></nav>
+</main>
+
+<!-- ======================= SOURCES ======================= -->
+<main class="page" id="view-sources" hidden>
+  <nav class="crumbs"><a href="../../index.html">Commonplace</a><span class="sep">/</span><a href="../index.html">Mechanical</a><span class="sep">/</span><a href="#index">Sheet Metal</a><span class="sep">/</span><span class="here">Sources</span></nav>
+  <header class="src-head">
+    <div class="kicker">Review only · not a page in the app</div>
+    <h1>Where each section comes from</h1>
+  </header>
+  <p class="src-lede">Three sources, one sheet set. Your course notes set the order and the designer's angle. The two books supply the theory and the die-shop detail behind each sheet.</p>
+  <div class="srcs" id="srcs"></div>
+</main>
+
+<script>
+(function(){
+  /* ---------- galvanized spangle background (generated once, seamless tile) ---------- */
+  try{
+    const dark=getComputedStyle(document.documentElement).colorScheme==='dark'; const N=360, cv=document.createElement('canvas'); cv.width=cv.height=N;
+    const cx=cv.getContext('2d'), img=cx.createImageData(N,N), d=img.data;
+    let seed=7; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+    const S=[]; for(let i=0;i<34;i++) S.push({x:rnd()*N,y:rnd()*N,b:rnd()*2-1,a:rnd()*Math.PI,f:.18+rnd()*.25,p:rnd()*6});
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+      let d1=1e9,d2=1e9,k=0;
+      for(let i=0;i<S.length;i++){let dx=Math.abs(x-S[i].x),dy=Math.abs(y-S[i].y);if(dx>N/2)dx=N-dx;if(dy>N/2)dy=N-dy;const q=dx*dx+dy*dy;
+        if(q<d1){d2=d1;d1=q;k=i}else if(q<d2)d2=q;}
+      const s=S[k], pr=x*Math.cos(s.a)+y*Math.sin(s.a);
+      let v=s.b*.7+.3*Math.sin(pr*s.f+s.p);
+      const edge=Math.sqrt(d2)-Math.sqrt(d1);
+      const o=(y*N+x)*4;
+      if(edge<1.1){d[o]=d[o+1]=d[o+2]=0;d[o+3]=dark?9:12;continue;}
+      const c=v>0?255:0; d[o]=d[o+1]=d[o+2]=c; d[o+3]=Math.round(Math.abs(v)*(dark?5:9));
+    }
+    cx.putImageData(img,0,0);
+    document.body.style.setProperty('--spangle','url('+cv.toDataURL()+')');
+  }catch(e){}
+
+  /* ---------- data ---------- */
+  const SECTIONS=[
+   ['Fundamentals &amp; materials','What a sheet is and what it is made of.','Course §1–2 · Marciniak intro, ch 1',[
+     ['SM-01','Common sheet forming processes: an overview','Concept'],['SM-02','The tensile test: σ–ε, n-value and r-value','Concept'],['SM-03','Steel vs aluminium for sheet parts','Reference'],['SM-04','Rolling direction, grain and anisotropy','Rule'],['SM-05','Hardness, toughness and strength compared','Concept']]],
+   ['Cutting','Shearing, blanking and piercing.','Course §3 · Suchy ch 6–7',[
+     ['SM-06','How shearing works: clearance, burr, rollover','Concept'],['SM-07','Blanking, piercing and shaving','Reference'],['SM-08','Punching force and press tonnage','Calculator'],['SM-09','Strip layout and scrap','Method']]],
+   ['Bending','From bend terms to a flat blank.','Course §6 · Marciniak ch 6 · Suchy ch 8',[
+     ['SM-10','Bend terms: radius, angle, flange, mould line','Concept'],['SM-11','Bend allowance and K-factor','Calculator'],['SM-12','Setbacks and bend deduction','Method'],['SM-13','Bend angle vs flange angle','Pitfall'],['SM-14','Minimum bend radius and bendability','Rule'],['SM-15','Bending force in a vee-die','Calculator'],['SM-16','Flanging and beading','Reference']]],
+   ['Springback &amp; wrinkling','Why the part does not stay where the tool left it.','Course §7 · Marciniak ch 6.6, 10',[
+     ['SM-17','Why a bend springs back','Concept'],['SM-18','Estimating springback','Calculator'],['SM-19','Overbend, bottoming and coining','Method'],['SM-20','Wrinkling and how to stop it','Pitfall']]],
+   ['Formability','How far a sheet can stretch before it fails.','Course §4–5 · Marciniak ch 2–5',[
+     ['SM-21','Strain paths: drawing, plane strain, biaxial','Concept'],['SM-22','Necking and the forming limit curve','Concept'],['SM-23','Checking a part on the FLD','Method'],['SM-24','Thinning as a pass/fail measure','Rule']]],
+   ['Drawing &amp; stretching','Cups, shells and stretched panels.','Course §8 · Marciniak ch 7–9 · Suchy ch 9',[
+     ['SM-25','Deep drawing: flange, wall and punch nose','Concept'],['SM-26','Limiting drawing ratio and blank size','Calculator'],['SM-27','Redrawing and ironing','Method'],['SM-28','Stretching and bulging','Concept']]],
+   ['Other processes &amp; joining','Less common routes, and how parts are joined.','Course §9–10 · Marciniak ch 11',[
+     ['SM-29','Hydroforming: sheet and tube','Concept'],['SM-30','Roll forming, spinning, tube bending','Reference'],['SM-31','Embossing and coining','Reference'],['SM-32','Welds, fasteners and clinching','Reference']]],
+   ['Dies &amp; presses','What the toolmaker builds from your drawing.','Course §11 · Suchy ch 1, 3–5, 10, 15',[
+     ['SM-33','Simple, compound, progressive and transfer dies','Reference'],['SM-34','Die components and how they fit together','Concept'],['SM-35','Choosing a press','Method'],['SM-36','Die cost and when tooling pays off','Concept']]],
+   ['Design guidelines','The checks a designer makes before release.','Course §12 · Suchy ch 14',[
+     ['SM-37','Holes and slots near bends and edges','Rule'],['SM-38','Bend relief and corner relief','Rule'],['SM-39','Minimum flange length','Calculator'],['SM-40','Beads, dimples and ribs for stiffness','Method'],['SM-41','Tolerances on formed parts','Rule'],['SM-42','Hole alignment across bends','Pitfall']]],
+   ['Building in Creo Sheetmetal','Setting up the part so the flat pattern is right.','Own Creo practice · replaces course §13 (Fusion 360)',[
+     ['SM-43','Part setup: thickness, radius, Y-factor','Method'],['SM-44','Bend tables vs K/Y-factor','Reference'],['SM-45','Flat pattern and drawing','Method'],['SM-46','Reliefs and corner treatments','Method']]],
+   ['Practice','Worked parts, then a pocket checklist.','Course §14–15 · Marciniak exercises + solutions',[
+     ['EX-S1','L-bracket: blank length by hand, then in Creo','Exercise'],['EX-S2','Mounting bracket with a stiffening bead','Exercise'],['EX-S3','Book exercises ch 1–11, with worked solutions','Exercise'],['SM-47','Sheet metal check card','Checklist']]]
+  ];
+  const ALL=SECTIONS.flatMap((s,i)=>s[3].map(r=>({id:r[0],t:r[1],k:r[2],sec:i})));
+
+  /* ---------- studied state (this browser only) ---------- */
+  const KEY='sm-studied-v1'; let done=new Set();
+  try{done=new Set(JSON.parse(localStorage.getItem(KEY)||'[]'))}catch(e){}
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify([...done]))}catch(e){}};
+
+  /* ---------- title block ---------- */
+  const nSheets=ALL.filter(r=>r.id.startsWith('SM')).length, nCalc=ALL.filter(r=>r.k==='Calculator').length, nEx=ALL.filter(r=>r.k==='Exercise').length;
+  document.getElementById('tblock').innerHTML=[['Sheets',nSheets],['Sections',SECTIONS.length],['Calculators',nCalc],['Practice',nEx]].map(x=>'<div><dt>'+x[0]+'</dt><dd>'+x[1]+'</dd></div>').join('');
+
+  /* ---------- contents ---------- */
+  const secsEl=document.getElementById('secs');
+  secsEl.innerHTML=SECTIONS.map((sec,i)=>{
+    const n=String(i+1).padStart(2,'0');
+    const rows=sec[3].map(r=>{
+      const sample=r[0]==='SM-11';
+      const title=sample?'<a class="rt" href="#sheet">'+r[1]+'<span class="open">· OPEN SAMPLE</span></a>':'<span class="rt">'+r[1]+'</span>';
+      return '<li class="row" data-id="'+r[0]+'"><button class="punch" type="button" data-id="'+r[0]+'" aria-pressed="false" aria-label="Mark '+r[0]+' studied"></button><span class="rid">'+r[0]+'</span>'+title+'<span class="chip k-'+r[2].toLowerCase()+'">'+r[2]+'</span></li>';
+    }).join('');
+    return (i?'<div class="bend" aria-hidden="true">Bend '+String(i).padStart(2,'0')+' · up 90°</div>':'')+
+      '<section class="sec"><div class="sec-head"><div class="sec-num" aria-hidden="true">'+n+'</div><h3><span class="mono" style="position:absolute;left:-9999px">Section '+n+': </span>'+sec[0]+'</h3><p class="sec-desc">'+sec[1]+'</p><p class="sec-src">'+sec[2]+'</p><div class="sec-prog" data-sec="'+i+'"><i></i></div></div><ol class="rows">'+rows+'</ol></section>';
+  }).join('');
+  secsEl.addEventListener('click',e=>{const b=e.target.closest('.punch');if(!b)return;toggle(b.dataset.id);});
+
+  /* ---------- strip ---------- */
+  const strip=document.getElementById('strip'), NS='http://www.w3.org/2000/svg';
+  function mk(parent,tag,attrs,cls,txt){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(cls)e.setAttribute('class',cls);if(txt!=null)e.textContent=txt;parent.appendChild(e);return e;}
+  const PITCH=21, GAP=12, X0=22; const pos=[]; let x=X0;
+  ALL.forEach((r,i)=>{ if(i&&r.sec!==ALL[i-1].sec) x+=GAP; pos.push(x); x+=PITCH; });
+  const W=x+X0-PITCH/2;
+  strip.setAttribute('viewBox','0 0 '+W+' 100');
+  function drawStrip(){
+    strip.textContent='';
+    const defs=mk(strip,'defs',{}); const g=mk(defs,'linearGradient',{id:'stripGrad',x1:0,y1:0,x2:0,y2:1});
+    [['0','--steel-c'],['.55','--steel-a'],['1','--steel-b']].forEach(s=>{const st=mk(g,'stop',{offset:s[0]});st.style.stopColor='var('+s[1]+')';});
+    mk(strip,'rect',{x:4,y:18,width:W-8,height:58},'st-strip');
+    let lastSec=-1;
+    ALL.forEach((r,i)=>{
+      const cx=pos[i]+PITCH/2;
+      mk(strip,'circle',{cx:cx,cy:28,r:2.4},'st-pilot');
+      const st=mk(strip,'g',{'data-id':r.id,tabindex:0,role:'button','aria-label':r.id+' · '+r.t.replace(/&amp;/g,'&')},'st-station');
+      mk(st,'title',{},null,r.id+' · '+r.t.replace(/&amp;/g,'&')+(done.has(r.id)?' · punched':''));
+      mk(st,'circle',{cx:cx,cy:52,r:10},null).setAttribute('style','fill:transparent');
+      if(done.has(r.id)){ mk(st,'circle',{cx:cx,cy:52,r:7.5},'st-hole'); mk(st,'path',{d:'M'+(cx-6.5)+',55 A7.5,7.5 0 0 0 '+(cx+6.5)+',55'},'st-hi'); }
+      else mk(st,'circle',{cx:cx,cy:52,r:7.5},'st-mark');
+      if(r.sec!==lastSec){ lastSec=r.sec; mk(strip,'text',{x:pos[i]+3,y:93},'st-lab','§'+String(r.sec+1).padStart(2,'0'));
+        if(i) mk(strip,'line',{x1:pos[i]-GAP/2,y1:12,x2:pos[i]-GAP/2,y2:82},'st-tick'); }
+    });
+  }
+
+  /* ---------- refresh everything that shows progress ---------- */
+  function refresh(){
+    drawStrip();
+    document.getElementById('strip-count').innerHTML='<b>'+done.size+'</b>of '+ALL.length+' stations punched';
+    const nx=ALL.find(r=>!done.has(r.id)), rb=document.getElementById('resume');
+    rb.textContent=nx?'Resume at '+nx.id+' →':'All punched'; rb.disabled=!nx;
+    document.querySelectorAll('.punch').forEach(b=>{const on=done.has(b.dataset.id);b.setAttribute('aria-pressed',on);b.closest('.row').classList.toggle('done',on);});
+    document.querySelectorAll('.sec-prog').forEach(p=>{const i=+p.dataset.sec, rs=ALL.filter(r=>r.sec===i);p.firstElementChild.style.width=(100*rs.filter(r=>done.has(r.id)).length/rs.length)+'%';});
+    const on=done.has('SM-11'), fb=document.getElementById('finish-btn');
+    fb.setAttribute('aria-pressed',on); document.getElementById('finish-label').textContent=on?'Punched · undo':'Punch SM-11';
+  }
+  function toggle(id){ done.has(id)?done.delete(id):done.add(id); save(); refresh(); }
+  function jumpTo(id){
+    show('index'); setFilter('all');
+    const row=document.querySelector('.row[data-id="'+id+'"]'); if(!row) return;
+    row.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});
+    row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
+  }
+  strip.addEventListener('click',e=>{const g=e.target.closest('.st-station');if(g)jumpTo(g.dataset.id);});
+  strip.addEventListener('keydown',e=>{const g=e.target.closest('.st-station');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();jumpTo(g.dataset.id);}});
+  document.getElementById('resume').addEventListener('click',()=>{const next=ALL.find(r=>!done.has(r.id));if(next)jumpTo(next.id);});
+
+  /* ---------- filters ---------- */
+  const KINDS=['all','Concept','Rule','Method','Calculator','Pitfall','Reference','Practice'];
+  let filter='all';
+  const fEl=document.getElementById('filters');
+  fEl.innerHTML=KINDS.map(k=>'<button type="button" class="fchip" data-k="'+k+'" aria-pressed="'+(k==='all')+'">'+(k==='all'?'All '+ALL.length:k)+'</button>').join('');
+  function setFilter(k){ filter=k;
+    fEl.querySelectorAll('.fchip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===k));
+    document.querySelectorAll('.row').forEach(row=>{const r=ALL.find(x=>x.id===row.dataset.id);
+      const kind=(r.k==='Exercise'||r.k==='Checklist')?'Practice':r.k;
+      row.classList.toggle('hide',k!=='all'&&kind!==k);});
+    document.querySelectorAll('.sec').forEach(sec=>sec.classList.toggle('empty',!sec.querySelector('.row:not(.hide)')));
+  }
+  fEl.addEventListener('click',e=>{const b=e.target.closest('.fchip');if(b)setFilter(b.dataset.k);});
+  document.getElementById('finish-btn').addEventListener('click',()=>toggle('SM-11'));
+  refresh();
+
+  /* ---------- sources ---------- */
+  const SRC=[
+    ['Course notes','3 DOCX · April 2025','Sets the order and the designer\'s angle. 119 lectures in 16 sections; your three versions (own, Gemini, condensed) are merged.',
+      [['§1–2','Introduction, materials','§01'],['§3','Common processes, punching force','§02'],['§4–5','Plastic deformation, formability','§05'],['§6','Bending, K-factor, bend allowance','§03'],['§7','Springback, wrinkling','§04'],['§8','Deep drawing','§06'],['§9–10','Other operations, joining','§07'],['§11','Tools and equipment','§08'],['§12','Design considerations','§09'],['§13','Fusion 360 workspace, rebuilt for Creo','§10'],['§14–15','Design projects, quiz','§11']]],
+    ['Mechanics of Sheet Metal Forming','Marciniak, Duncan & Hu · 2nd ed · 228 pp','The theory layer. Worked examples and exercise solutions feed the calculators and EX-S3.',
+      [['Intro, ch 1','Forming processes, material properties','§01'],['ch 2–3','Plane stress, strain diagram','§05'],['ch 4','Simplified stamping analysis','§06'],['ch 5','Instability, forming limit curve','§05'],['ch 6','Bending, springback, vee-die','§03 §04'],['ch 7–9','Shells, deep drawing, stretching','§06'],['ch 10','Bending under tension, draw-beads','§04'],['ch 11','Hydroforming','§07'],['Solutions','Exercises ch 1–11','§11']]],
+    ['Handbook of Die Design','Suchy · 2nd ed · chapter files 1–11, 14, 15','The die-shop layer: what happens to your drawing in the tool room.',
+      [['ch 1, 3–4','Die design basics, stamping dies, construction','§08'],['ch 5','Metalworking machinery (presses)','§08'],['ch 6–7','Blanking, piercing, flat layout','§02'],['ch 8','Bending and forming','§03'],['ch 9','Drawn parts','§06'],['ch 10–11','Practical die design, quality, maintenance','§08'],['ch 14','Materials and surface finish','§09'],['ch 15','Die cost estimating','§08']]],
+    ['Udemy course PDF','1 PDF','Course handout, used to check wording where your notes are thin.',[]]
+  ];
+  document.getElementById('srcs').innerHTML=SRC.map(s=>'<div class="srcbox"><div class="h"><b>'+s[0]+'</b><span>'+s[1]+'</span></div><p class="role">'+s[2]+'</p>'+
+    (s[3].length?'<div class="map"><table>'+s[3].map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>→ '+r[2]+'</td></tr>').join('')+'</table></div>':'<div style="height:12px"></div>')+'</div>').join('');
+
+  /* ---------- views ---------- */
+  const views={index:document.getElementById('view-index'),sheet:document.getElementById('view-sheet'),sources:document.getElementById('view-sources')};
+  const btns=document.querySelectorAll('.review button');
+  function show(v){ if(!views[v]) v='index';
+    for(const k in views) views[k].hidden=(k!==v);
+    btns.forEach(b=>b.setAttribute('aria-pressed',b.dataset.view===v?'true':'false'));
+    window.scrollTo(0,0); }
+  btns.forEach(b=>b.addEventListener('click',()=>{history.replaceState(null,'','#'+b.dataset.view);show(b.dataset.view);}));
+  window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
+  show(location.hash.slice(1)||'index');
+
+  /* ---------- folding bracket ---------- */
+  const part=document.getElementById('part'), fbtn=document.getElementById('fold-btn'), st=document.getElementById('art-state');
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let setFold=function(folded){ part.classList.toggle('flat',!folded);
+    fbtn.textContent=folded?'Unfold to blank':'Fold the blank';
+    st.innerHTML=folded?'<b>Formed</b> · 3 bends · R 1.6 · 90°':'<b>Blank</b> · t 1.6 · SPCC · 3 bend lines'; }
+  if(reduce){ setFold(true); }
+  else setTimeout(()=>setFold(true),650);
+  fbtn.addEventListener('click',()=>setFold(part.classList.contains('flat')));
+  // drag to turn
+  const stage=document.querySelector('.stage'); let rx=56, rz=-34, drag=null, moved=false;
+  const applyRot=()=>{part.style.transform='rotateX('+rx+'deg) rotateZ('+rz+'deg) translateZ(-10px)';};
+  stage.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,rx,rz};moved=false;stage.classList.add('grabbing');part.classList.add('live');stage.setPointerCapture(e.pointerId);});
+  stage.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>4)moved=true;
+    rz=drag.rz+dx*.45; rx=Math.max(5,Math.min(85,drag.rx-dy*.35)); applyRot();});
+  const endDrag=e=>{if(!drag)return;drag=null;stage.classList.remove('grabbing');part.classList.remove('live');};
+  stage.addEventListener('pointerup',endDrag); stage.addEventListener('pointercancel',endDrag);
+  stage.addEventListener('dblclick',()=>{rx=56;rz=-34;applyRot();});
+  // click one flange to fold / unfold just that one
+  const FL={'fl-l':'rotateY(90deg)','fl-r':'rotateY(-90deg)','fl-b':'rotateX(-90deg)'};
+  part.querySelectorAll('.fl-l,.fl-r,.fl-b').forEach(fl=>{
+    fl.addEventListener('click',e=>{ if(moved) return; e.stopPropagation();
+      const cls=[...fl.classList].find(c=>FL[c]); const open=fl.dataset.open==='1';
+      if(part.classList.contains('flat')){ part.classList.remove('flat'); part.querySelectorAll('.fl-l,.fl-r,.fl-b').forEach(o=>{o.style.transform='none';o.style.filter='none';o.dataset.open='1';}); }
+      fl.style.transform=open?'':'none'; fl.style.filter=open?'':'none'; fl.dataset.open=open?'0':'1';
+      const opened=[...part.querySelectorAll('.fl-l,.fl-r,.fl-b')].filter(o=>o.dataset.open==='1').length;
+      st.innerHTML=opened? '<b>Partly formed</b> · '+(3-opened)+' of 3 bends made' : '<b>Formed</b> · 3 bends · R 1.6 · 90°';
+      fbtn.textContent=opened?'Fold the rest':'Unfold to blank';
+    });
+  });
+  const _setFold=setFold;
+  setFold=function(folded){ part.querySelectorAll('.fl-l,.fl-r,.fl-b').forEach(o=>{o.style.transform='';o.style.filter='';o.dataset.open=folded?'0':'1';}); _setFold(folded); };
+
+  /* ---------- live bend section ---------- */
+  const svg=document.getElementById('bend');
+  const $=id=>document.getElementById(id), f2=n=>n.toFixed(2);
+  function el(tag,attrs,style,txt){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(style)e.setAttribute('style',style);if(txt!=null)e.textContent=txt;svg.appendChild(e);return e;}
+  const MONO="font-family:'Martian Mono',monospace;font-size:11px;";
+  let view='bent', VSpx=null, dragTh=false;
+  document.getElementById('vw-bent').addEventListener('click',()=>{view='bent';setView();});
+  document.getElementById('vw-flat').addEventListener('click',()=>{view='flat';setView();});
+  function setView(){document.getElementById('vw-bent').setAttribute('aria-pressed',view==='bent');document.getElementById('vw-flat').setAttribute('aria-pressed',view==='flat');calc();}
+  function drawFlat(t,R,thDeg,K,A,B){
+    const th=thDeg*Math.PI/180, BA=th*(R+K*t), OSSB=Math.tan(th/2)*(R+t), a=Math.max(A-OSSB,0), b=Math.max(B-OSSB,0), tot=a+BA+b;
+    const W=500, x0=40, sc=W/Math.max(tot,1e-6), h=Math.max(12,Math.min(44,t*14)), y0=170-h/2;
+    const X=(v)=>x0+v*sc;
+    el('rect',{x:X(0),y:y0,width:a*sc,height:h},'fill:url(#mgrad);stroke:var(--ink);stroke-width:1.4');
+    el('rect',{x:X(a),y:y0,width:BA*sc,height:h},'fill:var(--neutral);stroke:var(--ink);stroke-width:1.4');
+    el('rect',{x:X(a+BA),y:y0,width:b*sc,height:h},'fill:url(#mgrad);stroke:var(--ink);stroke-width:1.4');
+    el('line',{x1:X(a),y1:y0-8,x2:X(a),y2:y0+h+8},'stroke:var(--layout);stroke-width:1.5;stroke-dasharray:5 4');
+    el('line',{x1:X(a+BA),y1:y0-8,x2:X(a+BA),y2:y0+h+8},'stroke:var(--layout);stroke-width:1.5;stroke-dasharray:5 4');
+    el('line',{x1:X(0),y1:y0+h-K*h,x2:X(tot),y2:y0+h-K*h},'stroke:var(--ink);stroke-width:1;stroke-dasharray:6 4;opacity:.7');
+    const dim=(xa,xb,y,txt,col)=>{el('line',{x1:xa,y1:y,x2:xb,y2:y},'stroke:'+col+';stroke-width:1.2');el('line',{x1:xa,y1:y-5,x2:xa,y2:y+5},'stroke:'+col+';stroke-width:1');el('line',{x1:xb,y1:y-5,x2:xb,y2:y+5},'stroke:'+col+';stroke-width:1');
+      el('text',{x:(xa+xb)/2,y:y-7,'text-anchor':'middle'},MONO+'fill:'+col+';font-size:10.5px',txt);};
+    if(a>0) dim(X(0),X(a),y0-26,'A − OSSB = '+a.toFixed(2),'var(--ink-soft)');
+    dim(X(a),X(a+BA),y0-26,'BA = '+BA.toFixed(2),'var(--layout)');
+    if(b>0) dim(X(a+BA),X(tot),y0-26,'B − OSSB = '+b.toFixed(2),'var(--ink-soft)');
+    dim(X(0),X(tot),y0+h+34,'Flat = '+tot.toFixed(2)+' mm','var(--ink)');
+    el('text',{x:X(a+BA/2),y:y0+h/2+4,'text-anchor':'middle'},MONO+'fill:var(--ink);font-size:10px;font-weight:600','bend zone');
+    el('text',{x:x0,y:y0+h+70},MONO+'fill:var(--mute);font-size:10px','Same metal laid flat. The bend zone is BA long; blue lines are the bend lines you would scribe.');
+    el('text',{x:x0,y:y0+h+88},MONO+'fill:var(--mute);font-size:10px','Dashed line: neutral axis at K·t from the inside face.');
+  }
+  function draw(t,R,thDeg,K,FA,FB){
+    svg.textContent='';
+    const defs0=el('defs',{}); const mg0=document.createElementNS(NS,'linearGradient');mg0.setAttribute('id','mgrad');mg0.setAttribute('x1','0');mg0.setAttribute('y1','0');mg0.setAttribute('x2','0');mg0.setAttribute('y2','1');
+    [['0','--steel-c'],['1','--steel-b']].forEach(a=>{const sp=document.createElementNS(NS,'stop');sp.setAttribute('offset',a[0]);sp.setAttribute('style','stop-color:var('+a[1]+')');mg0.appendChild(sp);});
+    defs0.appendChild(mg0);
+    if(view==='flat'){ drawFlat(t,R,thDeg,K,FA,FB); return; }
+    const th=thDeg*Math.PI/180, s=Math.min(100/(R+t),34), O={x:Math.min(330,600-Math.tan(th/2)*(R+t)*s),y:286};
+    const P=(x,y)=>[O.x+x*s,O.y-y*s], fmt=p=>p[0].toFixed(1)+','+p[1].toFixed(1);
+    const L1=200/s, L2=150/s, C={x:0,y:t+R}, f0=-Math.PI/2, f1=-Math.PI/2+th, d=[Math.cos(th),Math.sin(th)];
+    const arcPt=(r,f)=>[C.x+r*Math.cos(f),C.y+r*Math.sin(f)];
+    const pt=(a)=>P(a[0],a[1]);
+    const ro=R+t, rn=R+K*t;
+    const oEnd=arcPt(ro,f1), iEnd=arcPt(R,f1);
+    const oFar=[oEnd[0]+L2*d[0],oEnd[1]+L2*d[1]], iFar=[iEnd[0]+L2*d[0],iEnd[1]+L2*d[1]];
+    const defs=defs0;
+    const cS=pt([C.x,C.y]);
+    const rg=document.createElementNS(NS,'radialGradient');rg.setAttribute('id','strain');rg.setAttribute('gradientUnits','userSpaceOnUse');
+    rg.setAttribute('cx',cS[0]);rg.setAttribute('cy',cS[1]);rg.setAttribute('r',ro*s);
+    const fi=R/ro, fn=rn/ro;
+    [[0,'--comp'],[fi,'--comp'],[fn,'--neutral'],[1,'--tens']].forEach(a=>{const sp=document.createElementNS(NS,'stop');sp.setAttribute('offset',a[0]);sp.setAttribute('style','stop-color:var('+a[1]+')');rg.appendChild(sp);});
+    defs.appendChild(rg);
+    const A=(r)=>(r*s).toFixed(1)+','+(r*s).toFixed(1);
+    // whole part outline
+    const outline='M'+fmt(P(-L1,0))+' L'+fmt(P(0,0))+' A'+A(ro)+' 0 0 0 '+fmt(pt(oEnd))+' L'+fmt(pt(oFar))+' L'+fmt(pt(iFar))+' L'+fmt(pt(iEnd))+
+      (R>0?' A'+A(R)+' 0 0 1 '+fmt(P(0,t)):' L'+fmt(P(0,t)))+' L'+fmt(P(-L1,t))+' Z';
+    el('path',{d:outline},'fill:url(#mgrad);stroke:none');
+    // bend zone with strain colour
+    const zone='M'+fmt(P(0,t))+' L'+fmt(P(0,0))+' A'+A(ro)+' 0 0 0 '+fmt(pt(oEnd))+' L'+fmt(pt(iEnd))+(R>0?' A'+A(R)+' 0 0 1 '+fmt(P(0,t)):'')+' Z';
+    el('path',{d:zone},'fill:url(#strain);stroke:none');
+    el('path',{d:outline},'fill:none;stroke:var(--ink);stroke-width:1.4;stroke-linejoin:round');
+    // tangent lines
+    el('line',{x1:P(0,0)[0],y1:P(0,0)[1],x2:P(0,t)[0],y2:P(0,t)[1]},'stroke:var(--ink-soft);stroke-width:.8;stroke-dasharray:2 3');
+    el('line',{x1:pt(oEnd)[0],y1:pt(oEnd)[1],x2:pt(iEnd)[0],y2:pt(iEnd)[1]},'stroke:var(--ink-soft);stroke-width:.8;stroke-dasharray:2 3');
+    // neutral axis
+    const nA=arcPt(rn,f1), nFar=[nA[0]+L2*d[0],nA[1]+L2*d[1]];
+    el('path',{d:'M'+fmt(P(-L1,t-K*t))+' L'+fmt(P(0,t-K*t))+' A'+A(rn)+' 0 0 0 '+fmt(pt(nA))+' L'+fmt(pt(nFar))},'fill:none;stroke:var(--ink);stroke-width:1;stroke-dasharray:6 4;opacity:.7');
+    el('path',{d:'M'+fmt(P(0,t-K*t))+' A'+A(rn)+' 0 0 0 '+fmt(pt(nA))},'fill:none;stroke:var(--layout);stroke-width:3.2;stroke-linecap:round');
+    // virtual sharp + mould lines
+    const ossb=Math.tan(th/2)*ro, VS=P(ossb,0);
+    el('path',{d:'M'+fmt(P(0,0))+' L'+fmt(VS)+' L'+fmt(pt(oEnd))},'fill:none;stroke:var(--mute);stroke-width:1;stroke-dasharray:1.5 3.5');
+    el('circle',{cx:VS[0],cy:VS[1],r:3.5},'fill:var(--ink)');
+    VSpx={x:VS[0],y:VS[1]};
+    const hm=pt([(oFar[0]+iFar[0])/2,(oFar[1]+iFar[1])/2]);
+    const hg=el('g',{class:'handle'},'');
+    const hc=document.createElementNS(NS,'circle');hc.setAttribute('cx',hm[0]);hc.setAttribute('cy',hm[1]);hc.setAttribute('r',11);hc.setAttribute('style','fill:var(--layout);opacity:.18');hg.appendChild(hc);
+    const hc2=document.createElementNS(NS,'circle');hc2.setAttribute('cx',hm[0]);hc2.setAttribute('cy',hm[1]);hc2.setAttribute('r',5);hc2.setAttribute('style','fill:var(--layout);stroke:var(--sheet);stroke-width:2');hg.appendChild(hc2);
+    // θ arc at virtual sharp
+    const ra=30, a2=[VS[0]+ra*Math.cos(th),VS[1]-ra*Math.sin(th)];
+    el('line',{x1:VS[0],y1:VS[1],x2:VS[0]+ra+12,y2:VS[1]},'stroke:var(--mute);stroke-width:.8');
+    el('path',{d:'M'+(VS[0]+ra)+','+VS[1]+' A'+ra+','+ra+' 0 0 0 '+a2[0].toFixed(1)+','+a2[1].toFixed(1)},'fill:none;stroke:var(--heat-2);stroke-width:1.4');
+    el('text',{x:VS[0]+(ra+14)*Math.cos(th/2),y:VS[1]-(ra+14)*Math.sin(th/2)+4},MONO+'fill:var(--heat-2);font-weight:600','θ '+thDeg+'°');
+    // OSSB dimension
+    const yD=O.y+18, x0=P(0,0)[0];
+    el('line',{x1:x0,y1:O.y+4,x2:x0,y2:yD+5},'stroke:var(--mute);stroke-width:.8');
+    el('line',{x1:VS[0],y1:O.y+6,x2:VS[0],y2:yD+5},'stroke:var(--mute);stroke-width:.8');
+    el('line',{x1:x0,y1:yD,x2:VS[0],y2:yD},'stroke:var(--layout);stroke-width:1.2');
+    el('text',{x:(x0+VS[0])/2,y:yD+16,'text-anchor':'middle'},MONO+'fill:var(--layout);font-size:10px','OSSB '+ossb.toFixed(2));
+    // t dimension at left end
+    const xl=P(-L1,0)[0]-12;
+    el('line',{x1:xl,y1:P(0,0)[1],x2:xl,y2:P(0,t)[1]},'stroke:var(--ink-soft);stroke-width:1');
+    el('text',{x:xl-6,y:(P(0,0)[1]+P(0,t)[1])/2+4,'text-anchor':'end'},MONO+'fill:var(--ink-soft)','t');
+    // R leader
+    if(R*s>14){ const fm=(f0+f1)/2, ip=pt(arcPt(R,fm));
+      el('circle',{cx:cS[0],cy:cS[1],r:2.2},'fill:var(--ink-soft)');
+      el('line',{x1:cS[0],y1:cS[1],x2:ip[0],y2:ip[1]},'stroke:var(--ink-soft);stroke-width:1');
+      const lp=pt(arcPt(R*.5,fm)); el('text',{x:lp[0]-4,y:lp[1]-6,'text-anchor':'end'},MONO+'fill:var(--ink-soft)','R'); }
+    // BA label outside the arc
+    const fm=(f0+f1)/2, bp=pt(arcPt(ro+22/s,fm));
+    el('text',{x:bp[0],y:bp[1]+4,'text-anchor':fm>-0.2?'start':'middle'},MONO+'fill:var(--layout);font-weight:700','BA');
+    // labels on flange 1
+    el('text',{x:P(-L1,0)[0]+8,y:P(0,t)[1]-10},MONO+'fill:var(--mute);font-size:10px','neutral axis · K·t from inside');
+  }
+  function calc(){
+    const t=+$('s-t').value, R=+$('s-r').value, th=+$('s-th').value, K=+$('s-k').value, A=+$('n-a').value||0, B=+$('n-b').value||0;
+    $('v-t').textContent=t.toFixed(1)+' mm'; $('v-r').textContent=R.toFixed(1)+' mm'; $('v-th').textContent=th+'°'; $('v-k').textContent=K.toFixed(2);
+    const r=th*Math.PI/180, BA=r*(R+K*t), OSSB=Math.tan(r/2)*(R+t), BD=2*OSSB-BA, flat=A+B-BD;
+    $('o-ba').textContent=f2(BA); $('o-ossb').textContent=f2(OSSB); $('o-bd').textContent=f2(BD); $('o-y').textContent=(K*Math.PI/2).toFixed(3); $('o-flat').textContent=f2(flat)+' mm';
+    const v=$('verdict');
+    if(R<t){v.textContent='R < t · check minimum bend radius (SM-14)';v.className='verdict bad-p';}
+    else{v.textContent='Cutting at A + B would be '+f2(BD)+' mm too long';v.className='verdict ok-p';}
+    draw(t,R,th,K,A,B);
+  }
+  // drag anywhere on the bent figure to set θ from the virtual sharp
+  const lab=document.querySelector('.lab-draw');
+  function thFromEvent(e){ const r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+    const px=(e.clientX-r.left)*vb.width/r.width, py=(e.clientY-r.top)*vb.height/r.height;
+    if(!VSpx) return null; let a=Math.atan2(VSpx.y-py,px-VSpx.x)*180/Math.PI; return Math.round(Math.max(10,Math.min(150,a))); }
+  svg.addEventListener('pointerdown',e=>{ if(view!=='bent')return; dragTh=true; lab.classList.add('dragging'); svg.setPointerCapture(e.pointerId); const a=thFromEvent(e); if(a!=null){$('s-th').value=a;calc();} });
+  svg.addEventListener('pointermove',e=>{ if(!dragTh)return; const a=thFromEvent(e); if(a!=null){$('s-th').value=a;calc();} });
+  const endTh=()=>{dragTh=false;lab.classList.remove('dragging');};
+  svg.addEventListener('pointerup',endTh); svg.addEventListener('pointercancel',endTh);
+  // K table rows set the slider
+  const krows=document.querySelectorAll('.ktable tbody tr[data-k]');
+  krows.forEach(tr=>tr.addEventListener('click',()=>{$('s-k').value=tr.dataset.k;calc();}));
+  function markK(){ const k=(+$('s-k').value).toFixed(2); krows.forEach(tr=>tr.classList.toggle('on',(+tr.dataset.k).toFixed(2)===k)); }
+  $('s-k').addEventListener('input',markK); markK();
+
+  /* ---------- quiz ---------- */
+  const flatNow=()=>{const t=+$('s-t').value,R=+$('s-r').value,th=+$('s-th').value*Math.PI/180,K=+$('s-k').value,A=+$('n-a').value||0,B=+$('n-b').value||0;return A+B-(2*Math.tan(th/2)*(R+t)-th*(R+K*t));};
+  const Q={1:{ans:()=>60,tol:.5,ok:'60°. The sheet turns through 60°, not 120°.',bad:'Not that. Think about how far the sheet turns, not the angle between flanges.'},
+           2:{ans:()=>1/Math.PI,tol:.012,ok:'K ≈ 0.32. Y = K·π/2, so K = 2Y/π.',bad:'Not that. Rearrange Y = K·π/2.'},
+           3:{ans:flatNow,tol:.06,ok:'Correct. That matches Fig. 1.',bad:'Not that. Flat = A + B − BD, with BD = 2·OSSB − BA.'}};
+  document.querySelectorAll('.qz .go[data-q]').forEach(b=>b.addEventListener('click',()=>{
+    const n=b.dataset.q, inp=$('q'+n), fb=$('q'+n+'-fb'), v=parseFloat(inp.value);
+    if(isNaN(v)){fb.textContent='Type a number first.';fb.className='fb';return;}
+    const q=Q[n], ok=Math.abs(v-q.ans())<=q.tol; fb.textContent=ok?'✓ '+q.ok:'✗ '+q.bad+(n==='3'?' Right now it is '+flatNow().toFixed(2)+' mm.':''); fb.className='fb '+(ok?'ok':'bad');
+  }));
+  document.querySelectorAll('.qz input').forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')i.closest('.qa').querySelector('.go[data-q]').click();}));
+  $('q3-peek').addEventListener('click',()=>{document.querySelector('.lab').scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});});
+
+  /* ---------- practice problem ---------- */
+  let P=null, score={ok:0,tried:0};
+  try{score=JSON.parse(localStorage.getItem('sm-practice-v1')||'{"ok":0,"tried":0}')}catch(e){}
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  function newProb(){
+    const t=pick([1,1.2,1.6,2,2.5,3,4]), R=pick([t,t,1.5*t,2*t,3*t]), th=pick([90,90,90,45,60,120,135]), K=pick([0.33,0.40,0.44,0.50]);
+    const A=Math.round(20+Math.random()*80), B=Math.round(15+Math.random()*60);
+    P={t,R,th,K,A,B};
+    $('prob-text').textContent='A '+t+' mm '+pick(['SPCC','SECC','A5052','SUS304'])+' bracket has one '+th+'° bend with inside radius R '+R+'. Flange lengths to the virtual sharp are A and B. Use K = '+K.toFixed(2)+'. Find the flat blank.';
+    $('prob-given').innerHTML=[['t',t+' mm'],['R',R+' mm'],['θ',th+'°'],['K',K.toFixed(2)],['A',A+' mm'],['B',B+' mm']].map(x=>'<div><dt>'+x[0]+'</dt><dd>'+x[1]+'</dd></div>').join('');
+    $('prob-in').value=''; $('prob-fb').textContent='Within ±0.05 mm counts as correct.'; $('prob-fb').className='fb'; $('prob-steps').textContent='';
+    $('prob-score').innerHTML=score.tried?'<b>'+score.ok+'</b> / '+score.tried+' correct':'';
+  }
+  function solve(){const r=P.th*Math.PI/180,BA=r*(P.R+P.K*P.t),OSSB=Math.tan(r/2)*(P.R+P.t),BD=2*OSSB-BA;return{BA,OSSB,BD,flat:P.A+P.B-BD};}
+  function steps(){const s=solve();$('prob-steps').innerHTML='BA = θ·(R + K·t) = '+(P.th*Math.PI/180).toFixed(4)+' · ('+P.R+' + '+P.K.toFixed(2)+'·'+P.t+') = <b>'+s.BA.toFixed(2)+'</b><br>OSSB = tan(θ/2)·(R + t) = '+Math.tan(P.th*Math.PI/360).toFixed(4)+' · '+(P.R+P.t)+' = <b>'+s.OSSB.toFixed(2)+'</b><br>BD = 2·OSSB − BA = <b>'+s.BD.toFixed(2)+'</b><br>Flat = A + B − BD = '+P.A+' + '+P.B+' − '+s.BD.toFixed(2)+' = <b>'+s.flat.toFixed(2)+' mm</b>';}
+  $('prob-check').addEventListener('click',()=>{const v=parseFloat($('prob-in').value),fb=$('prob-fb');if(isNaN(v)){fb.textContent='Type your answer in mm.';fb.className='fb';return;}
+    const s=solve(),ok=Math.abs(v-s.flat)<=0.05; score.tried++; if(ok)score.ok++; try{localStorage.setItem('sm-practice-v1',JSON.stringify(score))}catch(e){}
+    fb.textContent=ok?'✓ Correct: '+s.flat.toFixed(2)+' mm. Punch another one.':'✗ Off by '+(v-s.flat).toFixed(2)+' mm. '+(Math.abs(v-(P.A+P.B))<.05?'That is A + B: you forgot the bend deduction.':Math.abs(v-(P.A+P.B-s.BA))<.05?'You subtracted BA instead of BD.':'Check the steps.');
+    fb.className='fb '+(ok?'ok':'bad'); if(!ok)steps(); $('prob-score').innerHTML='<b>'+score.ok+'</b> / '+score.tried+' correct';});
+  $('prob-show').addEventListener('click',steps);
+  $('prob-new').addEventListener('click',newProb);
+  $('prob-in').addEventListener('keydown',e=>{if(e.key==='Enter')$('prob-check').click();});
+  newProb();
+  ['s-t','s-r','s-th','s-k','n-a','n-b'].forEach(id=>$(id).addEventListener('input',calc)); calc();
+})();
+</script>
+
+</body>
+</html>

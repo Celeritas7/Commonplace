@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hose Routing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=IBM+Plex+Mono:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<style>
+/* Layout concept: the hose IS the interface. The cover hose can be bent by hand and measures itself;
+   the contents hang off a vertical hose held by P-clips, and what you have studied flows down it.
+   Reading pages are a calm single column with workshop margin notes, every figure answers back. */
+:root{
+  --ground:#eceee9; --paper:#f7f8f4; --ink:#16191a; --ink-2:#454c4f; --mute:#767e81; --rule:#d2d6cf;
+  --rubber:#1c1f21; --rubber-edge:#0c0e0f; --sheen:#8b959b;
+  --brass:#a07a2c; --brass-hi:#dcb867; --brass-lo:#6d5119;
+  --layline:#f2c94c; --fluid:#d98a1f; --fluid-glow:rgba(217,138,31,.35);
+  --link:#7c5a14; --limit:#b3352b; --limit-bg:#f6e3df; --good:#2f6b4a; --good-bg:#e1eee5;
+  --chip:#e3e6e0; --shadow:rgba(22,25,26,.10);
+  --f-display:'Archivo','Arial Narrow',system-ui,sans-serif;
+  --f-read:'Literata',Georgia,'Times New Roman',serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#111314; --paper:#181b1d; --ink:#ebe8e1; --ink-2:#b9b6ae; --mute:#868d90; --rule:#2c3134;
+  --rubber:#2b3033; --rubber-edge:#050606; --sheen:#9aa5ab;
+  --brass:#c49a45; --brass-hi:#f0cf82; --brass-lo:#7a5a1e;
+  --layline:#f2c94c; --fluid:#f0a43a; --fluid-glow:rgba(240,164,58,.45);
+  --link:#e9c26c; --limit:#ef7d6e; --limit-bg:#3a1f1b; --good:#86cfa2; --good-bg:#1b3125;
+  --chip:#22272a; --shadow:rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ground:#111314; --paper:#181b1d; --ink:#ebe8e1; --ink-2:#b9b6ae; --mute:#868d90; --rule:#2c3134;
+  --rubber:#2b3033; --rubber-edge:#050606; --sheen:#9aa5ab;
+  --brass:#c49a45; --brass-hi:#f0cf82; --brass-lo:#7a5a1e;
+  --layline:#f2c94c; --fluid:#f0a43a; --fluid-glow:rgba(240,164,58,.45);
+  --link:#e9c26c; --limit:#ef7d6e; --limit-bg:#3a1f1b; --good:#86cfa2; --good-bg:#1b3125;
+  --chip:#22272a; --shadow:rgba(0,0,0,.45); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-read);font-size:17px;line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+:focus-visible{outline:2px solid var(--fluid);outline-offset:3px;border-radius:2px}
+::selection{background:var(--fluid-glow)}
+button{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:40px}
+@media (max-width:640px){.wrap{padding-inline:16px}}
+
+/* reading progress: a thin hose along the top that fills as you read */
+#readbar{position:fixed;left:0;right:0;top:0;height:4px;z-index:40;background:var(--rubber);pointer-events:none}
+#readbar i{display:block;height:100%;width:0;background:var(--fluid);box-shadow:0 0 8px var(--fluid-glow)}
+
+/* review bar — mockup only */
+.review{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;
+  padding:10px 16px 8px;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.review .seg{margin-left:auto;display:flex;border:1px solid var(--rule);border-radius:999px;padding:2px}
+.review button{letter-spacing:inherit;text-transform:inherit;color:var(--ink-2);background:none;border:0;padding:5px 12px;border-radius:999px;cursor:pointer}
+.review button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* module bar */
+.modbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 22px;padding-block:22px 0;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;color:var(--mute)}
+.modbar .crumb a{color:var(--mute);text-decoration:none} .modbar .crumb a:hover{color:var(--ink)}
+.modbar .crumb span{opacity:.5;margin:0 6px}
+.mods{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.mod{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2);text-decoration:none;background:var(--paper)}
+.mod[aria-current="page"]{border-color:var(--ink);color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mod .sw{width:26px;height:10px;border-radius:5px;flex:none}
+.sw.pipe{background:linear-gradient(180deg,#e7ebee,#9aa3a9 55%,#c9cfd3)}
+.sw.hose{background:linear-gradient(180deg,#3a3f42,#121415 60%,#2a2e31);position:relative;overflow:hidden}
+.sw.hose::after{content:"";position:absolute;left:3px;right:3px;top:4px;height:2px;background:var(--layline);border-radius:1px}
+.sw.cable{background:linear-gradient(180deg,#f1a35f,#c45f1a 60%,#e08542)}
+.mod small{font-size:10px;opacity:.7}
+
+/* ============ INDEX ============ */
+.hero{position:relative;padding-block:46px 8px}
+.hero .kicker{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass)}
+.hero h1{font-family:var(--f-display);font-stretch:125%;font-weight:800;font-size:clamp(56px,11vw,132px);line-height:.86;letter-spacing:-.035em;margin:14px 0 0;text-wrap:balance}
+.hero h1 em{font-style:normal;font-stretch:62%;font-weight:300;letter-spacing:-.01em;color:var(--ink-2)}
+.hero .deck{font-style:italic;font-size:clamp(19px,2.4vw,24px);line-height:1.45;color:var(--ink-2);max-width:34ch;margin:22px 0 0}
+.hosefig{margin:6px -40px 0;overflow:hidden;position:relative}
+.hosefig svg{display:block;width:100%;height:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+.hosefig .handle{cursor:grab}
+.hosefig .handle:active{cursor:grabbing}
+.hud{position:absolute;left:40px;top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--f-mono);font-size:11.5px;color:var(--mute);pointer-events:none}
+.hud .val{pointer-events:auto;background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:5px 12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.hud .val.bad{border-color:var(--limit);color:var(--limit);background:var(--limit-bg)}
+.hud .val.ok{border-color:var(--good);color:var(--good);background:var(--good-bg)}
+.hud button{pointer-events:auto;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--rule);border-radius:999px;padding:5px 10px;cursor:pointer;color:var(--ink-2)}
+.hud button:hover{border-color:var(--ink);color:var(--ink)}
+@media (max-width:640px){.hosefig{margin-inline:-16px}.hud{left:16px}}
+
+.spec{display:flex;flex-wrap:wrap;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);margin-top:8px}
+.spec div{flex:1 1 140px;padding:14px 18px 14px 0}
+.spec dt{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.spec dd{margin:2px 0 0;font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:26px;font-variant-numeric:tabular-nums}
+.spec dd small{font-family:var(--f-read);font-weight:400;font-size:14px;color:var(--mute)}
+
+.contents{display:grid;grid-template-columns:240px minmax(0,1fr);gap:48px;padding-block:56px 40px}
+@media (max-width:860px){.contents{grid-template-columns:1fr;gap:20px}}
+.contents aside{position:sticky;top:70px;align-self:start}
+@media (max-width:860px){.contents aside{position:static}}
+.contents aside h2{font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:26px;line-height:1.1;margin:0 0 12px}
+.contents aside p{font-size:15px;color:var(--ink-2);margin:0 0 14px}
+.legend{display:grid;gap:8px;font-family:var(--f-mono);font-size:11.5px;color:var(--mute);margin-top:22px}
+.legend span{display:flex;align-items:center;gap:10px}
+.legend i{width:12px;height:12px;border-radius:50%;flex:none;border:2px solid var(--mute);background:var(--paper)}
+.legend i.done{border-color:var(--fluid);background:var(--fluid);box-shadow:0 0 0 3px var(--fluid-glow)}
+.legend i.next{border-color:var(--fluid);background:var(--paper)}
+.aside-act{margin-top:18px;display:grid;gap:8px}
+.aside-act button{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--rule);border-radius:999px;padding:8px 12px;cursor:pointer;color:var(--ink-2);text-align:left}
+.aside-act button:hover{border-color:var(--ink);color:var(--ink)}
+
+.route{position:relative;padding-left:64px;min-width:0}
+.rail{position:absolute;left:14px;top:6px;bottom:6px;width:20px;border-radius:10px;
+  background:linear-gradient(90deg,var(--rubber-edge),var(--rubber) 30%,color-mix(in srgb,var(--sheen) 35%,var(--rubber)) 48%,var(--rubber) 66%,var(--rubber-edge));
+  box-shadow:0 2px 10px var(--shadow)}
+.rail .core{position:absolute;left:8px;width:4px;top:0;height:0;border-radius:2px;background:var(--fluid);box-shadow:0 0 10px 2px var(--fluid-glow);transition:height .9s cubic-bezier(.2,.7,.2,1)}
+.rail .lay{position:absolute;left:3px;top:0;bottom:0;width:2px;background:repeating-linear-gradient(180deg,var(--layline) 0 18px,transparent 18px 30px);opacity:.75}
+.sec{position:relative;padding:4px 0 26px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin:0 0 6px;position:relative}
+.sec-head .n{font-family:var(--f-mono);font-size:12px;color:var(--brass);letter-spacing:.1em}
+.sec-head h3{font-family:var(--f-display);font-stretch:115%;font-weight:700;font-size:23px;line-height:1.15;margin:0;text-wrap:balance}
+.sec-head .clip{position:absolute;left:-64px;top:-2px;width:48px;height:34px}
+.sec > p{margin:0 0 10px;font-size:15px;color:var(--mute);font-style:italic}
+.sheet{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:4px 16px;align-items:baseline;
+  padding:12px 12px 12px 0;border-top:1px solid var(--rule);text-decoration:none;color:var(--ink)}
+.sheet:hover .t{color:var(--link)} .sheet:hover{background:linear-gradient(90deg,color-mix(in srgb,var(--fluid) 7%,transparent),transparent 70%)}
+.sheet .st{position:absolute;left:-55px;top:17px;width:14px;height:14px;border-radius:50%;border:2px solid var(--sheen);background:var(--rubber);transition:transform .15s}
+.sheet:hover .st{transform:scale(1.35)}
+.sheet.done .st{border-color:var(--fluid);background:var(--fluid);box-shadow:0 0 0 4px var(--fluid-glow)}
+.sheet.next .st{border-color:var(--fluid);background:var(--paper)}
+.sheet .id{font-family:var(--f-mono);font-size:11.5px;color:var(--mute);letter-spacing:.04em}
+.sheet .t{font-family:var(--f-display);font-weight:600;font-size:17.5px;line-height:1.3}
+.sheet .d{grid-column:2/3;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.sheet .k{grid-row:1;grid-column:3;font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.sheet .k.kc{color:var(--brass)}
+.sheet .tag{display:inline-block;margin-left:8px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper);background:var(--fluid);border-radius:3px;padding:1px 6px;vertical-align:2px}
+.sheet .tick{position:absolute;right:12px;bottom:10px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);background:none;border:1px solid transparent;border-radius:999px;padding:2px 8px;cursor:pointer;opacity:0}
+.sheet:hover .tick,.sheet .tick:focus-visible{opacity:1;border-color:var(--rule)}
+.sheet.done .tick{opacity:1;color:var(--fluid);border-color:transparent}
+@media (max-width:560px){.sheet{grid-template-columns:52px minmax(0,1fr)}.sheet .k{display:none}.route{padding-left:52px}.rail{left:8px}.sheet .st{left:-47px}.sec-head .clip{left:-56px}.sheet .tick{opacity:1}}
+
+.foot-note{border-top:1px solid var(--rule);padding-block:20px 60px;font-size:14px;color:var(--mute);display:flex;gap:14px;align-items:flex-start;max-width:70ch}
+.foot-note b{color:var(--ink-2);font-weight:600}
+
+/* ============ SHEET ============ */
+.s-head{padding-block:40px 30px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:40px;align-items:end}
+@media (max-width:860px){.s-head{grid-template-columns:1fr;gap:18px}}
+.s-head .eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass)}
+.s-head h1{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:clamp(44px,7.6vw,88px);line-height:.92;letter-spacing:-.03em;margin:12px 0 0;text-wrap:balance}
+.s-head .deck{font-style:italic;font-size:21px;line-height:1.45;color:var(--ink-2);margin:18px 0 0;max-width:40ch}
+.s-meta{display:grid;gap:10px;font-family:var(--f-mono);font-size:12px;color:var(--mute);border-left:1px solid var(--rule);padding-left:20px}
+.s-meta b{display:block;font-family:var(--f-display);font-stretch:110%;font-size:19px;color:var(--ink);font-weight:700}
+.studied{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
+  border:1px solid var(--ink);background:none;color:var(--ink);padding:9px 14px;border-radius:999px;justify-self:start;display:inline-flex;gap:8px;align-items:center}
+.studied i{width:10px;height:10px;border-radius:50%;border:2px solid var(--fluid)}
+.studied[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.studied[aria-pressed="true"] i{background:var(--fluid)}
+
+.read{display:grid;grid-template-columns:minmax(0,64ch) minmax(0,1fr);column-gap:56px;padding-block:36px 10px}
+.read > *{grid-column:1}
+.read > .note{grid-column:2;align-self:start;margin-top:6px}
+.read > .wide{grid-column:1 / -1}
+@media (max-width:900px){.read{grid-template-columns:minmax(0,1fr)}.read > .note{grid-column:1}}
+.read p{margin:0 0 1.1em;text-wrap:pretty}
+.read h2{font-family:var(--f-display);font-stretch:112%;font-weight:700;font-size:28px;line-height:1.15;margin:1.6em 0 .5em;text-wrap:balance}
+.read h2 .n{font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--brass);margin-right:12px;letter-spacing:.08em;vertical-align:4px}
+.read strong{font-weight:600;color:var(--ink)}
+.dropcap::first-letter{font-family:var(--f-display);font-stretch:125%;font-weight:800;float:left;font-size:4.2em;line-height:.8;margin:.08em .1em 0 0;color:var(--ink)}
+.note{font-family:var(--f-mono);font-size:12.5px;line-height:1.6;color:var(--ink-2);border-top:2px solid var(--brass);padding-top:10px;margin-bottom:22px}
+.note b{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);margin-bottom:4px;font-weight:600}
+
+/* tap-for-definition terms */
+.tw{position:relative;display:inline}
+.term{font-family:var(--f-display);font-weight:600;background:linear-gradient(transparent 62%,var(--fluid-glow) 62%);border:0;padding:0;cursor:pointer;font-size:inherit;line-height:inherit}
+.term::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--fluid);margin-left:4px;vertical-align:super;transform:scale(.8)}
+.term[aria-expanded="true"]{background:var(--fluid-glow)}
+.pop{position:absolute;left:0;top:calc(100% + 8px);z-index:10;width:min(300px,78vw);background:var(--paper);border:1px solid var(--rule);border-top:2px solid var(--fluid);border-radius:8px;padding:12px 14px;
+  font-family:var(--f-mono);font-size:12.5px;line-height:1.55;color:var(--ink-2);box-shadow:0 14px 30px -14px var(--shadow)}
+.pop b{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);margin-bottom:4px}
+.pop[hidden]{display:none}
+
+.formula{font-family:var(--f-mono);font-size:15.5px;padding:16px 20px;border-left:3px solid var(--fluid);background:var(--paper);margin:0 0 1.4em;overflow-x:auto;white-space:nowrap}
+
+/* figure */
+.fig{background:var(--paper);border:1px solid var(--rule);border-radius:14px;overflow:hidden;margin:6px 0 30px;box-shadow:0 18px 40px -28px var(--shadow)}
+.fig-top{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px 14px;padding:14px 20px;border-bottom:1px solid var(--rule)}
+.fig-top b{font-family:var(--f-display);font-stretch:110%;font-weight:700;font-size:16px}
+.fig-top span{font-family:var(--f-mono);font-size:11px;color:var(--mute);letter-spacing:.06em}
+.fig-body{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(220px,1fr)}
+@media (max-width:760px){.fig-body{grid-template-columns:1fr}}
+.fig-draw{min-width:0;border-right:1px solid var(--rule);overflow-x:auto;position:relative}
+@media (max-width:760px){.fig-draw{border-right:0;border-bottom:1px solid var(--rule)}}
+.fig-draw svg{display:block;width:100%;min-width:380px;height:auto}
+.fig-side{padding:18px 20px;display:grid;gap:14px;align-content:start}
+.ctl label{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;color:var(--mute);margin-bottom:6px}
+.ctl label output{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--fluid)}
+.read-out{display:grid;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.read-out div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--rule);color:var(--ink-2)}
+.read-out b{color:var(--ink);font-weight:600}
+.pill{justify-self:start;font-family:var(--f-mono);font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
+.pill.ok{background:var(--good-bg);color:var(--good)} .pill.bad{background:var(--limit-bg);color:var(--limit)}
+.fig-side p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.tog{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--rule);border-radius:999px;padding:7px 12px;cursor:pointer;color:var(--ink-2);justify-self:start}
+.tog i{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.tog[aria-pressed="true"]{border-color:var(--fluid);color:var(--ink)} .tog[aria-pressed="true"] i{background:var(--fluid);box-shadow:0 0 0 3px var(--fluid-glow)}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;background:var(--chip);border:0;border-radius:6px;padding:5px 9px;cursor:pointer;color:var(--ink-2)}
+.presets button:hover{color:var(--ink);background:var(--fluid-glow)}
+
+/* calculator */
+.calc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;padding:18px 20px}
+@media (max-width:760px){.calc{grid-template-columns:1fr 1fr}}
+.calc label{display:grid;gap:6px;font-family:var(--f-mono);font-size:11.5px;color:var(--mute)}
+.calc input[type=number]{font-family:var(--f-mono);font-size:16px;padding:8px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--ground);color:var(--ink);width:100%;font-variant-numeric:tabular-nums}
+.calc-draw{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--ground);overflow-x:auto}
+.calc-draw svg{display:block;width:100%;height:230px;min-width:380px}
+.calc-out{display:flex;flex-wrap:wrap;align-items:center;gap:10px 26px;padding:14px 20px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2)}
+.calc-out b{color:var(--ink);font-variant-numeric:tabular-nums}
+.calc-hint{padding:0 20px 18px;margin:0;font-size:14px;color:var(--ink-2)}
+
+/* verdicts */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 30px}
+@media (max-width:640px){.vs{grid-template-columns:1fr}}
+.v{border-radius:12px;padding:16px 18px;font-size:15px;line-height:1.55}
+.v b{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;margin-bottom:6px}
+.v.ok{background:var(--good-bg);color:var(--ink-2)} .v.ok b{color:var(--good)}
+.v.bad{background:var(--limit-bg);color:var(--ink-2)} .v.bad b{color:var(--limit)}
+
+/* quiz */
+.quiz{border-top:1px solid var(--ink);margin-top:10px}
+.q{border-bottom:1px solid var(--rule);padding:18px 0;display:grid;grid-template-columns:40px minmax(0,1fr);gap:4px 0}
+.q .qn{font-family:var(--f-mono);font-size:12px;color:var(--brass);padding-top:4px}
+.q .qt{font-family:var(--f-display);font-weight:600;font-size:17.5px;line-height:1.35}
+.q .opts{grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.q .opts button{font-family:var(--f-mono);font-size:12.5px;background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:8px 14px;cursor:pointer;color:var(--ink);transition:transform .12s}
+.q .opts button:hover:not(:disabled){border-color:var(--ink);transform:translateY(-1px)}
+.q .opts button:disabled{cursor:default;opacity:.55}
+.q .opts button.right{opacity:1;background:var(--good-bg);border-color:var(--good);color:var(--good)}
+.q .opts button.wrong{opacity:1;background:var(--limit-bg);border-color:var(--limit);color:var(--limit)}
+.q .ex{grid-column:2;margin:10px 0 0;font-size:15px;color:var(--ink-2)} .q .ex[hidden]{display:none}
+.q .ex b{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-right:8px}
+.q .ex.good b{color:var(--good)} .q .ex.bad b{color:var(--limit)}
+.score{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:18px 0;font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2)}
+.score b{font-family:var(--f-display);font-stretch:110%;font-size:22px;color:var(--ink)}
+.score button{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--rule);border-radius:999px;padding:7px 12px;cursor:pointer;color:var(--ink-2)}
+.score button:hover{border-color:var(--ink);color:var(--ink)}
+
+.pager{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;border-top:1px solid var(--rule);margin-top:40px;padding-block:22px 70px;font-family:var(--f-mono);font-size:12px;letter-spacing:.04em}
+.pager a{text-decoration:none;color:var(--ink-2)} .pager a:hover{color:var(--link)}
+.pager .r{text-align:right}
+.pager small{display:block;color:var(--mute);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase}
+@media (max-width:560px){.pager{grid-template-columns:1fr 1fr}.pager .mid{display:none}}
+
+@media (prefers-reduced-motion:reduce){.rail .core,.sheet .st,.q .opts button{transition:none}}
+</style>
+
+</head>
+<body>
+<div id="readbar" aria-hidden="true"><i></i></div>
+
+<div class="review" role="toolbar" aria-label="Mockup review">
+  <span>Design preview · Hose module</span>
+  <div class="seg">
+    <button id="tab-index" aria-pressed="true" data-view="index">Module index</button>
+    <button id="tab-sheet" aria-pressed="false" data-view="sheet">Study sheet</button>
+  </div>
+</div>
+
+<!-- ======================= INDEX ======================= -->
+<main id="view-index">
+  <div class="wrap">
+    <div class="modbar">
+      <div class="crumb"><a href="../../index.html">Commonplace</a><span>/</span><a href="../index.html">Mechanical</a><span>/</span>Routing</div>
+      <nav class="mods" aria-label="Routing modules">
+        <a class="mod" href="#index"><i class="sw pipe"></i>Piping <small>rigid tube</small></a>
+        <a class="mod" href="#index" aria-current="page"><i class="sw hose"></i>Hose <small>flexible</small></a>
+        <a class="mod" href="#index"><i class="sw cable"></i>Cable <small>routing</small></a>
+      </nav>
+    </div>
+
+    <header class="hero">
+      <div class="kicker">Routing · Module 02 of 03</div>
+      <h1>Hose <em>routing</em></h1>
+      <p class="deck">A hose is a pressure vessel that is allowed to bend. These sheets are about bending it well. Try it: drag the stations on the hose below.</p>
+    </header>
+  </div>
+
+  <div class="wrap"><figure class="hosefig" aria-label="A rubber hose with crimped brass fittings. Drag its three stations to bend it; it reports its tightest bend radius and turns red where the bend is under the minimum.">
+    <svg id="hero" viewBox="0 0 1000 320" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="hud"><span class="val" id="hud-val">–</span><span id="hud-note"></span><button id="hud-reset" type="button">Reset</button></div>
+  </figure></div>
+
+  <div class="wrap">
+    <dl class="spec">
+      <div><dt>Sheets</dt><dd>20</dd></div>
+      <div><dt>Calculators</dt><dd>4</dd></div>
+      <div><dt>Practice</dt><dd>1 <small>worked route</small></dd></div>
+      <div><dt>Studied</dt><dd id="prog">4 / 20</dd></div>
+    </dl>
+
+    <section class="contents">
+      <aside>
+        <h2>The route</h2>
+        <p>Read top to bottom, the way you would work: know the hose, learn its limits, hold it, build it in Creo, then check and fix it.</p>
+        <p>Each sheet is a station on the hose. Hover a sheet and tick it; what you have studied flows down.</p>
+        <div class="legend">
+          <span><i class="done"></i>Studied</span>
+          <span><i class="next"></i>Up next</span>
+          <span><i></i>Not started</span>
+        </div>
+        <div class="aside-act">
+          <button type="button" id="go-next">→ Continue where I left off</button>
+          <button type="button" id="clear-prog">Reset progress</button>
+        </div>
+      </aside>
+      <div class="route" id="route">
+        <div class="rail" aria-hidden="true"><span class="lay"></span><span class="core" id="core"></span></div>
+      </div>
+    </section>
+
+    <div class="foot-note">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" style="flex:none;margin-top:2px"><circle cx="11" cy="11" r="9" fill="none" stroke="var(--brass)" stroke-width="2"/><rect x="10" y="9" width="2" height="7" fill="var(--brass)"/><rect x="10" y="5.5" width="2" height="2" fill="var(--brass)"/></svg>
+      <span><b>Method only.</b> Commonplace syncs to GitHub, so these sheets carry no part numbers, customer names or real assemblies. The real files stay in your company Routing_study folder.</span>
+    </div>
+  </div>
+</main>
+
+<!-- ======================= SHEET ======================= -->
+<main id="view-sheet" hidden>
+  <div class="wrap">
+    <div class="modbar">
+      <div class="crumb"><a href="../../index.html">Commonplace</a><span>/</span><a href="../index.html">Mechanical</a><span>/</span><a href="#index">Hose</a><span>/</span>§02 Routing rules</div>
+      <nav class="mods" aria-label="Routing modules">
+        <a class="mod" href="#index"><i class="sw pipe"></i>Piping</a>
+        <a class="mod" href="#index" aria-current="page"><i class="sw hose"></i>Hose</a>
+        <a class="mod" href="#index"><i class="sw cable"></i>Cable</a>
+      </nav>
+    </div>
+
+    <header class="s-head">
+      <div>
+        <div class="eyebrow">§02 Routing rules · Sheet HS-05</div>
+        <h1>Minimum bend radius</h1>
+        <p class="deck">How tight a hose may bend, and why the outside of the bend decides.</p>
+      </div>
+      <div class="s-meta">
+        <div>Reading time<b>8 min</b></div>
+        <div>Includes<b>2 calculators · 3 questions</b></div>
+        <button class="studied" id="studied" aria-pressed="false" type="button"><i></i><span>Mark as studied</span></button>
+      </div>
+    </header>
+
+    <article class="read">
+      <p class="dropcap">Every hose catalogue lists a <span class="tw"><button class="term" type="button" aria-expanded="false" data-def="The tightest centreline radius a hose may be bent to and still reach its rated pressure and service life. Given per hose size. Some makers measure to the inside of the bend instead." data-term="Minimum bend radius (MBR)">minimum bend radius</button></span> (MBR) for each size. It is the tightest radius the hose can be bent to and still reach its rated pressure and service life. Bend it tighter and nothing breaks on the day. The hose just fails sooner, usually at the outside of the bend.</p>
+      <aside class="note"><b>Catalogue check</b>Makers do not all measure MBR the same way. Some measure to the hose centreline, some to the inside of the bend. Read the definition line before you compare it with a radius from Creo.</aside>
+
+      <p>The reason is the <span class="tw"><button class="term" type="button" aria-expanded="false" data-def="The braided or spiral wire (or textile) layers between the inner tube and the outer cover. They carry the pressure. On the outside of a bend they are stretched apart." data-term="Reinforcement">reinforcement</button></span>. A hose carries pressure in its braided or spiral wire layers. On the outside of a bend those layers are stretched apart and open up gaps. On the inside they are pushed together. The rubber tube ovalises, the bore narrows, and every pressure pulse works the stretched side hardest.</p>
+
+      <div class="fig wide" id="fig1">
+        <div class="fig-top"><b>Fig. 1 · Bend the hose</b><span>Ø12 hose · catalogue MBR 65 mm (example values)</span></div>
+        <div class="fig-body">
+          <div class="fig-draw"><svg id="bend" viewBox="0 0 520 360" role="img" aria-label="A hose bent through 90 degrees. Drag the radius slider to tighten or open the bend; below the minimum the outer wall turns red and the cross-section flattens."></svg></div>
+          <div class="fig-side">
+            <div class="ctl">
+              <label for="r-slider">Bend radius R <output id="r-out" for="r-slider">80 mm</output></label>
+              <input id="r-slider" type="range" min="30" max="130" step="1" value="80">
+            </div>
+            <div class="presets"><button type="button" data-r="40">R 40 · too tight</button><button type="button" data-r="65">R 65 · at limit</button><button type="button" data-r="66">R 66 · Creo value</button><button type="button" data-r="100">R 100 · easy</button></div>
+            <button class="tog" id="flex" type="button" aria-pressed="false"><i></i>Flex ±15 mm (one end moves)</button>
+            <div class="read-out">
+              <div><span>MBR (catalogue)</span><b>65 mm</b></div>
+              <div><span>Margin R − MBR</span><b id="o-margin">–</b></div>
+              <div><span>Outer wall stretch ≈ r/R</span><b id="o-strain">–</b></div>
+              <div id="o-dynrow" hidden><span>Tightest while flexing</span><b id="o-dyn">–</b></div>
+            </div>
+            <span class="pill" id="o-pill">–</span>
+            <p id="o-text"></p>
+          </div>
+        </div>
+      </div>
+
+      <h2><span class="n">01</span>Reading the number</h2>
+      <p>For a hose of outside radius <em>r</em> bent to centreline radius <em>R</em>, the outer wall stretches by about <em>r / R</em>. A Ø12 hose at R 65 stretches its outer wall by roughly 9 %. At R 40 it is 15 %. The catalogue's MBR is simply the point where the maker stops guaranteeing the hose.</p>
+      <aside class="note"><b>Flexing service</b>If one end of the hose moves, the bend works every cycle. Catalogues often give a larger dynamic value, or ask for extra margin. Use that number, not the static one. Try the Flex button in Fig. 1 at R 70.</aside>
+      <p>Treat the MBR as a floor, never as a target. In Creo, set the single radius a little above it, for example 66 for a 65 limit, so rounding in the model never leaves a bend just under the limit.</p>
+
+      <h2><span class="n">02</span>Two bends on one straight</h2>
+      <p>A rounded corner uses up some straight hose on each side of it. That length is the <span class="tw"><button class="term" type="button" aria-expanded="false" data-def="The straight length a rounded corner consumes on each side of the corner point: T = R · tan(θ/2). At 90° it equals R." data-term="Tangent length">tangent length</button></span>, and it grows quickly as the corner gets sharper. Two neighbouring corners must fit both tangent lengths inside the straight between them, with room left for a clip.</p>
+      <div class="formula">T = R · tan(θ / 2)  ·  straight left = L − T₁ − T₂  ≥  clip width</div>
+
+      <div class="fig wide">
+        <div class="fig-top"><b>Calculator · Do two bends fit?</b><span>θ = how far the route turns at each corner · drawn to scale</span></div>
+        <div class="calc">
+          <label for="c-r">Radius R (mm)<input id="c-r" type="number" value="66" min="1"></label>
+          <label for="c-t1">Corner 1 θ₁ (°)<input id="c-t1" type="number" value="60" min="0" max="179"></label>
+          <label for="c-t2">Corner 2 θ₂ (°)<input id="c-t2" type="number" value="45" min="0" max="179"></label>
+          <label for="c-l">Straight L (mm)<input id="c-l" type="number" value="120" min="0"></label>
+        </div>
+        <div class="calc-draw"><svg id="corners" viewBox="0 0 520 230" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Two rounded corners on one straight, drawn to scale, with the tangent lengths and the straight left for a clip marked."></svg></div>
+        <div class="calc-out" aria-live="polite"><span>T₁ <b id="c-o1">–</b></span><span>T₂ <b id="c-o2">–</b></span><span>Straight left <b id="c-o3">–</b></span><span class="pill" id="c-pill">–</span></div>
+        <p class="calc-hint" id="c-hint"></p>
+      </div>
+
+      <h2><span class="n">03</span>In practice</h2>
+      <div class="vs wide">
+        <div class="v ok"><b>✓ HOLDS THE RADIUS</b>Corner points at every turn, Creo's single radius set just above MBR, clips placed on straights. Every bend measures exactly R.</div>
+        <div class="v bad"><b>✗ LOOKS SMOOTH, ISN'T</b>A spline through a few stations. Between close stations it tightens, and the check finds bends at R 59.8, 60.4 and 61.3 against a 65 limit.</div>
+      </div>
+      <aside class="note" style="grid-column:2;grid-row:auto"><b>Seen at work</b>All three tight bends in one real route came from a spline. Re-routing those sections with corner points at R 66 cleared them.</aside>
+
+      <h2><span class="n">04</span>Check yourself</h2>
+      <div class="quiz wide" id="quiz"></div>
+    </article>
+
+    <nav class="pager">
+      <a href="#index"><small>← Previous</small>HS-04 · Fittings, ferrules and crimps</a>
+      <a class="mid" href="#index">Contents</a>
+      <a class="r" href="#index"><small>Next →</small>HS-06 · Straight length behind the fitting</a>
+    </nav>
+  </div>
+</main>
+
+<script>
+(function(){
+const NS='http://www.w3.org/2000/svg';
+const mk=(p,n,a,txt)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;p.appendChild(e);return e;};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const MONO="'IBM Plex Mono',monospace";
+
+/* ---------- hose drawing: returns layers so the path can be re-bent ---------- */
+function hose(g,d,w,id,text,size){
+  const layers=[];
+  layers.push(mk(g,'path',{d,fill:'none',stroke:'var(--shadow)','stroke-width':w+10,transform:'translate(0,8)',opacity:.6}));
+  layers.push(mk(g,'path',{d,fill:'none',stroke:'var(--rubber-edge)','stroke-width':w}));
+  layers.push(mk(g,'path',{d,fill:'none',stroke:'var(--rubber)','stroke-width':w*.8}));
+  layers.push(mk(g,'path',{d,fill:'none',stroke:'var(--sheen)','stroke-width':w*.36,opacity:.16}));
+  layers.push(mk(g,'path',{d,fill:'none',stroke:'var(--sheen)','stroke-width':w*.1,opacity:.22}));
+  const p=mk(g,'path',{d,id,fill:'none',stroke:'none'}); layers.push(p);
+  let tp=null;
+  if(text){const t=mk(g,'text',{fill:'var(--layline)','font-family':"'Archivo','Arial Narrow',sans-serif",'font-stretch':'70%','font-weight':700,'font-size':size,'letter-spacing':size*.12,dy:size*.36});
+    tp=mk(t,'textPath',{href:'#'+id,startOffset:0},text);}
+  return {path:p,tp,set(nd){layers.forEach(l=>l.setAttribute('d',nd));}};
+}
+function fitting(g,x,y,dir,h){
+  const fl=72, nx=x-dir*fl, grp=mk(g,'g',{}), gid='br'+Math.random().toString(36).slice(2,7);
+  const lg=mk(grp,'linearGradient',{id:gid,x1:0,y1:0,x2:0,y2:1});
+  [['0','var(--brass-lo)'],['.28','var(--brass-hi)'],['.55','var(--brass)'],['1','var(--brass-lo)']].forEach(s=>mk(lg,'stop',{offset:s[0],'stop-color':s[1]}));
+  const fh=h+12, x0=Math.min(x,nx);
+  mk(grp,'rect',{x:x0,y:y-fh/2,width:fl,height:fh,rx:4,fill:'url(#'+gid+')'});
+  for(let i=1;i<6;i++) mk(grp,'rect',{x:x0+i*fl/6-1.5,y:y-fh/2+2,width:3,height:fh-4,fill:'var(--brass-lo)',opacity:.55});
+  const hx=dir>0?x0-30:x0+fl, hh=h+28;
+  mk(grp,'rect',{x:hx,y:y-hh/2,width:30,height:hh,rx:3,fill:'url(#'+gid+')'});
+  mk(grp,'rect',{x:hx,y:y-hh/2+hh*.33,width:30,height:1.5,fill:'var(--brass-lo)',opacity:.7});
+  mk(grp,'rect',{x:hx,y:y+hh/2-hh*.33,width:30,height:1.5,fill:'var(--brass-lo)',opacity:.7});
+  const tx=dir>0?hx-14:hx+30;
+  mk(grp,'rect',{x:tx,y:y-h*.42,width:14,height:h*.84,fill:'url(#'+gid+')'});
+  for(let i=1;i<4;i++) mk(grp,'rect',{x:tx,y:y-h*.42+i*h*.84/4-.75,width:14,height:1.5,fill:'var(--brass-lo)',opacity:.8});
+}
+// Catmull-Rom through pts (first/last are fixed ends, tangents forced horizontal by ghost points)
+function crPath(pts){
+  const Q=[[pts[0][0]-160,pts[0][1]],...pts,[pts[pts.length-1][0]+160,pts[pts.length-1][1]]];
+  let s='M'+pts[0].join(',');
+  for(let i=1;i<Q.length-2;i++){const p0=Q[i-1],p1=Q[i],p2=Q[i+1],p3=Q[i+2];
+    const c1=[p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6], c2=[p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6];
+    s+=' C'+c1.join(',')+' '+c2.join(',')+' '+p2.join(',');}
+  return s;
+}
+// sample a path and compute curvature radius at each sample (circumradius of three consecutive points)
+function curvature(path,n){
+  const L=path.getTotalLength(), P=[];
+  for(let i=0;i<=n;i++){const q=path.getPointAtLength(L*i/n);P.push([q.x,q.y]);}
+  const R=new Array(P.length).fill(Infinity);
+  for(let i=1;i<P.length-1;i++){const a=P[i-1],b=P[i],c=P[i+1];
+    const ab=Math.hypot(b[0]-a[0],b[1]-a[1]),bc=Math.hypot(c[0]-b[0],c[1]-b[1]),ca=Math.hypot(a[0]-c[0],a[1]-c[1]);
+    const area=Math.abs((b[0]-a[0])*(c[1]-a[1])-(c[0]-a[0])*(b[1]-a[1]))/2;
+    R[i]=area<1e-6?Infinity:(ab*bc*ca)/(4*area);}
+  return {P,R};
+}
+
+/* ---------- hero: a hose you can bend ---------- */
+const hero=document.getElementById('hero');
+const SC=2, MBR=65, HW=30;                 // 2 px per mm
+const F0=[110,246], F1=[890,114];
+const HOME=[[330,190],[520,210],[690,150]];
+let ST=store.get('hose-hero-stations',null); if(!Array.isArray(ST)||ST.length!==3) ST=HOME.map(p=>p.slice());
+const defsG=mk(hero,'g',{});
+const under=mk(hero,'g',{});               // red overlay for under-MBR segments
+const hg=mk(hero,'g',{});
+const lay='KEEP THIS LINE STRAIGHT · NO TWIST · Ø12 · MBR 65 mm · ROUTING STUDY · ';
+const H=hose(hg,crPath([F0,...ST,F1]),HW,'heroPath',lay.repeat(5),12);
+fitting(hg,F0[0],F0[1],1,HW); fitting(hg,F1[0],F1[1],-1,HW);
+const marks=mk(hero,'g',{}), handles=mk(hero,'g',{});
+const hudVal=document.getElementById('hud-val'), hudNote=document.getElementById('hud-note');
+function drawHero(){
+  const pts=[F0,...ST,F1]; H.set(crPath(pts));
+  // stations
+  marks.textContent=''; handles.textContent='';
+  ST.forEach((p,i)=>{
+    mk(marks,'line',{x1:p[0],y1:p[1]-HW/2-4,x2:p[0],y2:p[1]-HW/2-26,stroke:'var(--mute)','stroke-width':1});
+    mk(marks,'text',{x:p[0]+10,y:p[1]-HW/2-22,fill:'var(--mute)','font-family':MONO,'font-size':11},'CS0'+(i+1));
+    const h=mk(handles,'g',{class:'handle','data-i':i,tabindex:0,role:'slider','aria-label':'Station CS0'+(i+1)+', drag to move','aria-valuetext':Math.round(p[0]/SC)+' mm, '+Math.round(p[1]/SC)+' mm'});
+    mk(h,'circle',{cx:p[0],cy:p[1],r:16,fill:'transparent'});
+    mk(h,'circle',{cx:p[0],cy:p[1],r:7,fill:'var(--paper)',stroke:'var(--fluid)','stroke-width':2.5});
+    mk(h,'line',{x1:p[0]-3.5,y1:p[1],x2:p[0]+3.5,y2:p[1],stroke:'var(--fluid)','stroke-width':1.5});
+    mk(h,'line',{x1:p[0],y1:p[1]-3.5,x2:p[0],y2:p[1]+3.5,stroke:'var(--fluid)','stroke-width':1.5});
+  });
+  // curvature check
+  const {P,R}=curvature(H.path,220); under.textContent='';
+  let minR=Infinity,minI=-1; const lim=MBR*SC;
+  for(let i=1;i<P.length-1;i++){ if(R[i]<minR){minR=R[i];minI=i;}
+    if(R[i]<lim){mk(under,'line',{x1:P[i-1][0],y1:P[i-1][1],x2:P[i+1][0],y2:P[i+1][1],stroke:'var(--limit)','stroke-width':HW+6,'stroke-linecap':'round',opacity:.9});} }
+  const mm=minR/SC;
+  if(minI>0){const q=P[minI];
+    mk(marks,'circle',{cx:q[0],cy:q[1],r:HW/2+9,fill:'none',stroke:mm<MBR?'var(--limit)':'var(--fluid)','stroke-width':1.3,'stroke-dasharray':'3 4'});
+    mk(marks,'text',{x:q[0],y:q[1]+HW/2+28,'text-anchor':'middle',fill:mm<MBR?'var(--limit)':'var(--fluid)','font-family':MONO,'font-size':11.5,'font-weight':600},'R '+Math.round(mm));}
+  hudVal.textContent='Tightest bend R '+Math.round(mm)+' mm';
+  if(mm<MBR){hudVal.className='val bad';hudNote.textContent='below MBR 65. The red part would fail early. Open the bend.';}
+  else if(mm<MBR+6){hudVal.className='val ok';hudNote.textContent='legal, little margin. Creo it at 66.';}
+  else{hudVal.className='val ok';hudNote.textContent='clear of MBR 65 · drag a station to bend it';}
+}
+drawHero();
+// drag
+let drag=null;
+const toSvg=e=>{const pt=hero.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(hero.getScreenCTM().inverse());};
+hero.addEventListener('pointerdown',e=>{const h=e.target.closest('.handle');if(!h)return;drag=+h.dataset.i;hero.setPointerCapture(e.pointerId);e.preventDefault();});
+hero.addEventListener('pointermove',e=>{if(drag==null)return;const q=toSvg(e);
+  const lo=drag===0?F0[0]+120:ST[drag-1][0]+70, hi=drag===2?F1[0]-120:ST[drag+1][0]-70;
+  ST[drag]=[Math.max(lo,Math.min(hi,q.x)),Math.max(60,Math.min(280,q.y))];drawHero();});
+const endDrag=()=>{if(drag!=null){drag=null;store.set('hose-hero-stations',ST);}};
+hero.addEventListener('pointerup',endDrag);hero.addEventListener('pointercancel',endDrag);
+hero.addEventListener('keydown',e=>{const h=e.target.closest('.handle');if(!h)return;const i=+h.dataset.i,d=e.shiftKey?20:5;
+  const m={ArrowUp:[0,-d],ArrowDown:[0,d],ArrowLeft:[-d,0],ArrowRight:[d,0]}[e.key];if(!m)return;e.preventDefault();
+  ST[i]=[ST[i][0]+m[0],Math.max(48,Math.min(290,ST[i][1]+m[1]))];drawHero();store.set('hose-hero-stations',ST);handles.children[i].focus();});
+document.getElementById('hud-reset').addEventListener('click',()=>{ST=HOME.map(p=>p.slice());store.set('hose-hero-stations',ST);drawHero();});
+// layline drift
+if(!reduce&&H.tp){let t0=null,per=320;try{per=H.tp.getComputedTextLength()/5||320;}catch(e){}
+  (function step(ts){if(t0==null)t0=ts;H.tp.setAttribute('startOffset',-per+((ts-t0)/60)%per);requestAnimationFrame(step);})(performance.now());}
+
+/* ---------- contents ---------- */
+const S=[
+ {n:'§01',t:'Anatomy & standards',d:'What a hose is made of, and how to read what is printed on it.',s:[
+  ['HS-01','Tube, reinforcement, cover','Three layers, three jobs: hold the fluid, hold the pressure, survive the outside.','Concept'],
+  ['HS-02','Reading the layline','The printed stripe names the standard, size and pressure, and shows twist.','Reference'],
+  ['HS-03','Dash size, pressure, temperature','A dash number counts the bore in sixteenths of an inch: −8 is ½ inch.','Reference'],
+  ['HS-04','Fittings, ferrules and crimps','Where most hose failures start, and how a crimp is checked.','Concept']]},
+ {n:'§02',t:'Routing rules',d:'The limits every hose route has to respect.',s:[
+  ['HS-05','Minimum bend radius','How tight it may bend, and why the outside of the bend decides.','Calculator'],
+  ['HS-06','Straight length behind the fitting','Never start a bend at the ferrule.','Rule'],
+  ['HS-07','Twist: keep the layline straight','A twisted hose fails early even at rated pressure.','Rule'],
+  ['HS-08','Length change under pressure','A pressurised hose shortens or grows. Leave length for it.','Calculator'],
+  ['HS-09','Slack for moving ends','Between parts that move, plan the loop, do not hope for it.','Method']]},
+ {n:'§03',t:'Holding it',d:'Clips, clamps and guards, and what each one is allowed to do.',s:[
+  ['HS-10','P-clips, block clamps and spacing','Support often enough that the hose never sags onto a part.','Rule'],
+  ['HS-11','Abrasion sleeves and guards','Where hose touches hose or edge, something must take the wear.','Concept'],
+  ['HS-12','Heat: clearance and shields','Rubber ages fast near exhausts. Keep distance or add a shield.','Rule']]},
+ {n:'§04',t:'Building it in Creo',d:'Stations, corner points and the curve type that holds the radius.',s:[
+  ['HS-13','Stations as datum coordinate systems','Name them in route order. The order is part of the design.','Method'],
+  ['HS-14','Corner points + single radius','The only way to make every bend exactly R.','Calculator'],
+  ['HS-15','.pts point files','Read, write and paste route points without retyping.','Reference']]},
+ {n:'§05',t:'Checking & fixing',d:'Four checks for any route, and the smallest fix that clears each one.',s:[
+  ['HS-16','Bend, clash and order checks','Radius against MBR, gap to real parts, stations in sequence.','Calculator'],
+  ['HS-17','Clamps are fixed: what you can move','Fixes must respect what is bolted to the frame.','Rule'],
+  ['HS-18','Step around an obstacle','Four corner points, clamps untouched.','Method']]},
+ {n:'§06',t:'Practice',d:'One complete route, worked from problem list to fixed points.',s:[
+  ['EX-H1','Frame-mounted hose · Ø12, R65, 15 stations','Find 3 tight bends, 2 clashes and an order error, then fix them.','Exercise'],
+  ['HS-19','Hose route pocket checklist','Everything above on one page.','Checklist']]}
+];
+const all=S.flatMap(x=>x.s.map(r=>r[0]));
+let done=store.get('hose-mock-studied',null); if(!Array.isArray(done)) done=['HS-01','HS-02','HS-03','HS-04'];
+const route=document.getElementById('route');
+const clipSvg='<svg class="clip" viewBox="0 0 48 34" aria-hidden="true"><path d="M8 17 a12 12 0 1 1 0 .01" fill="none" stroke="var(--sheen)" stroke-width="3"/><path d="M20 5 L46 5 L46 11 L20 11" fill="var(--sheen)"/><circle cx="38" cy="8" r="2.2" fill="var(--rubber)"/></svg>';
+function toggleDone(id){done=done.includes(id)?done.filter(x=>x!==id):[...done,id];done.sort((a,b)=>all.indexOf(a)-all.indexOf(b));store.set('hose-mock-studied',done);renderRoute();syncBtn();}
+function renderRoute(){
+  route.querySelectorAll('.sec').forEach(e=>e.remove());
+  const next=all.find(id=>!done.includes(id));
+  S.forEach(sec=>{
+    const el=document.createElement('section');el.className='sec';
+    el.innerHTML='<div class="sec-head">'+clipSvg+'<span class="n">'+sec.n+'</span><h3>'+sec.t+'</h3></div><p>'+sec.d+'</p>';
+    sec.s.forEach(r=>{const a=document.createElement('a');a.href='#sheet';
+      const isDone=done.includes(r[0]);
+      a.className='sheet'+(isDone?' done':'')+(r[0]===next?' next':'');
+      a.innerHTML='<span class="st"></span><span class="id">'+r[0]+'</span><span class="t">'+r[1]+(r[0]===next?'<span class="tag">Up next</span>':'')+'</span><span class="k'+(r[3]==='Calculator'?' kc':'')+'">'+r[3]+'</span><span class="d">'+r[2]+'</span>'+
+        '<button class="tick" type="button" aria-label="'+(isDone?'Unmark':'Mark')+' '+r[0]+' as studied">'+(isDone?'✓ studied':'tick')+'</button>';
+      a.querySelector('.tick').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggleDone(r[0]);});
+      el.appendChild(a);});
+    route.appendChild(el);
+  });
+  document.getElementById('prog').textContent=done.length+' / '+all.length;
+  requestAnimationFrame(fill);
+}
+function fill(){
+  const core=document.getElementById('core'); const rows=[...route.querySelectorAll('.sheet.done')];
+  if(!rows.length){core.style.height='0px';return;}
+  const last=rows[rows.length-1], rr=route.getBoundingClientRect(), lr=last.querySelector('.st').getBoundingClientRect();
+  core.style.height=Math.max(0,lr.top-rr.top+1)+'px';
+}
+addEventListener('resize',fill);
+renderRoute();
+document.getElementById('clear-prog').addEventListener('click',()=>{done=[];store.set('hose-mock-studied',done);renderRoute();syncBtn();});
+document.getElementById('go-next').addEventListener('click',()=>{const n=route.querySelector('.sheet.next');if(n){n.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});n.focus();}});
+
+/* ---------- reading progress ---------- */
+const rb=document.querySelector('#readbar i');
+function readProg(){const h=document.documentElement;const max=h.scrollHeight-innerHeight;rb.style.width=(max>0?Math.min(1,scrollY/max)*100:0)+'%';}
+addEventListener('scroll',readProg,{passive:true});addEventListener('resize',readProg);readProg();
+
+/* ---------- views ---------- */
+const views={index:document.getElementById('view-index'),sheet:document.getElementById('view-sheet')};
+const btns=document.querySelectorAll('.review button');
+function show(v){if(!views[v])v='index';for(const k in views)views[k].hidden=k!==v;
+  btns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===v)));scrollTo(0,0);if(v==='index')requestAnimationFrame(fill);readProg();}
+btns.forEach(b=>b.addEventListener('click',()=>{history.replaceState(null,'','#'+b.dataset.view);show(b.dataset.view);}));
+addEventListener('hashchange',()=>show(location.hash.slice(1)));
+show(location.hash.slice(1)||'index');
+
+/* ---------- mark studied (sheet) ---------- */
+const sb=document.getElementById('studied');
+function syncBtn(){const on=done.includes('HS-05');sb.setAttribute('aria-pressed',String(on));sb.querySelector('span').textContent=on?'Studied':'Mark as studied';}
+sb.addEventListener('click',()=>toggleDone('HS-05')); syncBtn();
+
+/* ---------- definitions ---------- */
+document.querySelectorAll('.term').forEach(t=>{
+  const pop=document.createElement('div');pop.className='pop';pop.hidden=true;pop.setAttribute('role','note');
+  pop.innerHTML='<b>'+t.dataset.term+'</b>'+t.dataset.def;t.parentNode.appendChild(pop);
+  t.addEventListener('click',e=>{e.stopPropagation();const open=pop.hidden;document.querySelectorAll('.pop').forEach(p=>p.hidden=true);document.querySelectorAll('.term').forEach(x=>x.setAttribute('aria-expanded','false'));
+    pop.hidden=!open;t.setAttribute('aria-expanded',String(open));});
+});
+document.addEventListener('click',()=>{document.querySelectorAll('.pop').forEach(p=>p.hidden=true);document.querySelectorAll('.term').forEach(x=>x.setAttribute('aria-expanded','false'));});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.pop').forEach(p=>p.hidden=true);});
+
+/* ---------- Fig 1: bend the hose ---------- */
+const bend=document.getElementById('bend'), OD=12, s=1.75, VX=430, VY=318;
+const slider=document.getElementById('r-slider');
+let flexOn=false, flexBase=80, flexMin=Infinity, flexT0=null;
+function drawBend(R,dyn){
+  bend.textContent='';
+  const r=R*s, w=OD*s, cx=VX-r, cy=VY-r, m=MBR*s, bad=R<MBR;
+  mk(bend,'path',{d:`M${VX-m} ${VY} A${m} ${m} 0 0 0 ${VX} ${VY-m}`,fill:'none',stroke:'var(--fluid)','stroke-width':1.2,'stroke-dasharray':'4 5'});
+  mk(bend,'text',{x:VX+18,y:VY-m+4,fill:'var(--fluid)','font-family':MONO,'font-size':11},'← MBR 65');
+  const d=`M30 ${VY} L${VX-r} ${VY} A${r} ${r} 0 0 0 ${VX} ${VY-r} L${VX} 22`;
+  const gg=mk(bend,'g',{});
+  hose(gg,d,w,'bendPath','Ø12 · MBR 65 · NO TWIST · '.repeat(6),9);
+  if(bad){const ro=r+w/2-1.5, ri=r-w/2+2;
+    mk(gg,'path',{d:`M${cx} ${cy+ro} A${ro} ${ro} 0 0 0 ${cx+ro} ${cy}`,fill:'none',stroke:'var(--limit)','stroke-width':3});
+    for(let a=0.15;a<1.45;a+=0.16){const px=cx+ri*Math.sin(a), py=cy+ri*Math.cos(a);
+      mk(gg,'line',{x1:px,y1:py,x2:px-(px-cx)/ri*5,y2:py-(py-cy)/ri*5,stroke:'var(--limit)','stroke-width':1.6});}}
+  const mx=cx+r*Math.SQRT1_2, my=cy+r*Math.SQRT1_2;
+  mk(bend,'line',{x1:cx,y1:cy,x2:mx-6,y2:my-6,stroke:'var(--ink-2)','stroke-width':1});
+  mk(bend,'circle',{cx,cy,r:3,fill:'var(--ink-2)'});
+  mk(bend,'text',{x:cx-8,y:cy-10,fill:'var(--ink)','font-family':MONO,'font-size':13,'font-weight':600,'text-anchor':'end'},'R '+Math.round(R));
+  const ix=110, iy=92, rr=34, flat=bad?Math.min(.32,(MBR-R)/MBR*0.9):0;
+  mk(bend,'text',{x:ix,y:iy-rr-14,'text-anchor':'middle',fill:'var(--mute)','font-family':MONO,'font-size':10.5},'SECTION AT THE BEND');
+  mk(bend,'ellipse',{cx:ix,cy:iy,rx:rr*(1+flat*.5),ry:rr*(1-flat),fill:'var(--rubber)',stroke:bad?'var(--limit)':'var(--rubber-edge)','stroke-width':2});
+  mk(bend,'ellipse',{cx:ix,cy:iy,rx:rr*.78*(1+flat*.5),ry:rr*.78*(1-flat),fill:'none',stroke:'var(--brass)','stroke-width':2.4,'stroke-dasharray':'2 2.2'});
+  mk(bend,'ellipse',{cx:ix,cy:iy,rx:rr*.55*(1+flat*.6),ry:rr*.55*(1-flat*1.2),fill:'var(--paper)'});
+  mk(bend,'text',{x:ix,y:iy+rr+20,'text-anchor':'middle',fill:bad?'var(--limit)':'var(--mute)','font-family':MONO,'font-size':10.5},bad?'bore flattening':'round bore');
+  if(dyn){mk(bend,'text',{x:VX,y:VY+28,'text-anchor':'end',fill:'var(--mute)','font-family':MONO,'font-size':10.5},'one end moving · R swings ±15');}
+  document.getElementById('r-out').textContent=Math.round(R)+' mm';
+  const mg=Math.round(R)-MBR; document.getElementById('o-margin').textContent=(mg>=0?'+':'')+mg+' mm';
+  document.getElementById('o-strain').textContent=(OD/2/R*100).toFixed(1)+' %';
+  const pill=document.getElementById('o-pill'), tx=document.getElementById('o-text');
+  if(dyn){const dmin=flexBase-15, dbad=dmin<MBR; document.getElementById('o-dyn').textContent=dmin+' mm';
+    pill.textContent=dbad?'Fails while flexing':'Holds while flexing';pill.className='pill '+(dbad?'bad':'ok');
+    tx.textContent=dbad?'Static R '+flexBase+' looks fine, but each cycle dips to R '+dmin+'. Use the dynamic MBR, or add margin.':'Even the tightest moment of the cycle stays above MBR.';return;}
+  if(bad){pill.textContent='Below MBR';pill.className='pill bad';tx.textContent='The outer wall is stretched past what the maker guarantees, and the bore starts to flatten. Open the radius or re-route.';}
+  else if(mg<2){pill.textContent='At the limit';pill.className='pill ok';tx.textContent='Legal, but with no margin. Model it at 66 so rounding can never take it under.';}
+  else{pill.textContent='Within MBR';pill.className='pill ok';tx.textContent='The reinforcement stays evenly spread and the bore stays round.';}
+}
+slider.addEventListener('input',()=>{flexBase=+slider.value;if(!flexOn)drawBend(flexBase,false);});
+document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('click',()=>{slider.value=b.dataset.r;flexBase=+b.dataset.r;if(!flexOn)drawBend(flexBase,false);}));
+const flexBtn=document.getElementById('flex');
+function flexStep(ts){if(!flexOn)return;if(flexT0==null)flexT0=ts;const R=flexBase+15*Math.sin((ts-flexT0)/1000*2*Math.PI*0.5);slider.value=Math.round(R);drawBend(R,true);requestAnimationFrame(flexStep);}
+flexBtn.addEventListener('click',()=>{flexOn=!flexOn;flexBtn.setAttribute('aria-pressed',String(flexOn));document.getElementById('o-dynrow').hidden=!flexOn;flexT0=null;
+  if(flexOn&&!reduce)requestAnimationFrame(flexStep);else if(flexOn){drawBend(flexBase-15,true);}else{slider.value=flexBase;drawBend(flexBase,false);}});
+drawBend(80,false);
+
+/* ---------- calculator with to-scale drawing ---------- */
+const $=id=>document.getElementById(id), f=n=>n.toFixed(1)+' mm', cs=document.getElementById('corners');
+function drawCorners(R,a,b,L,fits,Rmax){
+  cs.textContent='';
+  const Ru=fits?R:Math.max(1,Rmax*0.999), k=Math.PI/180;
+  const d0=[Math.cos(a*k),Math.sin(a*k)], d3=[Math.cos(b*k),-Math.sin(b*k)];
+  const T1=Ru*Math.tan(a*k/2),T2=Ru*Math.tan(b*k/2), leg=Math.max(T1,T2)+28;
+  const C=[[-d0[0]*leg,-d0[1]*leg],[0,0],[L,0],[L+d3[0]*leg,d3[1]*leg]];
+  // fillet path
+  const nrm=v=>{const l=Math.hypot(v[0],v[1]);return[v[0]/l,v[1]/l]};
+  let d='M'+C[0].join(' ');
+  for(let i=1;i<3;i++){const u=nrm([C[i-1][0]-C[i][0],C[i-1][1]-C[i][1]]),w=nrm([C[i+1][0]-C[i][0],C[i+1][1]-C[i][1]]);
+    const ang=Math.acos(Math.max(-1,Math.min(1,u[0]*w[0]+u[1]*w[1]))),T=Ru/Math.tan(ang/2);
+    const p=[C[i][0]+u[0]*T,C[i][1]+u[1]*T],q=[C[i][0]+w[0]*T,C[i][1]+w[1]*T],cr=u[0]*w[1]-u[1]*w[0];
+    d+=' L'+p.join(' ')+' A'+Ru+' '+Ru+' 0 0 '+(cr>0?0:1)+' '+q.join(' ');}
+  d+=' L'+C[3].join(' ');
+  // viewBox from bbox
+  const xs=C.map(p=>p[0]),ys=C.map(p=>p[1]);const pad=16;
+  let x0=Math.min(...xs)-pad,x1=Math.max(...xs)+pad,y0=Math.min(...ys)-pad-10,y1=Math.max(...ys)+pad+34;
+  const W=x1-x0,Hh=y1-y0, asp=520/230; if(W/Hh<asp){const nw=Hh*asp;x0-=(nw-W)/2;x1=x0+nw;}else{const nh=W/asp;y0-=(nh-Hh)/2;y1=y0+nh;}
+  cs.setAttribute('viewBox',`${x0} ${y0} ${x1-x0} ${y1-y0}`);
+  const sc=(x1-x0)/520, px=v=>v*sc;  // sc = mm per CSS px
+  const t1=R*Math.tan(a*k/2),t2=R*Math.tan(b*k/2), hw=12, fs=px(11);
+  const band=(xa,xb,col,op)=>mk(cs,'rect',{x:Math.min(xa,xb),y:-hw/2-px(4),width:Math.abs(xb-xa),height:hw+px(8),fill:col,opacity:op});
+  if(fits){band(0,t1,'var(--brass)',.35);band(L-t2,L,'var(--brass)',.35);band(t1,L-t2,'var(--good)',.28);}
+  else{band(0,Math.min(t1,L),'var(--brass)',.35);band(Math.max(0,L-t2),L,'var(--brass)',.35);band(Math.max(0,L-t2),Math.min(t1,L),'var(--limit)',.55);}
+  const g=mk(cs,'g',{});
+  hose(g,d,hw,'cornerPath',null,0);
+  if(!fits){mk(g,'path',{d,fill:'none',stroke:'var(--limit)','stroke-width':hw*.5,opacity:.85});}
+  [[C[1],'θ₁ '+a+'°',-1],[C[2],'θ₂ '+b+'°',1]].forEach(([p,t,sd])=>{mk(cs,'rect',{x:p[0]-px(3),y:p[1]-px(3),width:px(6),height:px(6),fill:'var(--ink)'});
+    mk(cs,'text',{x:p[0]+sd*px(10),y:p[1]+px(16),fill:'var(--ink)','font-family':MONO,'font-size':fs,'font-weight':600,'text-anchor':sd<0?'end':'start'},t);});
+  const dy=hw/2+px(18);
+  mk(cs,'line',{x1:0,y1:dy,x2:L,y2:dy,stroke:'var(--mute)','stroke-width':px(1.2)});
+  mk(cs,'line',{x1:0,y1:dy-px(5),x2:0,y2:dy+px(5),stroke:'var(--mute)','stroke-width':px(1.2)});
+  mk(cs,'line',{x1:L,y1:dy-px(5),x2:L,y2:dy+px(5),stroke:'var(--mute)','stroke-width':px(1.2)});
+  mk(cs,'text',{x:L/2,y:dy+px(14),'text-anchor':'middle',fill:'var(--mute)','font-family':MONO,'font-size':fs},'L '+L);
+  const left=L-t1-t2, ty=-hw/2-px(10);
+  if(fits){mk(cs,'text',{x:t1/2,y:ty,'text-anchor':'middle',fill:'var(--brass)','font-family':MONO,'font-size':fs},'T₁ '+t1.toFixed(0));
+    mk(cs,'text',{x:L-t2/2,y:ty,'text-anchor':'middle',fill:'var(--brass)','font-family':MONO,'font-size':fs},'T₂ '+t2.toFixed(0));
+    const cxm=(t1+L-t2)/2;
+    if(left>=12){mk(cs,'rect',{x:cxm-6,y:-hw/2-4,width:12,height:hw+8,rx:1.5,fill:'none',stroke:'var(--sheen)','stroke-width':px(2)});
+      mk(cs,'text',{x:cxm,y:ty-px(14),'text-anchor':'middle',fill:'var(--good)','font-family':MONO,'font-size':fs},'clip · '+left.toFixed(0)+' free');}
+    else mk(cs,'text',{x:cxm,y:ty-px(14),'text-anchor':'middle',fill:'var(--good)','font-family':MONO,'font-size':fs},left.toFixed(0)+' free, no room for a clip');}
+  else mk(cs,'text',{x:L/2,y:dy+px(30),'text-anchor':'middle',fill:'var(--limit)','font-family':MONO,'font-size':fs,'font-weight':600},'tangents overlap · R squeezed to '+Rmax.toFixed(0));
+}
+function calc(){
+  const R=+$('c-r').value,a=+$('c-t1').value,b=+$('c-t2').value,L=+$('c-l').value, pill=$('c-pill'), hint=$('c-hint');
+  if(!(R>0&&a>=0&&a<180&&b>=0&&b<180&&L>=0)){pill.textContent='Check inputs';pill.className='pill bad';hint.textContent='R must be above 0 and each angle between 0° and 179°.';return;}
+  const k=Math.PI/360,T1=R*Math.tan(a*k),T2=R*Math.tan(b*k),left=L-T1-T2,Rmax=L/((Math.tan(a*k)+Math.tan(b*k))||1e-9);
+  $('c-o1').textContent=f(T1);$('c-o2').textContent=f(T2);$('c-o3').textContent=f(left);
+  drawCorners(R,a,b,L,left>=0,Rmax);
+  if(left>=0){pill.textContent='Fits at R '+R;pill.className='pill ok';hint.textContent=f(left)+' of straight remains for a clip between the bends.';}
+  else{pill.textContent='Short by '+f(-left);pill.className='pill bad';
+    hint.textContent='The largest radius that fits is '+f(Rmax)+(Rmax<MBR?', which is under MBR 65. ':'. ')+'Lengthen the straight or soften a corner instead of dropping below MBR.';}
+}
+['c-r','c-t1','c-t2','c-l'].forEach(id=>$(id).addEventListener('input',calc)); calc();
+
+/* ---------- quiz ---------- */
+const QZ=[
+ {q:'A route bends at R 59.8 mm. The hose MBR is 65 mm. Can it stay?',o:['Yes, 5 mm is within tolerance','No, re-route it','Yes, if a clip holds it'],a:1,ex:'MBR is a floor. 59.8 is 5.2 mm under it. Re-route that section with corner points at R 66.'},
+ {q:'Why does the outside of a bend fail first?',o:['The cover is thinner there','The reinforcement is stretched apart there','Fluid pressure is higher there'],a:1,ex:'The wire layers on the outside are pulled apart by about r/R, so each pressure pulse loads fewer, more open wires.'},
+ {q:'Two corners of 60° and 45° at R 66 sit 60 mm apart. Do they fit?',o:['Yes','No, they need about 65 mm','Only if R drops to 50'],a:1,ex:'T₁ ≈ 38.1 and T₂ ≈ 27.3 mm, together 65.4 mm. Lengthen the straight or soften a corner; never drop below MBR. Type it into the calculator above.'}
+];
+const quiz=document.getElementById('quiz'); let answered=0,score=0;
+QZ.forEach((it,i)=>{const q=document.createElement('div');q.className='q';
+  q.innerHTML='<span class="qn">Q'+(i+1)+'</span><span class="qt">'+it.q+'</span><div class="opts"></div><p class="ex" hidden></p>';
+  const opts=q.querySelector('.opts'),ex=q.querySelector('.ex');
+  it.o.forEach((o,j)=>{const b=document.createElement('button');b.type='button';b.textContent=o;
+    b.addEventListener('click',()=>{[...opts.children].forEach(x=>x.disabled=true);const ok=j===it.a;b.classList.add(ok?'right':'wrong');if(!ok)opts.children[it.a].classList.add('right');
+      ex.hidden=false;ex.className='ex '+(ok?'good':'bad');ex.innerHTML='<b>'+(ok?'Right':'Not quite')+'</b>'+it.ex;answered++;if(ok)score++;scoreLine();});
+    opts.appendChild(b);});
+  quiz.appendChild(q);});
+const sl=document.createElement('div');sl.className='score';quiz.appendChild(sl);
+function scoreLine(){sl.innerHTML=answered<QZ.length?'<span>'+answered+' of '+QZ.length+' answered</span>':
+  '<b>'+score+' / '+QZ.length+'</b><span>'+(score===QZ.length?'All clear. This sheet is yours.':'Re-read the parts you missed, then try again.')+'</span>'+
+  (score===QZ.length&&!done.includes('HS-05')?'<button type="button" id="q-mark">Mark sheet as studied</button>':'<button type="button" id="q-retry">Try again</button>');
+  const m=document.getElementById('q-mark');if(m)m.addEventListener('click',()=>{toggleDone('HS-05');scoreLine();});
+  const r=document.getElementById('q-retry');if(r)r.addEventListener('click',()=>{answered=0;score=0;quiz.querySelectorAll('.opts button').forEach(b=>{b.disabled=false;b.className='';});quiz.querySelectorAll('.ex').forEach(e=>e.hidden=true);scoreLine();});}
+scoreLine();
+})();
+</script>
+
+</body>
+</html>

@@ -78,12 +78,6 @@ CONFIG = {
             "href": "Harness/index.html",
         },
         {
-            "label": "External app · routing · preview",
-            "title": "Hose Routing",
-            "summary": "Bend a hose by hand and watch its radius — minimum bend radius, twist and the layline, clips and clamps, Creo corner points with single radius, and route checks. Piping and Cable modules to follow.",
-            "href": "Hose_routing/index.html",
-        },
-        {
             "label": "External app · 13 calculators",
             "title": "Machine Design Calculators",
             "summary": "ISO fits, 1-D tolerance stack-ups, beam stress and deflection, springs, bolt preload, spur gears, bearing L₁₀ life, shaft sizing, buckling, V-belts, and wall stresses.",
@@ -100,12 +94,6 @@ CONFIG = {
             "title": "Motion Lab",
             "summary": "Statics and kinematics sandbox — beam reactions and deflection under point and distributed loads, Grashof four-bar, slider-crank stroke, and gear ratios, all animated.",
             "href": "Motion_lab/index.html",
-        },
-        {
-            "label": "External app · sheet metal · preview",
-            "title": "Sheet Metal",
-            "summary": "Every part starts flat — a folding bracket, a progressive-die progress strip, and a live bend section: bend allowance, K-factor, bend deduction and practice problems. 47 sheets from Marciniak and Suchy, being written.",
-            "href": "Sheet_metal/index.html",
         },
         {
             "label": "External app · 507 movements",
