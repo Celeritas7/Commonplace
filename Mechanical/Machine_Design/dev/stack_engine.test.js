@@ -8,7 +8,7 @@ const tpl = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf8');
 const a = tpl.indexOf('// STACK-ENGINE-BEGIN'), b = tpl.indexOf('// STACK-ENGINE-END');
 assert(a > 0 && b > a, 'engine markers not found in template.html');
 const E = new Function(tpl.slice(a, b) +
-  ';return {fmtPct, isoTol, stackRowCalc, stackCalc, stackVerdict, stackReject, stackCsv, stackReportHtml, stackHistSvg, STACK_SAMPLES, fx};')();
+  ';return {stackCleanChain, fmtPct, isoTol, stackRowCalc, stackCalc, stackVerdict, stackReject, stackCsv, stackReportHtml, stackHistSvg, STACK_SAMPLES, fx};')();
 
 let n = 0;
 const near = (x, y, tol, msg) => { assert(Math.abs(x - y) <= tol, (msg || '') + ': ' + x + ' vs ' + y); };
@@ -108,6 +108,30 @@ test('fmtPct handles tiny and zero rates', () => {
 test('fx never prints negative zero', () => {
   assert.strictEqual(E.fx(-0.00001, 3), '0.000');
   assert.strictEqual(E.fx(-0.0006, 3), '-0.001');
+});
+
+test('samples/stack-up-practice.json is the same six chains as the built-in examples', () => {
+  const j = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'samples', 'stack-up-practice.json'), 'utf8'));
+  assert.deepStrictEqual(j.chains, E.STACK_SAMPLES.map(E.stackCleanChain), 'regenerate the JSON after editing STACK_SAMPLES');
+});
+
+test('a gap limit met exactly passes worst case even at large nominals', () => {
+  const r = E.stackCalc([{nom:'12345.67', tol:'0.07', dir:1}, {nom:'12345.30', tol:'0', dir:-1}], {n:0, gapMin:'0.3'});
+  assert(r.wcPass, 'wcLo ' + r.wcLo);
+  assert(!E.stackCalc([{nom:'10', tol:'0.1', dir:1}], {n:0, gapMin:'9.95'}).wcPass, 'a real miss still fails');
+});
+
+test('a row without dir opens the gap, like stackCleanRow', () => {
+  near(E.stackCalc([{nom:'10', tol:'0.1'}], {n:0}).nom, 10, 1e-12);
+  assert.strictEqual(E.stackCleanChain({name:'', rows:[{}]}).rows[0].dir, 1);
+});
+
+test('an ISO code that cannot be applied is flagged in CSV and report', () => {
+  const chain = {name:'big', gapMin:'', gapMax:'', rows:[{name:'r', nom:'600', tol:'0.1', dir:1, iso:'H7'}]};
+  const r = E.stackCalc(chain.rows, {n:0});
+  near(r.wc, 0.1, 1e-12, 'manual value used');
+  assert(E.stackCsv(chain, r).includes('H7 NOT APPLIED'), 'csv');
+  assert(E.stackReportHtml(chain, r, '').includes('not applied'), 'report');
 });
 
 console.log(n + ' tests passed');

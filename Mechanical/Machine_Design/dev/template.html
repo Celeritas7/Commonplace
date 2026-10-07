@@ -1471,7 +1471,7 @@ function stackRowCalc(r){
   const iso = r.iso ? isoTol(r.iso, nom) : null;
   const tol = iso && !iso.err ? iso.tol : Math.abs(parseFloat(r.tol) || 0);
   const shift = iso && !iso.err ? iso.shift : 0;
-  const sign = (nom < 0 ? -1 : 1) * (r.dir > 0 ? 1 : -1);
+  const sign = (nom < 0 ? -1 : 1) * (r.dir < 0 ? -1 : 1);
   const mag = Math.abs(nom) + shift;
   const dist = r.dist === 'uniform' || r.dist === 'triangular' ? r.dist : 'normal';
   const cpkIn = parseFloat(r.cpk);
@@ -1497,12 +1497,13 @@ function stackCalc(rows, opts){
   const varSum = rc.reduce((a,r) => a + r.sigma*r.sigma, 0);
   const sigma = Math.sqrt(varSum), rss = 3*sigma;
   const contrib = rc.map(r => varSum > 0 ? 100*r.sigma*r.sigma/varSum : 0);
+  const eps = 1e-9*Math.max(1, Math.abs(mean), wc);  // round-off guard that scales with the chain, so a limit met exactly passes
   const pOut = sigma > 0
     ? (LSL != null ? normCdf((LSL-mean)/sigma) : 0) + (USL != null ? 1 - normCdf((USL-mean)/sigma) : 0)
     : ((LSL != null && mean < LSL) || (USL != null && mean > USL) ? 1 : 0);
   const res = {rows:rc, nom, mean, wc, rss, sigma, contrib, LSL, USL, pOutRss:pOut,
     wcLo:mean-wc, wcHi:mean+wc, rssLo:mean-rss, rssHi:mean+rss,
-    wcPass:(LSL == null || mean-wc >= LSL - 1e-12) && (USL == null || mean+wc <= USL + 1e-12)};
+    wcPass:(LSL == null || mean-wc >= LSL - eps) && (USL == null || mean+wc <= USL + eps)};
   const n = Math.max(0, Math.min(200000, Math.round(opts.n == null ? 20000 : opts.n)));
   if (n > 0 && rc.length) res.mc = stackMonteCarlo(rc, n, opts.seed == null ? 1 : opts.seed, LSL, USL);
   return res;
@@ -1596,7 +1597,7 @@ function stackCsv(chain, res){
   const q = v => '"' + String(v).replace(/"/g,'""') + '"';
   const L = [['#','Dimension','Dir','Nominal mm','Tol ± mm','ISO','Mean shift mm','Distribution','Cpk','Sigma mm','Contribution %'].map(q).join(',')];
   chain.rows.forEach((r, i) => { const c = res.rows[i];
-    L.push([i+1, r.name, c.sign > 0 ? '+' : '-', fx(c.nom,4), fx(c.tol,4), r.iso || '', fx(c.shift,4), c.dist, c.dist === 'normal' ? fx(c.cpk,2) : '', fx(c.sigma,5), fx(res.contrib[i],1)].map(q).join(',')); });
+    L.push([i+1, r.name, c.sign > 0 ? '+' : '-', fx(c.nom,4), fx(c.tol,4), c.iso && c.iso.err ? r.iso + ' NOT APPLIED (' + c.iso.err + '); manual value used' : (r.iso || ''), fx(c.shift,4), c.dist, c.dist === 'normal' ? fx(c.cpk,2) : '', fx(c.sigma,5), fx(res.contrib[i],1)].map(q).join(',')); });
   L.push('');
   [['Chain', chain.name || ''], ['Gap min', res.LSL ?? ''], ['Gap max', res.USL ?? ''], ['Nominal gap', fx(res.nom,4)], ['Mean gap', fx(res.mean,4)],
    ['Worst case ±', fx(res.wc,4)], ['Worst case range', fx(res.wcLo,4) + ' .. ' + fx(res.wcHi,4)], ['RSS ±3 sigma', fx(res.rss,4)],
@@ -1612,7 +1613,7 @@ function stackReportHtml(chain, res, when){
   const lim = (res.LSL != null ? 'min ' + c3(res.LSL) : '') + (res.LSL != null && res.USL != null ? ' · ' : '') + (res.USL != null ? 'max ' + c3(res.USL) : '');
   const rowsHtml = chain.rows.map((r, i) => { const c = res.rows[i];
     return '<tr><td>' + (i+1) + '</td><td>' + e(r.name || '') + '</td><td class="c">' + (c.sign > 0 ? '+' : '−') + '</td><td>' + fx(Math.abs(c.nom),3) + '</td><td>±' + fx(c.tol,4) +
-      (c.iso && !c.iso.err ? ' <span class="m">(' + e(c.iso.label) + ')</span>' : '') + '</td><td>' + (c.shift ? (c.shift > 0 ? '+' : '') + fx(c.shift,4) : '—') + '</td><td>' + c.dist +
+      (c.iso && !c.iso.err ? ' <span class="m">(' + e(c.iso.label) + ')</span>' : c.iso && c.iso.err ? ' <span class="m" style="color:#a15b4f">(' + e(r.iso) + ' not applied: ' + e(c.iso.err) + ')</span>' : '') + '</td><td>' + (c.shift ? (c.shift > 0 ? '+' : '') + fx(c.shift,4) : '—') + '</td><td>' + c.dist +
       (c.dist === 'normal' ? ' · Cpk ' + fx(c.cpk,2) : '') + '</td><td>' + fx(c.sigma,5) + '</td><td><span class="bar" style="width:' + fx(res.contrib[i],1) + '%"></span>' + fx(res.contrib[i],1) + ' %</td></tr>'; }).join('');
   const kv = (k, v) => '<tr><th>' + k + '</th><td>' + v + '</td></tr>';
   const mc = res.mc;
@@ -1661,7 +1662,6 @@ const STACK_SAMPLES = [
    notes:'Six parts at ±0.05 each. Parts C and D come from a supplier with Cpk 0.5 instead of 1.33.',
    rows:[{name:'Housing', nom:'80.13', tol:'0.05', dir:1, cpk:'1.33'},{name:'Part A', nom:'20', tol:'0.05', dir:-1, cpk:'1.33'},{name:'Part B', nom:'15', tol:'0.05', dir:-1, cpk:'1.33'},{name:'Part C', nom:'20', tol:'0.05', dir:-1, cpk:'0.5'},{name:'Part D', nom:'15', tol:'0.05', dir:-1, cpk:'0.5'},{name:'Part E', nom:'10', tol:'0.05', dir:-1, cpk:'1.33'}]}
 ];
-// STACK-ENGINE-END
 const STACK_KEY = 'designbench.stack.v1';
 function stackStore(){ try { const v = JSON.parse(localStorage.getItem(STACK_KEY)); return v && typeof v === 'object' ? v : {}; } catch(e){ return {}; } }
 function stackPut(st){ try { localStorage.setItem(STACK_KEY, JSON.stringify(st)); return true; } catch(e){ return false; } }
@@ -1675,6 +1675,7 @@ function stackCleanChain(c){
   return {name:String(c.name ?? 'Imported chain'), notes:String(c.notes ?? ''), gapMin:String(c.gapMin ?? ''), gapMax:String(c.gapMax ?? ''),
     rows:(Array.isArray(c.rows) ? c.rows : []).map(stackCleanRow)};
 }
+// STACK-ENGINE-END
 function stackDownload(name, text, type){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], {type}));
@@ -1704,7 +1705,8 @@ class Component extends DCLogic {
   setRow(i, k){ return e => { const v = e.target.value; this.setState(p => ({stackRows: p.stackRows.map((r,j) => j===i ? {...r, [k]: v, ...(k === 'tol' ? {iso:''} : {})} : r)})); }; }
   stackChain(){
     const s = this.state;
-    const rows = s.stackRows.map(r => { const iso = r.iso ? isoTol(r.iso, parseFloat(r.nom) || 0) : null; return iso && !iso.err ? {...r, tol:String(iso.tol)} : r; });
+    const calc = this.stackResult().rows;
+    const rows = s.stackRows.map((r, i) => { const c = calc[i]; return c && c.iso && !c.iso.err ? {...r, tol:String(c.tol)} : r; });
     return {name:s.stackName, notes:s.stackNotes, gapMin:s.stackGapMin, gapMax:s.stackGapMax, rows};
   }
   stackApply(c, msg){ c = stackCleanChain(c); this.setState({stackRows:c.rows, stackName:c.name, stackNotes:c.notes, stackGapMin:c.gapMin, stackGapMax:c.gapMax, stackMsg:msg || ''}); }
@@ -1736,7 +1738,8 @@ class Component extends DCLogic {
   }
   exportChains(){
     const st = stackStore();
-    const chains = [{...this.stackChain()}, ...Object.values(st.saved || {}).filter(c => c.name !== this.state.stackName)];
+    const cur = this.stackChain(); cur.name = cur.name.trim();
+    const chains = [cur, ...Object.values(st.saved || {}).filter(c => c.name !== cur.name)];
     stackDownload('stack-chains-' + new Date().toISOString().slice(0,10) + '.json',
       JSON.stringify({app:'designbench-stack', version:1, exportedAt:new Date().toISOString(), chains}, null, 1), 'application/json');
     this.setState({stackMsg:'Exported ' + chains.length + ' chain' + (chains.length > 1 ? 's' : '') + ' (current first).'});
@@ -1752,9 +1755,12 @@ class Component extends DCLogic {
           const list = (Array.isArray(j) ? j : Array.isArray(j.chains) ? j.chains : [j]).filter(c => c && Array.isArray(c.rows)).map(stackCleanChain);
           if (!list.length) throw new Error('no chains with rows in this file');
           const st = stackStore(); st.saved = st.saved || {};
+          list.forEach((c, i) => { c.name = c.name.trim() || ('Imported chain ' + (i + 1)); });
+          const clash = list.map(c => c.name).filter(nm => st.saved[nm]);
+          if (clash.length && !window.confirm('Replace ' + clash.length + ' saved chain' + (clash.length > 1 ? 's' : '') + ' with the same name?\n' + clash.join('\n'))) return this.setState({stackMsg:'Import cancelled.'});
           list.forEach(c => { st.saved[c.name] = {...c, savedAt:new Date().toISOString()}; });
           stackPut(st);
-          this.stackApply(list[0], 'Imported ' + list.length + ' chain' + (list.length > 1 ? 's' : '') + ' into Saved; showing “' + list[0].name + '”.');
+          this.stackApply(list[0], 'Imported ' + list.length + ' chain' + (list.length > 1 ? 's' : '') + (clash.length ? ' (' + clash.length + ' replaced)' : '') + ' into Saved; showing “' + list[0].name + '”.');
           this.setState({stackPick:list[0].name});
         } catch(err){ this.setState({stackMsg:'Could not import: ' + err.message}); }
       };
@@ -1817,9 +1823,13 @@ class Component extends DCLogic {
     const nomSum = sr.nom, wc = sr.wc;
     const lim = sr.LSL != null || sr.USL != null;
     const mcRes = sr.mc;
-    const curChain = JSON.stringify(this.stackChain());
-    if (curChain !== this._stkSaved){ this._stkSaved = curChain; const st = stackStore(); st.current = JSON.parse(curChain); stackPut(st); }
-    const savedNames = Object.keys(stackStore().saved || {}).sort((x,y) => x.localeCompare(y));
+    let savedNames = this._stkNames || [];
+    if (s.tab === 'stack'){
+      const curChain = JSON.stringify(this.stackChain());
+      const st = stackStore();
+      if (curChain !== this._stkSaved){ this._stkSaved = curChain; st.current = JSON.parse(curChain); stackPut(st); }
+      savedNames = this._stkNames = Object.keys(st.saved || {}).sort((x,y) => x.localeCompare(y));
+    }
     // Chain diagram
     const signedVals = rows.map(r => (parseFloat(r.nom)||0)*(r.dir>0?1:-1));
     let cum = 0; const cums = [0];

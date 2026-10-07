@@ -25,7 +25,9 @@ PAT = re.compile(r'(<script type="__bundler/template">)(\s*)(.*?)(\s*)(</script>
 
 def encode(text):
     # Same encoding the bundler uses: raw UTF-8, "</" escaped so the script tag can't close early.
-    return json.dumps(text, ensure_ascii=False).replace("</", "<\\u002F")
+    # "<!--" is escaped too: inside a script element it would switch the HTML parser into its
+    # escaped state and the bundle's real </script> could be swallowed.
+    return json.dumps(text, ensure_ascii=False).replace("</", "<\\u002F").replace("<!--", "<\\u0021--")
 
 
 def read_bundle():
