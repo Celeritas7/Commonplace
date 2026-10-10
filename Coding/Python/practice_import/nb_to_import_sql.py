@@ -54,6 +54,15 @@ OPTIONS
   --bank-all           also bank non-failed attempts as (unresolved) mistakes
   --keep-stubs         keep placeholder code cells (e.g. "# Try fixing here")
                        instead of skipping comment-only / empty cells
+  --json               write practice/data/<set>.json + .js + index.js for the
+                       problem-card page (practice/set.html) instead of SQL;
+                       --email not needed, several notebooks allowed:
+                         python nb_to_import_sql.py ../practice/*.html --json
+  --json-dir DIR       where --json writes (default ../practice/data)
+  --level LABEL        --json: level label (default from the file name)
+  --assign-ids         --json: pin a stable id into every problem heading that
+                       has none, as an invisible "<!-- id: … -->" comment, so a
+                       later retitle keeps its solved state and bank entries
 
 --------------------------------------------------------------------------------
 HOW IT READS A NOTEBOOK
@@ -134,9 +143,9 @@ def _load_nbdata_html(raw, path):
         sys.exit(f"error: no <script id=\"nbdata\"> block found in {path}")
     data = json.loads(m.group(1))
     out = []
-    for c in data:
+    for i, c in enumerate(data):
         kind = "code" if c.get("t") == "code" else "md"
-        out.append({"kind": kind, "text": c.get("s", ""), "stdout": None})
+        out.append({"kind": kind, "text": c.get("s", ""), "stdout": None, "index": i})
     return out
 
 
@@ -144,6 +153,14 @@ def _load_nbdata_html(raw, path):
 
 # Tolerant: these notebooks often omit the space after '#' (e.g. "##Prime").
 HEAD_RE = re.compile(r'^(#{1,6})\s*(.*)$')
+# A problem's stable id lives in its heading cell as an invisible HTML comment,
+# e.g. "##FizzBuzz <!-- id: fizzbuzz -->". Titles can change; the id never does.
+ID_RE = re.compile(r'<!--\s*id:\s*([A-Za-z0-9_-]+)\s*-->')
+
+
+def cell_id(text):
+    m = ID_RE.search(text or "")
+    return m.group(1) if m else None
 
 
 def heading(text):
@@ -160,7 +177,7 @@ def heading(text):
     if not m:
         return (0, "", text.strip())
     level = len(m.group(1))
-    htext = m.group(2).strip()
+    htext = ID_RE.sub("", m.group(2)).strip()
     body = "\n".join(lines[lines.index(first) + 1:]).strip()
     return (level, htext, body)
 
@@ -208,13 +225,21 @@ def slug(path):
 # ---------------------------------------------------------------- parsing
 
 class Problem:
-    __slots__ = ("title", "prompt", "section", "attempts")
+    __slots__ = ("title", "prompt", "section", "attempts", "statement", "pid", "cell")
 
-    def __init__(self, title, section):
+    def __init__(self, title, section, cell=None):
         self.title = title
         self.prompt = None
         self.section = section
         self.attempts = []   # list of {'code','stdout','passed','marker'}
+        self.statement = []  # markdown chunks before the first attempt (--json only)
+        self.pid = cell_id(cell["text"]) if cell else None   # stable id, if the heading carries one
+        self.cell = cell     # the heading cell (so --assign-ids can write an id into it)
+
+    def add_statement(self, text):
+        text = (text or "").strip()
+        if text and not self.attempts:
+            self.statement.append(text)
 
 
 def detect_structured(cells):
@@ -254,19 +279,23 @@ def parse_structured(cells, keep_stubs):
         if c["kind"] == "md":
             lvl, ht, body = heading(c["text"])
             if lvl == 1 and re.search(r'problem\s*\d+', ht, re.I):
-                cur = Problem(ht, "Imported")
+                cur = Problem(ht, "Imported", c)
                 problems.append(cur)
                 pending_passed, pending_marker = None, None
                 st = statement_from_body(body)            # title+prompt in same cell
+                cur.add_statement(re.sub(r'(?im)^#+\s*\W*\s*problem statement\s*$', '', body))
                 if st:
                     cur.prompt = st
                     cur.title = st[:120]
             elif cur is not None and re.search(r'problem statement', ht, re.I):
                 stmt = body or ""
+                cur.add_statement(stmt)
                 if stmt:
                     cur.prompt = first_line(stmt)
                     if cur.title and re.fullmatch(r'.*problem\s*\d+.*', cur.title, re.I):
                         cur.title = first_line(stmt)[:120]
+            elif lvl == 0 and cur is not None:
+                cur.add_statement(body)
             elif re.search(r'verified|working solution', ht, re.I):
                 pending_passed, pending_marker = True, "verified solution"
             elif re.search(r'attempt|raw|fix|refactor', ht, re.I):
@@ -316,20 +345,25 @@ def parse_freeform(cells, keep_stubs):
         if c["kind"] == "md":
             lvl, ht, body = heading(c["text"])
             if lvl == 0:
+                if cur is not None:
+                    cur.add_statement(body)
                 continue
             if lvl < B:
                 # shallow heading = section label (the 2nd tag)
                 section = ht or section
             elif lvl == B:
                 flush_if_empty()
-                cur = Problem(ht or "Untitled", section)
+                cur = Problem(ht or "Untitled", section, c)
                 problems.append(cur)
+                cur.add_statement(body)
                 pending_marker = None
             else:  # lvl > B  -> prompt or status marker for the next code cell
                 g = grade(ht)
                 if g is None:
                     if cur is not None and cur.prompt is None and not cur.attempts:
                         cur.prompt = ht          # a sub-title before any code = prompt
+                    if cur is not None:
+                        cur.add_statement((ht + "\n\n" + body).strip())
                 else:
                     pending_marker = ht          # "failed" / "successful" = status
         else:  # code
@@ -444,12 +478,170 @@ def emit(problems, email, tag, subject, language, all_unresolved, bank_all):
     return "\n".join(L)
 
 
+
+# ---------------------------------------------------------------- JSON emit (--json)
+# Feeds practice/set.html (Phase 3 problem cards). One file per notebook:
+#   practice/data/<set>.json  and  practice/data/<set>.js  (same data; the .js
+#   form loads from a double-clicked page too) + practice/data/index.js.
+# Optional hand-written practice/data/<set>.expect.json adds auto-checking:
+#   { "<problem id>": { "expect": "printed output", "stdin": ["typed", "inputs"] } }
+
+FENCE_RE = re.compile(r'```[^\n]*\n(.*?)```', re.S)
+
+
+def level_for(set_id):
+    s = set_id.lower()
+    if "beginner" in s:
+        return "Beginner"
+    if "intermediate" in s:
+        return "Intermediate"
+    if "random" in s or "module" in s:
+        return "Module drills"
+    if "template" in s:
+        return "Templates"
+    return "Projects"
+
+
+def status_of(passed):
+    return "passed" if passed is True else "failed" if passed is False else "ungraded"
+
+
+def problem_json(p, pid, level):
+    text = "\n\n".join(p.statement).strip()
+    examples = [m.strip("\n") for m in FENCE_RE.findall(text)]
+    text = FENCE_RE.sub("", text).strip()
+    if not text and p.prompt:
+        text = p.prompt
+    return {
+        "id": pid,
+        "title": p.title,
+        "section": p.section or "",
+        "level": level,
+        "statement": text,
+        "examples": examples,
+        "attempts": [{"code": a["code"], "status": status_of(a["passed"]),
+                      "marker": a["marker"] or ""} for a in p.attempts],
+    }
+
+
+def slug_of(title):
+    return re.sub(r'[^a-z0-9]+', '-', (title or "problem").lower()).strip('-')[:40] or "problem"
+
+
+def unique_ids(problems):
+    """One id per problem: the id stored in its heading when there is one,
+    otherwise a slug of the title (made unique). Run --assign-ids once to pin
+    the slugs into the notebooks so later retitles don't change them."""
+    taken = set(p.pid for p in problems if p.pid)
+    seen, out = {}, []
+    for p in problems:
+        if p.pid:
+            out.append(p.pid); continue
+        base = slug_of(p.title)
+        n = seen.get(base, 0) + 1
+        seen[base] = n
+        cand = base if n == 1 else f"{base}-{n}"
+        while cand in taken:
+            n += 1; seen[base] = n; cand = f"{base}-{n}"
+        taken.add(cand); out.append(cand)
+    return out
+
+
+def assign_ids(path, cells, problems):
+    """Write '<!-- id: … -->' into the heading cell of every problem that has none.
+    HTML pages only (the nbdata block is rewritten in place); returns how many were added."""
+    if not path.lower().endswith((".html", ".htm")):
+        return 0
+    ids = unique_ids(problems)
+    todo = [(p, pid) for p, pid in zip(problems, ids) if not p.pid and p.cell is not None]
+    if not todo:
+        return 0
+    raw = open(path, encoding="utf-8").read()
+    m = re.search(r'(<script[^>]*id=["\']nbdata["\'][^>]*>)(.*?)(</script>)', raw, re.DOTALL | re.IGNORECASE)
+    data = json.loads(m.group(2))
+    for p, pid in todo:
+        c = data[p.cell["index"]]
+        lines = c["s"].split("\n")
+        k = next(i for i, ln in enumerate(lines) if ln.strip())
+        lines[k] = lines[k].rstrip() + f" <!-- id: {pid} -->"
+        c["s"] = "\n".join(lines)
+        p.pid = pid
+    new = raw[:m.start(2)] + json.dumps(data, ensure_ascii=False).replace("</", "<\\/") + raw[m.end(2):]
+    open(path, "w", encoding="utf-8", newline="\n").write(new)
+    return len(todo)
+
+
+def page_title(path, raw_cells):
+    """The set's display name: the page's crumb/title if it has one, else the file name."""
+    try:
+        raw = open(path, encoding="utf-8").read()
+        m = re.search(r'"crumb":\s*"([^"]+)"', raw) or re.search(r'<title>([^<·]+)', raw)
+        if m:
+            return m.group(1).strip()
+    except OSError:
+        pass
+    return os.path.splitext(os.path.basename(path))[0].replace("_", " ").strip().capitalize()
+
+
+def write_json_set(path, problems, out_dir, level=None):
+    set_id = os.path.splitext(os.path.basename(path))[0]
+    level = level or level_for(set_id)
+    ids = unique_ids(problems)
+    data = {
+        "set": set_id,
+        "title": page_title(path, None),
+        "level": level,
+        "page": set_id + ".html",
+        "problems": [problem_json(p, pid, level) for p, pid in zip(problems, ids)],
+    }
+    exp_path = os.path.join(out_dir, set_id + ".expect.json")
+    if os.path.exists(exp_path):
+        extra = json.load(open(exp_path, encoding="utf-8"))
+        for pr in data["problems"]:
+            e = extra.get(pr["id"])
+            if e:
+                if "expect" in e:
+                    pr["expect"] = e["expect"]
+                if "stdin" in e:
+                    pr["stdin"] = e["stdin"]
+    os.makedirs(out_dir, exist_ok=True)
+    js = json.dumps(data, ensure_ascii=False, indent=1)
+    open(os.path.join(out_dir, set_id + ".json"), "w", encoding="utf-8").write(js + "\n")
+    with open(os.path.join(out_dir, set_id + ".js"), "w", encoding="utf-8") as f:
+        f.write("window.PRACTICE_SETS = window.PRACTICE_SETS || {};\n")
+        f.write("window.PRACTICE_SETS[" + json.dumps(set_id) + "] = "
+                + json.dumps(data, ensure_ascii=False).replace("</", "<\\/") + ";\n")
+    return data
+
+
+def write_json_index(out_dir):
+    """data/index.js: every set + a light per-problem list (no code) for the shelf and the Mistake Bank."""
+    sets = []
+    for name in sorted(os.listdir(out_dir)):
+        if not name.endswith(".json") or name.endswith(".expect.json"):
+            continue
+        d = json.load(open(os.path.join(out_dir, name), encoding="utf-8"))
+        sets.append({
+            "set": d["set"], "title": d["title"], "level": d["level"], "page": d["page"],
+            "problems": [dict({"id": p["id"], "title": p["title"], "sec": p["section"],
+                               "prompt": (p["statement"].split("\n")[0] if p["statement"] else p["title"])[:300],
+                               "nbSolved": any(a["status"] == "passed" for a in p["attempts"])},
+                              **({"expect": p["expect"]} if "expect" in p else {}),
+                              **({"stdin": p["stdin"]} if "stdin" in p else {}))
+                         for p in d["problems"]],
+        })
+    with open(os.path.join(out_dir, "index.js"), "w", encoding="utf-8") as f:
+        f.write("/* generated by practice_import/nb_to_import_sql.py --json — do not edit */\n")
+        f.write("window.PRACTICE_SET_INDEX = " + json.dumps(sets, ensure_ascii=False).replace("</", "<\\/") + ";\n")
+    return sets
+
+
 # ---------------------------------------------------------------- main
 
 def main():
-    ap = argparse.ArgumentParser(description="Notebook -> Supabase import SQL")
-    ap.add_argument("notebook", help="path to a .ipynb or a practice .html page")
-    ap.add_argument("--email", required=True, help="your login email (resolves user_id)")
+    ap = argparse.ArgumentParser(description="Notebook -> Supabase import SQL, or --json for practice/set.html")
+    ap.add_argument("notebook", nargs="+", help="path(s) to .ipynb or practice .html pages (several only with --json)")
+    ap.add_argument("--email", default=None, help="your login email (resolves user_id) - required for SQL")
     ap.add_argument("--tag", default=None, help="import tag (default import:<file-slug>)")
     ap.add_argument("--subject", default="python")
     ap.add_argument("--language", default="python")
@@ -460,10 +652,53 @@ def main():
                     help="also bank non-failed attempts as unresolved mistakes")
     ap.add_argument("--keep-stubs", action="store_true",
                     help="keep placeholder / comment-only code cells")
+    ap.add_argument("--json", action="store_true",
+                    help="write practice/data/<set>.json + .js (+ index.js) instead of SQL")
+    ap.add_argument("--json-dir", default=None,
+                    help="where --json writes (default: ../practice/data next to this script)")
+    ap.add_argument("--level", default=None, help="--json: level label (default: from the file name)")
+    ap.add_argument("--assign-ids", action="store_true",
+                    help="--json: pin a stable id into each problem heading that has none (edits the .html pages)")
     args = ap.parse_args()
 
-    tag = args.tag or f"import:{slug(args.notebook)}"
-    cells = load_cells(args.notebook)
+    if args.json:
+        out_dir = args.json_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "practice", "data")
+        out_dir = os.path.abspath(out_dir)
+        import glob
+        paths = []
+        for pat in args.notebook:          # cmd.exe doesn't expand *.html, so do it here
+            paths += sorted(glob.glob(pat)) or [pat]
+        for nb in paths:
+            try:
+                cells = load_cells(nb)
+            except SystemExit:             # e.g. practice/set.html has no notebook data
+                print(f"skip {nb}: not a notebook page", file=sys.stderr)
+                continue
+            problems = parse(cells, args.keep_stubs)
+            if not problems:
+                print(f"skip {nb}: no problems with code attempts", file=sys.stderr)
+                continue
+            if args.assign_ids:
+                n_new = assign_ids(nb, cells, problems)
+                if n_new:
+                    print(f"pinned {n_new} new id(s) into {nb}", file=sys.stderr)
+            missing = sum(1 for p in problems if not p.pid)
+            if missing and not args.assign_ids:
+                print(f"note: {missing} problem(s) in {nb} have no stored id yet (titles act as ids) - run with --assign-ids", file=sys.stderr)
+            d = write_json_set(nb, problems, out_dir, args.level)
+            n_att = sum(len(p["attempts"]) for p in d["problems"])
+            print(f"wrote {d['set']}.json/.js: {len(d['problems'])} problems, {n_att} attempts  ({d['level']})", file=sys.stderr)
+        sets = write_json_index(out_dir)
+        print(f"wrote index.js: {len(sets)} set(s) in {out_dir}", file=sys.stderr)
+        return
+
+    if len(args.notebook) != 1:
+        sys.exit("error: SQL mode takes exactly one notebook (use --json for several)")
+    if not args.email:
+        sys.exit("error: --email is required for SQL output")
+    nb_path = args.notebook[0]
+    tag = args.tag or f"import:{slug(nb_path)}"
+    cells = load_cells(nb_path)
     problems = parse(cells, args.keep_stubs)
     if not problems:
         sys.exit("error: no problems with code attempts were found")

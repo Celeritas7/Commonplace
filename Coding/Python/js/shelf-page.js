@@ -53,12 +53,22 @@ function renderBook() {
 
 /* ---------- a notebook folder ---------- */
 function renderNbFolder(f) {
+  if (f.id === "nb-practice" && window.PRACTICE_SHELF) return renderPractice(f);
   setHead("Notebooks · runnable", f.t, f.sub + " — every cell is editable and runs real Python in the browser.",
     [["Notebooks", f.n], ["Runtime", "Pyodide"]]);
   var items = (f.items || []).map(function (k) { return P.NB[k]; }).concat(f.links || []);
   body.innerHTML = '<div class="nblist">' + items.map(function (n) {
     return '<a class="nbcard" href="' + n[2] + '"><span class="idx">' + n[0] + '</span><span class="ct">' + n[1] + '</span><span class="go">Open ↗</span></a>';
   }).join("") + '</div>';
+}
+
+/* ---------- practice logs: grouped by level, counts from practice-shelf.js ---------- */
+function renderPractice(f) {
+  var T = window.PRACTICE_SHELF.totals();
+  setHead("Practice logs · your own attempts", f.t,
+    "Every notebook practice log, grouped by level. Problem sets open as cards — statement, your earlier attempts, then a fresh try; the notebook is one click away.",
+    [["Problems", T.problems], ["Solved", T.solved + " / " + T.problems], ["Logs", T.logs]]);
+  body.innerHTML = window.PRACTICE_SHELF.html("");
 }
 
 function wireToc() {

@@ -108,6 +108,12 @@ CONFIG = {
             "href": "Sheet_metal/index.html",
         },
         {
+            "label": "External app · STEP checker",
+            "title": "Sheet Metal Checker",
+            "summary": "Can it be made? Open a STEP file of a bracket and get a 合格 / 不合格 verdict — bend radius, flange height, hole-to-bend and hole-to-edge distances, bend reliefs and deep channels, checked against your course-note rules and highlighted in 3D.",
+            "href": "Sheet_metal/checker.html",
+        },
+        {
             "label": "External app · 507 movements",
             "title": "Brown's 507 Mechanical Movements",
             "summary": "Interactive study app for Henry T. Brown's 1868 classic — searchable diagrams, Wikimedia animations, notes, bookmarks, and dark mode.",

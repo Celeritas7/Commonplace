@@ -87,8 +87,16 @@ body{margin:0;background:#eceee4;color:#1a2820;line-height:1.6;-webkit-font-smoo
 .cc-authbtn{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;cursor:pointer;border:1px solid #d2dacb;border-radius:8px;padding:5px 10px;background:#fbfcf6;color:#234f3b;}
 .cc-authbtn.primary{background:#2f6b4f;color:#fff;border-color:#2f6b4f;}
 .cc-authbtn:disabled{opacity:.55;cursor:default;}
+.cc-explain{background:#fbfcf6;border:1px solid #d2dacb;border-left:3px solid #2f6b4f;border-radius:12px;padding:14px 18px;margin-top:18px;}
+.cc-explain-k,.cc-demo-k{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#2f6b4f;}
+.cc-explain p{margin:8px 0 0;font-size:16px;color:#41564a;max-width:760px;}
+.cc-explain code{font-family:'JetBrains Mono',monospace;font-size:12px;background:#dde7dd;border-radius:5px;padding:1px 6px;color:#234f3b;}
+.cc-explain-go{color:#1a2820 !important;}
+.cc-demo-k{margin:22px 0 -14px;color:#566a5d;}
+.cc-demo{position:relative;filter:blur(2.5px) saturate(.8);opacity:.7;pointer-events:none;user-select:none;max-height:520px;overflow:hidden;
+ -webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent);}
 .cc-state{font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;color:#7a8c80;background:rgba(251,252,246,.7);border:1px dashed #7fa68b;border-radius:10px;padding:16px 18px;margin-top:18px;}
-@media (max-width:680px){.cc-auth input{min-width:120px;}}
+@media (max-width:680px){.cc-auth input{min-width:0;flex:1;}.cc-topnav{flex-wrap:wrap;padding:10px 14px;}.cc-auth{margin-left:0;width:100%;}.cc-wrap{padding:22px 16px 70px;}.cc-h2{white-space:normal;font-size:28px;}.cc-head{flex-wrap:wrap;}}
 </style>
 </head>
 <body>
@@ -311,9 +319,40 @@ body{margin:0;background:#eceee4;color:#1a2820;line-height:1.6;-webkit-font-smoo
   }
   function stateBox(msg){ return '<div class="cc-state">'+msg+'</div>'; }
 
+  /* Signed out: say what this page is, and show a blurred example of a chain
+     (made-up sample data, never your own) instead of an empty box. */
+  var SAMPLE = [
+    { id:'__sample1', title:'Prime Number Checker', tags:['Day 12','sample'],
+      prompt:'Write is_prime(n) that returns True only for prime numbers.',
+      attempts:[
+        { passed:false, code:'def is_prime(n):\n    for i in range(2, n):\n        if n % i == 0:\n            print("no")' },
+        { passed:null,  code:'def is_prime(n):\n    for i in range(2, n):\n        if n % i == 0:\n            return False' },
+        { passed:true,  code:'def is_prime(n):\n    if n < 2:\n        return False\n    for i in range(2, n):\n        if n % i == 0:\n            return False\n    return True' }
+      ],
+      mistakes:[{ reason:'printed instead of returning, and 1 counted as prime', resolved:true }] },
+    { id:'__sample2', title:'Tip Calculator', tags:['Day 2','sample'],
+      prompt:'Split the bill, with tip, between the people paying.',
+      attempts:[ { passed:false, code:'bill = input("Total? ")\nprint(bill / 3)' }, { passed:true, code:'bill = float(input("Total? "))\nprint(round(bill * 1.12 / 3, 2))' } ],
+      mistakes:[{ reason:'input() returns text — forgot float()', resolved:true }] }
+  ];
+  function signedOutHtml(){
+    return '<div class="cc-out-wrap">'
+      + '<div class="cc-explain"><div class="cc-explain-k">What this page is</div>'
+      + '<p>Every 100 Days problem you practised, as a <b>chain of attempts</b>: v1, v2, v3&hellip; coloured failed, unmarked or passed. '
+      + 'Tap a dot to read that version, pick any two to see a line-by-line diff of what changed, and write down what the mistake was.</p>'
+      + '<p>Your chains live in your Commonplace cloud account (Supabase), so they follow you between devices. '
+      + 'New attempts arrive when you import a practice notebook (<code>practice_import/nb_to_import_sql.py</code>).</p>'
+      + '<p class="cc-explain-go"><b>Sign in</b> with the email box at the top of the page &mdash; you get a one-time link, no password.</p></div>'
+      + '<div class="cc-demo-k">Example &mdash; made-up data</div>'
+      + '<div class="cc-demo" aria-hidden="true">'
+      + '<div class="cc-section"><h3>Sample section</h3><span class="cc-count">2</span></div>'
+      + SAMPLE.map(cardHtml).join('')
+      + '</div></div>';
+  }
+
   function render(){
     renderAuth();
-    if (!currentUser){ root.innerHTML = headerHtml('&mdash;') + stateBox('Sign in (top-right) to load your 100 Days attempt chains from Supabase.'); return; }
+    if (!currentUser){ root.innerHTML = headerHtml('&mdash;') + signedOutHtml(); return; }
     if (loading){ root.innerHTML = headerHtml('&mdash;') + stateBox('Loading your Python practice&hellip;'); return; }
     if (loadErr){ root.innerHTML = headerHtml('&mdash;') + stateBox('Could not load: ' + esc(loadErr)); return; }
     var total = 0; DATA.forEach(function(s){ total += s.exercises.length; });

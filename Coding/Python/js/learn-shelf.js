@@ -81,6 +81,12 @@ function build() {
     count: S.book.read ? '<b>' + S.book.read + '</b> read &middot; ' + S.book.written + ' / ' + S.book.total + ' written'
                        : '<b>' + S.book.written + '</b> / ' + S.book.total + ' written' });
   var nbs = P.NBFOLDERS.map(function (f) {
+    if (f.id === "nb-practice" && window.PRACTICE_SHELF) {   /* same numbers as shelf.html?s=nb-practice */
+      var T = window.PRACTICE_SHELF.totals();
+      return fcard({ id: f.id, name: f.t, sub: "grouped by level &middot; problem cards", href: "shelf.html?s=" + f.id,
+        written: 1, read: T.solved, total: T.problems, tag: "runnable",
+        count: '<b>' + T.solved + '</b> / ' + T.problems + ' solved &middot; ' + T.logs + ' logs' });
+    }
     return fcard({ id: f.id, name: f.t, sub: f.sub, href: "shelf.html?s=" + f.id, written: 1, read: 0, total: 0,
       tag: "runnable", count: '<b>' + f.n + '</b> notebooks' });
   }).join("");
