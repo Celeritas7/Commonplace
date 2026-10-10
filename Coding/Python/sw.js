@@ -7,13 +7,15 @@
  *      is already handled by the browser's own HTTP cache)
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v10";
+var VERSION = "cp-py-v14";
 var CORE = [
   "./",
   "index.html",
   "lib/py-kb-fix.js",
   "lib/practice-engine.js",
   "lib/compose-blocks.js",
+  "lib/my-scripts-data.js?v=1",
+  "lib/my-scripts.js?v=3",
   "pwa/manifest.json"
 ];
 

@@ -32,7 +32,7 @@
   function today(){ return dstr(new Date()); }
   function plus(n){ var d=new Date(); d.setDate(d.getDate()+n); return dstr(d); }
   function items(sc){ return sc.blocks.map(function(b,i){ return { key:"blk:"+b.id, label:"Block "+(i+1)+" · "+b.name, mode:"blocks", bi:i }; })
-    .concat([{key:"ro-blocks",label:"Put the blocks in order",mode:"reorder",ro:"blocks"},{key:"reorder",label:"Reorder the whole script",mode:"reorder",ro:"all"},{key:"gaps",label:"Fill the gaps",mode:"gaps"},{key:"blank",label:"Whole script from blank",mode:"blank"}]); }
+    .concat([{key:"reorder",label:"Reorder the whole script",mode:"reorder"},{key:"gaps",label:"Fill the gaps",mode:"gaps"},{key:"blank",label:"Whole script from blank",mode:"blank"}]); }
   function isDue(it){ return !!(it && it.due <= today()); }
   function dueItems(){ var out=[]; D.scripts.forEach(function(sc){ var st=S(sc.id); items(sc).forEach(function(it){ if(isDue(st.sr[it.key])) out.push({sc:sc, it:it}); }); }); return out; }
   function srMark(sid, key, ok, clean){
@@ -217,7 +217,7 @@
       '<p class="sec-desc">Your own tools, rebuilt by hand. Write notes on each block, then practise in any mode. The code runs here, against a fake test folder.</p>';
     if(due.length){
       h+='<div class="ms-k ms-duek">Due today · '+due.length+'</div><div class="ms-due">';
-      due.forEach(function(d){ h+='<button type="button" class="ms-dcard" data-act="open" data-sid="'+d.sc.id+'" data-mode="'+d.it.mode+'" data-bi="'+(d.it.bi||0)+'"'+(d.it.ro?' data-ro="'+d.it.ro+'"':'')+'><span><b>'+esc(d.sc.short)+'</b> · '+esc(d.it.label)+'</span>'+pips(S(d.sc.id).sr[d.it.key])+'</button>'; });
+      due.forEach(function(d){ h+='<button type="button" class="ms-dcard" data-act="open" data-sid="'+d.sc.id+'" data-mode="'+d.it.mode+'" data-bi="'+(d.it.bi||0)+'"><span><b>'+esc(d.sc.short)+'</b> · '+esc(d.it.label)+'</span>'+pips(S(d.sc.id).sr[d.it.key])+'</button>'; });
       h+='</div>';
     }
     h+='<div class="ms-list">';
@@ -226,7 +226,7 @@
           lb=sc.blocks.filter(function(b){ return st.sr["blk:"+b.id]; }).length;
       h+='<button type="button" class="ms-scard" data-act="open" data-sid="'+sc.id+'"><span class="ms-st">'+esc(sc.title)+'</span><span class="ms-sw">'+esc(sc.what)+'</span>'+
          '<span class="ms-prog"><span>Notes '+nn+'/'+sc.blocks.length+'</span><span>Blocks '+lb+'/'+sc.blocks.length+'</span>'+
-         ['reorder','gaps','blank'].map(function(k){ return '<span>'+({reorder:"Reorder",gaps:"Gaps",blank:"Blank"})[k]+' '+((st.sr[k]||(k==="reorder"&&st.sr["ro-blocks"]))?"●":"○")+'</span>'; }).join("")+'</span></button>';
+         ['reorder','gaps','blank'].map(function(k){ return '<span>'+({reorder:"Reorder",gaps:"Gaps",blank:"Blank"})[k]+' '+(st.sr[k]?"●":"○")+'</span>'; }).join("")+'</span></button>';
     });
     D.next.forEach(function(n){ h+='<div class="ms-scard ms-soon"><span class="ms-st">'+esc(n.title)+'</span><span class="ms-sw">Coming next</span></div>'; });
     h+='</div><div class="ms-sync"></div></section>';
@@ -236,7 +236,7 @@
     var st=S(sc.id), h='<section class="sec ms"><div class="ms-top"><button type="button" class="ms-back" data-act="home">← All scripts</button><span class="ms-sync"></span></div>'+
       '<h2 class="ms-title">'+esc(sc.title)+'</h2><p class="ms-what">'+esc(sc.what)+'</p><div class="ms-modes" role="tablist">';
     MODES.forEach(function(m){
-      var dueDot = m[0]==="blocks" ? sc.blocks.some(function(b){ return isDue(st.sr["blk:"+b.id]); }) : isDue(st.sr[m[0]]) || (m[0]==="reorder" && isDue(st.sr["ro-blocks"]));
+      var dueDot = m[0]==="blocks" ? sc.blocks.some(function(b){ return isDue(st.sr["blk:"+b.id]); }) : isDue(st.sr[m[0]]);
       h+='<button type="button" role="tab" class="ms-mode'+(VIEW.mode===m[0]?" on":"")+'" data-act="mode" data-mode="'+m[0]+'">'+m[1]+(dueDot?'<i class="ms-dot"></i>':'')+'</button>';
     });
     h+='</div><div class="ms-body"></div>';
@@ -288,151 +288,25 @@
   }
   function shuffle(n){ var a=[],i; for(i=0;i<n;i++) a.push(i); do{ for(i=n-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } }while(n>2 && a.every(function(v,k){ return v===k; })); return a; }
   function chunkHTML(c){ return esc(c).split("\n").map(function(l){ var m=/^ */.exec(l)[0].length; return '<span class="ms-ind">'+"·".repeat(m)+'</span>'+l.slice(m); }).join("\n"); }
-  // Pieces to order: blank and comment-only lines are left out (comments would give the order away);
-  // a statement spanning several lines (open brackets) stays one piece.
-  function piecesOf(lines){
-    var out=[], cur=null, depth=0;
-    lines.forEach(function(line){
-      var t=line.trim();
-      if(!cur){ if(!t || t.charAt(0)==="#") return; cur=[line]; } else cur.push(line);
-      depth += (line.match(/[([{]/g)||[]).length - (line.match(/[)\]}]/g)||[]).length;
-      if(depth<=0){ out.push(cur.join("\n")); cur=null; depth=0; }
-    });
-    return out;
-  }
-  var PYKW={"False":1,"None":1,"True":1,"and":1,"as":1,"assert":1,"break":1,"class":1,"continue":1,"def":1,"del":1,"elif":1,"else":1,"except":1,"finally":1,"for":1,"from":1,"global":1,"if":1,"import":1,"in":1,"is":1,"lambda":1,"not":1,"or":1,"pass":1,"raise":1,"return":1,"try":1,"while":1,"with":1,"yield":1};
-  function namesIn(code){
-    code=code.replace(/[fF]("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, function(m){ return " "+(m.match(/\{[^}]*\}/g)||[]).join(" ").replace(/[{}]/g," ")+" "; })
-             .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g," ").replace(/#.*$/gm,"");
-    var out=[], re=/(^|[^.\w])([A-Za-z_]\w*)\b(?!\s*=[^=])/g, m;   // skip attributes (x.name) and keyword args (name=)
-    while((m=re.exec(code))) if(!PYKW[m[2]]) out.push(m[2]);
-    return out;
-  }
-  function analysePiece(piece){
-    var defs={}, uses={};
-    piece.split("\n").forEach(function(line){
-      var t=line.replace(/#.*$/,"").trim(), m, rhs=t;
-      if((m=/^import\s+(.+)$/.exec(t))){ m[1].split(",").forEach(function(x){ var a=x.trim().split(/\s+as\s+/); defs[(a[1]||a[0]).split(".")[0].trim()]=1; }); return; }
-      if((m=/^from\s+\S+\s+import\s+(.+)$/.exec(t))){ m[1].replace(/[()]/g,"").split(",").forEach(function(x){ var a=x.trim().split(/\s+as\s+/); defs[(a[1]||a[0]).trim()]=1; }); return; }
-      if((m=/^for\s+(.+?)\s+in\s+(.+):$/.exec(t))){ m[1].split(",").forEach(function(x){ defs[x.trim()]=1; }); rhs=m[2]; }
-      else if((m=/^(?:def|class)\s+(\w+)/.exec(t))){ defs[m[1]]=1; rhs=""; }
-      else if((m=/^([A-Za-z_][\w\s,]*?)\s*(?:[+\-*\/%]?=)(?!=)(.*)$/.exec(t)) && !/^(if|elif|while|return|assert)\b/.test(t)){ m[1].split(",").forEach(function(x){ defs[x.trim()]=1; }); rhs=m[2]; }
-      var w=/\bas\s+(\w+)\s*:$/.exec(t); if(w) defs[w[1]]=1;
-      namesIn(rhs).forEach(function(n){ if(!defs[n]) uses[n]=1; });
-    });
-    return { defs:defs, uses:uses };
-  }
-  function indentOf(line){ return /^ */.exec(line)[0].length; }
-  // Order check. Two rules, applied piece by piece in the order you built:
-  //  1. names: a piece may only use a name after the piece that makes it (names nobody makes, like print, are ignored);
-  //  2. indentation, by Python's rules rather than the original's positions: after a line ending in ':' the next piece
-  //     must go deeper; otherwise a piece must sit on a level that is still open.
-  // returns { ok, same, bad:[pos…], why:{pos:text} }
-  function checkOrder(units, built){
-    var info=units.map(analysePiece), made={}, allDefs={}, bad=[], why={};
-    info.forEach(function(x){ for(var k in x.defs) allDefs[k]=1; });
-    var base=Math.min.apply(null, units.map(function(u){ return indentOf(u); })), stack=[base], deeper=false, prevInd=base;
-    function mark(pos, text){ if(bad.indexOf(pos)<0){ bad.push(pos); why[pos]=text; } }
-    built.forEach(function(ci,pos){
-      var lines=units[ci].split("\n").filter(function(l){ return l.trim(); }), ind=indentOf(lines[0]), last=lines[lines.length-1];
-      var miss=[]; for(var u in info[ci].uses) if(allDefs[u] && !made[u]) miss.push(u);
-      if(miss.length) mark(pos, "uses "+miss.join(", ")+" before "+(miss.length>1?"they are":"it is")+" made");
-      if(deeper ? ind<=prevInd : stack.indexOf(ind)<0) mark(pos, deeper ? "must be indented: it comes right after a line ending in ':'" : "the indentation does not fit here");
-      // levels still open after this piece: outer ones below it, plus its own levels up to its last line
-      stack=stack.filter(function(d){ return d<ind; });
-      lines.forEach(function(l){ var d=indentOf(l); if(d<=indentOf(last) && stack.indexOf(d)<0) stack.push(d); });
-      stack.sort(function(a,b){ return a-b; });
-      deeper=/:\s*$/.test(last); prevInd=indentOf(last);
-      for(var d in info[ci].defs) made[d]=1;
-    });
-    if(deeper && built.length===units.length) mark(built.length-1, "ends with ':' but nothing is indented under it");
-    bad.sort(function(a,b){ return a-b; });
-    return { ok:!bad.length, same:built.every(function(ci,pos){ return units[ci]===units[pos]; }), bad:bad, why:why };
-  }
-  function blockLines(sc, b){ return L(sc).slice(b.from-1, b.to); }
-  function roSet(sc){
-    var lv=VIEW.ro||"blocks", bi=Math.min(VIEW.rbi||0, sc.blocks.length-1);
-    if(lv==="blocks") return { key:"blocks", units:sc.blocks.map(function(b){ return piecesOf(blockLines(sc,b)).join("\n"); }), names:sc.blocks.map(function(b){ return b.name; }) };
-    if(lv==="in") return { key:"in:"+bi, bi:bi, units:piecesOf(blockLines(sc, sc.blocks[bi])) };
-    return { key:"all", units:chunks(sc) };
-  }
   function viewReorder(sc, body){
-    var lv=VIEW.ro||"blocks", set=roSet(sc), n=set.units.length;
-    if(!RO || RO.sid!==undefined) RO={};
-    var id=sc.id+"|"+set.key;
-    if(!RO[id]) RO[id]={ pool:shuffle(n), built:[], marks:null };
-    var R=RO[id];
-    var LEAD={
-      blocks:"Put the "+n+" blocks in the order the script runs them. For each one ask: what must already exist before this can work? The indented blocks sit inside the loop.",
-      "in":"Order the lines inside one block. A line can only use a name after the line that makes it. Lines that do not depend on each other can go either way.",
-      all:"The whole script, line by line. Do this once Blocks and Inside a block feel easy. The dots are indentation, which is part of each line."
-    };
-    function multi(i){ return piecesOf(blockLines(sc, sc.blocks[i])).length > 1; }
-    function nextMulti(i){ for(var j=i+1;j<sc.blocks.length;j++) if(multi(j)) return j; return -1; }
-    function levelBar(){
-      var h='<div class="ms-rolv" role="tablist">'+[["blocks","1 · Blocks"],["in","2 · Inside a block"],["all","3 · Whole script"]].map(function(x){
-        return '<button type="button" class="ms-mode'+(lv===x[0]?" on":"")+'" data-act="ro-lv" data-lv="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>';
-      if(lv==="in"){
-        h+='<div class="ms-bpills">'+sc.blocks.map(function(b,i){
-          var k=piecesOf(blockLines(sc,b)).length;
-          return '<button type="button" class="ms-bp'+(i===set.bi?" on":"")+'" data-act="ro-bi" data-bi="'+i+'"'+(k<2?' disabled title="one line, nothing to order"':' title="'+esc(b.name)+' · '+k+' lines"')+'>'+(i+1)+'</button>'; }).join("")+'</div>';
-      }
-      return h;
-    }
-    function label(ci, placedAt){
-      var nm = lv==="blocks" && VIEW.roNames ? '<span class="ms-roname">'+esc(set.names[ci])+'</span>' : '';
-      var mk = R.marks && placedAt!=null ? (R.marks[placedAt] ? '<span class="ms-romk ok">✓</span>' : '<span class="ms-romk bad">✕</span>') : '';
-      return mk+'<span class="ms-ropre">'+nm+'<pre>'+chunkHTML(set.units[ci])+'</pre></span>';
-    }
+    var ch=chunks(sc);
+    if(!RO || RO.sid!==sc.id) RO={ sid:sc.id, pool:shuffle(ch.length), built:[] };
     function paint(){
-      var h=levelBar();
-      if(lv==="in" && n<2){ body.innerHTML=h+'<p class="ms-lead">This block is a single line. Pick another block.</p>'; return; }
-      h+='<p class="ms-lead">'+LEAD[lv]+'</p>';
-      if(lv==="blocks") h+='<label class="ms-roopt"><input type="checkbox" data-act="ro-names"'+(VIEW.roNames?" checked":"")+'> Show block names (hint, not counted)</label>';
-      var word = lv==="blocks" ? "Blocks" : "Lines";
-      h+='<div class="ms-k">Your order · '+R.built.length+' / '+n+'</div><div class="ms-built">'+
-        (R.built.length ? R.built.map(function(ci,k){ return '<button type="button" class="ms-chunk placed'+(R.marks?(R.marks[k]?" good":" wrong"):"")+'" data-act="unplace" data-k="'+k+'"><span class="ms-no">'+(k+1)+'</span>'+label(ci,k)+'</button>'; }).join("")
-          : '<div class="ms-empty">Tap a piece below to start.</div>')+'</div>'+
-        '<div class="ms-k">'+word+' left · '+R.pool.length+'</div><div class="ms-pool">'+
-        R.pool.map(function(ci,k){ return '<button type="button" class="ms-chunk" data-act="place" data-k="'+k+'">'+label(ci,null)+'</button>'; }).join("")+'</div>'+
-        '<div class="ms-actions">'+
-          (lv==="all" ? '<button type="button" class="ms-btn" data-act="ro-run"'+(R.pool.length?" disabled":"")+'>▶ Run &amp; check</button>'
-                      : '<button type="button" class="ms-btn" data-act="ro-check"'+(R.pool.length?" disabled":"")+'>✓ Check order</button>')+
-          '<button type="button" class="ms-btn ghost" data-act="ro-reset">Shuffle again</button></div><div class="ms-out"></div>';
+      var h='<p class="ms-lead">Tap the lines in the order they run. The dots are indentation, which is part of each line. Tap a placed line to send it back.</p>'+
+        '<div class="ms-k">Your script · '+RO.built.length+' / '+ch.length+'</div><div class="ms-built">'+
+        (RO.built.length ? RO.built.map(function(ci,k){ return '<button type="button" class="ms-chunk placed" data-act="unplace" data-k="'+k+'"><span class="ms-no">'+(k+1)+'</span><pre>'+chunkHTML(ch[ci])+'</pre></button>'; }).join("") : '<div class="ms-empty">Tap a line below to start.</div>')+'</div>'+
+        '<div class="ms-k">Lines left · '+RO.pool.length+'</div><div class="ms-pool">'+RO.pool.map(function(ci,k){ return '<button type="button" class="ms-chunk" data-act="place" data-k="'+k+'"><pre>'+chunkHTML(ch[ci])+'</pre></button>'; }).join("")+'</div>'+
+        '<div class="ms-actions"><button type="button" class="ms-btn" data-act="ro-run"'+(RO.pool.length?" disabled":"")+'>▶ Run &amp; check</button><button type="button" class="ms-btn ghost" data-act="ro-reset">Shuffle again</button></div><div class="ms-out"></div>';
       body.innerHTML=h;
     }
     paint();
-    body.onchange=function(e){ if(e.target.getAttribute && e.target.getAttribute("data-act")==="ro-names"){ VIEW.roNames=e.target.checked; saveView(); paint(); } };
     body.onclick=function(e){
-      var b=e.target.closest("[data-act]"); if(!b || b.disabled) return; var a=b.getAttribute("data-act"), k=+b.getAttribute("data-k");
-      if(a==="ro-names") return;
-      if(a==="ro-lv"){ VIEW.ro=b.getAttribute("data-lv"); saveView(); viewReorder(sc, body); return; }
-      if(a==="ro-bi"){ VIEW.rbi=+b.getAttribute("data-bi"); saveView(); viewReorder(sc, body); return; }
-      if(a==="place"){ R.built.push(R.pool.splice(k,1)[0]); R.marks=null; paint(); }
-      else if(a==="unplace"){ R.pool.push(R.built.splice(k,1)[0]); R.marks=null; paint(); }
-      else if(a==="ro-reset"){ RO[id]={ pool:shuffle(n), built:[], marks:null }; R=RO[id]; paint(); }
-      else if(a==="ro-check"){
-        var res=checkOrder(set.units, R.built);
-        if(lv==="blocks" && !res.same){   // blocks have one working order (e.g. the file must be in Old/ before it is opened from there)
-          R.built.forEach(function(ci,pos){ if(ci!==pos && res.bad.indexOf(pos)<0){ res.bad.push(pos); res.why[pos]="is in the wrong place"; res.fileHint=true; } });
-          res.bad.sort(function(a,b){ return a-b; }); res.ok=false;
-        }
-        var ok=res.ok, wrong=res.bad.length;
-        R.marks=R.built.map(function(ci,pos){ return res.bad.indexOf(pos)<0; });
-        var r = lv==="blocks" ? srMark(sc.id,"ro-blocks",ok,!VIEW.roNames) : null;
-        paint();
-        var msg = ok ? '<div class="ms-verdict ok">✓ '+(res.same ? "Right order"+(lv==="blocks"?". That is how the script runs.":".")
-                                                             : "This order works. It is not the original order, but the pieces you swapped do not depend on each other, so either way runs the same.")+'</div>'
-                     : '<div class="ms-verdict bad">✕ '+wrong+' '+(wrong===1?"piece does":"pieces do")+' not work where '+(wrong===1?"it is":"they are")+' (marked ✕):</div>'+
-                       '<ul class="ms-rowhy">'+res.bad.slice(0,5).map(function(pos){ return '<li><b>'+(pos+1)+'</b> '+esc(res.why[pos])+'</li>'; }).join("")+'</ul>'+
-                       (res.fileHint?'<div class="ms-srmsg">Some blocks depend on what has already happened to the files, not just on names.</div>':'');
-        if(r) msg+='<div class="ms-srmsg">'+esc(r==="peek" ? "Right, but the block names were showing, so it is not counted. Hide them and try again." : srText(r,S(sc.id).sr["ro-blocks"]))+'</div>';
-        if(ok && lv==="blocks") msg+='<div class="ms-actions"><button type="button" class="ms-btn ghost" data-act="ro-lv" data-lv="in">Next: inside each block →</button></div>';
-        if(ok && lv==="in"){ var nx=nextMulti(set.bi); msg+='<div class="ms-actions">'+(nx>=0 ? '<button type="button" class="ms-btn ghost" data-act="ro-bi" data-bi="'+nx+'">Next block ('+(nx+1)+') →</button>' : '<button type="button" class="ms-btn ghost" data-act="ro-lv" data-lv="all">Last one done. Try the whole script →</button>')+'</div>'; }
-        $(".ms-out",body).innerHTML=msg;
-      }
+      var b=e.target.closest("[data-act]"); if(!b) return; var a=b.getAttribute("data-act"), k=+b.getAttribute("data-k");
+      if(a==="place"){ RO.built.push(RO.pool.splice(k,1)[0]); paint(); }
+      else if(a==="unplace"){ RO.pool.push(RO.built.splice(k,1)[0]); paint(); }
+      else if(a==="ro-reset"){ RO={ sid:sc.id, pool:shuffle(ch.length), built:[] }; paint(); }
       else if(a==="ro-run"){
-        var out=$(".ms-out",body), src=R.built.map(function(ci){ return set.units[ci]; }).join("\n"); b.disabled=true;
+        var out=$(".ms-out",body), src=RO.built.map(function(ci){ return ch[ci]; }).join("\n"); b.disabled=true;
         var st=function(m){ out.innerHTML='<div class="ms-wait">'+esc(m)+'</div>'; };
         expected(sc,"full",sc.original,st).then(function(exp){ return run(sc,src,st).then(function(res){
           var ok=!res.fatal && !res.err && compare(exp.out,res.out).ok, r=(res.fatal||exp.fatal)?null:srMark(sc.id,"reorder",ok,true);
@@ -529,7 +403,7 @@
     var b=e.target.closest("[data-act]"); if(!b || !root.contains(b)) return;
     var a=b.getAttribute("data-act");
     if(a==="home"){ VIEW.sid=null; saveView(); render(); }
-    else if(a==="open"){ VIEW.sid=b.getAttribute("data-sid"); if(b.hasAttribute("data-mode")){ VIEW.mode=b.getAttribute("data-mode"); VIEW.bi=+b.getAttribute("data-bi")||0; if(b.hasAttribute("data-ro")) VIEW.ro=b.getAttribute("data-ro"); } saveView(); render(); }
+    else if(a==="open"){ VIEW.sid=b.getAttribute("data-sid"); if(b.hasAttribute("data-mode")){ VIEW.mode=b.getAttribute("data-mode"); VIEW.bi=+b.getAttribute("data-bi")||0; } saveView(); render(); }
     else if(a==="mode"){ VIEW.mode=b.getAttribute("data-mode"); saveView(); render(); }
     else return;
     window.scrollTo(0, root.getBoundingClientRect().top+window.scrollY-8);
@@ -566,13 +440,6 @@
 ".ms-hint{display:flex;gap:8px;font-size:15px;line-height:1.4;color:var(--is);margin:10px 0 0}.ms-hint span{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--vm);padding-top:3px}"+
 ".ms-note{width:100%;margin-top:12px;font-family:'EB Garamond',serif;font-size:16px;line-height:1.45;color:var(--ik);background:#fff;border:1.5px solid var(--ln);border-radius:9px;padding:10px 12px;resize:vertical;min-height:84px;outline:none}.ms-note:focus{border-color:var(--g)}"+
 ".ms-built,.ms-pool{display:flex;flex-direction:column;gap:6px}"+
-".ms-rolv{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.ms-rolv .ms-mode{height:38px;font-size:11.5px}"+
-".ms-roopt{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11.5px;color:var(--is);cursor:pointer;margin:0 0 4px}"+
-".ms-ropre{display:flex;flex-direction:column;gap:4px;min-width:0}.ms-roname{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--g)}"+
-".ms-romk{font-family:var(--mono);font-weight:700;font-size:13px;width:1.2em;padding-top:1px}.ms-romk.ok{color:#2f7a4f}.ms-romk.bad{color:var(--vm)}"+
-".ms-chunk.placed.good{background:#e3efe6;border-color:#7fa68b}.ms-chunk.placed.wrong{background:#f8e9e5;border-color:#d9a197}"+
-".ms-bp:disabled{opacity:.35;cursor:default}"+
-".ms-rowhy{margin:6px 0 0;padding-left:20px;font-family:var(--mono);font-size:12px;color:var(--is);line-height:1.7}.ms-rowhy b{color:var(--vm)}"+
 ".ms-chunk{all:unset;box-sizing:border-box;display:flex;gap:6px;align-items:flex-start;min-height:44px;padding:9px 10px;background:var(--cd);border:1px solid var(--ln);border-radius:9px;cursor:pointer;overflow-x:auto}"+
 ".ms-chunk pre{font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre;color:var(--ik)}.ms-chunk.placed{background:#eef4ec;border-color:var(--sage,#7fa68b)}.ms-chunk .ms-no{width:1.6em;margin-right:4px;font-family:var(--mono);font-size:11px;padding-top:1px}"+
 ".ms-ind{color:var(--sage,#7fa68b);opacity:.8}"+

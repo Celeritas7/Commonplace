@@ -52,23 +52,13 @@
     return String(src).split("\n").map(function (l) {
       if (/^\s*(```|~~~)/.test(l)) { fence = !fence; return l; }
       if (fence) return l;
-      l = l.replace(/^(\s{0,3}#{1,6})(?=[^#\s])/, "$1 ");
-      // headings: drop keycap numbers (1-9, 10) - the outline already numbers sections
-      if (/^\s{0,3}#{1,6}\s/.test(l)) l = l.replace(/^(\s{0,3}#{1,6}\s+)(?:[0-9#*]\uFE0F?\u20E3|\uD83D\uDD1F)\s*/, "$1");
-      return l;
+      return l.replace(/^(\s{0,3}#{1,6})(?=[^#\s])/, "$1 ");
     }).join("\n");
   }
   function renderMd(src) {
     var s = normMd(src);
-    if (root.marked) { try { return wrapEmoji(root.marked.parse(s)); } catch (e) {} }
+    if (root.marked) { try { return root.marked.parse(s); } catch (e) {} }
     return "<pre>" + esc(s) + "</pre>";
-  }
-  // Wrap emoji in prose (not inside <pre>/<code>) so CSS can size and align them.
-  var EMO = /(?:\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDEFF]|\uD83E[\uDD00-\uDFFF]|[\u2600-\u27BF]|\u2B50|\u2B55)\uFE0F?/g;
-  function wrapEmoji(html) {
-    var parts = html.split(/(<pre[\s\S]*?<\/pre>|<code[\s\S]*?<\/code>|<[^>]+>)/);
-    for (var i = 0; i < parts.length; i += 2) parts[i] = parts[i].replace(EMO, '<span class="np-emo">$&</span>');
-    return parts.join("");
   }
 
   /* ---------------------------------------------- outline (units + groups) */
