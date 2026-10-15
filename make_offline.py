@@ -196,6 +196,9 @@ def main():
 BACKUP_JS = r"""/* Commonplace - progress export/import (injected by make_offline.py) */
 (function(){
 if(window.__cpBackup)return;window.__cpBackup=1;
+/* quiz layer: _lib/quiz/quiz.js sits next to this file, so derive its URL from our own src */
+var ME=document.currentScript&&document.currentScript.src;
+function quiz(){if(!ME||window.__cpQuiz||window.CP_QUIZ_OFF)return;var q=document.createElement("script");q.src=ME.replace(/progress-backup\.js(\?.*)?$/,"quiz/quiz.js");q.defer=true;document.head.appendChild(q);}
 function dl(){var d={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);d[k]=localStorage.getItem(k);}
  var blob=new Blob([JSON.stringify({app:"commonplace",exportedAt:new Date().toISOString(),data:d},null,1)],{type:"application/json"});
  var a=document.createElement("a");a.href=URL.createObjectURL(blob);
@@ -224,7 +227,7 @@ function boot(){
   var m=box.querySelector(".cpb-menu");
   if(b.className==="cpb-main"){m.hidden=!m.hidden;return;}
   if(b.getAttribute("data-a")==="ex")dl();else imp();m.hidden=true;});}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",function(){boot();quiz();});else{boot();quiz();}
 })();
 """
 
