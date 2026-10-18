@@ -55,6 +55,7 @@
   var PAGE_NAME   = CFG.pageName || (document.title || "").split(/[·|—-]/)[0].trim() || "This page";
   var LS_KEY      = "crs::" + RS;             // local progress map for this page
   var IS_FILE     = location.protocol === "file:";
+  var SELF_SRC    = (document.currentScript && document.currentScript.src) || "";   // captured now; null later
 
   var sb = null, session = null, units = [], bar = null, styleDone = false;
 
@@ -334,9 +335,17 @@
   function withSupabase(cb) {
     if (window.supabase) return cb();
     if (IS_FILE) return cb();            // offline file:// → device-only
+    // bundled copy first (works offline once cached), CDN only if that fails
+    var local = new URL("_lib/supabase.js", SELF_SRC || location.href).href;
     var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-    s.onload = cb; s.onerror = cb;
+    s.src = local;
+    s.onload = cb;
+    s.onerror = function () {
+      var c = document.createElement("script");
+      c.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      c.onload = cb; c.onerror = cb;
+      document.head.appendChild(c);
+    };
     document.head.appendChild(s);
   }
 

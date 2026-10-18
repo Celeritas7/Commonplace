@@ -47,7 +47,7 @@
     b.setAttribute("style",
       "position:fixed;right:14px;bottom:14px;z-index:60;min-height:44px;padding:11px 16px;" +
       "border-radius:9px;border:1px solid #234f3b;background:#234f3b;color:#f2f7f2;" +
-      'font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;letter-spacing:1.2px;' +
+      'font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:600;letter-spacing:1.2px;' +
       "text-transform:uppercase;cursor:pointer;box-shadow:0 10px 26px -14px rgba(20,40,30,.7)");
     b.addEventListener("click", function () {
       if (!prompt_) return;

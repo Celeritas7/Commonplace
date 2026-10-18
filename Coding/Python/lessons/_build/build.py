@@ -99,16 +99,23 @@ def tryit_notebook(href, label, note):
     return ('<p>%s</p>\n  <p><a class="nb-link" href="%s">%s ↗</a></p>' % (note, href, label))
 
 
-def render(L):
+def render(L, prev=None, written=None):
+    """prev: (href, label) of the lesson before this one, or None for the first.
+    written: set of lesson filenames that exist; a `next` pointing outside it is
+    shown as "not written yet" instead of a dead link."""
     pn, ln = L["id"].split(".")
     pi = int(pn)
     roman, partname = ROMAN[pi], PARTNM[pi]
     fname = "Py_Lesson_%s_%s.html" % (pn, ln)
 
     nxt = L.get("next")
+    if nxt and written is not None and nxt[0] not in written:
+        nxt = None
     nxt_html = ('<a href="%s">Next — %s &rarr;</a>' % (nxt[0], nxt[1])) if nxt else \
                '<span style="font-family:var(--mono);font-size:13px;color:var(--ink-mute)">Next lesson not written yet</span>'
-    nav = ('<div class="next">\n    <a href="../index.html">&larr; All Python lessons</a>\n    %s\n  </div>' % nxt_html)
+    prev_html = ('<a href="%s">&larr; Previous — %s</a>' % (prev[0], prev[1])) if prev else ''
+    nav = ('<div class="next">\n    <a href="../index.html">&larr; All Python lessons</a>\n    %s%s\n  </div>'
+           % ((prev_html + '\n    ') if prev_html else '', nxt_html))
 
     secs = []
     for i, key in enumerate(["s1","s2","s3","s4","s5","s6","s7","s8"]):
@@ -182,6 +189,7 @@ def render(L):
 <script>window.READING_SYNC={resourceSet:"py_%(pn)s_%(ln)s",mode:"page",items:"section.lesson-section",pageName:"Python Lesson %(id)s"};</script>
 <script src="../../../reading-sync.js"></script>
 <script src="../../../_lib/progress-backup.js"></script>
+<script src="../lib/sw-register.js?v=1"></script>
 <script src="../lib/lesson-reader.js" defer></script>
 </body>
 </html>
@@ -214,6 +222,24 @@ def sync_shelf():
 
 def main():
     which = sys.argv[1:] or ["0","1","2","3","4","5"]
+    # Every lesson on disk, in reading order, so each page can link to the one before it
+    # (0.1 is hand-written and not in parts/, but it is still a valid "previous").
+    written = sorted(fn for fn in os.listdir(OUT) if fn.startswith("Py_Lesson_") and fn.endswith(".html"))
+    def key(fn):
+        a, b = fn[len("Py_Lesson_"):-len(".html")].split("_"); return (int(a), int(b))
+    written.sort(key=key)
+    short = {}
+    for p in ["0","1","2","3","4","5"]:
+        try:
+            for L in importlib.import_module("parts.part_%s" % p).LESSONS:
+                short["Py_Lesson_%s.html" % L["id"].replace(".", "_")] = L["id"] + " " + L["short"]
+        except ImportError:
+            pass
+    def prev_of(fname):
+        i = written.index(fname) if fname in written else -1
+        if i <= 0: return None
+        pf = written[i - 1]
+        return (pf, short.get(pf, pf[len("Py_Lesson_"):-len(".html")].replace("_", ".")))
     total = 0
     for p in which:
         try:
@@ -221,7 +247,8 @@ def main():
         except ImportError:
             print("  (no content for part %s yet)" % p); continue
         for L in mod.LESSONS:
-            html, fname = render(L)
+            fname = "Py_Lesson_%s.html" % L["id"].replace(".", "_")
+            html, fname = render(L, prev=prev_of(fname), written=set(written))
             io.open(os.path.join(OUT, fname), "w", encoding="utf-8", newline="").write(html)
             print("  wrote %-26s %6d bytes" % (fname, len(html)))
             total += 1

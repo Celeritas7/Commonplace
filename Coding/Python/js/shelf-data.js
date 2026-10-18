@@ -132,12 +132,13 @@ function state(key){
  /* real reading progress wins over the seed when any is stored */
  var live = (window.PYPROGRESS && window.PYPROGRESS.read()) || {};
  var RD = Object.keys(live).length ? live : s.read;
- for (var k in RD){ if (RD[k].pct>=100) read++; if(!last||RD[k].at>last.at) last={id:k,pct:RD[k].pct,at:RD[k].at}; }
+ /* "last" = most recently opened; entries without a timestamp (synced status only) never win on recency */
+ for (var k in RD){ if (RD[k].pct>=100) read++; if(!last||(RD[k].at||0)>(last.at||0)) last={id:k,pct:RD[k].pct,at:RD[k].at||0}; }
  return {key:key, W:W, read:RD, last:last,
   book:{written:s.bookWritten.length, total:total, read:read}};
 }
 
-function ago(t){var d=Math.round((Date.now()-t)/864e5);if(d<1)return"today";if(d===1)return"yesterday";if(d<30)return d+" days ago";return Math.round(d/30)+" mo ago";}
+function ago(t){if(!t)return"earlier";var d=Math.round((Date.now()-t)/864e5);if(d<1)return"today";if(d===1)return"yesterday";if(d<30)return d+" days ago";return Math.round(d/30)+" mo ago";}
 
 function bookmark(S){
  var first = PARTS[0];
