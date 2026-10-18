@@ -279,6 +279,7 @@
         rec.set = function (v) { if (cm) cm.setValue(v); else ta.value = v; };
         rec.init = function () {
           cm = root.CodeMirror.fromTextArea(ta, { mode: "python", lineNumbers: true, indentUnit: 4, viewportMargin: Infinity,
+            lineWrapping: root.innerWidth <= 640,   // phones: wrap instead of scrolling sideways inside a cell
             extraKeys: { "Shift-Enter": function () { runCell(rec); }, "Ctrl-Enter": function () { runCell(rec); }, "Tab": function (c) { c.execCommand(c.somethingSelected() ? "indentMore" : "insertSoftTab"); } } });
           cm.on("change", function () { store(LS("code_" + n), cm.getValue()); });
           cms.push(cm);

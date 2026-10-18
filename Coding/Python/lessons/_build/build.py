@@ -189,6 +189,7 @@ def render(L, prev=None, written=None):
 <script>window.READING_SYNC={resourceSet:"py_%(pn)s_%(ln)s",mode:"page",items:"section.lesson-section",pageName:"Python Lesson %(id)s"};</script>
 <script src="../../../reading-sync.js"></script>
 <script src="../../../_lib/progress-backup.js"></script>
+<script src="../lib/sw-register.js?v=1"></script>
 <script src="../lib/lesson-reader.js" defer></script>
 </body>
 </html>
