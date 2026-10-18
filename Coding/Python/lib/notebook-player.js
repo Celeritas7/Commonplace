@@ -369,7 +369,9 @@
 
     /* ---- running ---- */
     var sessionRan = {};
-    function codeOf(n) { return editors[n] ? editors[n].get() : ""; }
+    /* IPython-only lines (%matplotlib inline, !pip …) are not Python; drop them so the cell still runs */
+    function stripMagics(code) { return code.replace(/^[ \t]*[%!].*$/gm, ""); }
+    function codeOf(n) { return editors[n] ? stripMagics(editors[n].get()) : ""; }
     function runQuiet(p, code) {
       return p.loadPackagesFromImports(code).catch(function () {}).then(function () { return p.runPythonAsync(code); }).catch(function () {});
     }
@@ -388,7 +390,7 @@
       var out = rec.out, buf = "";
       out.className = "np-out show"; out.textContent = ""; rec.run.disabled = true;
       function append(s) { buf += s + "\n"; out.textContent = buf; }
-      var code = rec.get();
+      var code = stripMagics(rec.get());
       return ensurePy().then(function (p) {
         return (PREREQS && !opts.noPre ? runPrereqs(p, rec.n) : Promise.resolve()).then(function () {
           p.setStdout({ batched: append }); p.setStderr({ batched: append });

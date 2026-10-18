@@ -49,7 +49,9 @@ window.CommonplacePractice = (function () {
   var C={ brass:"#a98a4b", ok:"#2f8f5b", err:"#b3261e" };
 
   /* ===================== shared Pyodide engine ===================== */
-  var PY_BASES=["https://cdn.jsdelivr.net/pyodide/v0.26.4/full/","https://fastly.jsdelivr.net/pyodide/v0.26.4/full/","https://unpkg.com/pyodide@0.26.4/"];
+  /* bundled copy first (same version, works offline), CDNs as fallback */
+  var PY_LOCAL=(function(){ try{ var s=document.currentScript&&document.currentScript.src; if(s) return new URL("../../../_lib/pyodide/", s).href; }catch(e){} return new URL("../../_lib/pyodide/", location.href).href; })();
+  var PY_BASES=[PY_LOCAL,"https://cdn.jsdelivr.net/pyodide/v0.26.4/full/","https://fastly.jsdelivr.net/pyodide/v0.26.4/full/","https://unpkg.com/pyodide@0.26.4/"];
   var PY_BASE=PY_BASES[0];
   var py=null, pyState="idle", pyPromise=null, enginePills=[], engineSubs=[];
   var ENGINE_MAP={ idle:[C.brass,"CPython idle"], boot:[C.brass,"loading CPython…"], ready:[C.ok,"CPython ready"],

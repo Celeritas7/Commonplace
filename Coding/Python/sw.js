@@ -7,7 +7,7 @@
  *      is already handled by the browser's own HTTP cache)
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v14";
+var VERSION = "cp-py-v15";
 var CORE = [
   "./",
   "index.html",

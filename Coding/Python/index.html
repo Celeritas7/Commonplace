@@ -609,13 +609,15 @@ body.cc-focus-lock{overflow:hidden;}
 <div class="ip-toast" id="ip-toast"></div>
 
 <!-- Imported Practice: Supabase client + magic-link login, mirroring cpp_playground.html -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../../_lib/supabase.js"></script>
 <script>(function __RUNNER(){
   var pyodide=null, pyReady=false, pyLoading=null;
   function setBtn(b,txt,dis){ if(b){ b.innerHTML=txt; b.disabled=dis; } }
   // Pyodide is lazy-loaded on first Run (not at startup) to keep page load fast.
   var PY_VERSION = "v0.26.4";
+  // The bundled copy in _lib/pyodide (same version) comes first, so this works offline.
   var PY_BASES = [
+    new URL("../../_lib/pyodide/", location.href).href,
     "https://cdn.jsdelivr.net/pyodide/" + PY_VERSION + "/full/",
     "https://fastly.jsdelivr.net/pyodide/" + PY_VERSION + "/full/",
     "https://unpkg.com/pyodide@" + PY_VERSION.slice(1) + "/"
@@ -729,9 +731,24 @@ body.cc-focus-lock{overflow:hidden;}
 var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
 var SUPABASE_KEY = "sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv";
 
-var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-});
+var sb;
+try {
+  if (!window.supabase) throw new Error("supabase-js not loaded");
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+} catch (e) {
+  /* Offline or the script was blocked: keep the rest of the page alive.
+     Everything below still works; cloud reads report "offline", writes are refused. */
+  var __off = function(){ return Promise.resolve({ data: null, error: { message: "offline — connect to sync" } }); };
+  var __q = { select: function(){ return __q; }, eq: function(){ return __q; }, order: function(){ return __q; },
+              insert: __off, upsert: __off, update: __off, delete: __off,
+              then: function(ok, no){ return __off().then(ok, no); } };
+  sb = { __offline: true,
+         auth: { signOut: function(){}, signInWithOtp: __off, onAuthStateChange: function(){},
+                 getSession: function(){ return Promise.resolve({ data: { session: null } }); } },
+         from: function(){ return __q; } };
+}
 var currentUser = null;
 window.__hc = window.__hc || { exp:{}, sel:{}, tview:'lines', edits:{}, ins:{}, out:{}, notes:(function(){try{return JSON.parse(localStorage.getItem("cp_chain_notes")||"{}");}catch(e){return {};}})(), rows:null };
 
@@ -744,7 +761,9 @@ function toast(msg){ var t=$("ip-toast"); t.textContent=msg; t.classList.add("sh
 /* ---------- auth UI (magic link) ---------- */
 function renderAuth(){
   var el = $("ip-auth");
-  if(currentUser){
+  if(sb.__offline){
+    el.innerHTML = '<span class="who">Offline &middot; saved on this device</span>';
+  } else if(currentUser){
     el.innerHTML = '<span class="who">Signed in as <b>'+esc(currentUser.email)+'</b></span> <button class="ip-btn ip-btn-ghost" id="ip-signout" type="button">Sign out</button>';
     $("ip-signout").onclick = function(){ sb.auth.signOut(); };
   } else {
@@ -1062,7 +1081,6 @@ sb.auth.getSession().then(function(res){
 <script src="lib/py-keys.js"></script>
 <script src="lib/compose-blocks.js"></script>
 <script src="lib/practice-engine.js"></script>
-<script src="lib/game-layer.js"></script>
 <script src="lib/my-scripts-data.js?v=1"></script>
 <script src="lib/my-scripts.js?v=3"></script>
 <script>
