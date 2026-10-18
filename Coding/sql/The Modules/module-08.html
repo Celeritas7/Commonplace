@@ -168,6 +168,21 @@ main table td { padding:9px 26px 9px 0; border-bottom:1px solid var(--rule-soft)
   .spec { justify-self:start; }
   .crumbs { display:none; }
 }
+/* phones: nothing wider than the screen */
+@media (max-width:680px) {
+  .topbar { position:static; }                    /* sticky + wrapped rows overlapped the rail */
+  .topbar__row { flex-wrap:wrap; height:auto; padding:10px 20px; gap:8px 14px; }
+  .crumbs { display:none; }
+  .rail { top:0; }
+  .topnav { flex-wrap:wrap; gap:8px 14px; width:100%; }
+  .topnav .pill { padding:8px 12px; white-space:nowrap; }
+  .module-progress-pill { margin-left:0 !important; }
+  main table { display:block; overflow-x:auto; max-width:100%; }
+  pre, .highlight { max-width:100%; overflow-x:auto; }
+  .playground textarea { font-size:13px; }
+  .pg-actions { flex-wrap:wrap; gap:8px; }
+  .pg-actions .btn { padding:8px 12px; }
+}
 </style>
 </head>
 <body>
@@ -804,6 +819,28 @@ SELECT id, name, price_num FROM product_import ORDER BY id;</textarea>
 <script>
 const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
 let dbPromise = null;
+let dataChanged = false; // set after any statement that alters data or schema
+const CHANGES_DATA = /^\s*(DROP|CREATE|ALTER|INSERT|UPDATE|DELETE|REPLACE)\b/im;
+// All playgrounds on this page share one database on purpose (a CREATE TABLE in
+// one lesson is used by the next). This rebuilds it from the seed.
+window.SQL_PG_RESET = async function () {
+  try { const old = await dbPromise; if (old) old.close(); } catch (e) {}
+  dbPromise = null; dataChanged = false;
+  await getDb();
+  document.querySelectorAll(".pg-changed").forEach(n => n.remove());
+  document.querySelectorAll(".playground .pg-result").forEach(r => { r.innerHTML = ""; });
+  const first = document.querySelector(".playground .pg-result");
+  if (first) first.innerHTML = '<div class="pg-status ok">✓ Data reset to its original state — every playground on this page now sees the seed data again.</div>';
+};
+function changedNote(pg) {
+  pg.querySelectorAll(".pg-changed").forEach(n => n.remove());
+  if (!dataChanged) return;
+  const n = document.createElement("div");
+  n.className = "pg-status pg-changed";
+  n.style.cssText = "margin-top:8px;opacity:0.9";
+  n.innerHTML = '⚠ The data was changed by a statement on this page. <button type="button" class="btn" style="margin-left:6px" onclick="SQL_PG_RESET()">Reset data ↺</button>';
+  pg.querySelector(".pg-result").appendChild(n);
+}
 function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
 async function getDb() {
   if (!dbPromise) {
@@ -836,8 +873,10 @@ async function runQuery(pg) {
   try {
     const db = await getDb();
     const out = db.exec(sql);
+    if (CHANGES_DATA.test(sql)) dataChanged = true;
     if (out.length === 0) renderResult(result, null, null, "Statement executed");
     else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
+    changedNote(pg);
     led.classList.remove("loading","err");
   } catch (e) {
     led.classList.remove("loading"); led.classList.add("err");
@@ -852,10 +891,29 @@ document.querySelectorAll(".playground").forEach(pg => {
   const reset = pg.querySelector('[data-action="reset"]');
   if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
   const hint = pg.querySelector('[data-action="hint"]');
-  if (hint) hint.addEventListener("click", () => alert(hint.dataset.hint));
+  if (hint) hint.addEventListener("click", () => {
+    // inline hint box under the actions, toggled; replaces the old alert()
+    let box = pg.querySelector(".pg-hint-box");
+    if (!box) {
+      box = document.createElement("div");
+      box.className = "pg-hint-box";
+      box.style.cssText = "margin:0 14px 12px;padding:10px 14px;border-left:3px solid var(--accent, #8a2f22);background:rgba(255,255,255,0.04);font-size:13.5px;line-height:1.5;color:var(--term-w, #c9d4e3);";
+      box.innerHTML = "<b style='font-family:var(--mono);font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7'>Hint</b> &nbsp;" + escapeHtml(hint.dataset.hint);
+      pg.querySelector(".pg-actions").insertAdjacentElement("afterend", box);
+      hint.textContent = "Hide hint";
+    } else { box.remove(); hint.textContent = "Show hint"; }
+  });
   const sol = pg.querySelector('[data-action="solution"]');
   if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
-  ta.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); } });
+  ta.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); }
+    if (e.key === "Tab" && !e.shiftKey) { // Tab indents instead of leaving the editor
+      e.preventDefault();
+      const s = ta.selectionStart, en = ta.selectionEnd;
+      ta.value = ta.value.slice(0, s) + "  " + ta.value.slice(en);
+      ta.setSelectionRange(s + 2, s + 2);
+    }
+  });
 });
 getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
        .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
@@ -880,11 +938,12 @@ updateActiveToc();
 <script>
 (function(){var hs=document.querySelectorAll('main h4[id^="challenge-"]');var total=hs.length;var sc=document.getElementById("spec-challenges");if(sc)sc.textContent=String(total);var done=0;try{var st=JSON.parse(localStorage.getItem("commonplace_module_exercises_progress")||"{}");Object.keys(st).forEach(function(k){if(st[k]==="done"&&/^ex_8_/.test(k))done++;});}catch(e){}var pct=total?Math.min(100,Math.round(done/total*100)):0;var f=document.getElementById("mod-pbar");if(f)f.style.width=pct+"%";var l=document.getElementById("mod-pbar-label");if(l)l.textContent=done+" / "+total+" challenges done";var p=document.getElementById("mod-pbar-pct");if(p)p.textContent=pct+"% complete";})();
 </script>
+<script src="../lib/exercises-index.js"></script>
 <script src="playground-enhancements.js"></script>
 
 <!-- Commonplace cloud reading-progress sync -->
 <script>window.READING_SYNC={resourceSet:"sql_module_08",mode:"toggle",items:"h2[id^=\u0027lesson-\u0027]"};</script>
-<script src="reading-sync.js"></script>
+<script src="../../../reading-sync.js"></script>
 <script src="funnel-interactive.js" defer></script>
 <script src="../../../_lib/progress-backup.js"></script>
 <script src="../lib/sql-kb-fix.js?v=2"></script>

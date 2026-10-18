@@ -673,7 +673,8 @@
     var ok = !!(fb && fb.classList.contains("ok"));
     var msg = "";
     if (fb) {
-      msg = fb.textContent.replace(/^[✓✕]\s*/, "").trim();
+      var vline = fb.querySelector(".ex-verdict");   // verdict only — not the expected/yours diff under it
+      msg = (vline ? vline.textContent : fb.textContent).replace(/^[✓✕]\s*/, "").trim();
       // tighten common phrasings for the compact reason line
       if (/no result set/i.test(msg)) msg = "no rows returned";
       else if (/^SQL error/i.test(msg)) msg = msg.split("—")[0].trim();
