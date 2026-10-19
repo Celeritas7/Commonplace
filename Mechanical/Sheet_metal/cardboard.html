@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cardboard Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Martian+Mono:wdth,wght@75..112.5,300..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&display=swap">
+<style>
+/* Same layout language as the Sheet Metal module, re-skinned in kraft board.
+   Solid ink = cut. Dashed layout blue = score (fold). Faint lines in the board = flute direction. */
+:root{
+  --paper:#ece4d6; --sheet:#f7f2e9; --sheet-2:#f0e8db;
+  --ink:#221b13; --ink-soft:#4a3e31; --mute:#7a6c5c; --rule:#d3c5b0; --rule-soft:#e2d7c6;
+  --layout:#1d4da6; --layout-ink:#153a80; --layout-wash:rgba(29,77,166,.08);
+  --kraft:#d2ab78; --kraft-2:#c09461; --kraft-edge:#7d5a33; --flute:rgba(90,60,25,.22);
+  --ok-bg:#edf6f0; --ok-line:#b5d3bf; --ok-ink:#1d6741;
+  --bad-bg:#f8efed; --bad-line:#deb6ae; --bad-ink:#a1311f;
+  --warn-bg:#fbf3e2; --warn-line:#e4cc97; --warn-ink:#83570f;
+  --f-display:'Archivo','Arial Narrow',system-ui,sans-serif;
+  --f-body:'Newsreader',Georgia,'Times New Roman',serif;
+  --f-mono:'Martian Mono',ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#15120e; --sheet:#1e1914; --sheet-2:#1a1612;
+  --ink:#ece4d8; --ink-soft:#bdb1a1; --mute:#8d8172; --rule:#3a3128; --rule-soft:#2b241d;
+  --layout:#7fa6f2; --layout-ink:#a9c3f7; --layout-wash:rgba(127,166,242,.10);
+  --kraft:#7f6141; --kraft-2:#6b5036; --kraft-edge:#c7a77d; --flute:rgba(255,230,190,.14);
+  --ok-bg:#18261e; --ok-line:#2d5a3f; --ok-ink:#8fd1a9;
+  --bad-bg:#2a1d1b; --bad-line:#6b3a33; --bad-ink:#f0a092;
+  --warn-bg:#2a2216; --warn-line:#6a5124; --warn-ink:#e9c27a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#15120e; --sheet:#1e1914; --sheet-2:#1a1612;
+  --ink:#ece4d8; --ink-soft:#bdb1a1; --mute:#8d8172; --rule:#3a3128; --rule-soft:#2b241d;
+  --layout:#7fa6f2; --layout-ink:#a9c3f7; --layout-wash:rgba(127,166,242,.10);
+  --kraft:#7f6141; --kraft-2:#6b5036; --kraft-edge:#c7a77d; --flute:rgba(255,230,190,.14);
+  --ok-bg:#18261e; --ok-line:#2d5a3f; --ok-ink:#8fd1a9;
+  --bad-bg:#2a1d1b; --bad-line:#6b3a33; --bad-ink:#f0a092;
+  --warn-bg:#2a2216; --warn-line:#6a5124; --warn-ink:#e9c27a; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--layout);text-decoration:none}
+a:hover{color:var(--layout-ink);text-decoration:underline}
+:focus-visible{outline:2px solid var(--layout);outline-offset:3px}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:var(--f-mono);font-stretch:87.5%}
+[hidden]{display:none!important}
+
+.page{max-width:1080px;margin:0 auto;padding:28px 32px 96px}
+@media (max-width:640px){.page{padding-inline:16px}}
+
+.crumbs{font-family:var(--f-mono);font-stretch:87.5%;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--mute)}
+.crumbs a{color:var(--mute)}
+.kicker{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;font-weight:500;letter-spacing:2.6px;text-transform:uppercase;color:var(--layout)}
+.kicker::before{content:"";width:28px;border-top:1.5px dashed currentColor}
+
+.hero{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center;margin:28px 0 8px}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+h1{font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:clamp(38px,6vw,64px);line-height:.98;letter-spacing:-.02em;margin:14px 0 0}
+.lede{margin:18px 0 0;max-width:56ch;color:var(--ink-soft);text-wrap:pretty}
+.hero svg{width:100%;height:auto;max-height:320px}
+
+h2{font-family:var(--f-display);font-stretch:112%;font-weight:750;font-size:clamp(26px,3.4vw,34px);line-height:1.1;margin:0}
+h3{font-family:var(--f-display);font-stretch:105%;font-weight:700;font-size:19px;margin:0 0 6px}
+section.sec{margin-top:64px;padding-top:28px;border-top:1.5px dashed var(--rule)}
+section.sec > .kicker{margin-bottom:10px}
+.intro{max-width:64ch;color:var(--ink-soft);margin:12px 0 0}
+
+.panel{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:22px}
+@media (max-width:640px){.panel{padding:16px}}
+
+table{border-collapse:collapse;width:100%;font-size:16px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--rule-soft)}
+th{font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--mute);font-weight:500;border-bottom:1px solid var(--rule)}
+.tablewrap{overflow-x:auto;margin-top:20px}
+.tablewrap table{min-width:620px}
+td.mono{white-space:nowrap}
+td.k{font-family:var(--f-display);font-weight:650;white-space:nowrap}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:22px}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:18px 18px 16px}
+.card .tag{font-family:var(--f-mono);font-stretch:87.5%;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--layout);margin-bottom:6px}
+.card p,.card li{font-size:16px;color:var(--ink-soft);margin:0}
+.card ul,.card ol{margin:6px 0 0;padding-left:20px}
+.card li+li{margin-top:4px}
+
+/* planner */
+.planner{display:grid;grid-template-columns:320px 1fr;gap:24px;margin-top:22px;align-items:start}
+@media (max-width:900px){.planner{grid-template-columns:1fr}}
+.planner > *,.two > *{min-width:0}
+fieldset{border:0;margin:0 0 18px;padding:0}
+legend{font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--layout);margin-bottom:8px;padding:0}
+.f{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:8px;margin:6px 0;font-size:15.5px}
+.f.wide{grid-template-columns:1fr}
+.f input[type=number],.f select{width:100%;background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:6px 8px;font-family:var(--f-mono);font-stretch:87.5%;font-size:13px}
+.f.wide select{font-family:var(--f-body);font-size:15px}
+.f label small{display:block;color:var(--mute);font-size:13px;line-height:1.3}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:15.5px;margin:8px 0}
+.check input{margin-top:5px}
+.hint{font-size:14px;color:var(--mute);line-height:1.45;margin:8px 0 0}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--sheet-2);border:1px solid var(--rule-soft);border-radius:5px;padding:10px 12px}
+.stat .l{font-family:var(--f-mono);font-stretch:87.5%;font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--mute)}
+.stat .v{font-family:var(--f-mono);font-stretch:87.5%;font-size:17px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.stat .s{font-size:13px;color:var(--mute)}
+
+.notes{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px}
+.notes li{border:1px solid;border-radius:5px;padding:8px 12px;font-size:15px;line-height:1.45}
+.notes li.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+.notes li.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+.notes li.bad{background:var(--bad-bg);border-color:var(--bad-line);color:var(--bad-ink)}
+
+.figure{margin-top:18px;background:var(--sheet-2);border:1px solid var(--rule-soft);border-radius:5px;padding:12px}
+.figure svg{display:block;width:100%;height:auto}
+.figcap{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;justify-content:space-between;font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.legend{display:flex;flex-wrap:wrap;gap:14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:22px;height:0;border-top:2px solid var(--ink)}
+.sw.score{border-top:2px dashed var(--layout)}
+.sw.flute{border-top:2px solid var(--flute);width:22px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--layout);color:var(--layout);border-radius:4px;padding:6px 12px;cursor:pointer;font-family:var(--f-mono);font-stretch:87.5%;font-size:11px;letter-spacing:1.2px;text-transform:uppercase}
+.btn:hover{background:var(--layout-wash)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:5px 10px;cursor:pointer;font-family:var(--f-mono);font-stretch:87.5%;font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--mute)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+ol.steps{margin:10px 0 0;padding-left:22px;font-size:16px;color:var(--ink-soft)}
+ol.steps li+li{margin-top:6px}
+ol.steps b{color:var(--ink)}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:22px;align-items:start}
+@media (max-width:820px){.two{grid-template-columns:1fr}}
+
+.big{font-family:var(--f-display);font-stretch:112%;font-weight:800;font-size:44px;line-height:1;margin:6px 0 4px}
+.big small{font-size:18px;font-weight:600;color:var(--mute)}
+
+footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-family:var(--f-mono);font-stretch:87.5%;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--mute)}
+
+@media print{
+  body{background:#fff;color:#000;font-size:12pt}
+  .noprint,.hero,section.sec:not(#drawers),.planner > form,footer,.crumbs{display:none!important}
+  #drawers{border:0;margin:0;padding:0}
+  .planner{display:block}
+  .panel,.figure,.stat{border-color:#999;background:#fff}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="crumbs"><a href="../../index.html">Commonplace</a> / <a href="../index.html">Mechanical</a> / <a href="index.html">Sheet Metal</a> / Cardboard</div>
+
+<header class="hero">
+  <div>
+    <div class="kicker">Side project · Sheet set SM</div>
+    <h1>Cardboard Workshop</h1>
+    <p class="lede">Supermarket boxes make good temporary furniture. Corrugated board follows the same rules as sheet metal. It starts as a flat blank, you score it before you fold it, it is stronger in one direction, and a folded-over edge stiffens it the way a hem does. This page applies those rules to drawers, shelves and tables made from boxes you can get for free.</p>
+  </div>
+  <svg viewBox="0 0 360 280" role="img" aria-label="A cardboard box on its side with two drawers, the top one pulled out">
+    <defs>
+      <pattern id="fl" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 3H6" stroke="var(--flute)" stroke-width="1"/></pattern>
+    </defs>
+    <!-- carcass -->
+    <polygon points="70,90 230,90 290,55 130,55" fill="var(--kraft-2)" stroke="var(--kraft-edge)" stroke-width="1.5"/>
+    <polygon points="230,90 290,55 290,215 230,250" fill="var(--kraft-2)" stroke="var(--kraft-edge)" stroke-width="1.5"/>
+    <polygon points="70,90 230,90 230,250 70,250" fill="var(--sheet-2)" stroke="var(--kraft-edge)" stroke-width="1.5"/>
+    <!-- lower drawer front -->
+    <rect x="74" y="172" width="152" height="74" fill="var(--kraft)" stroke="var(--kraft-edge)" stroke-width="1.5"/>
+    <rect x="74" y="172" width="152" height="74" fill="url(#fl)"/>
+    <rect x="130" y="192" width="40" height="12" rx="6" fill="var(--kraft-edge)" opacity=".7"/>
+    <!-- upper drawer pulled out -->
+    <polygon points="40,118 200,118 230,100 70,100" fill="var(--kraft-2)" stroke="var(--kraft-edge)" stroke-width="1.5"/>
+    <polygon points="44,116 196,116 222,101 70,101" fill="var(--sheet)" opacity=".55"/>
+    <polygon points="200,118 230,100 230,160 200,178" fill="var(--kraft-2)" stroke="var(--kraft-edge)" stroke-width="1.5"/>
+    <rect x="34" y="108" width="172" height="76" fill="var(--kraft)" stroke="var(--kraft-edge)" stroke-width="1.5"/>
+    <rect x="34" y="108" width="172" height="76" fill="url(#fl)"/>
+    <rect x="100" y="128" width="40" height="12" rx="6" fill="var(--kraft-edge)" opacity=".7"/>
+    <!-- score line hint -->
+    <path d="M34 108H206" stroke="var(--layout)" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <text x="214" y="112" font-family="Martian Mono,monospace" font-size="9" fill="var(--layout)">hemmed edge</text>
+    <text x="236" y="245" font-family="Martian Mono,monospace" font-size="9" fill="var(--mute)">flutes ↕</text>
+  </svg>
+</header>
+
+<!-- 1 -->
+<section class="sec" id="rules">
+  <div class="kicker">01 · Same rules, softer sheet</div>
+  <h2>What carries over from sheet metal</h2>
+  <p class="intro">Most of what you learn on the Sheet Metal sheets applies here. The numbers are looser, because board is soft and every box is a little different. Expect ±1–2 mm.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Sheet metal</th><th>Cardboard version</th><th>Rule you'll use</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Thickness t</td><td>Board caliper</td><td>3-ply (single wall) ≈ 3–4 mm. 5-ply (double wall) ≈ 6–7 mm. 7-ply ≈ 10 mm. Measure the cut edge of your board.</td></tr>
+      <tr><td class="k">Rolling direction</td><td>Flute direction</td><td>Board is much stiffer along the flutes. Run them <b>vertically in walls and legs</b> (column strength) and <b>along the span in shelves</b> (they act like beams).</td></tr>
+      <tr><td class="k">Bend line</td><td>Score line</td><td>Press a crease first with a blunt tool, such as an empty ballpoint pen or the back of a butter knife. Put the score on the <b>inside</b> of the fold. Never cut through the liner to make a fold.</td></tr>
+      <tr><td class="k">K-factor and bend deduction (SM-11)</td><td>Fold allowance</td><td>A crushed crease has R ≈ 0 and K ≈ 0.5, so each 90° fold adds BA = π/2 · K · t ≈ 0.8 t to the inside length. The planner below works this out for you.</td></tr>
+      <tr><td class="k">Hem</td><td>Fold-over edge</td><td>Fold a wall over its top edge and down the inside. You get a double wall and a rounded edge that won't fray. Thick board needs <b>two parallel scores, one board thickness apart</b>, to make a 180° fold.</td></tr>
+      <tr><td class="k">Bend relief</td><td>Corner slit / V-notch</td><td>Where two folds meet at a corner, cut a 2–3 mm slot so the board doesn't tear or bunch up.</td></tr>
+      <tr><td class="k">Min. flange height</td><td>Min. flap width</td><td>Flaps narrower than about 4 t won't fold straight. Keep glue flaps ≥ 25 mm.</td></tr>
+      <tr><td class="k">Hole-to-bend distance</td><td>Cut-out to score</td><td>Keep handle holes and slots ≥ 20 mm from any score. Otherwise the fold kinks through the hole.</td></tr>
+      <tr><td class="k">Laminated / double sheet</td><td>Cross-laminating</td><td>Glue two layers with the flutes at 90° to each other. The panel ends up stiff in both directions. Use this for tops, shelves and drawer bottoms.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- 2 -->
+<section class="sec" id="boxes">
+  <div class="kicker">02 · Sourcing</div>
+  <h2>Picking boxes at the supermarket</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Best</div><h3>Ask for these</h3><ul>
+      <li><b>Banana / fruit boxes.</b> Usually double wall, often two-piece with a deep lid, and built to stack. They make the best carcasses.</li>
+      <li><b>Printer-paper / copier boxes.</b> Strong, square, with a lid that fits. They make good drawers as they are.</li>
+      <li><b>Beverage and bottle cartons.</b> They often come with ready-made egg-crate dividers.</li>
+      <li><b>Appliance boxes</b> (from the electronics aisle). You get big flat sheets for tops and back panels.</li>
+    </ul></div>
+    <div class="card"><div class="tag">Check</div><h3>Before you carry it home</h3><ul>
+      <li>Press a corner. If it's soft or crushed, the box has lost most of its strength.</li>
+      <li>Look at the cut edge to count the plies and see the flutes.</li>
+      <li>Read the box print. A stamp like “5 ply”, “ECT 44”, or a bursting/BCT figure tells you the grade.</li>
+      <li>Take a tape measure and the shopping list from the planner below.</li>
+    </ul></div>
+    <div class="card"><div class="tag">Avoid</div><h3>Leave these behind</h3><ul>
+      <li>Meat, fish or dairy boxes, and anything damp, stained or smelly. These attract mould and cockroaches.</li>
+      <li>Waxed or plastic-coated produce boxes. Glue won't stick to them. They're fine for a dry bin, though.</li>
+      <li>Boxes that have been wet and dried. They look fine but are weak.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="sec" id="drawers">
+  <div class="kicker">03 · Planner</div>
+  <h2>Drawer unit from one box</h2>
+  <p class="intro">Stand a large box on end with its open (flap) end facing you. That box is the cabinet, or <i>carcass</i>. Measure it on the inside and enter the numbers. You get each drawer's size, the box sizes to look for, a dimensioned flat pattern if you'd rather cut the drawers from flat board, and a cut list for the runners and fronts.</p>
+
+  <div class="planner">
+    <form class="panel" id="pform" onsubmit="return false">
+      <fieldset>
+        <legend>Carcass · inside, mm</legend>
+        <div class="f"><label for="cw">Width</label><input id="cw" type="number" min="100" max="2000" step="1" value="380"></div>
+        <div class="f"><label for="ch">Height</label><input id="ch" type="number" min="100" max="2000" step="1" value="480"></div>
+        <div class="f"><label for="cd">Depth<small>open face → back wall</small></label><input id="cd" type="number" min="100" max="2000" step="1" value="300"></div>
+        <div class="f wide"><select id="cboard" aria-label="Carcass board"></select></div>
+      </fieldset>
+      <fieldset>
+        <legend>Drawers</legend>
+        <div class="f"><label for="n">How many, stacked</label><input id="n" type="number" min="1" max="6" step="1" value="3"></div>
+        <div class="f wide"><select id="dboard" aria-label="Drawer board"></select></div>
+        <div class="f"><label for="clr">Side gap, each side</label><input id="clr" type="number" min="0" max="20" step="0.5" value="3"></div>
+        <div class="f"><label for="top">Gap above drawer</label><input id="top" type="number" min="0" max="40" step="1" value="8"></div>
+        <div class="f"><label for="back">Gap at back</label><input id="back" type="number" min="0" max="60" step="1" value="10"></div>
+        <label class="check"><input id="hem" type="checkbox" checked><span>Hemmed walls (folded over, double thickness). Stronger and cleaner, but needs a bigger blank.</span></label>
+        <div class="f"><label for="k">K-factor<small><a href="index.html">SM-11</a> · 0.5 for a crushed crease</small></label><input id="k" type="number" min="0.2" max="0.5" step="0.01" value="0.5"></div>
+      </fieldset>
+      <p class="hint">Fold the carcass flaps inward and glue them flat against the inside walls before you measure. They double the walls at the opening, the same job a hem does on a sheet-metal edge.</p>
+    </form>
+
+    <div>
+      <div class="panel">
+        <div class="stats" id="stats"></div>
+        <ul class="notes" id="notes"></ul>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h3>Shopping list · quickest route</h3>
+        <p class="hint" style="margin-top:0">You don't have to make a drawer from flat board. Find a box with the right footprint and cut it down. Look for:</p>
+        <ul class="notes" id="shop"></ul>
+      </div>
+
+      <div class="figure">
+        <div class="figcap">
+          <span id="figtitle">Drawer blank · flat pattern</span>
+          <span class="legend"><span><i class="sw"></i>cut</span><span><i class="sw score"></i>score · fold up</span><span><i class="sw flute"></i>flutes</span></span>
+        </div>
+        <svg id="flat" role="img" aria-label="Dimensioned flat pattern of the drawer blank"></svg>
+        <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn" type="button" onclick="window.print()">Print plan</button>
+          <button class="btn" type="button" id="dl">Download SVG</button>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h3>Cut list</h3>
+        <div class="tablewrap" style="margin-top:6px"><table id="cuts"></table></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h3>Assembly</h3>
+        <ol class="steps" id="steps"></ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="sec" id="load">
+  <div class="kicker">04 · Will it hold?</div>
+  <h2>Load on top of the carcass</h2>
+  <p class="intro">A box's stacking strength comes from its four walls acting as columns. The usual packaging estimate is the McKee formula: BCT ≈ 5.87 · ECT · √(t · Z), where Z is the box perimeter. Cutting a face open, turning the box on its side, humidity and long-term load each take a share of that strength away. The number below is a rough guide only. Test with gradually more weight before you trust it.</p>
+  <div class="two">
+    <form class="panel" onsubmit="return false">
+      <fieldset>
+        <legend>Carcass</legend>
+        <div class="f"><label>Inside W × D</label><span class="mono" id="lwd">–</span></div>
+        <div class="f wide"><select id="lboard" aria-label="Board grade"></select></div>
+        <div class="f"><label for="ect">ECT, kN/m<small>edge crush, from box print if shown</small></label><input id="ect" type="number" min="1" max="30" step="0.5"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Derating</legend>
+        <div class="f wide"><select id="orient">
+          <option value="1">Standing the way it was shipped (flutes vertical)</option>
+          <option value="0.5">Turned on its side (two walls' flutes horizontal)</option>
+        </select></div>
+        <div class="f wide"><select id="open">
+          <option value="1">All four walls intact</option>
+          <option value="0.6" selected>One face removed for drawers / shelves</option>
+        </select></div>
+        <div class="f wide"><select id="hum">
+          <option value="1">Dry / air-conditioned room</option>
+          <option value="0.8" selected>Normal indoor room</option>
+          <option value="0.5">Humid / monsoon season</option>
+        </select></div>
+        <div class="f wide"><select id="dur">
+          <option value="1">A few hours</option>
+          <option value="0.5" selected>Weeks to months (creep)</option>
+        </select></div>
+        <div class="f wide"><select id="used">
+          <option value="1">Clean, uncrushed box</option>
+          <option value="0.8" selected>Second-hand / shipped once</option>
+        </select></div>
+      </fieldset>
+    </form>
+    <div class="panel">
+      <div class="stat" style="background:transparent;border:0;padding:0"><div class="l">Safe sustained load on top</div></div>
+      <div class="big" id="safe">–</div>
+      <div class="stats" style="margin-top:12px">
+        <div class="stat"><div class="l">BCT, new box</div><div class="v" id="bct">–</div></div>
+        <div class="stat"><div class="l">Combined factor</div><div class="v" id="fac">–</div></div>
+      </div>
+      <ul class="notes">
+        <li class="warn">Spread the load. A single heavy point, such as a TV foot, punches through the top long before the walls give way. Lay a cross-laminated top panel over the whole carcass.</li>
+        <li class="ok">To raise the capacity, glue egg-crate partitions or rolled tubes inside as extra columns, double the walls, and keep the unit off a damp floor. Bottle caps or a sheet of plastic underneath work.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="sec" id="dividers">
+  <div class="kicker">05 · Organiser</div>
+  <h2>Egg-crate dividers for a drawer</h2>
+  <p class="intro">Interlocking strips with half-depth slots, like the inserts in bottle cartons. Each strip braces the others, so they also stiffen the drawer. Slot width = board thickness + 0.5 mm, so the strips slide in without crushing.</p>
+  <div class="two">
+    <form class="panel" onsubmit="return false">
+      <fieldset>
+        <legend>Drawer inside, mm</legend>
+        <div class="f"><label for="gw">Width</label><input id="gw" type="number" min="40" step="1"></div>
+        <div class="f"><label for="gd">Depth</label><input id="gd" type="number" min="40" step="1"></div>
+        <div class="f"><label for="gh">Divider height</label><input id="gh" type="number" min="20" step="1"></div>
+        <div class="f"><label for="gt">Board t</label><input id="gt" type="number" min="1" max="12" step="0.5"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Cells</legend>
+        <div class="f"><label for="gc">Across (left–right)</label><input id="gc" type="number" min="1" max="12" step="1" value="3"></div>
+        <div class="f"><label for="gr">Front–back</label><input id="gr" type="number" min="1" max="12" step="1" value="2"></div>
+      </fieldset>
+      <p class="hint">Filled in from the planner. Change any value to suit another drawer or box.</p>
+    </form>
+    <div class="panel">
+      <div class="stats" id="gstats"></div>
+      <div class="figure"><svg id="grid" role="img" aria-label="Divider strips with slot positions"></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="sec" id="builds">
+  <div class="kicker">06 · More builds</div>
+  <h2>Other furniture from boxes</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Shelving</div><h3>Cube bookcase</h3><ol>
+      <li>Use same-size boxes, turned so the open face points forward.</li>
+      <li>Cut the opening but leave a <b>40 mm frame</b> round it. The lip works like a flange and keeps the box square.</li>
+      <li>Zip-tie or glue neighbouring boxes together. A grid of boxes is much stiffer than single boxes.</li>
+      <li>Put heavy items (books) in the bottom row only. Check the load with section 04.</li>
+    </ol></div>
+    <div class="card"><div class="tag">Table</div><h3>Side table / nightstand</h3><ol>
+      <li>Use a cube-ish box standing upright, as shipped.</li>
+      <li>Fill it with an egg-crate grid at full height (section 05). That gives it internal columns.</li>
+      <li>Top: two layers glued with flutes crossed, overhanging 20 mm, with the edges hemmed or taped.</li>
+      <li>Light loads only: a lamp, a phone, books. Don't sit on it.</li>
+    </ol></div>
+    <div class="card"><div class="tag">Desk</div><h3>Laptop / monitor riser</h3><ol>
+      <li>Make triangular prism beams. Score a strip into 3 equal faces plus a 25 mm glue flap, fold and glue. Flutes run along the beam.</li>
+      <li>Set 3–4 beams on edge. They are very stiff for the board they use.</li>
+      <li>Glue on a cross-laminated top. Height = face width × 0.87.</li>
+    </ol></div>
+    <div class="card"><div class="tag">Storage</div><h3>Under-bed drawer</h3><ol>
+      <li>Make a shallow, wide tray using the planner with 1 drawer and the hem on.</li>
+      <li>Laminate a second base layer with flutes crossed. Wide bases sag.</li>
+      <li>Add a strap or rope loop through two slots ≥ 20 mm below the top edge to pull it out.</li>
+    </ol></div>
+    <div class="card"><div class="tag">Entry</div><h3>Shoe rack</h3><ol>
+      <li>Use a tall box on end with the front removed.</li>
+      <li>Fold Z-shaped shelves: a 15° slope with a 30 mm toe-stop lip at the front.</li>
+      <li>Glue each shelf to L-angle runners on the side walls. It's the same runner as in the drawer cut list.</li>
+      <li>Line the shelves with an old plastic bag, because shoes carry moisture.</li>
+    </ol></div>
+    <div class="card"><div class="tag">Parts</div><h3>Legs and columns</h3><ul>
+      <li><b>Square tube:</b> 4 faces + glue flap, flutes along the length. Stuff it with a rolled-up offcut so the walls can't buckle inward.</li>
+      <li><b>Paper-roll cores</b> (from shops or fabric stores) are the strongest free legs.</li>
+      <li>Always cut leg ends square so the load bears on all walls.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="sec" id="tools">
+  <div class="kicker">07 · Kit</div>
+  <h2>Tools and glue</h2>
+  <div class="cards">
+    <div class="card"><div class="tag">Cutting</div><ul>
+      <li>Snap-blade box cutter. Snap to a fresh tip often, because a blunt blade crushes the flutes.</li>
+      <li>Steel rule or straight edge. Cut against it in 2–3 light passes.</li>
+      <li>Cut on scrap board, never on the floor or table.</li>
+    </ul></div>
+    <div class="card"><div class="tag">Scoring</div><ul>
+      <li>Empty ballpoint pen, butter knife back, or a bone folder.</li>
+      <li>Score along the rule, fold away from you over a table edge for a crisp 90°.</li>
+      <li>Folds across the flutes need a firmer score than folds along them.</li>
+    </ul></div>
+    <div class="card"><div class="tag">Joining</div><ul>
+      <li><b>PVA (white) wood glue</b> for anything that carries load. Clamp with binder clips and leave it overnight.</li>
+      <li>Hot glue is quick for positioning, but it creeps under load and softens in hot rooms.</li>
+      <li>Gummed paper tape is better than plastic packing tape on edges. It bonds into the liner.</li>
+    </ul></div>
+  </div>
+</section>
+
+<footer>
+  <a href="index.html">← Sheet Metal module</a>
+  <span>Cardboard Workshop · temporary furniture</span>
+</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const BOARDS = [
+  {id:'e',  name:'E-flute, thin retail box (≈1.5 mm)', t:1.5, ect:3},
+  {id:'b',  name:'3-ply single wall, B-flute (≈3 mm)', t:3,   ect:4.5},
+  {id:'c',  name:'3-ply single wall, C-flute (≈4 mm)', t:4,   ect:5},
+  {id:'bc', name:'5-ply double wall (≈7 mm)',          t:7,   ect:8},
+  {id:'tw', name:'7-ply triple wall (≈10 mm)',         t:10,  ect:12},
+];
+const byId = id => BOARDS.find(b => b.id === id) || BOARDS[2];
+function fillBoards(sel, def){
+  sel.innerHTML = BOARDS.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+  sel.value = def;
+}
+fillBoards($('cboard'), 'bc');
+fillBoards($('dboard'), 'c');
+fillBoards($('lboard'), 'bc');
+
+const KEY = 'commonplace.cardboard.v1';
+const SAVE = ['cw','ch','cd','cboard','n','dboard','clr','top','back','hem','k','lboard','ect','orient','open','hum','dur','used','gc','gr'];
+try{
+  const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+  SAVE.forEach(id => { if (s[id] === undefined) return; const el = $(id); if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; });
+}catch(e){}
+function save(){
+  try{
+    const s = {}; SAVE.forEach(id => { const el = $(id); s[id] = el.type === 'checkbox' ? el.checked : el.value; });
+    localStorage.setItem(KEY, JSON.stringify(s));
+  }catch(e){}
+}
+
+const num = (id, d) => { const v = parseFloat($(id).value); return isFinite(v) ? v : d; };
+const r0 = v => Math.round(v);
+const r1 = v => (Math.round(v * 10) / 10).toString();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let plan = null;
+
+function computePlan(){
+  const cw = num('cw', 380), ch = num('ch', 480), cd = num('cd', 300);
+  const tc = byId($('cboard').value).t, td = byId($('dboard').value).t;
+  const n = Math.max(1, Math.min(6, Math.round(num('n', 3))));
+  const clr = num('clr', 3), top = num('top', 8), back = num('back', 10);
+  const K = Math.max(0.2, Math.min(0.5, num('k', 0.5)));
+  const hem = $('hem').checked;
+
+  const runners = n > 1;
+  const slot = ch / n;
+  const Hd = slot - (runners ? tc : 0) - top;          // drawer outside height
+  const Wd = cw - 2 * clr - (runners ? 2 * tc : 0);     // runner upright legs eat width
+  const Dd = cd - back;
+  const wallT = hem ? 2 * td : td;
+  const inW = Wd - 2 * wallT, inD = Dd - 2 * wallT, inH = Hd - td;
+
+  // Flat pattern, SM-11 formulas with R ≈ 0 (crushed crease): BA = π/2 · K · t
+  const BA = Math.PI / 2 * K * td;
+  const baseW = Wd - 2 * td + BA, baseD = Dd - 2 * td + BA;
+  let outer, band = 0, inner = 0, wall;
+  if (hem){ outer = Hd - td; band = td; inner = Hd - 2 * td - 2; wall = outer + band + inner; }
+  else    { outer = Hd - td + BA / 2; wall = outer; }
+  const insF = td + 1, insS = 2 * td + 1;               // hem inner walls clear the corners
+  const g = Math.max(20, Math.min(40, baseW * 0.15));   // corner tab length
+  const relief = 2;
+  const X = baseW + 2 * wall, Y = baseD + 2 * wall;
+
+  // runners
+  const runnerList = [];
+  for (let j = 1; j < n; j++) runnerList.push(j * slot + tc);   // top face of horizontal leg, from carcass floor
+
+  plan = {cw, ch, cd, tc, td, n, clr, top, back, K, hem, runners, slot, Hd, Wd, Dd, inW, inD, inH,
+          BA, baseW, baseD, outer, band, inner, wall, insF, insS, g, relief, X, Y, runnerList};
+  return plan;
+}
+
+function stat(l, v, s){ return `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`; }
+
+function renderPlan(){
+  const p = computePlan();
+  $('stats').innerHTML =
+    stat('Drawer outside', `${r0(p.Wd)} × ${r0(p.Dd)} × ${r0(p.Hd)}`, 'W × D × H, mm') +
+    stat('Drawer inside', `${r0(p.inW)} × ${r0(p.inD)} × ${r0(p.inH)}`, p.hem ? 'hemmed walls' : 'single walls') +
+    stat('Flat blank', `${r0(p.X)} × ${r0(p.Y)}`, `×${p.n} · board t ${p.td}`) +
+    stat('Fold allowance', `${r1(p.BA)} mm`, `BA per 90° fold · K ${p.K}`);
+
+  const notes = [];
+  const bad = p.Hd < 40 || p.Wd < 80 || p.Dd < 80 || p.outer - p.relief - 7 < 5;
+  if (bad) notes.push(['bad', 'Too small to fold. Drawers need at least about 40 mm height and 80 mm width and depth. Use fewer drawers or a bigger box.']);
+  if (p.hem && p.inner < 4 * p.td) notes.push(['warn', `The hem's inner wall is only ${r0(p.inner)} mm, under 4 t, so it won't fold flat. Turn the hem off or use thinner board.`]);
+  if (p.Hd > p.Wd * 0.8) notes.push(['warn', 'The drawers are taller than they are wide. They tend to tip and jam. Use more, shallower drawers.']);
+  if (p.baseW > 450 && p.td < 7) notes.push(['warn', `A ${r0(p.baseW)} mm wide base in single-wall board will sag. Glue a second base layer with the flutes crossed.`]);
+  if (p.X > 1000 || p.Y > 1000) notes.push(['warn', `The flat blank is ${r0(p.X)} × ${r0(p.Y)} mm, bigger than most flattened boxes. Use the shopping-list route, or turn off the hem.`]);
+  if (p.runners) notes.push(['ok', `${2 * (p.n - 1)} L-angle runners. The bottom drawer sits on the carcass floor. Each runner's upright leg takes ${p.tc} mm of width per side, already allowed for.`]);
+  if (!bad) notes.push(['ok', `Run the drawer board's flutes left-to-right. The base then spans between the runners along its stiff direction, and the front/back folds and hems lie along the flutes, where they fold cleanly.`]);
+  $('notes').innerHTML = notes.map(([c, t]) => `<li class="${c}">${esc(t)}</li>`).join('');
+
+  const hNeed = p.hem ? 2 * p.Hd - p.td : p.Hd;
+  $('shop').innerHTML = [
+    ['ok', `A box with an outside footprint of about ${r0(p.Wd - 15)}–${r0(p.Wd)} mm by ${r0(p.Dd - 40)}–${r0(p.Dd)} mm, and at least ${r0(hNeed)} mm tall. You need ${p.n}.`],
+    ['ok', p.hem ? `Mark ${r0(p.Hd)} mm up from the bottom all round. Then mark a second line ${p.td} mm above it, score both lines, and cut ${r0(p.Hd - 2 * p.td - 2)} mm above the second line. Fold that strip down inside to make the hem.` : `Cut it down to ${r0(p.Hd)} mm tall and tape the cut edge.`],
+    ['warn', `A box that is a little narrower is fine: just add more side gap. A wider box won't fit. Copier-paper boxes and their lids often make good shallow drawers.`],
+  ].map(([c, t]) => `<li class="${c}">${esc(t)}</li>`).join('');
+
+  drawFlat(p);
+  renderCuts(p);
+  renderSteps(p);
+
+  // feed the other calculators
+  $('lwd').textContent = `${r0(p.cw)} × ${r0(p.cd)} mm`;
+  if (!$('gw').dataset.touched){
+    $('gw').value = r0(p.inW); $('gd').value = r0(p.inD); $('gh').value = r0(Math.max(20, p.inH - 10)); $('gt').value = p.td;
+  }
+  renderLoad(); renderGrid();
+}
+
+/* ---------- flat pattern ---------- */
+let lastSvg = '';
+function drawFlat(p){
+  const svg = $('flat');
+  const hw = p.baseW / 2, hd = p.baseD / 2, A = p.wall, o = p.outer, b = p.band, r = p.relief, g = p.g;
+  const tabEnd = o - 3;
+  // one quarter: top centre → right centre (SVG y down)
+  let Q;
+  if (p.hem){
+    Q = [[0, -hd - A], [hw - p.insF, -hd - A], [hw - p.insF, -hd - o - b], [hw, -hd - o - b], [hw, -hd],
+         [hw + r, -hd], [hw + r, -hd - g], [hw + tabEnd - 4, -hd - g], [hw + tabEnd, -hd - g + 4], [hw + tabEnd, -hd],
+         [hw + o + b, -hd], [hw + o + b, -hd + p.insS], [hw + A, -hd + p.insS], [hw + A, 0]];
+  } else {
+    Q = [[0, -hd - A], [hw, -hd - A], [hw, -hd],
+         [hw + r, -hd], [hw + r, -hd - g], [hw + tabEnd - 4, -hd - g], [hw + tabEnd, -hd - g + 4], [hw + tabEnd, -hd],
+         [hw + A, -hd], [hw + A, 0]];
+  }
+  const Q2 = Q.slice().reverse().map(([x, y]) => [x, -y]);
+  const Q3 = Q.map(([x, y]) => [-x, -y]);
+  const Q4 = Q.slice().reverse().map(([x, y]) => [-x, y]);
+  const pts = [...Q, ...Q2.slice(1), ...Q3.slice(1), ...Q4.slice(1, -1)];
+
+  const pad = Math.max(p.X, p.Y) * 0.09 + 20;
+  const vbW = p.X + 2 * pad, vbH = p.Y + 2 * pad;
+  const fs = Math.max(p.X, p.Y) / 48;
+  const sw = Math.max(p.X, p.Y) / 500;
+  const f = v => r1(v);
+  const poly = pts.map(([x, y]) => `${f(x)},${f(y)}`).join(' ');
+
+  const scores = [];
+  const L = (x1, y1, x2, y2) => scores.push(`M${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}`);
+  L(-hw, -hd, hw, -hd); L(-hw, hd, hw, hd); L(-hw, -hd, -hw, hd); L(hw, -hd, hw, hd);
+  for (const sx of [1, -1]) for (const sy of [1, -1]) L(sx * (hw + r), sy * hd, sx * (hw + tabEnd), sy * hd); // tab folds
+  if (p.hem){
+    for (const s of [1, -1]){
+      L(-hw, s * (hd + o), hw, s * (hd + o)); L(-hw, s * (hd + o + b), hw, s * (hd + o + b));
+      L(s * (hw + o), -hd, s * (hw + o), hd); L(s * (hw + o + b), -hd, s * (hw + o + b), hd);
+    }
+  }
+
+  // dimensions
+  const dims = [];
+  const dimH = (x1, x2, y, label) => {
+    const t = fs * 0.35;
+    dims.push(`<path d="M${f(x1)} ${f(y)}H${f(x2)}M${f(x1)} ${f(y - t)}V${f(y + t)}M${f(x2)} ${f(y - t)}V${f(y + t)}" class="dl"/>` +
+      `<text x="${f((x1 + x2) / 2)}" y="${f(y - fs * 0.45)}" text-anchor="middle" class="dt">${label}</text>`);
+  };
+  const dimV = (y1, y2, x, label) => {
+    const t = fs * 0.35, cx = x - fs * 0.45, cy = (y1 + y2) / 2;
+    dims.push(`<path d="M${f(x)} ${f(y1)}V${f(y2)}M${f(x - t)} ${f(y1)}H${f(x + t)}M${f(x - t)} ${f(y2)}H${f(x + t)}" class="dl"/>` +
+      `<text x="${f(cx)}" y="${f(cy)}" text-anchor="middle" transform="rotate(-90 ${f(cx)} ${f(cy)})" class="dt">${label}</text>`);
+  };
+  const top = -p.Y / 2, left = -p.X / 2;
+  dimH(-p.X / 2, p.X / 2, top - pad * 0.62, `${r0(p.X)} overall`);
+  dimH(-hw, hw, top - pad * 0.28, `base ${r1(p.baseW)}`);
+  dimV(-p.Y / 2, p.Y / 2, left - pad * 0.62, `${r0(p.Y)} overall`);
+  dimV(-hd, hd, left - pad * 0.28, `base ${r1(p.baseD)}`);
+  // wall segments labelled along bottom strip
+  const wy = hd, segs = p.hem ? [['wall', o], ['band', b], ['hem', p.inner]] : [['wall', o]];
+  let acc = 0;
+  const xw = p.X / 2 + pad * 0.32;
+  segs.forEach(([name, len]) => {
+    if (len > fs * 0.6) dimV(wy + acc, wy + acc + len, xw, `${name} ${r1(len)}`);
+    acc += len;
+  });
+  dimH(hw + r, hw + tabEnd, -hd - g - fs * 0.9, `tab ${r0(tabEnd - r)}`);
+
+  // labels
+  const lab = (x, y, t, cls = 'lb') => `<text x="${f(x)}" y="${f(y)}" text-anchor="middle" dominant-baseline="middle" class="${cls}">${t}</text>`;
+  const labels = [
+    lab(0, -fs * 0.7, 'BASE'), lab(0, fs * 0.7, 'flutes ↔', 'lb sm'),
+    lab(0, -hd - o / 2, 'BACK'), lab(0, hd + o / 2, 'FRONT'),
+    lab(-hw - o / 2, 0, 'SIDE'), lab(hw + o / 2, 0, 'SIDE'),
+  ];
+  if (p.hem){
+    labels.push(lab(0, -hd - o - b - p.inner / 2, 'hem · folds inside', 'lb sm'));
+    labels.push(lab(0, hd + o + b + p.inner / 2, 'hem · folds inside', 'lb sm'));
+  }
+
+  const css = `.cut{fill:var(--kraft);stroke:var(--ink);stroke-width:${f(sw * 1.6)};stroke-linejoin:round}
+.fl{stroke:var(--flute);stroke-width:${f(sw)}}
+.sc{fill:none;stroke:var(--layout);stroke-width:${f(sw * 1.4)};stroke-dasharray:${f(fs * 0.6)} ${f(fs * 0.4)}}
+.dl{fill:none;stroke:var(--mute);stroke-width:${f(sw)}}
+.dt{fill:var(--ink-soft);font-family:'Martian Mono',monospace;font-size:${f(fs * 0.78)}px}
+.lb{fill:var(--ink);font-family:Archivo,Arial,sans-serif;font-weight:700;font-size:${f(fs * 1.05)}px;letter-spacing:.08em}
+.lb.sm{font-weight:500;font-size:${f(fs * 0.75)}px;fill:var(--ink-soft);letter-spacing:0}`;
+
+  const fluteStep = Math.max(6, p.Y / 60);
+  let flutes = '';
+  for (let y = -p.Y / 2 + fluteStep; y < p.Y / 2; y += fluteStep) flutes += `M${f(-p.X / 2)} ${f(y)}H${f(p.X / 2)}`;
+
+  const inner = `<style>${css}</style>
+<defs><clipPath id="blank"><polygon points="${poly}"/></clipPath></defs>
+<polygon class="cut" points="${poly}"/>
+<path class="fl" d="${flutes}" clip-path="url(#blank)"/>
+<polygon points="${poly}" fill="none" stroke="var(--ink)" stroke-width="${f(sw * 1.6)}" stroke-linejoin="round"/>
+<path class="sc" d="${scores.join('')}"/>
+${dims.join('')}
+${labels.join('')}`;
+  svg.setAttribute('viewBox', `${f(-vbW / 2)} ${f(-vbH / 2)} ${f(vbW)} ${f(vbH)}`);
+  svg.innerHTML = inner;
+  $('figtitle').textContent = `Drawer blank · flat pattern · ${p.n} off · mm`;
+  lastSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(-vbW / 2)} ${f(-vbH / 2)} ${f(vbW)} ${f(vbH)}" width="${f(vbW)}mm" height="${f(vbH)}mm">` +
+    inner.replace(/var\(--kraft\)/g, '#d2ab78').replace(/var\(--ink\)/g, '#221b13').replace(/var\(--ink-soft\)/g, '#4a3e31')
+         .replace(/var\(--layout\)/g, '#1d4da6').replace(/var\(--mute\)/g, '#7a6c5c').replace(/var\(--flute\)/g, 'rgba(90,60,25,.22)') + '</svg>';
+}
+
+$('dl').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lastSvg], {type: 'image/svg+xml'}));
+  a.download = 'cardboard-drawer-blank.svg';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+function renderCuts(p){
+  const rows = [
+    ['Drawer blank', p.n, `${r0(p.X)} × ${r0(p.Y)}`, `t ${p.td}`, 'Pattern above. Or use the shopping-list box.'],
+    ['Drawer base doubler', p.n, `${r0(p.inW - 2)} × ${r0(p.inD - 2)}`, `t ${p.td}`, 'Optional. Flutes front-to-back (crossed with the base). Glue in flat.'],
+    ['False front', p.n, `${r0(p.cw + 2 * p.tc - 2)} × ${r0(p.slot - 3)}`, `2 × t ${p.td}`, 'Two layers glued with flutes crossed. Cut a 90 × 30 finger slot in the upper third.'],
+  ];
+  if (p.runners) rows.push(['L-angle runner', 2 * (p.n - 1), `${r0(p.Dd)} × 70`, `t ${p.tc}`, 'Score 40 mm from one edge, fold 90°. Glue the 40 leg to the wall with the 30 leg pointing in.']);
+  rows.push(['Back doubler', 1, `${r0(p.cw - 2)} × ${r0(p.ch - 2)}`, `t ${p.tc}`, 'Glue inside the back wall. It stops the carcass racking now that the front is open.']);
+  $('cuts').innerHTML = '<thead><tr><th>Part</th><th>Qty</th><th>Size, mm</th><th>Board</th><th>Note</th></tr></thead><tbody>' +
+    rows.map(r => `<tr><td class="k">${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono">${r[3]}</td><td>${esc(r[4])}</td></tr>`).join('') + '</tbody>';
+}
+
+function renderSteps(p){
+  const s = [];
+  s.push(`<b>Prepare the carcass.</b> Turn the box so the flap end faces you. Fold the four flaps inward and glue them flat against the inside walls. Glue the back doubler in. Measure the inside again and update the numbers above if they changed.`);
+  if (p.runners){
+    s.push(`<b>Mark runner heights.</b> Measure from the carcass floor up each side wall and mark the top of each runner at ${p.runnerList.map(v => r0(v) + ' mm').join(', ')}. Use a long rule so left and right match. A drawer on uneven runners jams.`);
+    s.push(`<b>Glue the runners.</b> Glue the 40 mm leg to the wall, below the mark, with the 30 mm leg pointing in at the mark. Clamp with binder clips through the opening and leave overnight.`);
+  }
+  s.push(`<b>Cut and score the drawer blank.</b> Cut the solid lines with fresh blade passes. Then score every dashed line on the side that will be the <b>inside</b> of the drawer.`);
+  s.push(`<b>Fold the walls up.</b> Fold the sides first. Fold the corner tabs inward 90° so they lie against the inside of the front and back walls.`);
+  if (p.hem) s.push(`<b>Fold the hems.</b> Fold the front and back walls up, then fold their hem down inside over the tabs. That traps the tabs, and the corners need no glue. Fold the side hems last. A line of PVA under each hem makes it permanent.`);
+  else s.push(`<b>Glue the corners.</b> Glue each tab to the inside of the front and back walls. Clip and leave to dry.`);
+  s.push(`<b>Add the false front.</b> Glue the laminated false front to the drawer front, flush with the bottom and centred left to right. It covers the gaps and stops the drawer at the carcass edge.`);
+  s.push(`<b>Test the slide.</b> If it sticks, rub a candle or a bar of soap on the runners. Don't sand cardboard.`);
+  $('steps').innerHTML = s.map(x => `<li>${x}</li>`).join('');
+}
+
+/* ---------- load ---------- */
+let ectTouched = false;
+function renderLoad(){
+  const p = plan; if (!p) return;
+  const b = byId($('lboard').value);
+  if (!ectTouched) $('ect').value = b.ect;
+  const ect = num('ect', b.ect);                 // kN/m = N/mm
+  const Z = 2 * (p.cw + p.cd) + 4 * b.t;         // outside perimeter, mm
+  const bct = 5.87 * ect * Math.sqrt(b.t * Z);   // N
+  const fac = ['orient','open','hum','dur','used'].reduce((a, id) => a * parseFloat($(id).value), 1);
+  const kg = bct * fac / 9.81;
+  $('bct').textContent = `${r0(bct / 9.81)} kgf`;
+  $('fac').textContent = `× ${fac.toFixed(2)}`;
+  $('safe').innerHTML = `${r0(kg / 5) * 5 || '<5'} <small>kg</small>`;
+}
+
+/* ---------- divider grid ---------- */
+function renderGrid(){
+  const W = num('gw', 300), D = num('gd', 260), H = num('gh', 80), t = num('gt', 4);
+  const cols = Math.max(1, Math.round(num('gc', 3))), rows = Math.max(1, Math.round(num('gr', 2)));
+  const slotW = Math.ceil((t + 0.5) * 2) / 2, slotD = H / 2 + 1;
+  const nLong = rows - 1, nShort = cols - 1;     // long strips run left–right, short strips front–back
+  const lenL = W - 1, lenS = D - 1;
+  $('gstats').innerHTML =
+    stat('Long strips', nLong ? `${nLong} × ${r0(lenL)} × ${r0(H)}` : '–', 'left–right · slots from top') +
+    stat('Short strips', nShort ? `${nShort} × ${r0(lenS)} × ${r0(H)}` : '–', 'front–back · slots from bottom') +
+    stat('Slot', `${r1(slotW)} × ${r1(slotD)}`, 'width × depth') +
+    stat('Cell', `${r0((W - nShort * t) / cols)} × ${r0((D - nLong * t) / rows)}`, 'inside, mm');
+
+  const svg = $('grid');
+  const gap = H * 0.6, total = (nLong ? H : 0) + (nShort ? H : 0) + (nLong && nShort ? gap : 0);
+  const Wv = Math.max(lenL, lenS);
+  const fs = Wv / 40, sw = Wv / 450;
+  const out = [];
+  let y = 0;
+  const strip = (len, divs, fromTop, label) => {
+    let d = `M0 ${y}`;
+    const xs = []; for (let i = 1; i <= divs; i++) xs.push(i * len / (divs + 1));
+    if (fromTop){
+      xs.forEach(x => { d += `H${r1(x - slotW / 2)}V${r1(y + slotD)}H${r1(x + slotW / 2)}V${y}`; });
+      d += `H${r1(len)}V${r1(y + H)}H0Z`;
+    } else {
+      d += `H${r1(len)}V${r1(y + H)}`;
+      xs.slice().reverse().forEach(x => { d += `H${r1(x + slotW / 2)}V${r1(y + H - slotD)}H${r1(x - slotW / 2)}V${r1(y + H)}`; });
+      d += 'H0Z';
+    }
+    out.push(`<path d="${d}" fill="var(--kraft)" stroke="var(--ink)" stroke-width="${r1(sw * 1.5)}" stroke-linejoin="round"/>`);
+    out.push(`<text x="${r1(len / 2)}" y="${r1(fromTop ? y + H * 0.78 : y + H * 0.32)}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink-soft)" font-family="Martian Mono,monospace" font-size="${r1(fs)}">${label}</text>`);
+    xs.forEach(x => out.push(`<text x="${r1(x)}" y="${r1(fromTop ? y - fs * 0.4 : y + H + fs * 1.1)}" text-anchor="middle" fill="var(--mute)" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.8)}">${r0(x)}</text>`));
+    y += H + gap;
+  };
+  if (nLong) strip(lenL, nShort, true, `long strip ×${nLong}`);
+  if (nShort) strip(lenS, nLong, false, `short strip ×${nShort}`);
+  if (!nLong && !nShort){
+    svg.setAttribute('viewBox', '0 0 300 40');
+    svg.innerHTML = `<text x="150" y="24" text-anchor="middle" fill="var(--mute)" font-family="Martian Mono,monospace" font-size="11">One cell, no dividers needed</text>`;
+    return;
+  }
+  const pad = fs * 1.6;
+  svg.setAttribute('viewBox', `${r1(-pad)} ${r1(-pad)} ${r1(Wv + 2 * pad)} ${r1(total + 2 * pad)}`);
+  svg.innerHTML = out.join('');
+}
+
+/* ---------- wiring ---------- */
+const planIds = ['cw','ch','cd','cboard','n','dboard','clr','top','back','hem','k'];
+planIds.forEach(id => $(id).addEventListener('input', () => { renderPlan(); save(); }));
+$('lboard').addEventListener('change', () => { ectTouched = false; renderLoad(); save(); });
+$('ect').addEventListener('input', () => { ectTouched = true; renderLoad(); save(); });
+['orient','open','hum','dur','used'].forEach(id => $(id).addEventListener('change', () => { renderLoad(); save(); }));
+['gw','gd','gh','gt'].forEach(id => $(id).addEventListener('input', () => { $('gw').dataset.touched = '1'; renderGrid(); }));
+['gc','gr'].forEach(id => $(id).addEventListener('input', () => { renderGrid(); save(); }));
+// keep the carcass board for the load check in step with the planner unless changed there
+$('cboard').addEventListener('change', () => { $('lboard').value = $('cboard').value; ectTouched = false; renderLoad(); save(); });
+
+try{ if (JSON.parse(localStorage.getItem(KEY) || '{}').ect !== undefined) ectTouched = true; }catch(e){}
+renderPlan();
+})();
+</script>
+</body>
+</html>

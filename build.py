@@ -114,6 +114,12 @@ CONFIG = {
             "href": "Sheet_metal/checker.html",
         },
         {
+            "label": "External app · cardboard · DIY",
+            "title": "Cardboard Workshop",
+            "summary": "Sheet-metal rules applied to supermarket boxes — a drawer-unit planner with flat pattern, fold allowance from the K-factor, runners and cut list, a box load check, egg-crate dividers, and other temporary furniture builds.",
+            "href": "Sheet_metal/cardboard.html",
+        },
+        {
             "label": "External app · 507 movements",
             "title": "Brown's 507 Mechanical Movements",
             "summary": "Interactive study app for Henry T. Brown's 1868 classic — searchable diagrams, Wikimedia animations, notes, bookmarks, and dark mode.",
