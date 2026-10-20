@@ -11,10 +11,10 @@
 (function () {
   "use strict";
 
+  var SHOW_MISTAKES = false;   // see refresh()
+
   /* lessons whose "Try it" names a specific notebook (from the nb-link in each lesson);
      any other lesson falls back to the first notebook listed for its Part */
-  var SHOW_MISTAKES = false;
-
   var LESSON_NB = { "0.3": "r02", "1.3": "r06", "2.1": "r04", "2.3": "r02", "2.4": "r03", "3.2": "r05" };
 
   function json(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
