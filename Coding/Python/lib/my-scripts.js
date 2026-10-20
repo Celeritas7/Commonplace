@@ -578,7 +578,7 @@
 ".ms-ind{color:var(--sage);opacity:.8}"+
 ".ms-gapcode{line-height:2}"+
 ".ms-gap{font-family:var(--mono);font-size:12px;width:min(32ch,70vw);height:28px;vertical-align:middle;resize:none;overflow:hidden;white-space:pre;border:1.5px dashed var(--g);border-radius:6px;background:var(--card);padding:4px 7px;color:var(--ik);outline:none}.ms-gap:focus{border-style:solid}"+
-".ms-gm{font-weight:700;margin-left:6px}.ms-gm.ok{color:var(--g)}.ms-gm.near{color:var(--brass)}.ms-gm.bad{color:var(--vm)}"+
+".ms-gm{font-weight:700;margin-left:6px}.ms-gm.ok{color:var(--g)}.ms-gm.near{color:var(--brass-ink)}.ms-gm.bad{color:var(--vm)}"+
 ".ms-keys{position:sticky;bottom:0;z-index:5;margin-top:12px}"+
 ".ms-actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}"+
 ".ms-btn{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--on-fill);background:var(--g);border:1px solid var(--g);border-radius:10px;padding:0 18px;height:46px;cursor:pointer}.ms-btn:disabled{opacity:.5;cursor:default}.ms-btn.ghost{background:var(--cd);color:var(--g);border-color:var(--ln)}"+
