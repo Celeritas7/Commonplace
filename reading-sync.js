@@ -55,7 +55,11 @@
   var PAGE_NAME   = CFG.pageName || (document.title || "").split(/[·|—-]/)[0].trim() || "This page";
   var LS_KEY      = "crs::" + RS;             // local progress map for this page
   var IS_FILE     = location.protocol === "file:";
-  var SELF_SRC    = (document.currentScript && document.currentScript.src) || "";   // captured now; null later
+  var SELF_SRC    = (document.currentScript && document.currentScript.src) || (function () {   // captured now; null later
+    var ss = document.getElementsByTagName("script");                                        // (no currentScript for module/async loads)
+    for (var i = ss.length - 1; i >= 0; i--) if (/reading-sync\.js(\?|$)/.test(ss[i].src || "")) return ss[i].src;
+    return "";
+  })();
 
   var sb = null, session = null, units = [], bar = null, styleDone = false;
 

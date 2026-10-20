@@ -259,7 +259,14 @@ def main():
     which = sys.argv[1:] or ["0","1","2","3","4","5"]
     # Every lesson on disk, in reading order, so each page can link to the one before it
     # (0.1 is hand-written and not in parts/, but it is still a valid "previous").
-    written = sorted(fn for fn in os.listdir(OUT) if fn.startswith("Py_Lesson_") and fn.endswith(".html"))
+    written = set(fn for fn in os.listdir(OUT) if fn.startswith("Py_Lesson_") and fn.endswith(".html"))
+    for p in ["0","1","2","3","4","5"]:          # plus what this build is about to write
+        try:
+            for L in importlib.import_module("parts.part_%s" % p).LESSONS:
+                written.add("Py_Lesson_%s.html" % L["id"].replace(".", "_"))
+        except ImportError:
+            pass
+    written = sorted(written)
     def key(fn):
         a, b = fn[len("Py_Lesson_"):-len(".html")].split("_"); return (int(a), int(b))
     written.sort(key=key)
