@@ -1,88 +1,71 @@
-# Phase 0 + Phase 1 (batch 1) — drop-in
+# Step 3 — Lesson pages (toolbar, end-of-lesson block, section numbers, XP removed)
 
-Copy these into your `Python/` folder. **No HTML edits, no `build.py` edits, and a
-rebuild with `build.py` will not undo any of it** — everything hangs off
-`lib/lesson-reader.js`, which is already on all 32 lesson pages.
+Apply AFTER step 2 (sw.js here is v19 and includes step 2's `js/today-card.js` line).
+Copy into `Python/` at the same paths, then:
 
-## What to copy
+```
+cd lessons/_build && python build.py
+```
 
-    lib/lesson-reader.js      → Python/lib/lesson-reader.js   (replaces existing)
-    lib/lesson-drills.js      → Python/lib/lesson-drills.js   (new)
-    lib/lesson-drills.css     → Python/lib/lesson-drills.css  (new)
-    lib/drills/0_2.js         → Python/lib/drills/0_2.js      (new folder)
-    lib/drills/0_3.js         → Python/lib/drills/0_3.js
-    lib/drills/0_4.js         → Python/lib/drills/0_4.js
+Commit message:
 
-Do **not** copy `lib/random/fd.js` (you already have it, unchanged) or
-`Py_Lesson_0_4.html` — those two are only here so the folder previews on its own.
+```
+python lessons: labelled bottom toolbar, end-of-lesson block, no XP HUD
 
-## Phase 0 — reading-page UI
+- lib/lesson-reader.js: toolbar is a labelled bar at the bottom of the screen
+  on phones (Reader · Smaller · Larger · Theme · Saved · Account/Sign in), a
+  labelled pill bottom-right on ≥820px. It no longer covers the breadcrumb or
+  progress bar. New Theme button cycles light → dark → system via CPTheme.
+  Bookmark sheet and the account panel dock above the toolbar. All colours
+  from tokens.css (reader mode now follows the theme).
+- lessons/_build/build.py + lesson.css + lesson.js: every lesson ends with a
+  "Before you go" block (#eol): 1 Recall (3 questions from L["recall"], or a
+  muted "not written yet" row) → 2 notebook link (L["notebook"] or the nb-link
+  from section 4) → 3 "Mark N.N done" (writes PYPROGRESS 100). Previous/Next
+  become a two-card pager under it.
+- XP HUD removed (markup, CSS, counter); toasts just say the word.
+- Phones: section number sits above the heading; sections get 18px padding.
+- Cobra (desktop) lifted to bottom:96px so it clears the backup button.
+- lessons/Py_Lesson_0_1.html: same edits by hand, with three real recall
+  questions.
+- sw.js: VERSION cp-py-v19.
+```
 
-**Now fixed at source.** `reading-sync.js` is the file that makes the panel: it is a
-top-right pill on desktop, but its `@media(max-width:600px)` rule moved it to
-`bottom:10px` — that is the slab across the bottom of the phone. The patched copy
-in this folder collapses it to a 34px chip (bottom-left, above the `⇅` backup
-circle, clear of the home bar) that opens on tap. Every subject page that loads
-`reading-sync.js` — SQL, VBA, C — gets the fix, not just Python.
+## Note
 
-    reading-sync.js  → <the folder two levels above Python/>/reading-sync.js
+Your generated lessons (`Py_Lesson_*.html`) are still the pre-step-1 build —
+they lack the `tokens.css` / `theme.js` head links, so step 1's dark mode and
+this step's toolbar theme button only work after `build.py` has been run.
+Running it once after copying step 3 covers both.
 
-`progress-backup.js` is unchanged and included only so the demo page runs.
+## Recall data shape (for parts/part_N.py)
 
-**The ★ and the red pin are not from this app.** `progress-backup.js` draws one
-bottom-**left** `⇅` circle and nothing else; `reading-sync.js` draws only the sync
-bar and, in toggle mode, an inline "○ Mark read" pill. Neither makes a ★ or a pin,
-and the lesson pages load nothing else — so those two round buttons at bottom-right
-are your mobile browser's own UI. There has never been a "bookmark this spot"
-control in a lesson: the Learn shelf's Bookmark card is computed from reading
-progress, and the only manual marker is `⚑` in the top pill.
+```python
+"recall": [
+  {"q": "What does <code>list(range(1, 10, 3))</code> give?",
+   "opts": [("a", "[1, 4, 7, 10]"), ("b", "[1, 4, 7]"), ("c", "[3, 6, 9]")],
+   "answer": "b", "why": "It stops before 10."},
+  ...  # three per lesson
+],
+"notebook": ("../fundamentals/02_for_loops.html", "Open the For Loops notebook"),  # optional
+```
 
+Lessons without `recall` show "Not written for this lesson yet. Go on to the notebook."
 
-- The fixed "✓ Synced · email · Sign out" panel is hidden and now opens from a
-  small **✓ chip** in the top pill, next to `⚑`. Tapping outside closes it.
-  Chip shows `✓` when signed in, `○` when signed out.
-- Fixed bottom-anchored floaters (the **★ bookmark**, the red pin, toasts) get
-  `margin-bottom: env(safe-area-inset-bottom)` so the phone's home bar no longer
-  sits on them. With the panel collapsed they are no longer covered either.
-- The flag sheet also respects the safe-area inset.
+## For Claude Code
 
-On lesson pages `lesson-reader.js` takes over from the chip above: it matches
-`#reading-sync-bar` by id, hides reading-sync's own chip, and hangs the panel under
-the top pill. So the two fixes do not fight — apply both.
+- `#eol-done` click → `PYPROGRESS.write(id, 100)`. If the merged progress store
+  wants a separate "done" flag, this is the hook.
+- Recall answers are not recorded anywhere yet (wire a wrong answer into the
+  mistake bank here if wanted: `.rq .opt.wrong`).
+- Drills (`lib/lesson-drills.js`) still append their own section 9 after the
+  page; they are untouched.
 
-## Phase 1 — drills in lessons
+## Test at 390px
 
-`lesson-reader.js` looks for `lib/drills/<lessonId>.js` (e.g. `0_4` for
-`Py_Lesson_0_4.html`). If it exists it loads `lib/random/fd.js`,
-`lesson-drills.css` and `lesson-drills.js` and appends a **section 9 — Drills**
-to the page. Lessons without a drill file are untouched.
-
-Per variant: one fill-the-blank, one spot-the-bug — same two kinds as the random
-module, reusing the same `FD` engine.
-
-**Soft lock.** Variant 1 is open. Drill 2 opens once drill 1 is answered (right or
-wrong). The next variant opens once its pair is answered. **Skip ahead** opens
-everything, and the rail dots are clickable. Progress is per lesson in
-`localStorage` under `lsd:<id>`; "Bank it" on a wrong answer appends to `lsd:bank`
-(the hook Phase 4 will read). XP and the toast work whether or not `lesson.js`
-exposes `addXp`.
-
-### Batch 1 written
-
-| Lesson | Variants | Drills |
-|---|---|---|
-| 0.2 Installing Python | which python · sys.executable · conda vs pip | 6 |
-| 0.3 Script, REPL, notebook | script · REPL · notebook | 6 |
-| 0.4 Reading a traceback | bottom-up · type: detail · SyntaxError · moment of use | 8 |
-
-0.1 is hand-authored outside the builder — it gets drills in batch 2 once I've read it.
-
-### Adding a lesson later
-
-Write `lib/drills/<part>_<n>.js` setting `window.LESSON_DRILL_DATA` to an array of
-
-    { name, title, concept,
-      d1: { kind, ask, code, blanks:[{a, lures:[…]}], why },
-      d2: { kind, ask, code, options:[…], answer:<index>, why } }
-
-`{{1}}`, `{{2}}` … in `d1.code` are the blanks, in order. Nothing else to wire up.
+- Toolbar at the bottom, six labelled buttons, none clipped; the top bar shows
+  breadcrumb + progress bar unobstructed.
+- Theme button: Light → Dark → Auto; the whole page recolours.
+- End of lesson: tap answers — the explanation appears under the question;
+  Mark done turns green; Previous/Next cards sit side by side.
+- Section headings that wrap to 2–3 lines have the number above them.

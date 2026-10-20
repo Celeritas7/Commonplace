@@ -1,13 +1,11 @@
-  var xp = 0, xpEl = document.getElementById('xp'), toast = document.getElementById('toast');
+  var toast = document.getElementById('toast');
   var tT;
   function say(msg) {
     toast.textContent = msg; toast.classList.add('show');
     clearTimeout(tT); tT = setTimeout(function () { toast.classList.remove('show'); }, 2100);
   }
-  function addXp(n, msg) {
-    xp += n; xpEl.textContent = xp;
-    if (msg) say(msg + '  +' + n + ' XP');
-  }
+  /* XP HUD retired — a right answer just gets its word */
+  function addXp(n, msg) { if (msg) say(msg); }
 
   /* ---- Cobra's line changes with the section in view ---- */
   var LINES = __COBRA_LINES__;
@@ -47,9 +45,27 @@
   });
 
   /* ---- section 5: predict ---- */
-  wire(document.getElementById('quiz'), function () {
+  var quiz = document.getElementById('quiz');
+  if (quiz) wire(quiz, function () {
     document.getElementById('quizR').classList.add('show');
     addXp(20, 'Called it');
+  });
+
+  /* ---- end of lesson: recall questions, then "Mark done" ---- */
+  var rqs = Array.prototype.slice.call(document.querySelectorAll('#eol .rq')), rqDone = 0;
+  rqs.forEach(function (r) {
+    wire(r.querySelector('.rq-opts'), function () {
+      r.querySelector('.rq-why').classList.add('show');
+      if (++rqDone === rqs.length) { var st = document.getElementById('eol-recall'); if (st) st.classList.add('done'); }
+    });
+  });
+  var doneBtn = document.getElementById('eol-done');
+  if (doneBtn) doneBtn.addEventListener('click', function () {
+    if (doneBtn.classList.contains('is-done')) return;
+    doneBtn.classList.add('is-done'); doneBtn.textContent = '✓ Done';
+    doneBtn.closest('.eol-step').classList.add('done');
+    if (window.PYPROGRESS) PYPROGRESS.write(__LESSON_ID__, 100);
+    say('Marked done');
   });
 
   /* ---- progress: a section counts once 55% of it has been seen ---- */
@@ -69,7 +85,7 @@
         var id = e.target.id;
         if (!seen[id]) {
           seen[id] = 1; e.target.classList.add('done'); paint();
-          if (Object.keys(seen).length === total) { say('Lesson complete · ' + xp + ' XP'); }
+          if (Object.keys(seen).length === total) { say('Lesson complete'); }
         }
         if (LINES[id] && lineEl.textContent !== LINES[id]) {
           lineEl.textContent = LINES[id];

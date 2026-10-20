@@ -95,6 +95,37 @@ def recap(title, bullets):
     lis = "\n      ".join('<li>%s</li>' % b for b in bullets)
     return ('<div class="recap">\n    <h2>%s</h2>\n    <ul>\n      %s\n    </ul>\n  </div>' % (title, lis))
 
+def recall(items, lesson_id):
+    """End-of-lesson recall. items: list of dicts
+         {"q": html, "opts": [(key, html), ...], "answer": key, "why": html}
+    Three per lesson. Rendered inside the 'Before you go' block; lesson.js wires them."""
+    out = []
+    n = len(items)
+    for i, it in enumerate(items):
+        o = "".join('<button class="opt" data-k="%s">%s</button>' % (k, t) for k, t in it["opts"])
+        out.append('<div class="rq" data-answer="%s"><p class="rq-q"><span class="rq-i">%d / %d</span>%s</p>'
+                   '<div class="rq-opts" data-answer="%s">%s</div><div class="rq-why">%s</div></div>'
+                   % (it["answer"], i + 1, n, it["q"], it["answer"], o, it.get("why", "")))
+    return "\n      ".join(out)
+
+def end_of_lesson(L, nb):
+    """The block every lesson ends with: recall → notebook → mark done.
+    nb: (href, label) of the lesson's notebook, or None."""
+    rc = L.get("recall")
+    if rc:
+        step1 = '<h4>Recall · %d question%s</h4>\n      %s' % (len(rc), "" if len(rc) == 1 else "s", recall(rc, L["id"]))
+    else:
+        step1 = '<h4>Recall · 3 questions</h4>\n      <p class="eol-muted">Not written for this lesson yet. Go on to the notebook.</p>'
+    if nb:
+        step2 = '<a class="eol-btn ghost" href="%s">&#9654; %s &#8599;</a>' % nb
+    else:
+        step2 = '<a class="eol-btn ghost" href="../index.html">&#9654; Notebooks on the Python page &#8599;</a>'
+    return ('<div class="eol" id="eol">\n    <div class="eol-h"><span class="eol-k">&sect; Before you go &middot; 3 steps</span></div>\n'
+            '    <div class="eol-step" id="eol-recall"><span class="eol-n">1</span><div>\n      %s\n    </div></div>\n'
+            '    <div class="eol-step"><span class="eol-n">2</span><div><h4>Try it in the notebook</h4>%s</div></div>\n'
+            '    <div class="eol-step"><span class="eol-n">3</span><div><h4>Mark it read</h4><button class="eol-btn" id="eol-done" type="button">&#10003; Mark %s done</button></div></div>\n'
+            '  </div>' % (step1, step2, L["id"]))
+
 def tryit_notebook(href, label, note):
     return ('<p>%s</p>\n  <p><a class="nb-link" href="%s">%s ↗</a></p>' % (note, href, label))
 
@@ -117,10 +148,19 @@ def render(L, prev=None, written=None):
     nav = ('<div class="next">\n    <a href="../index.html">&larr; All Python lessons</a>\n    %s%s\n  </div>'
            % ((prev_html + '\n    ') if prev_html else '', nxt_html))
 
+    # the lesson's notebook: an explicit L["notebook"] = (href, label), else the
+    # nb-link already written in section 4
+    import re as _re
+    nb = L.get("notebook")
+    if not nb:
+        m = _re.search(r'<a class="nb-link" href="([^"]+)">(.*?)\s*&#8599;|<a class="nb-link" href="([^"]+)">(.*?)\s*↗', L.get("s4", ""))
+        if m: nb = (m.group(1) or m.group(3), m.group(2) or m.group(4))
+    eol = end_of_lesson(L, nb)
+
     secs = []
     for i, key in enumerate(["s1","s2","s3","s4","s5","s6","s7","s8"]):
         heading = L.get(key + "_title", SECTION_TITLES[i])
-        body = L[key] + ("\n  " + nav if key == "s8" else "")
+        body = L[key] + ("\n  " + eol + "\n  " + nav if key == "s8" else "")
         secs.append('<!-- %d -->\n<section class="lesson-section" id="s%d">\n'
                     '  <div class="step-label"><span class="step-num">%d</span><h2>%s</h2></div>\n'
                     '  %s\n</section>' % (i+1, i+1, i+1, heading, body))
@@ -134,6 +174,8 @@ def render(L, prev=None, written=None):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lesson %(id)s — %(short)s · The Python Book</title>
+<script src="../lib/theme.js"></script>
+<link rel="stylesheet" href="../lib/tokens.css">
 <link href="../../../_lib/fonts/gf-135340b0.css" rel="stylesheet">
 <script src="../js/progress-adapter.js"></script>
 <style>
@@ -147,13 +189,6 @@ def render(L, prev=None, written=None):
   <div class="progress-bar"><div class="progress-fill" id="pfill"></div></div>
   <div class="pct" id="ppc">0%%</div>
 </div></div>
-
-<div class="hud">
-  <div class="hud-mascot">
-    %(hud)s
-  </div>
-  <div class="hud-xp">XP<strong id="xp">0</strong></div>
-</div>
 
 <div class="page">
 
@@ -193,7 +228,7 @@ def render(L, prev=None, written=None):
 <script src="../lib/lesson-reader.js" defer></script>
 </body>
 </html>
-''' % dict(id=L["id"], short=L["short"], css=CSS, hud=HUD_SVG, cobra=COBRA_SVG,
+''' % dict(id=L["id"], short=L["short"], css=CSS, cobra=COBRA_SVG,
            roman=roman, partname=partname, title=L["title"], sub=L["sub"],
            mins=L.get("mins","12"), meta3=L.get("meta3","No setup needed"),
            sections="\n\n".join(secs), cobra0=L["cobra"]["s1"], js=js,
