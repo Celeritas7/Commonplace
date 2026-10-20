@@ -59,8 +59,8 @@ window.TodayCard = (function () {
 
   /* ---------- Learn · Today ---------- */
   var PLACEHOLDER = {
-    drills:   { count: 5, title: "Strings and loops", meta: "from 1.3 · 1.4 · 2.1", href: "index.html?tab=practice" },
-    mistakes: { count: 3, title: "Mistakes waiting", meta: "oldest 4 days", href: "index.html?tab=bank" },
+    drills:   { count: 5, title: "Strings and loops", meta: "from 1.3 · 1.4 · 2.1", href: "index.html#practice" },
+    mistakes: { count: 3, title: "Mistakes waiting", meta: "oldest 4 days", href: "index.html#bank" },
     notebook: { title: "For loops", meta: "pairs with 2.3 · 14 cells", href: "fundamentals/02_for_loops.html" }
   };
   var learnEl = null, learnData = {};

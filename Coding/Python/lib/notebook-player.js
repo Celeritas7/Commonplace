@@ -371,7 +371,7 @@
     /* ---- running ---- */
     var sessionRan = {};
     /* IPython-only lines (%matplotlib inline, !pip …) are not Python; drop them so the cell still runs */
-    function stripMagics(code) { return code.replace(/^[ \t]*[%!].*$/gm, ""); }
+    function stripMagics(code) { return code.replace(/^[ \t]*(%%?[a-zA-Z_]+\b|!(pip|python|conda|ls|cat)\b).*$/gm, ""); }
     function codeOf(n) { return editors[n] ? stripMagics(editors[n].get()) : ""; }
     function runQuiet(p, code) {
       return p.loadPackagesFromImports(code).catch(function () {}).then(function () { return p.runPythonAsync(code); }).catch(function () {});

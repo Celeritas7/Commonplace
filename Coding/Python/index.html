@@ -1374,12 +1374,12 @@ sb.auth.getSession().then(function(res){
   if(modes){
     var panes={};
     Array.prototype.forEach.call(document.querySelectorAll(".mode-pane"),function(p){ panes[p.getAttribute("data-pane")]=p; });
-    function activate(mode){
+    function activate(mode, replace){
       Array.prototype.forEach.call(modes.querySelectorAll(".mode"),function(b){ b.classList.toggle("active", b.getAttribute("data-mode")===mode); });
       for(var k in panes){ panes[k].hidden = (k!==mode); }
       try{ localStorage.setItem("cp_py_mode", mode); }catch(e){}
       /* mirror the tab in the URL so it can be bookmarked and Back returns to the previous tab */
-      try{ if(location.hash.slice(1)!==mode) history.pushState(null,"","#"+mode); }catch(e){}
+      try{ if(location.hash.slice(1)!==mode) history[replace?"replaceState":"pushState"](null,"","#"+mode); }catch(e){}
       if(mode==="bank" && window.__bank){ window.__bank.render(); }
       window.scrollTo(0,0);
     }
@@ -1388,7 +1388,7 @@ sb.auth.getSession().then(function(res){
     var saved="learn"; try{ saved=localStorage.getItem("cp_py_mode")||"learn"; }catch(e){}
     var fromUrl=location.hash.slice(1); if(panes[fromUrl]) saved=fromUrl;
     if(!panes[saved]) saved="learn";
-    activate(saved);
+    activate(saved, true);   // first paint: replace, so Back still leaves the page
   }
 })();
 </script>
