@@ -7,7 +7,7 @@
  *      is already handled by the browser's own HTTP cache)
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v23";
+var VERSION = "cp-py-v24";
 var CORE = [
   "./",
   "index.html",
@@ -84,6 +84,7 @@ var CORE = [
   "lib/tokens.css",
   "lib/theme.js",
   "js/today-card.js",
+  "js/today.js",
   "lib/drills/0_2.js",
   "lib/drills/0_3.js",
   "lib/drills/0_4.js",
