@@ -254,12 +254,13 @@
   }
 
   // ---- page mode: mark done once every `items` element has been seen
+  function pageMarkDone() {
+    if (getLocal("lesson") === "done") return;
+    setLocal("lesson", "done"); reflectPage(); syncOne(units[0]);
+  }
   function wirePage() {
     var key = "lesson";
-    function markDone() {
-      if (getLocal(key) === "done") return;
-      setLocal(key, "done"); reflectPage(); syncOne(units[0]);
-    }
+    var markDone = pageMarkDone;
     reflectPage();
     if (getLocal(key) === "done") return;
     var secs = Array.prototype.slice.call(document.querySelectorAll(ITEMS_SEL));
@@ -321,6 +322,7 @@
         var remoteDone = {};
         res.data.forEach(function (r) { if (r.status === "done") { remoteDone[r.item_key] = true; applyRemoteDone(r.item_key); } });
         if (typeof CFG.onApply === "function") { try { CFG.onApply(); } catch (e) {} }
+        try { document.dispatchEvent(new CustomEvent("readingsync:apply")); } catch (e) {}   // for listeners other than CFG
         // push any device-only "done" the cloud hasn't seen yet
         units.forEach(function (u) { if (statusOf(u) === "done" && !remoteDone[u.key]) syncOne(u); });
       });
@@ -377,8 +379,12 @@
     get client()  { return sb; },
     get session() { return session; },
     markPageDone: function () {
-      if (MODE === "page") { setLocal("lesson", "done"); reflectPage(); if (units[0]) syncOne(units[0]); }
+      if (MODE !== "page") return;
+      if (units.length) pageMarkDone();
+      else setLocal("lesson", "done");   // before boot finishes: kept locally, pull() pushes it after sign-in
     },
+    // true once this page is done here or pulled from the cloud
+    isDone: function () { return MODE === "page" && getLocal("lesson") === "done"; },
     config: CFG
   };
 })();

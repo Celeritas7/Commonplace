@@ -508,13 +508,28 @@
     });
   });
   var doneBtn = document.getElementById('eol-done');
-  if (doneBtn) doneBtn.addEventListener('click', function () {
-    if (doneBtn.classList.contains('is-done')) return;
+  function showDone() {
+    if (!doneBtn || doneBtn.classList.contains('is-done')) return;
     doneBtn.classList.add('is-done'); doneBtn.textContent = '✓ Done';
     doneBtn.closest('.eol-step').classList.add('done');
-    if (window.PYPROGRESS) PYPROGRESS.write("2.5", 100);
-    say('Marked done');
-  });
+  }
+  function alreadyDone() {
+    var r = {}; try { r = JSON.parse(localStorage.getItem('cp_py_read') || '{}'); } catch (e) {}
+    return (r["2.5"] && r["2.5"].pct >= 100) || (window.ReadingSync && ReadingSync.isDone());
+  }
+  if (doneBtn) {
+    if (alreadyDone()) showDone();
+    document.addEventListener('DOMContentLoaded', function () { if (alreadyDone()) showDone(); });   // reading-sync loads after this script
+    /* done on another device: reading-sync pulls it after sign-in, then tells us */
+    document.addEventListener('readingsync:apply', function () { if (alreadyDone()) showDone(); });
+    doneBtn.addEventListener('click', function () {
+      if (doneBtn.classList.contains('is-done')) return;
+      showDone();
+      if (window.PYPROGRESS) PYPROGRESS.write("2.5", 100);
+      if (window.ReadingSync) ReadingSync.markPageDone();   // syncs to your account when signed in
+      say('Marked done');
+    });
+  }
 
   /* ---- progress: a section counts once 55% of it has been seen ---- */
   var secs = Array.prototype.slice.call(document.querySelectorAll('section.lesson-section'));
