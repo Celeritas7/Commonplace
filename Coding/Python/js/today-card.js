@@ -40,7 +40,7 @@ window.TodayCard = (function () {
   + '.tdy-n.bad{background:var(--bad);color:var(--on-fill)}'
   /* rows still on built-in sample data stay hidden until real data is wired in — never show made-up counts */
   + '.tdy-r[data-placeholder]{display:none}'
-  + '@media (min-width:900px){.tdy-rows{display:grid;grid-template-columns:1fr 1fr}.tdy-r{border-top:1px solid var(--line-soft)}.tdy-r:nth-child(2n){border-left:1px solid var(--line-soft)}}'
+  + '@media (min-width:900px){.tdy-rows{display:grid;grid-template-columns:1fr 1fr}.tdy-r:only-child,.tdy-r:last-child:nth-child(odd){grid-column:1/-1}.tdy-r{border-top:1px solid var(--line-soft)}.tdy-r:nth-child(2n){border-left:1px solid var(--line-soft)}}'
   /* Due today (Practice) */
   + '.due{background:var(--card);border:1.5px solid var(--green);border-radius:14px;padding:16px;margin:4px 0 26px}'
   + '.due-k{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green)}'
@@ -65,7 +65,7 @@ window.TodayCard = (function () {
   };
   var learnEl = null, learnData = {};
   function row(label, d, right, cls, ph) {
-    if (!d) return "";
+    if (!d || ph) return "";   // sample rows are not drawn at all, so they leave no empty grid cell
     return '<a class="tdy-r' + (cls ? " " + cls : "") + '" href="' + esc(d.href || "#") + '"' + (ph ? ' data-placeholder="1"' : '') + '>'
       + '<span><span class="tdy-l">' + label + '</span><span class="tdy-t" style="display:block">' + d.title + '</span>'
       + (d.meta ? '<span class="tdy-m" style="display:block">' + d.meta + '</span>' : '')
