@@ -38,7 +38,8 @@ window.TodayCard = (function () {
   + '.tdy-go{font-family:"JetBrains Mono",monospace;font-size:18px;color:var(--green);width:28px;text-align:right}'
   + '.tdy-n{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:var(--on-deep);background:var(--green-deep);border-radius:12px;padding:3px 9px;min-width:28px;text-align:center}'
   + '.tdy-n.bad{background:var(--bad);color:var(--on-fill)}'
-  + '.tdy-r[data-placeholder] .tdy-m::after{content:" · placeholder";color:var(--brass-ink)}'
+  /* rows still on built-in sample data stay hidden until real data is wired in — never show made-up counts */
+  + '.tdy-r[data-placeholder]{display:none}'
   + '@media (min-width:900px){.tdy-rows{display:grid;grid-template-columns:1fr 1fr}.tdy-r{border-top:1px solid var(--line-soft)}.tdy-r:nth-child(2n){border-left:1px solid var(--line-soft)}}'
   /* Due today (Practice) */
   + '.due{background:var(--card);border:1.5px solid var(--green);border-radius:14px;padding:16px;margin:4px 0 26px}'
@@ -50,7 +51,7 @@ window.TodayCard = (function () {
   + '.due-go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;border-radius:10px;background:var(--green-deep);color:var(--on-deep);font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;letter-spacing:.3px;text-decoration:none;border:1px solid var(--green-deep)}'
   + '.due-go:hover{background:var(--fill-dk);color:var(--on-deep)}'
   + '.due-empty{font-size:16px;color:var(--ink-soft);margin:8px 0 0;font-style:italic}'
-  + '.due[data-placeholder] .due-k::after{content:" · placeholder";color:var(--brass-ink);letter-spacing:0;text-transform:none}';
+  + '.due[data-placeholder]{display:none}';
 
   function css() { if (document.getElementById("today-card-css")) return; var s = document.createElement("style"); s.id = "today-card-css"; s.textContent = CSS; document.head.appendChild(s); }
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
