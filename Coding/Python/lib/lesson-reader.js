@@ -57,6 +57,8 @@
     '.lr-auth-dock{top:auto!important;bottom:calc(74px + env(safe-area-inset-bottom,0px))!important;right:10px!important;left:auto!important}',
     '@media (max-width:600px){.lr-auth-dock{left:8px!important;right:8px!important}}',
     '.lr-safe{margin-bottom:env(safe-area-inset-bottom,0px)!important}',
+    /* phones: the bottom toolbar is ~66px tall — floaters (backup ⇅, 🧠 Quiz, toasts) sit above it */
+    '@media (max-width:819px){.lr-safe:not(.toast){margin-bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}}',   /* the toast already clears the bar and hides by sliding down */
     /* reader mode */
     'html.lr-reader,html.lr-reader body{background:var(--paper)!important;color:var(--ink)!important}',
     'html.lr-reader .lr-flat{background:var(--card)!important;background-image:none!important;color:var(--ink)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--line)!important;border-radius:6px!important;backdrop-filter:none!important}',

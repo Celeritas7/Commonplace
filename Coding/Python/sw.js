@@ -7,7 +7,7 @@
  *      is already handled by the browser's own HTTP cache)
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v26";
+var VERSION = "cp-py-v27";
 var CORE = [
   "./",
   "index.html",
@@ -98,6 +98,8 @@ var CORE = [
   "lib/sw-register.js?v=1",
   "../../reading-sync.js",
   "../../_lib/progress-backup.js",
+  "../../_lib/quiz/quiz.js",
+  "lessons/quiz/Py_Lesson_1_1.js",
   "../../_lib/supabase.js",
   "../../_lib/marked.min.js",
   "../../_lib/fonts/gf-135340b0.css",
