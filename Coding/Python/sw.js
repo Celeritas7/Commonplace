@@ -7,7 +7,7 @@
  *      is already handled by the browser's own HTTP cache)
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v27";
+var VERSION = "cp-py-v30";
 var CORE = [
   "./",
   "index.html",
@@ -99,7 +99,22 @@ var CORE = [
   "../../reading-sync.js",
   "../../_lib/progress-backup.js",
   "../../_lib/quiz/quiz.js",
+  "lessons/quiz/Py_Lesson_0_1.js",
+  "lessons/quiz/Py_Lesson_0_2.js",
+  "lessons/quiz/Py_Lesson_0_3.js",
+  "lessons/quiz/Py_Lesson_0_4.js",
   "lessons/quiz/Py_Lesson_1_1.js",
+  "lessons/quiz/Py_Lesson_1_2.js",
+  "lessons/quiz/Py_Lesson_1_3.js",
+  "lessons/quiz/Py_Lesson_1_4.js",
+  "lessons/quiz/Py_Lesson_1_5.js",
+  "lessons/quiz/Py_Lesson_1_6.js",
+  "lessons/quiz/Py_Lesson_1_7.js",
+  "lessons/quiz/Py_Lesson_2_1.js",
+  "lessons/quiz/Py_Lesson_2_2.js",
+  "lessons/quiz/Py_Lesson_2_3.js",
+  "lessons/quiz/Py_Lesson_2_4.js",
+  "lessons/quiz/Py_Lesson_2_5.js",
   "../../_lib/supabase.js",
   "../../_lib/marked.min.js",
   "../../_lib/fonts/gf-135340b0.css",

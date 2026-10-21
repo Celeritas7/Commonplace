@@ -338,6 +338,7 @@
       if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
       var cs = getComputedStyle(el);
       if (cs.position !== 'fixed' || cs.bottom === 'auto') return;
+      if (cs.top !== 'auto' && parseFloat(cs.top) < 60) return;   // full-screen overlays (the quiz) are not floaters
       if (parseFloat(cs.bottom) > 160) return;
       el.classList.add('lr-safe');
     });
