@@ -4,6 +4,9 @@ if(window.__cpBackup)return;window.__cpBackup=1;
 /* quiz layer: _lib/quiz/quiz.js sits next to this file, so derive its URL from our own src */
 var ME=document.currentScript&&document.currentScript.src;
 function quiz(){if(!ME||window.__cpQuiz||window.CP_QUIZ_OFF)return;var q=document.createElement("script");q.src=ME.replace(/progress-backup\.js(\?.*)?$/,"quiz/quiz.js");q.defer=true;document.head.appendChild(q);}
+/* study layer (🔖 bookmarks, ★ saved pages, highlights): extras.js sits one folder up from this file. serve.py may already have
+   injected it; extras.js guards itself (window.__cpx), so loading it here too is harmless and makes it work on any host */
+function study(){if(!ME||window.__cpx||window.CP_STUDY_OFF)return;var x=document.createElement("script");x.src=ME.replace(/_lib\/progress-backup\.js(\?.*)?$/,"extras.js");if(x.src===ME)return;x.defer=true;document.head.appendChild(x);}
 function dl(){var d={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);d[k]=localStorage.getItem(k);}
  var blob=new Blob([JSON.stringify({app:"commonplace",exportedAt:new Date().toISOString(),data:d},null,1)],{type:"application/json"});
  var a=document.createElement("a");a.href=URL.createObjectURL(blob);
@@ -32,5 +35,5 @@ function boot(){
   var m=box.querySelector(".cpb-menu");
   if(b.className==="cpb-main"){m.hidden=!m.hidden;return;}
   if(b.getAttribute("data-a")==="ex")dl();else imp();m.hidden=true;});}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",function(){boot();quiz();});else{boot();quiz();}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",function(){boot();quiz();study();});else{boot();quiz();study();}
 })();
