@@ -156,7 +156,7 @@
 
   /* UI furniture, not content: nav bars, mascots, progress strips, anything pinned to the viewport */
   function chrome(el) {
-    if (el.closest('nav,header,footer,aside,button,a,[role=navigation],[role=dialog],.toc,.topbar,.hud,.cobra,.progressbar,#reading-sync-bar')) return true;
+    if (el.closest('nav,header,footer,aside,button,a,[role=navigation],[role=dialog],.toc,.topbar,.hud,.cobra,.progressbar,#reading-sync-bar,.eol,.next,.lr-ui,.lr-sheet')) return true;
     for (var n = el, i = 0; n && n !== document.body && i < 10; n = n.parentElement, i++) {
       var pos = getComputedStyle(n).position; if (pos === 'fixed' || pos === 'sticky') return true;
     }
