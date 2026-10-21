@@ -115,7 +115,8 @@ def end_of_lesson(L, nb):
     if rc:
         step1 = '<h4>Recall · %d question%s</h4>\n      %s' % (len(rc), "" if len(rc) == 1 else "s", recall(rc, L["id"]))
     else:
-        step1 = '<h4>Recall · 3 questions</h4>\n      <p class="eol-muted">Not written for this lesson yet. Go on to the notebook.</p>'
+        step1 = ('<h4>Check yourself · 5 questions</h4>\n      <p class="eol-muted" id="eol-check-note">A short quiz on this lesson. Get 4 of 5 and it is checked.</p>\n'
+                 '      <button class="eol-btn" id="eol-check" type="button">&#129504; Start the check</button>')
     if nb:
         step2 = '<a class="eol-btn ghost" href="%s">&#9654; %s &#8599;</a>' % nb
     else:

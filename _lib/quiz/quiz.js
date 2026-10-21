@@ -454,7 +454,10 @@
     '.cpq-review{border-top:1px solid var(--line2);padding-top:14px}.cpq-review h3{font-size:13px;' + MONO + 'letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0 0 10px}' +
     '.cpq-miss{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:10px;padding:9px 12px;margin-bottom:8px;font-size:14px}' +
     '.cpq-miss .cpq-a{color:var(--ok);font-weight:600}' +
-    '.cpq-empty{padding:12px 0 18px;color:var(--soft)}';
+    '.cpq-empty{padding:12px 0 18px;color:var(--soft)}' +
+    /* lesson check: main action first; on desktop it sits on the right, on phones the buttons stack full width */
+    '.cpq-foot-check{flex-direction:row-reverse;justify-content:flex-start}' +
+    '@media (max-width:560px){.cpq-foot-check{flex-direction:column;align-items:stretch}.cpq-foot-check .cpq-btn{width:100%;min-height:46px}}';
   document.head.appendChild(css);
 
   /* ---------------- quiz state & UI ---------------- */
@@ -462,8 +465,9 @@
   var TIME = { mcq: 15, fill: 35, match: 45 };
   var prefs = Object.assign({ types: ['mcq', 'fill', 'match'], count: 10, stress: false }, load(LS_PREF, {}));
   var root, card, S, tick;
+  var CHECK = null;   // set by CPQuiz.check(): a fixed short quiz with a pass mark, no setup screen
 
-  function open() {
+  function open(skipSetup) {
     if (root) return;
     root = document.createElement('div'); root.id = 'cpq-root';
     root.innerHTML = '<div id="cpq-card" role="dialog" aria-modal="true" aria-label="Quiz"></div>';
@@ -471,10 +475,12 @@
     root.addEventListener('mousedown', function (e) { if (e.target === root) close(); });
     document.addEventListener('keydown', onKey, true);
     document.documentElement.style.overflow = 'hidden';
-    setup();
+    if (skipSetup !== true) setup();
   }
   function close() {
     clearInterval(tick);
+    if (CHECK && !CHECK.reported) { var c = CHECK; CHECK = null; if (c.onCancel) try { c.onCancel(); } catch (e) {} }
+    CHECK = null;
     if (!root) return;
     document.removeEventListener('keydown', onKey, true);
     root.remove(); root = card = null; S = null;
@@ -509,14 +515,20 @@
   }
 
   function start() {
-    var order = ['mcq', 'fill', 'match'].filter(function (t) { return prefs.types.indexOf(t) >= 0; });
-    var built = buildDeck(order, prefs.count);
+    var order = CHECK ? ['mcq', 'fill', 'match'] : ['mcq', 'fill', 'match'].filter(function (t) { return prefs.types.indexOf(t) >= 0; });
+    var built = buildDeck(order, CHECK ? CHECK.count : prefs.count);
+    if (CHECK) {   // a lesson check uses only written questions when there are enough of them
+      var authored = fromBank(window.CP_QUIZ_BANK);
+      if (authored.length >= CHECK.count) built = { deck: shuffle(authored).slice(0, CHECK.count), stats: built.stats };
+    }
+    if (CHECK && !built.deck.length) { var c = CHECK; c.reported = true; close(); if (c.onDone) c.onDone({ pass: true, right: 0, asked: 0, empty: true, action: 'continue' }); return; }
     if (!built.deck.length) {
       card.querySelector('#cpq-meta').innerHTML = '<span style="color:var(--bad)">Not enough material on this page for those types yet' +
         (built.stats.code || built.stats.pairs ? '' : ' — open a lesson tab or scroll the content in first') + '. Try another type, or add an authored bank (see _lib/quiz/README.md).</span>';
       return;
     }
-    S = { deck: built.deck, i: 0, score: 0, right: 0, streak: 0, bestStreak: 0, lives: prefs.stress ? 3 : Infinity, misses: [], stress: prefs.stress, t0: Date.now() };
+    var stress = CHECK ? false : prefs.stress;
+    S = { deck: built.deck, i: 0, score: 0, right: 0, streak: 0, bestStreak: 0, lives: stress ? 3 : Infinity, misses: [], stress: stress, t0: Date.now() };
     show();
   }
 
@@ -696,6 +708,7 @@
 
   function results() {
     clearInterval(tick);
+    if (CHECK) return checkResults();
     var asked = S.i + 1, pct = Math.round(S.right / asked * 100), secs = Math.round((Date.now() - S.t0) / 1000);
     var best = load(LS_BEST, null), isBest = !best || S.score > best.score;
     if (isBest) save(LS_BEST, { score: S.score, pct: pct, stress: S.stress, at: new Date().toISOString() });
@@ -718,6 +731,52 @@
     S.over = true;
     card.innerHTML = h;
     card.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; if (b.dataset.a === 'close') close(); else if (b.dataset.a === 'again') start(); else if (b.dataset.a === 'setup') setup(); };
+  }
+
+  /* ---- lesson check: pass / review / continue ---- */
+  function checkResults() {
+    var c = CHECK, asked = S.i + 1, need = Math.min(c.pass, asked), pass = S.right >= need;
+    var r = { pass: pass, right: S.right, asked: asked, at: Date.now() };
+    var secs = [];
+    S.misses.forEach(function (m) { if (m.q.sec != null && secs.indexOf(m.q.sec) < 0) secs.push(m.q.sec); });
+    secs.sort(function (a, b) { return a - b; });
+    var head = pass ? '✓ ' + (c.passTitle || 'Checked') : 'Not quite yet';
+    var line = pass ? (S.right === asked ? 'All ' + asked + ' right.' : S.right + ' of ' + asked + ' right — good enough to move on.')
+                    : S.right + ' of ' + asked + ' right. You need ' + need + '. The misses below show what to look at again.';
+    var h = topBar('🧠 ' + esc(c.title || pageTitle())) + '<div class="cpq-body"><div class="cpq-score"><div class="cpq-big" style="color:var(' + (pass ? '--ok' : '--bad') + ')">' + S.right + '/' + asked + '</div>' +
+      '<div class="cpq-grade"><b>' + esc(head) + '</b> · ' + esc(line) + '</div></div>';
+    if (S.misses.length) {
+      h += '<div class="cpq-review"><h3>What you missed (' + S.misses.length + ')</h3>' + S.misses.map(function (m) {
+        var ask = String(m.q.ask || '').replace(/<span class="cpq-ctx">.*?<\/span>/, '');
+        var where = m.q.sec != null && c.secName ? '<div style="color:var(--soft);font-size:12.5px;margin-top:3px">↳ ' + esc(c.secName(m.q.sec)) + '</div>' : '';
+        return '<div class="cpq-miss"><div>' + ask + '</div><div class="cpq-a" style="white-space:pre-line">' + esc(m.answer) + '</div>' + where + '</div>';
+      }).join('') + '</div>';
+    }
+    h += '</div><div class="cpq-foot cpq-foot-check">';
+    if (pass) h += '<button class="cpq-btn" data-a="go">' + esc(c.continueLabel || 'Continue') + ' →</button><button class="cpq-btn cpq-ghost" data-a="again">Try again</button>';
+    else h += '<button class="cpq-btn" data-a="review">' + (secs.length && c.secName ? 'Review ' + (secs.length === 1 ? 'that section' : 'those sections') : 'Review the lesson') + '</button>' +
+              '<button class="cpq-btn cpq-ghost" data-a="again">Try again</button><button class="cpq-btn cpq-ghost" data-a="go">' + esc(c.anywayLabel || 'Continue anyway') + '</button>';
+    h += '</div>';
+    S.over = true; card.innerHTML = h;
+    function report(action) { r.action = action; c.reported = true; close(); if (c.onDone) try { c.onDone(r); } catch (e) {} }
+    card.onclick = function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      var a = b.dataset.a;
+      if (a === 'close') return report('close');
+      if (a === 'again') { r = null; return start(); }
+      if (a === 'go') return report('continue');
+      if (a === 'review') { r.sections = secs; return report('review'); }
+    };
+    // a pass is recorded even if the reader only closes the dialog
+    if (c.onResult) try { c.onResult({ pass: pass, right: S.right, asked: asked, at: r.at }); } catch (e) {}
+  }
+  /* CPQuiz.check({ count, pass, title, continueLabel, anywayLabel, secName(sec), onResult(r), onDone(r), onCancel })
+     A short quiz straight away (no setup, no stress); onResult fires when the score is in,
+     onDone when the reader picks continue / review / close (r.action). */
+  function check(opts) {
+    if (root) return;
+    CHECK = Object.assign({ count: 5, pass: 4 }, opts || {});
+    open(true); start();
   }
 
   function onClick(e) {
@@ -758,7 +817,7 @@
     pill.onclick = open;
     document.body.appendChild(pill);
   }
-  window.CPQuiz = { open: open, close: close, _debug: { harvestCode: harvestCode, harvestPairs: harvestPairs, commentPairs: commentPairs, buildDeck: buildDeck } };
+  window.CPQuiz = { open: open, close: close, check: check, _debug: { harvestCode: harvestCode, harvestPairs: harvestPairs, commentPairs: commentPairs, buildDeck: buildDeck } };
 
   // optional authored bank next to the page: <dir>/quiz/<name>.js
   if (!window.CP_QUIZ_BANK && NAME) {

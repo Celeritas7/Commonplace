@@ -544,6 +544,69 @@
       if (++rqDone === rqs.length) { var st = document.getElementById('eol-recall'); if (st) st.classList.add('done'); }
     });
   });
+  /* ---- lesson check: a 5-question quiz between this lesson and the next (soft gate) ----
+     cp_py_check = { "2.3": { pass, right, asked, at } }. Passing once removes the gate for this lesson;
+     "Continue anyway" always goes on, the lesson just stays "read, not checked". */
+  var CHECK_KEY = 'cp_py_check';
+  function checks() { try { return JSON.parse(localStorage.getItem(CHECK_KEY) || '{}'); } catch (e) { return {}; } }
+  function checked() { var c = checks()["0.1"]; return !!(c && c.pass); }
+  function saveCheck(r) {
+    var all = checks(), prev = all["0.1"];
+    if (prev && prev.pass && !r.pass) return;            // a later miss never un-checks a lesson
+    all["0.1"] = { pass: r.pass, right: r.right, asked: r.asked, at: r.at || Date.now() };
+    try { localStorage.setItem(CHECK_KEY, JSON.stringify(all)); } catch (e) {}
+  }
+  function secName(n) {
+    var h = document.querySelector('#s' + n + ' .step-label h2');
+    return 'Section ' + n + (h ? ' · ' + h.textContent.trim() : '');
+  }
+  function goToSection(list) {
+    var n = list && list.length ? list[0] : 1, el = document.getElementById('s' + n);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  var checkBtn = document.getElementById('eol-check'), checkNote = document.getElementById('eol-check-note');
+  function showChecked() {
+    var c = checks()["0.1"];
+    if (!checkBtn || !c) return;
+    if (c.pass) {
+      checkBtn.classList.add('is-done'); checkBtn.textContent = '✓ Checked · ' + c.right + '/' + c.asked;
+      if (checkNote) checkNote.textContent = 'You passed the check for this lesson. Retake it any time from 🧠 Quiz.';
+      checkBtn.closest('.eol-step').classList.add('done');
+    } else {
+      checkBtn.textContent = '↻ Try the check again';
+      if (checkNote) checkNote.textContent = 'Last try: ' + c.right + '/' + c.asked + '. Get 4 of 5 to check this lesson.';
+    }
+  }
+  function runCheck(after) {
+    if (!window.CPQuiz || !CPQuiz.check) { if (after) after({ action: 'continue' }); return; }
+    CPQuiz.check({
+      count: 5, pass: 4, title: 'Check · Lesson ' + "0.1",
+      passTitle: 'Lesson ' + "0.1" + ' checked',
+      continueLabel: after ? 'Next lesson' : 'Done', anywayLabel: after ? 'Continue anyway' : 'Close',
+      secName: secName,
+      onResult: function (r) { saveCheck(r); showChecked(); },
+      onDone: function (r) {
+        if (r.empty) { if (after) after(r); return; }   // nothing to ask on this page: never block
+        if (r.action === 'review') return goToSection(r.sections);
+        if (after && r.action === 'continue') after(r);
+      }
+    });
+  }
+  if (checkBtn) {
+    showChecked();
+    checkBtn.addEventListener('click', function () { runCheck(null); });   // also a retake once checked
+  }
+  /* Next → runs the check first, unless this lesson is already checked */
+  Array.prototype.forEach.call(document.querySelectorAll('.next a'), function (a) {
+    if (!/^\s*Next\b/.test(a.textContent)) return;
+    a.addEventListener('click', function (e) {
+      if (checked() || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      var href = a.href;
+      runCheck(function () { location.href = href; });
+    });
+  });
+
   var doneBtn = document.getElementById('eol-done');
   function showDone() {
     if (!doneBtn || doneBtn.classList.contains('is-done')) return;
