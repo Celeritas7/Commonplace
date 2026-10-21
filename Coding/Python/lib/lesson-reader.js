@@ -58,7 +58,10 @@
     '@media (max-width:600px){.lr-auth-dock{left:8px!important;right:8px!important}}',
     '.lr-safe{margin-bottom:env(safe-area-inset-bottom,0px)!important}',
     /* phones: the bottom toolbar is ~66px tall — floaters (backup ⇅, 🧠 Quiz, toasts) sit above it */
-    '@media (max-width:819px){.lr-safe:not(.toast){margin-bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}}',   /* the toast already clears the bar and hides by sliding down */
+    '@media (max-width:819px){.lr-safe:not(.toast){margin-bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}}',
+    /* wide screens: the toolbar is a pill in the bottom-right corner, so only right-hand floaters
+       (the study layer's 🔖 ★ ☰ buttons) need to sit above it */
+    '@media (min-width:820px){.lr-safe.lr-right:not(.toast){margin-bottom:76px!important}}',   /* the toast already clears the bar and hides by sliding down */
     /* reader mode */
     'html.lr-reader,html.lr-reader body{background:var(--paper)!important;color:var(--ink)!important}',
     'html.lr-reader .lr-flat{background:var(--card)!important;background-image:none!important;color:var(--ink)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--line)!important;border-radius:6px!important;backdrop-filter:none!important}',
@@ -341,6 +344,8 @@
       if (cs.top !== 'auto' && parseFloat(cs.top) < 60) return;   // full-screen overlays (the quiz) are not floaters
       if (parseFloat(cs.bottom) > 160) return;
       el.classList.add('lr-safe');
+      var r = el.getBoundingClientRect();
+      if (r.left + r.width / 2 > window.innerWidth / 2) el.classList.add('lr-right');
     });
   }
 
