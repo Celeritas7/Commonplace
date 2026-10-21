@@ -20,7 +20,7 @@
   'use strict';
   if (window.__cpQuiz) return; window.__cpQuiz = 1;
 
-  var PAGE = decodeURIComponent(location.pathname);
+  var PAGE; try { PAGE = decodeURIComponent(location.pathname); } catch (e) { PAGE = location.pathname; }
   if (/(^|\/)(index\.html?)?$/i.test(PAGE) || /shelf\.html$/i.test(PAGE) || window.CP_QUIZ_OFF) return;
   var NAME = (PAGE.split('/').pop() || '').replace(/\.html?$/i, '');
   var LS_BEST = 'cpq:best:' + PAGE, LS_BANK = 'cpq:bank', LS_PREF = 'cpq:prefs';
@@ -349,6 +349,7 @@
         var p2 = [], re2 = /\{\{(\d+)\}\}/g, m2, l2 = 0;
         while ((m2 = re2.exec(q.text))) { p2.push(q.text.slice(l2, m2.index), { blank: +m2[1] - 1 }); l2 = m2.index + m2[0].length; }
         p2.push(q.text.slice(l2)); q.parts = p2; q.prose = true;
+        if (q.ci == null) q.ci = true;   // a sentence blank: 'Read' and 'read' are the same answer
         q.blanks = (q.blanks || []).map(function (b) { return typeof b === 'string' ? { a: b } : b; });
       }
       if (q.type === 'mcq' && q.code) { q.codeText = q.code; delete q.code; }
@@ -516,11 +517,12 @@
 
   function start() {
     var order = CHECK ? ['mcq', 'fill', 'match'] : ['mcq', 'fill', 'match'].filter(function (t) { return prefs.types.indexOf(t) >= 0; });
-    var built = buildDeck(order, CHECK ? CHECK.count : prefs.count);
-    if (CHECK) {   // a lesson check uses only written questions when there are enough of them
+    var built;
+    if (CHECK) {   // a lesson check uses only written questions when there are enough; the page is harvested only as a fallback
       var authored = fromBank(window.CP_QUIZ_BANK);
-      if (authored.length >= CHECK.count) built = { deck: shuffle(authored).slice(0, CHECK.count), stats: built.stats };
-    }
+      built = authored.length >= CHECK.count ? { deck: shuffle(authored).slice(0, CHECK.count), stats: { authored: authored.length, code: 0, pairs: 0 } }
+                                             : buildDeck(order, CHECK.count);
+    } else built = buildDeck(order, prefs.count);
     if (CHECK && !built.deck.length) { var c = CHECK; c.reported = true; close(); if (c.onDone) c.onDone({ pass: true, right: 0, asked: 0, empty: true, action: 'continue' }); return; }
     if (!built.deck.length) {
       card.querySelector('#cpq-meta').innerHTML = '<span style="color:var(--bad)">Not enough material on this page for those types yet' +
@@ -547,7 +549,7 @@
       (S.stress ? '<div class="cpq-timer"><i id="cpq-tm" style="width:100%"></i></div>' : '') +
       '<div class="cpq-body"><span class="cpq-kind">' + KIND[q.type] + '</span><div class="cpq-ask">' + (q.ask || '') + '</div>';
     if (q.quote) html += '<div class="cpq-quote">' + esc(q.quote) + '</div>';
-    if (q.codeText) html += '<div class="cpq-code">' + (q.html && /<(b|i|code|span)\b/.test(q.codeText) ? q.codeText : esc(q.codeText)) + '</div>';
+    if (q.codeText) html += '<div class="cpq-code">' + (q.html && /<(b|i|code|span)(\s[^>]*)?>/.test(q.codeText) ? q.codeText : esc(q.codeText)) + '</div>';
     if (q.type === 'mcq') html += renderMcq(q);
     else if (q.type === 'fill') html += renderFill(q);
     else html += renderMatch(q);
@@ -776,7 +778,9 @@
   function check(opts) {
     if (root) return;
     CHECK = Object.assign({ count: 5, pass: 4 }, opts || {});
-    open(true); start();
+    open(true);
+    card.innerHTML = '<div class="cpq-body"><p class="cpq-empty">Loading the questions…</p></div>';
+    bankReady.then(function () { if (CHECK && root) start(); });
   }
 
   function onClick(e) {
@@ -819,12 +823,17 @@
   }
   window.CPQuiz = { open: open, close: close, check: check, _debug: { harvestCode: harvestCode, harvestPairs: harvestPairs, commentPairs: commentPairs, buildDeck: buildDeck } };
 
-  // optional authored bank next to the page: <dir>/quiz/<name>.js
+  // optional authored bank next to the page: <dir>/quiz/<name>.js — bankReady settles once it has loaded or failed
+  var bankReady = Promise.resolve();
   if (!window.CP_QUIZ_BANK && NAME) {
-    var s = document.createElement('script');
-    s.src = 'quiz/' + encodeURIComponent(NAME) + '.js';
-    s.onerror = function () { s.remove(); };
-    document.head.appendChild(s);
+    bankReady = new Promise(function (res) {
+      var s = document.createElement('script');
+      s.src = 'quiz/' + encodeURIComponent(NAME) + '.js';
+      s.onload = function () { res(); };
+      s.onerror = function () { s.remove(); res(); };
+      document.head.appendChild(s);
+      setTimeout(res, 8000);   // never wait on a slow network for ever
+    });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

@@ -112,8 +112,10 @@ def end_of_lesson(L, nb):
     """The block every lesson ends with: recall → notebook → mark done.
     nb: (href, label) of the lesson's notebook, or None."""
     rc = L.get("recall")
+    check = ('<p class="eol-muted" id="eol-check-note">Then a 5-question check on this lesson. Get 4 of 5 and it is checked.</p>\n'
+             '      <button class="eol-btn" id="eol-check" type="button">&#129504; Start the check</button>')
     if rc:
-        step1 = '<h4>Recall · %d question%s</h4>\n      %s' % (len(rc), "" if len(rc) == 1 else "s", recall(rc, L["id"]))
+        step1 = '<h4>Recall · %d question%s</h4>\n      %s\n      %s' % (len(rc), "" if len(rc) == 1 else "s", recall(rc, L["id"]), check)
     else:
         step1 = ('<h4>Check yourself · 5 questions</h4>\n      <p class="eol-muted" id="eol-check-note">A short quiz on this lesson. Get 4 of 5 and it is checked.</p>\n'
                  '      <button class="eol-btn" id="eol-check" type="button">&#129504; Start the check</button>')

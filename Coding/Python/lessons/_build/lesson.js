@@ -89,7 +89,7 @@
       checkBtn.closest('.eol-step').classList.add('done');
     } else {
       checkBtn.textContent = '↻ Try the check again';
-      if (checkNote) checkNote.textContent = 'Last try: ' + c.right + '/' + c.asked + '. Get 4 of 5 to check this lesson.';
+      if (checkNote) checkNote.textContent = 'Last try: ' + c.right + '/' + c.asked + '. Get ' + Math.min(4, c.asked) + ' of ' + c.asked + ' to check this lesson.';
     }
   }
   function runCheck(after) {
@@ -130,7 +130,9 @@
   }
   function alreadyDone() {
     var r = {}; try { r = JSON.parse(localStorage.getItem('cp_py_read') || '{}'); } catch (e) {}
-    return (r[__LESSON_ID__] && r[__LESSON_ID__].pct >= 100) || (window.ReadingSync && ReadingSync.isDone());
+    var local = r[__LESSON_ID__] && r[__LESSON_ID__].pct >= 100, cloud = window.ReadingSync && ReadingSync.isDone();
+    if (cloud && !local && window.PYPROGRESS) PYPROGRESS.write(__LESSON_ID__, 100);   // finished on another device: count it here too
+    return !!(local || cloud);
   }
   if (doneBtn) {
     if (alreadyDone()) showDone();
