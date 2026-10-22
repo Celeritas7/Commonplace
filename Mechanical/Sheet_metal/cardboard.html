@@ -420,6 +420,21 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);display
         <div class="stats" id="rstats"></div>
         <ul class="notes" id="rnotes"></ul>
       </div>
+      <div class="panel" style="margin-top:16px">
+        <h3>Box to look for</h3>
+        <p class="hint" style="margin-top:0">Take these numbers shopping. Measure boxes on the <b>inside</b>. The size printed on a box is usually the inside size, but check with a tape.</p>
+        <ul class="notes" id="rshop"></ul>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h3>Got a box? Check it</h3>
+        <p class="hint" style="margin-top:0">Enter its three inside measurements in any order. The page tries every way of standing it and picks the one that holds the most bottles.</p>
+        <form onsubmit="return false" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:420px">
+          <div class="f wide"><label for="kA">Side 1</label><input id="kA" type="number" min="50" step="1" value="400"></div>
+          <div class="f wide"><label for="kB">Side 2</label><input id="kB" type="number" min="50" step="1" value="350"></div>
+          <div class="f wide"><label for="kC">Side 3</label><input id="kC" type="number" min="50" step="1" value="300"></div>
+        </form>
+        <ul class="notes" id="rcheck"></ul>
+      </div>
       <div class="views">
         <div class="figure">
           <div class="figcap"><span>Front · mm</span></div>
@@ -642,7 +657,7 @@ fillBoards($('rgboard'), 'bc');
 fillBoards($('rcboard'), 'bc');
 
 const KEY = 'commonplace.cardboard.v1';
-const SAVE = ['cw','ch','cd','cboard','n','dboard','clr','top','back','hem','k','lboard','ect','orient','open','hum','dur','used','gc','gr','lw','ld','ang','lip','sboard','use-drawers','use-laptop','use-grid','use-rack','bd','bl','bkg','rc','rr','rout','rtilt','rclr','rgboard','rcboard','rmode'];
+const SAVE = ['cw','ch','cd','cboard','n','dboard','clr','top','back','hem','k','lboard','ect','orient','open','hum','dur','used','gc','gr','lw','ld','ang','lip','sboard','use-drawers','use-laptop','use-grid','use-rack','bd','bl','bkg','rc','rr','rout','rtilt','rclr','rgboard','rcboard','rmode','kA','kB','kC'];
 try{
   const s = JSON.parse(localStorage.getItem(KEY) || '{}');
   SAVE.forEach(id => { if (s[id] === undefined) return; const el = $(id); if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; });
@@ -1124,7 +1139,7 @@ function renderRack(){
   notes.push(['ok', 'Flutes: horizontal in the shelf strips, so they span the cell like a beam, and vertical in the column strips and case sides, so they carry the stack.']);
   $('rnotes').innerHTML = notes.map(([c, x]) => `<li class="${c}">${esc(x)}</li>`).join('');
 
-  drawRackFront(rack); drawRackSide(rack); drawRackStrips(rack);
+  drawRackFront(rack); drawRackSide(rack); drawRackStrips(rack); renderRackBox(rack);
 
   const colNote = mode === 'wedge'
     ? `Flutes along the ${r0(H - 1)} edge. Cut slots ${r1(slotW)} wide and ${r0(slotD)} deep from the front edge, at ${ys.map(r0).join(', ') || '–'} from the bottom.`
@@ -1161,6 +1176,70 @@ function renderRack(){
   ];
   $('rsteps').innerHTML = steps.map(x => `<li>${x}</li>`).join('');
   renderCut();
+}
+
+
+/* how many cells fit in a given inside space, for either tilt method */
+function rackFit(r, w, h, dep){
+  const D = Math.min(dep, r.D);
+  const cols = Math.floor((w + r.t) / (r.cell + r.t));
+  const rows = r.mode === 'wedge'
+    ? Math.floor((h + r.t) / (r.cell + r.t))
+    : Math.floor((h - D * Math.tan(r.a)) / r.pv);
+  return {cols: Math.max(0, cols), rows: Math.max(0, rows), D};
+}
+
+function renderRackBox(r){
+  if (!r) return;
+  const box = [r.W, r.H, r.D];
+  const wSlack = r.cell + r.t - 1, hSlack = (r.mode === 'wedge' ? r.cell + r.t : r.pv) - 1;
+  // board for the grid and runners, against what one case box offers
+  const strips = r.nShelf * (r.W - 1) * r.Ds + (r.cols - 1) * (r.H - 1) * r.D + (r.mode === 'shelf' ? 2 * r.rows * r.Ds * 60 : r.nWedge * r.wb * r.wh / 2 + r.Wo * r.wb);
+  const boxSkin = 2 * (r.W * r.H + r.W * r.D + r.H * r.D);
+  const longest = Math.max(r.W - 1, r.H - 1);
+  const shop = [
+    ['ok', `<b>Case box:</b> at least <b>${r0(r.W)} × ${r0(r.H)} mm</b> inside across the opening, and at least <b>${r0(r.D)} mm</b> deep. Any of the three sides can be the depth, as long as all three are big enough.`],
+    ['ok', `<b>A bit bigger is fine.</b> Up to ${r0(r.W + wSlack)} wide and ${r0(r.H + hSlack)} tall, spread the extra as cell clearance. Any wider or taller and you can add another column or row. Any depth over ${r0(r.D)} is cut off.`],
+    ['warn', `<b>Smaller won't work.</b> Even 10 mm short on width or height loses a whole column or row. Less than ${r0(r.Lb * 0.55)} mm of depth can't hold the bottle.`],
+    ['ok', `<b>Board for the grid${r.mode === 'shelf' ? ' and runners' : ' and wedge'}:</b> about ${r1(strips / 1e6)} m², which is roughly ${Math.max(1, Math.ceil(strips / boxSkin))} more box${Math.ceil(strips / boxSkin) > 1 ? 'es' : ''} of the same size, flattened. You need pieces at least ${r0(longest)} × ${r0(r.Ds)} mm for the strips.`],
+  ];
+  $('rshop').innerHTML = shop.map(([c, x]) => `<li class="${c}">${x}</li>`).join('');
+
+  const A = num('kA', 400), B = num('kB', 350), C = num('kC', 300);
+  const perms = [[A, B, C], [A, C, B], [B, A, C], [B, C, A], [C, A, B], [C, B, A]];
+  let best = null;
+  perms.forEach(([w, h, dep]) => {
+    if (dep < r.Lb * 0.55) return;
+    const f = rackFit(r, w, h, dep);
+    const n = f.cols * f.rows;
+    const waste = (w - (f.cols * r.cell + (f.cols - 1) * r.t)) + (h - f.rows * (r.mode === 'wedge' ? r.pitch : r.pv));
+    if (!best || n > best.n || (n === best.n && waste < best.waste)) best = {w, h, dep, n, waste, ...f};
+  });
+  const want = r.cols * r.rows, out = [];
+  if (!best || best.n === 0){
+    const deepest = Math.max(A, B, C);
+    out.push(['bad', deepest < r.Lb * 0.55
+      ? `Too shallow. No side is ${r0(r.Lb * 0.55)} mm, the minimum to hold a ${r0(r.Lb)} mm bottle.`
+      : `Too small for even one ${r0(r.cell)} mm cell plus the shelf slope.`]);
+  } else {
+    const stick = r.Lb - best.D - r.T;
+    out.push([best.n >= want ? 'ok' : 'warn',
+      `Holds <b>${best.n} bottles</b> (${best.cols} columns × ${best.rows} rows)${best.n >= want ? `, enough for your ${want}.` : `, short of your ${want}.`}`]);
+    out.push(['ok', `Stand it with the <b>${r0(best.w)}</b> side as the width and the <b>${r0(best.h)}</b> side as the height. The <b>${r0(best.dep)}</b> side is the depth: ${best.dep > best.D + 2 ? `cut it down to ${r0(best.D)} mm.` : `use it as is, and the necks stick out about ${r0(stick)} mm.`}`]);
+    const usedW = best.cols * r.cell + (best.cols - 1) * r.t;
+    const extra = (best.w - usedW) / best.cols;
+    if (extra > 0.5) out.push([extra > 20 ? 'warn' : 'ok', extra > 20
+      ? `There's ${r0(best.w - usedW)} mm of spare width. Glue a filler panel inside one side wall, or use it for a narrow column of small bottles.`
+      : `Add the spare ${r1(extra)} mm per cell to the clearance (set cell clearance to ${r0(num('rclr', 8) + extra)}).`]);
+    if (best.n < want){
+      const needW = r.W - best.w, needH = r.H - best.h;
+      const short = [];
+      if (best.cols < r.cols) short.push(`${r0(needW)} mm more width`);
+      if (best.rows < r.rows) short.push(`${r0(needH)} mm more height`);
+      if (short.length) out.push(['warn', `For the full ${r.cols} × ${r.rows} plan, this box needs ${short.join(' and ')}. Or change the plan to ${best.cols} × ${best.rows}.`]);
+    }
+  }
+  $('rcheck').innerHTML = out.map(([c, x]) => `<li class="${c}">${x}</li>`).join('');
 }
 
 function drawRackFront(r){
@@ -1479,6 +1558,7 @@ try{ if (JSON.parse(localStorage.getItem(KEY) || '{}').ect !== undefined) ectTou
 $('k').addEventListener('input', () => renderStand());
 ['use-drawers','use-laptop','use-grid','use-rack'].forEach(id => $(id).addEventListener('change', () => { renderCut(); save(); }));
 renderStock();
+['kA','kB','kC'].forEach(id => $(id).addEventListener('input', () => { renderRackBox(rack); save(); }));
 ['bd','bl','bkg','rc','rr','rout','rtilt','rclr','rgboard','rcboard','rmode'].forEach(id => $(id).addEventListener('input', () => { renderRack(); save(); }));
 renderStand();
 renderRack();
