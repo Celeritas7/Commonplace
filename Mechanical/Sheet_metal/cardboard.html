@@ -382,7 +382,15 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);display
 <section class="sec" id="rack">
   <div class="kicker">06 · Planner</div>
   <h2>Tilted bottle rack</h2>
-  <p class="intro">A grid of square cells, like a wine rack, inside a box case. The bottles lie on their sides with the necks out, so you can grab one and pull. The whole rack sits on wedge ribs that tilt it back a few degrees. Each bottle's base rests against the back panel and nothing can roll out. The grid is the egg-crate idea from section 09 stood on its edge: horizontal strips are shelves, vertical strips are columns, and they lock together with half-depth slots.</p>
+  <p class="intro">A grid of cells, like a wine rack, inside a box case. The bottles lie on their sides with the necks out, so you can grab one and pull. Each bottle tilts down toward the back, so its base rests against the back panel and nothing rolls out. The grid is the egg-crate idea from section 09 stood on its edge: shelf strips and column strips lock together with half-depth slots. There are two ways to get the tilt:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>Sloped shelves, upright box</th><th>Whole box on a wedge</th></tr></thead>
+    <tbody>
+      <tr><td class="k">How</td><td>The case stands straight. Each shelf slopes down to the back, and the column strips get angled slots.</td><td>A square grid. The finished box sits on wedge-shaped supports and leans back.</td></tr>
+      <tr><td class="k">Good</td><td>Back flat against the wall, level top you can use, no risk of toppling backwards</td><td>Every cut is square, and any box works as it is</td></tr>
+      <tr><td class="k">Cost</td><td>Angled slots must be cut accurately, there's one extra shelf at the bottom, and the box is a little taller</td><td>Leans away from the wall, the top slopes, and a tall rack can tip back</td></tr>
+    </tbody>
+  </table></div>
   <div class="planner">
     <form class="panel" onsubmit="return false">
       <fieldset>
@@ -393,6 +401,10 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);display
       </fieldset>
       <fieldset>
         <legend>Rack</legend>
+        <div class="f wide"><select id="rmode" aria-label="How to tilt">
+          <option value="shelf">Sloped shelves inside an upright box</option>
+          <option value="wedge">Whole box tilted on a wedge</option>
+        </select></div>
         <div class="f"><label for="rc">Columns</label><input id="rc" type="number" min="1" max="10" step="1" value="4"></div>
         <div class="f"><label for="rr">Rows</label><input id="rr" type="number" min="1" max="10" step="1" value="3"></div>
         <div class="f"><label for="rout">Neck sticks out<small>enough to grab</small></label><input id="rout" type="number" min="0" max="200" step="5" value="80"></div>
@@ -401,7 +413,7 @@ footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--rule);display
         <div class="f wide"><select id="rgboard" aria-label="Grid board"></select></div>
         <div class="f wide"><select id="rcboard" aria-label="Case board"></select></div>
       </fieldset>
-      <p class="hint">The first board is for the grid strips, the second for the case and wedge. Double wall is the safer choice for both.</p>
+      <p class="hint">The first board is for the grid strips, the second for the case, runners and wedge. Double wall is the safer choice for both.</p>
     </form>
     <div>
       <div class="panel">
@@ -630,7 +642,7 @@ fillBoards($('rgboard'), 'bc');
 fillBoards($('rcboard'), 'bc');
 
 const KEY = 'commonplace.cardboard.v1';
-const SAVE = ['cw','ch','cd','cboard','n','dboard','clr','top','back','hem','k','lboard','ect','orient','open','hum','dur','used','gc','gr','lw','ld','ang','lip','sboard','use-drawers','use-laptop','use-grid','use-rack','bd','bl','bkg','rc','rr','rout','rtilt','rclr','rgboard','rcboard'];
+const SAVE = ['cw','ch','cd','cboard','n','dboard','clr','top','back','hem','k','lboard','ect','orient','open','hum','dur','used','gc','gr','lw','ld','ang','lip','sboard','use-drawers','use-laptop','use-grid','use-rack','bd','bl','bkg','rc','rr','rout','rtilt','rclr','rgboard','rcboard','rmode'];
 try{
   const s = JSON.parse(localStorage.getItem(KEY) || '{}');
   SAVE.forEach(id => { if (s[id] === undefined) return; const el = $(id); if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; });
@@ -1061,16 +1073,25 @@ function renderRack(){
   const out = Math.max(0, num('rout', 80)), th = Math.max(0, Math.min(20, num('rtilt', 8))), clr = num('rclr', 8);
   const gbB = byId($('rgboard').value), cbB = byId($('rcboard').value);
   const t = gbB.t, T = cbB.t, a = th * Math.PI / 180;
+  const mode = $('rmode').value === 'wedge' ? 'wedge' : 'shelf';
   const cell = d + clr;
-  const W = cols * cell + (cols - 1) * t, H = rows * cell + (rows - 1) * t;   // case inside
-  const Wo = W + 2 * T, Ho = H + 2 * T;
-  const D = Math.max(60, Lb - out - T);            // grid & case depth; bottle base touches the back panel
-  const wb = D * Math.cos(a), wh = D * Math.sin(a);  // wedge rib legs
-  const nWedge = cols + 1;
-  const slotW = Math.ceil((t + 0.5) * 2) / 2, slotD = D / 2 + 1;
   const pitch = cell + t;
+  const D = Math.max(60, Lb - out - T);            // grid & case depth; bottle base touches the back panel
+  const W = cols * cell + (cols - 1) * t;
+  // sloped shelves: one shelf under every row, spaced so the gap square to the shelves is still one cell
+  const pv = pitch / Math.cos(a), drop = D * Math.tan(a);
+  const H = mode === 'wedge' ? rows * cell + (rows - 1) * t : rows * pv + drop;   // case inside
+  const Wo = W + 2 * T, Ho = H + 2 * T;
+  const Ds = mode === 'wedge' ? D : D / Math.cos(a);  // shelf strip width
+  const wb = D * Math.cos(a), wh = D * Math.sin(a);  // wedge rib legs
+  const nWedge = mode === 'wedge' ? cols + 1 : 0;
+  const nShelf = mode === 'wedge' ? rows - 1 : rows;
+  const slotW = Math.ceil((t + 0.5) * 2) / 2, slotD = D / 2 + 1, slotDs = Ds / 2 + 1;
   const xs = []; for (let i = 1; i < cols; i++) xs.push(i * pitch - t / 2);   // column centre lines from the left
-  const ys = []; for (let j = 1; j < rows; j++) ys.push(j * pitch - t / 2);   // shelf centre lines from the bottom
+  const ys = [];                                                              // shelf centre lines at the front edge, from the bottom
+  if (mode === 'wedge') for (let j = 1; j < rows; j++) ys.push(j * pitch - t / 2);
+  else for (let j = 0; j < rows; j++) ys.push(j * pv + drop + t / (2 * Math.cos(a)));
+  const backY = []; for (let j = 0; j < rows; j++) backY.push(j * pv);      // shelf underside at the back wall
   // strength: columns + case sides share the stack; slots leave half the depth in compression
   const total = cols * rows * kg;
   const walls = cols + 1;
@@ -1078,14 +1099,16 @@ function renderRack(){
   const perWall = total / walls;
   // tipping: centre of gravity of the loaded rack, measured forward of the wedge's back edge
   const cgU = D / 2, cgV = Ho / 2 + wh / 2;
-  const cgX = cgU * Math.cos(a) - (Ho / 2) * Math.sin(a);
-  rack = {d, Lb, kg, cols, rows, out, th, a, t, T, cell, W, H, Wo, Ho, D, wb, wh, nWedge, slotW, slotD, xs, ys,
-          gb: gbB.id, cb: cbB.id, total, capWall, perWall, cgX};
+  const cgX = mode === 'wedge' ? cgU * Math.cos(a) - (Ho / 2) * Math.sin(a) : D / 2;
+  rack = {mode, d, Lb, kg, cols, rows, out, th, a, t, T, cell, pitch, pv, drop, W, H, Wo, Ho, D, Ds, wb, wh, nWedge, nShelf,
+          slotW, slotD, slotDs, xs, ys, backY, gb: gbB.id, cb: cbB.id, total, capWall, perWall, cgX};
 
   $('rstats').innerHTML =
     stat('Holds', `${cols * rows} bottles`, `${r1(total)} kg full`) +
-    stat('Outside', `${r0(Wo)} × ${r0(Ho + wh)} × ${r0(wb)}`, 'W × H × D incl. wedge') +
-    stat('Cell', `${r0(cell)} mm`, `square · pitch ${r1(pitch)}`) +
+    (mode === 'wedge'
+      ? stat('Outside', `${r0(Wo)} × ${r0(Ho + wh)} × ${r0(wb)}`, 'W × H × D incl. wedge')
+      : stat('Outside', `${r0(Wo)} × ${r0(Ho)} × ${r0(D)}`, 'W × H × D, stands upright')) +
+    stat('Cell', `${r0(cell)} mm`, mode === 'wedge' ? `square · pitch ${r1(pitch)}` : `shelves ${r1(pv)} apart, vertically`) +
     stat('Depth', `${r0(D)} mm`, `${r0(out)} mm of bottle out front`);
 
   const notes = [];
@@ -1094,34 +1117,49 @@ function renderRack(){
   if (perWall > capWall) notes.push(['bad', `Each column strip carries about ${r1(perWall)} kg, more than the ${r1(capWall)} kg it can safely hold. Use double-wall board for the grid, or make the rack wider instead of taller.`]);
   else notes.push([perWall > capWall * 0.6 ? 'warn' : 'ok', `Column load ≈ ${r1(perWall)} kg per strip against about ${r1(capWall)} kg safe. Load the bottom rows first and empty the top first.`]);
   if (th < 4) notes.push(['warn', 'With under 4° of tilt, bottles can creep forward when you pull a neighbour. Use 6–10°.']);
-  if (cgX < 0.2 * wb) notes.push(['bad', 'The rack is tall for its depth, and with the tilt it can topple backwards. Stand it against a wall, strap it to the wall, or reduce the rows.']);
-  if (Ho > 2.5 * wb) notes.push(['warn', 'It is tall and shallow, so push it against a wall. A pulled bottle can tug the rack forward.']);
+  if (mode === 'wedge' && cgX < 0.2 * wb) notes.push(['bad', 'The rack is tall for its depth, and with the tilt it can topple backwards. Stand it against a wall, strap it to the wall, or reduce the rows.']);
+  if (mode === 'shelf') notes.push(['ok', `Each shelf drops ${r0(drop)} mm from front to back, so the box is ${r0(H - (rows * cell + (rows - 1) * t))} mm taller than a square grid. The top stays level and the back sits flat against the wall.`]);
+  if (Ho > 2.5 * (mode === 'wedge' ? wb : D)) notes.push(['warn', 'It is tall and shallow, so push it against a wall. A pulled bottle can tug the rack forward.']);
   if (clr < 5) notes.push(['warn', 'Under 5 mm of clearance, a bottle with a label or a dent will jam.']);
   notes.push(['ok', 'Flutes: horizontal in the shelf strips, so they span the cell like a beam, and vertical in the column strips and case sides, so they carry the stack.']);
   $('rnotes').innerHTML = notes.map(([c, x]) => `<li class="${c}">${esc(x)}</li>`).join('');
 
   drawRackFront(rack); drawRackSide(rack); drawRackStrips(rack);
 
+  const colNote = mode === 'wedge'
+    ? `Flutes along the ${r0(H - 1)} edge. Cut slots ${r1(slotW)} wide and ${r0(slotD)} deep from the front edge, at ${ys.map(r0).join(', ') || '–'} from the bottom.`
+    : `Flutes along the ${r0(H - 1)} edge. Cut slots from the front edge at ${ys.map(r0).join(', ')} from the bottom. Each one runs ${r0(slotD)} mm back, sloping ${th}° downward, and is ${r1(slotW)} wide. Make a card template for the angle.`;
   const rows_ = [
-    ['Shelf strip', rows - 1, `${r0(W - 1)} × ${r0(D)}`, `t ${t}`, `Flutes along the ${r0(W - 1)} edge. Cut slots ${r1(slotW)} wide and ${r0(slotD)} deep from the back edge, at ${xs.map(r0).join(', ') || '–'} from the left.`],
-    ['Column strip', cols - 1, `${r0(H - 1)} × ${r0(D)}`, `t ${t}`, `Flutes along the ${r0(H - 1)} edge. Cut slots ${r1(slotW)} wide and ${r0(slotD)} deep from the front edge, at ${ys.map(r0).join(', ') || '–'} from the bottom.`],
+    [mode === 'wedge' ? 'Shelf strip' : 'Sloped shelf', nShelf, `${r0(W - 1)} × ${r0(Ds)}`, `t ${t}`, `Flutes along the ${r0(W - 1)} edge. Cut slots ${r1(slotW)} wide and ${r0(slotDs)} deep from the back edge, at ${xs.map(r0).join(', ') || '–'} from the left.`],
+    ['Column strip', cols - 1, `${r0(H - 1)} × ${r0(D)}`, `t ${t}`, colNote],
     ['Case top / bottom', 2, `${r0(Wo)} × ${r0(D)}`, `t ${T}`, 'Flutes along the width.'],
     ['Case side', 2, `${r0(H)} × ${r0(D)}`, `t ${T}`, 'Flutes vertical. They fit between the top and bottom.'],
     ['Case back', 1, `${r0(Wo)} × ${r0(Ho)}`, `t ${T}`, 'The bottle stop. It also keeps the case square.'],
+  ];
+  if (mode === 'wedge') rows_.push(
     ['Wedge rib', nWedge, `${r0(wb)} × ${r0(wh)}`, `t ${T}`, `Right triangle. Trim the thin tip where it is under 8 mm.`],
     ['Wedge base', 1, `${r0(Wo)} × ${r0(wb)}`, `t ${T}`, 'Ties the ribs together. Flutes along the width.'],
-  ];
+  );
+  else rows_.push(['Side runner', 2 * rows, `${r0(Ds)} × 60`, `t ${T}`, 'Score along the middle and fold 90° into a 30 × 30 L. Glue one under each end of every shelf, following the slope.']);
   $('rcuts').innerHTML = '<thead><tr><th>Part</th><th>Qty</th><th>Size, mm</th><th>Board</th><th>Note</th></tr></thead><tbody>' +
     rows_.filter(r => r[1] > 0).map(r => `<tr><td class="k">${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td class="mono">${r[3]}</td><td>${esc(r[4])}</td></tr>`).join('') + '</tbody>';
 
-  $('rsteps').innerHTML = [
+  const steps = mode === 'wedge' ? [
     `<b>Shortcut:</b> if a box has an inside of about ${r0(W)} × ${r0(H)} mm and is at least ${r0(D)} mm deep, use it as the case. Cut it down to ${r0(D)} mm deep, keep its bottom as the back panel, and skip the case parts.`,
     `<b>Cut the strips</b> and check each slot with a scrap of the same board. The scrap should slide in with light pressure. If it is tight, the board crushes and the grid leans.`,
     `<b>Assemble the grid</b> on the floor, front edge down. Drop the column strips (slots facing up) onto the shelf strips (slots facing down) until the edges are flush. No glue is needed yet.`,
     `<b>Build the case</b> around the grid. Glue the top and bottom to the sides, then glue the back on. Run a bead of PVA where every strip meets the case.`,
     `<b>Make the wedge.</b> Glue the ${nWedge} ribs onto the base sheet, upright, under each column line and at both sides, with the tall end at the front. Glue the rack onto the ribs so the front is ${r0(wh)} mm higher than the back.`,
     `<b>Load it bottom-up.</b> Bottles go in base first, neck out, about ${r0(out)} mm showing. Push the rack against a wall.`,
-  ].map(x => `<li>${x}</li>`).join('');
+  ] : [
+    `<b>Shortcut:</b> if a box has an inside of about ${r0(W)} × ${r0(H)} mm and is at least ${r0(D)} mm deep, use it as the case standing upright. Cut it to ${r0(D)} mm deep and keep its bottom as the back panel.`,
+    `<b>Mark the slopes on both case sides.</b> For each shelf, mark the back end at ${backY.map(r0).join(', ')} mm and the front end ${r0(drop)} mm higher, then join the marks. Use the same marks to lay out the column strips.`,
+    `<b>Cut the column strips' angled slots</b> from one card template so they all match. Test each slot with a scrap of the board: it should slide in with light pressure.`,
+    `<b>Assemble the grid</b> front edge down. Slide the shelves (slots toward the back) into the columns' angled slots until the edges are flush. The bottom shelf's back edge rests on the case floor.`,
+    `<b>Glue the side runners</b> along the marked lines inside the case sides, then the back panel, then slide the grid in. A bead of PVA where every strip meets the case and the runners locks it square.`,
+    `<b>Load it bottom-up.</b> Bottles go in base first, neck out, about ${r0(out)} mm showing. The box stands straight against the wall, and the top is free for small things.`,
+  ];
+  $('rsteps').innerHTML = steps.map(x => `<li>${x}</li>`).join('');
   renderCut();
 }
 
@@ -1131,7 +1169,8 @@ function drawRackFront(r){
   let g = `<rect x="0" y="0" width="${r1(r.Wo)}" height="${r1(r.Ho)}" fill="var(--kraft-2)" stroke="var(--ink)" stroke-width="2"/>` +
           `<rect x="${r1(r.T)}" y="${r1(r.T)}" width="${r1(r.W)}" height="${r1(r.H)}" fill="var(--kraft)"/>`;
   for (let i = 0; i < r.cols; i++) for (let j = 0; j < r.rows; j++){
-    const x = r.T + i * (r.cell + r.t), y = r.T + j * (r.cell + r.t);
+    const x = r.T + i * (r.cell + r.t);
+    const y = r.mode === 'wedge' ? r.T + j * (r.cell + r.t) : r.T + r.H - r.ys[r.rows - 1 - j] - r.t / 2 - r.cell;   // front-edge view
     g += `<rect x="${r1(x)}" y="${r1(y)}" width="${r1(r.cell)}" height="${r1(r.cell)}" fill="var(--sheet-2)"/>`;
     g += `<circle cx="${r1(x + r.cell / 2)}" cy="${r1(y + r.cell - r.d / 2)}" r="${r1(r.d / 2)}" fill="none" stroke="var(--layout)" stroke-width="1.5"/>`;
     g += `<circle cx="${r1(x + r.cell / 2)}" cy="${r1(y + r.cell - r.d / 2)}" r="${r1(r.d / 7)}" fill="var(--layout)" opacity=".5"/>`;
@@ -1143,6 +1182,7 @@ function drawRackFront(r){
 }
 
 function drawRackSide(r){
+  if (r.mode === 'shelf') return drawRackSideShelf(r);
   const svg = $('rside');
   const a = r.a, ca = Math.cos(a), sa = Math.sin(a);
   // u: back → front along the rack floor, v: up from the rack floor; origin at the wedge's back-bottom corner, x forward, y up
@@ -1171,6 +1211,33 @@ function drawRackSide(r){
 <text x="${r1(P(0, r.Ho)[0])}" y="${r1(Y(P(0, r.Ho)[1]) - fs * 0.4)}" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.6)}" fill="var(--ink-soft)">back</text>`;
 }
 
+function drawRackSideShelf(r){
+  const svg = $('rside');
+  const a = r.a, ca = Math.cos(a), sa = Math.sin(a);
+  const Do = r.D + r.T;                         // x: 0 = outside of back panel → front edge
+  const fs = Math.max(Do + r.Lb, r.Ho) / 20, pad = fs * 1.6;
+  const Y = y => r.Ho - y;
+  let g = `<rect x="0" y="0" width="${r1(Do)}" height="${r1(r.Ho)}" fill="var(--sheet-2)" stroke="var(--ink)" stroke-width="2"/>` +
+          `<rect x="0" y="0" width="${r1(r.T)}" height="${r1(r.Ho)}" fill="var(--kraft-2)"/>` +
+          `<rect x="0" y="0" width="${r1(Do)}" height="${r1(r.T)}" fill="var(--kraft-2)"/><rect x="0" y="${r1(r.Ho - r.T)}" width="${r1(Do)}" height="${r1(r.T)}" fill="var(--kraft-2)"/>`;
+  r.backY.forEach(yb => {
+    const y0 = r.T + yb, y1 = y0 + r.drop, n = r.t / ca;
+    g += `<polygon points="${r1(r.T)},${r1(Y(y0))} ${r1(Do)},${r1(Y(y1))} ${r1(Do)},${r1(Y(y1 + n))} ${r1(r.T)},${r1(Y(y0 + n))}" fill="var(--kraft)" stroke="var(--ink)" stroke-width="1.2"/>`;
+  });
+  // bottle on the bottom shelf, base against the back panel
+  const P = (u, v) => [r.T + u * ca - v * sa, r.T + r.t / ca + u * sa + v * ca];
+  const vC = r.d / 2, body = r.Lb * 0.68, neckD = r.d * 0.32;
+  const u0 = (r.d) * Math.tan(a), b1 = u0 + body, b2 = b1 + r.Lb * 0.14, b3 = u0 + r.Lb;
+  const bottle = [P(u0, vC - r.d / 2), P(b1, vC - r.d / 2), P(b2, vC - neckD / 2), P(b3, vC - neckD / 2), P(b3, vC + neckD / 2), P(b2, vC + neckD / 2), P(b1, vC + r.d / 2), P(u0, vC + r.d / 2)];
+  g += `<polygon points="${bottle.map(([x, y]) => `${r1(x)},${r1(Y(y))}`).join(' ')}" fill="var(--layout-wash)" stroke="var(--layout)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  g += `<text x="${r1(Do * 0.55)}" y="${r1(Y(r.T + r.backY[0] + r.drop * 0.55) + fs * 0.9)}" text-anchor="middle" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.6)}" fill="var(--layout)">${r.th}°</text>`;
+  g += `<text x="${r1(r.T + fs * 0.3)}" y="${r1(-fs * 0.4)}" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.6)}" fill="var(--ink-soft)">back · wall</text>`;
+  g += `<text x="${r1(Do)}" y="${r1(-fs * 0.4)}" text-anchor="end" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.6)}" fill="var(--ink-soft)">front</text>`;
+  const maxX = Math.max(Do, bottle[3][0]) + pad;
+  svg.setAttribute('viewBox', `${r1(-pad)} ${r1(-pad)} ${r1(maxX + pad)} ${r1(r.Ho + 2 * pad)}`);
+  svg.innerHTML = g;
+}
+
 function drawRackStrips(r){
   const svg = $('rstrips');
   const gap = r.D * 0.5;
@@ -1179,31 +1246,36 @@ function drawRackStrips(r){
   let y = 0, out = '';
   const strip = (len, cuts, fromBack, label, n) => {
     if (n < 1) return;
+    const SD = fromBack ? r.Ds : r.D;                       // strip width
+    const sl = fromBack ? r.slotDs : r.slotD;               // slot depth
+    const tilt = !fromBack && r.mode === 'shelf' ? sl * Math.tan(r.a) : 0;   // angled slot: shifts toward the bottom of the rack
+    const hw = r.slotW / 2 / (tilt ? Math.cos(r.a) : 1);
     // slots: shelves from the back edge (top in drawing), columns from the front edge (bottom)
     let d = `M0 ${r1(y)}`;
     if (fromBack){
-      cuts.forEach(x => { d += `H${r1(x - r.slotW / 2)}V${r1(y + r.slotD)}H${r1(x + r.slotW / 2)}V${r1(y)}`; });
-      d += `H${r1(len)}V${r1(y + r.D)}H0Z`;
+      cuts.forEach(x => { d += `H${r1(x - hw)}V${r1(y + sl)}H${r1(x + hw)}V${r1(y)}`; });
+      d += `H${r1(len)}V${r1(y + SD)}H0Z`;
     } else {
-      d += `H${r1(len)}V${r1(y + r.D)}`;
-      cuts.slice().reverse().forEach(x => { d += `H${r1(x + r.slotW / 2)}V${r1(y + r.D - r.slotD)}H${r1(x - r.slotW / 2)}V${r1(y + r.D)}`; });
+      d += `H${r1(len)}V${r1(y + SD)}`;
+      cuts.slice().reverse().forEach(x => { d += `H${r1(x + hw)}L${r1(x + hw - tilt)} ${r1(y + SD - sl)}H${r1(x - hw - tilt)}L${r1(x - hw)} ${r1(y + SD)}`; });
       d += 'H0Z';
     }
-    let fl = ''; for (let yy = y + 6; yy < y + r.D; yy += 7) fl += `M0 ${r1(yy)}H${r1(len)}`;
+    let fl = ''; for (let yy = y + 6; yy < y + SD; yy += 7) fl += `M0 ${r1(yy)}H${r1(len)}`;
     const id = 'rs' + (fromBack ? 'a' : 'b');
     out += `<defs><clipPath id="${id}"><path d="${d}"/></clipPath></defs>` +
       `<path d="${d}" fill="var(--kraft)" stroke="var(--ink)" stroke-width="${r1(sw * 1.5)}" stroke-linejoin="round"/>` +
       `<path d="${fl}" stroke="var(--flute)" stroke-width="${r1(sw)}" clip-path="url(#${id})"/>` +
-      `<text x="${r1(len / 2)}" y="${r1(fromBack ? y + r.D * 0.78 : y + r.D * 0.25)}" text-anchor="middle" dominant-baseline="middle" font-family="Martian Mono,monospace" font-size="${r1(fs)}" fill="var(--ink)">${label} ×${n} · ${r0(len)} × ${r0(r.D)}</text>` +
-      `<text x="${r1(-fs * 0.4)}" y="${r1(fromBack ? y + fs * 0.8 : y + r.D - fs * 0.2)}" text-anchor="end" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.65)}" fill="var(--mute)">${fromBack ? 'back' : 'front'}</text>`;
-    cuts.forEach(x => out += `<text x="${r1(x)}" y="${r1(fromBack ? y - fs * 0.4 : y + r.D + fs * 1.1)}" text-anchor="middle" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.75)}" fill="var(--mute)">${r0(x)}</text>`);
-    y += r.D + gap;
+      `<text x="${r1(len / 2)}" y="${r1(fromBack ? y + SD * 0.78 : y + SD * 0.25)}" text-anchor="middle" dominant-baseline="middle" font-family="Martian Mono,monospace" font-size="${r1(fs)}" fill="var(--ink)">${label} ×${n} · ${r0(len)} × ${r0(SD)}</text>` +
+      `<text x="${r1(-fs * 0.4)}" y="${r1(fromBack ? y + fs * 0.8 : y + SD - fs * 0.2)}" text-anchor="end" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.65)}" fill="var(--mute)">${fromBack ? 'back' : 'front'}</text>`;
+    cuts.forEach(x => out += `<text x="${r1(x)}" y="${r1(fromBack ? y - fs * 0.4 : y + SD + fs * 1.1)}" text-anchor="middle" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.75)}" fill="var(--mute)">${r0(x)}</text>`);
+    if (tilt) out += `<text x="${r1(len / 2)}" y="${r1(y + SD + fs * 2.3)}" text-anchor="middle" font-family="Martian Mono,monospace" font-size="${r1(fs * 0.7)}" fill="var(--layout)">slots slope ${r.th}° toward the rack bottom (left)</text>`;
+    y += SD + gap + (tilt ? fs * 1.5 : 0);
   };
-  strip(len1, r.xs, true, 'shelf', r.rows - 1);
+  strip(len1, r.xs, true, r.mode === 'wedge' ? 'shelf' : 'sloped shelf', r.nShelf);
   strip(len2, r.ys, false, 'column', r.cols - 1);
   if (!out){ svg.setAttribute('viewBox', '0 0 300 40'); svg.innerHTML = '<text x="150" y="24" text-anchor="middle" fill="var(--mute)" font-family="Martian Mono,monospace" font-size="11">One cell: no grid strips needed</text>'; return; }
   const pad = fs * 3;
-  svg.setAttribute('viewBox', `${r1(-pad)} ${r1(-fs * 2)} ${r1(Wv + pad * 1.5)} ${r1(y - gap + fs * 4)}`);
+  svg.setAttribute('viewBox', `${r1(-pad)} ${r1(-fs * 2)} ${r1(Wv + pad * 1.5)} ${r1(y - r.D * 0.5 + fs * 4)}`);
   svg.innerHTML = out;
 }
 
@@ -1267,13 +1339,15 @@ function collectParts(){
   }
   if ($('use-rack').checked && rack){
     const r = rack;
-    add('Rack shelf', r.W - 1, r.D, r.rows - 1, r.gb, 'w', 'R');
+    add('Rack shelf', r.W - 1, r.Ds, r.nShelf, r.gb, 'w', 'R');
     add('Rack column', r.H - 1, r.D, r.cols - 1, r.gb, 'w', 'R');
     add('Case top/bottom', r.Wo, r.D, 2, r.cb, 'w', 'R');
     add('Case side', r.H, r.D, 2, r.cb, 'w', 'R');
     add('Case back', r.Wo, r.Ho, 1, r.cb, 'h', 'R');
-    add('Wedge rib', r.wb, r.wh, r.nWedge, r.cb, 'h', 'R');
-    add('Wedge base', r.Wo, r.wb, 1, r.cb, 'w', 'R');
+    if (r.mode === 'wedge'){
+      add('Wedge rib', r.wb, r.wh, r.nWedge, r.cb, 'h', 'R');
+      add('Wedge base', r.Wo, r.wb, 1, r.cb, 'w', 'R');
+    } else add('Side runner', r.Ds, 60, 2 * r.rows, r.cb, 'w', 'R');
   }
   if ($('use-grid').checked && grid){
     add('Divider long', grid.lenL, grid.H, grid.nLong, $('dboard').value, 'h', 'G');
@@ -1405,7 +1479,7 @@ try{ if (JSON.parse(localStorage.getItem(KEY) || '{}').ect !== undefined) ectTou
 $('k').addEventListener('input', () => renderStand());
 ['use-drawers','use-laptop','use-grid','use-rack'].forEach(id => $(id).addEventListener('change', () => { renderCut(); save(); }));
 renderStock();
-['bd','bl','bkg','rc','rr','rout','rtilt','rclr','rgboard','rcboard'].forEach(id => $(id).addEventListener('input', () => { renderRack(); save(); }));
+['bd','bl','bkg','rc','rr','rout','rtilt','rclr','rgboard','rcboard','rmode'].forEach(id => $(id).addEventListener('input', () => { renderRack(); save(); }));
 renderStand();
 renderRack();
 renderPlan();
