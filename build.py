@@ -116,7 +116,7 @@ CONFIG = {
         {
             "label": "External app · cardboard · DIY",
             "title": "Cardboard Workshop",
-            "summary": "Sheet-metal rules applied to supermarket boxes — list the pieces you have, then plan drawers and a sloped laptop stand with flat patterns and K-factor fold allowances, and nest every part onto your pieces with flutes the right way. Plus load check, dividers and more builds.",
+            "summary": "Sheet-metal rules applied to supermarket boxes — list the pieces you have, then plan drawers, a sloped laptop stand and a tilted bottle rack with flat patterns and K-factor fold allowances, and nest every part onto your pieces with flutes the right way. Plus load check, dividers and more builds.",
             "href": "Sheet_metal/cardboard.html",
         },
         {
