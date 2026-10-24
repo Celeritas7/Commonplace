@@ -183,6 +183,9 @@
     selT = setTimeout(function () {
       var r = liveRange();
       if (!r) { if (popBtn.textContent.charAt(0) === '⚑') hidePop(); return; }
+      /* the study layer (extras.js: 🔖 coloured bookmarks) handles selections when it is on the page —
+         one bookmark tool, and nothing sitting on the phone's selection handles */
+      if (window.__cpx) return;
       var text = window.getSelection().toString().replace(/\s+/g, ' ').trim();
       var rect = r.getBoundingClientRect();
       if (!rect.width && !rect.height) return;
