@@ -261,6 +261,9 @@
     var range = sel.getRangeAt(0);
     if (range.startContainer.parentElement && range.startContainer.parentElement.closest('#cpx-panel,#cpx-rsmenu,#cpx-pop,.katex')) return;
     pendingSel = { text: text.trim().slice(0, 90), occ: occurrenceOfRange(range, text) };
+    /* the sentence is remembered now, so drop the live selection: on phones it keeps the OS copy/search
+       menu, the drag handles and Android's search sheet on screen, right over the colour panel */
+    try { sel.removeAllRanges(); } catch (e) {}
   }
   var ribbons = {}; // id -> ribbon div (lives in the paint layer, never in the page's own DOM)
   var paintTimer = null;

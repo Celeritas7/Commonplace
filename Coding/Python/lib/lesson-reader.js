@@ -232,7 +232,13 @@
       minus = btn('A−', 'Smaller', function () { setSize(size - 1); }),
       plus = btn('A+', 'Larger', function () { setSize(size + 1); }),
       themeBtn = btn('◐', 'Theme', cycleTheme),
-      flagBtn = btn('⚑', 'Saved', function () { sheet.classList.toggle('open'); });
+      flagBtn = btn('⚑', 'Saved', function () {
+        /* with the study layer on the page, bookmarks live in its 🔖 list — open that instead,
+           unless there are older ⚑ bookmarks to show */
+        var fab = window.__cpx && document.querySelector('#cpx-fab button');
+        if (fab && !flags.length) { sheet.classList.remove('open'); setTimeout(function () { fab.click(); }, 0); return; }   // after this tap's outside-click close
+        sheet.classList.toggle('open');
+      });
   ui.appendChild(readBtn); ui.appendChild(minus); ui.appendChild(plus); ui.appendChild(themeBtn); ui.appendChild(flagBtn); document.body.appendChild(ui);
   var sheet = document.createElement('div'); sheet.className = 'lr-sheet'; document.body.appendChild(sheet);
   /* every button is glyph + 12px label; setLabel() changes the label, setGlyph() the glyph */
