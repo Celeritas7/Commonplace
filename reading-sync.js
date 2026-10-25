@@ -55,6 +55,11 @@
   var PAGE_NAME   = CFG.pageName || (document.title || "").split(/[·|—-]/)[0].trim() || "This page";
   var LS_KEY      = "crs::" + RS;             // local progress map for this page
   var IS_FILE     = location.protocol === "file:";
+  var SELF_SRC    = (document.currentScript && document.currentScript.src) || (function () {   // captured now; null later
+    var ss = document.getElementsByTagName("script");                                        // (no currentScript for module/async loads)
+    for (var i = ss.length - 1; i >= 0; i--) if (/reading-sync\.js(\?|$)/.test(ss[i].src || "")) return ss[i].src;
+    return "";
+  })();
 
   var sb = null, session = null, units = [], bar = null, styleDone = false;
 
@@ -249,12 +254,13 @@
   }
 
   // ---- page mode: mark done once every `items` element has been seen
+  function pageMarkDone() {
+    if (getLocal("lesson") === "done") return;
+    setLocal("lesson", "done"); reflectPage(); syncOne(units[0]);
+  }
   function wirePage() {
     var key = "lesson";
-    function markDone() {
-      if (getLocal(key) === "done") return;
-      setLocal(key, "done"); reflectPage(); syncOne(units[0]);
-    }
+    var markDone = pageMarkDone;
     reflectPage();
     if (getLocal(key) === "done") return;
     var secs = Array.prototype.slice.call(document.querySelectorAll(ITEMS_SEL));
@@ -316,6 +322,7 @@
         var remoteDone = {};
         res.data.forEach(function (r) { if (r.status === "done") { remoteDone[r.item_key] = true; applyRemoteDone(r.item_key); } });
         if (typeof CFG.onApply === "function") { try { CFG.onApply(); } catch (e) {} }
+        try { document.dispatchEvent(new CustomEvent("readingsync:apply")); } catch (e) {}   // for listeners other than CFG
         // push any device-only "done" the cloud hasn't seen yet
         units.forEach(function (u) { if (statusOf(u) === "done" && !remoteDone[u.key]) syncOne(u); });
       });
@@ -334,9 +341,17 @@
   function withSupabase(cb) {
     if (window.supabase) return cb();
     if (IS_FILE) return cb();            // offline file:// → device-only
+    // bundled copy first (works offline once cached), CDN only if that fails
+    var local = new URL("_lib/supabase.js", SELF_SRC || location.href).href;
     var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-    s.onload = cb; s.onerror = cb;
+    s.src = local;
+    s.onload = cb;
+    s.onerror = function () {
+      var c = document.createElement("script");
+      c.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      c.onload = cb; c.onerror = cb;
+      document.head.appendChild(c);
+    };
     document.head.appendChild(s);
   }
 
@@ -364,8 +379,12 @@
     get client()  { return sb; },
     get session() { return session; },
     markPageDone: function () {
-      if (MODE === "page") { setLocal("lesson", "done"); reflectPage(); if (units[0]) syncOne(units[0]); }
+      if (MODE !== "page") return;
+      if (units.length) pageMarkDone();
+      else setLocal("lesson", "done");   // before boot finishes: kept locally, pull() pushes it after sign-in
     },
+    // true once this page is done here or pulled from the cloud
+    isDone: function () { return MODE === "page" && getLocal("lesson") === "done"; },
     config: CFG
   };
 })();

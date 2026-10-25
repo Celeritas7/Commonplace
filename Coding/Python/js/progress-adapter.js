@@ -38,7 +38,8 @@ function atOf(v) {
     if (typeof t === "number") return t < 1e12 ? t * 1000 : t;
     if (typeof t === "string") { var d = Date.parse(t); if (!isNaN(d)) return d; }
   }
-  return Date.now();
+  /* no timestamp (e.g. a synced crs:: status) — 0, so it never looks "read just now" */
+  return 0;
 }
 function keys() {
   var out = [];
@@ -64,7 +65,7 @@ function collect() {
     var idFromKey = toId(key);
     if (idFromKey) {
       var p1 = pctOf(val);
-      if (p1 != null) { notes.push(key + " → " + idFromKey + " " + p1 + "%"); if (!found[idFromKey] || found[idFromKey].pct < p1) found[idFromKey] = { pct: p1, at: atOf(val) }; }
+      if (p1 != null) { notes.push(key + " → " + idFromKey + " " + p1 + "%"); if (!found[idFromKey] || found[idFromKey].pct < p1) found[idFromKey] = { pct: p1, at: atOf(val) || (found[idFromKey] ? found[idFromKey].at : 0) }; }
       return;
     }
     if (val && typeof val === "object" && !Array.isArray(val)) {
@@ -74,7 +75,7 @@ function collect() {
         var p2 = pctOf(val[sub]);
         if (p2 == null) return;
         notes.push(key + "." + sub + " → " + id + " " + p2 + "%");
-        if (!found[id] || found[id].pct < p2) found[id] = { pct: p2, at: atOf(val[sub]) };
+        if (!found[id] || found[id].pct < p2) found[id] = { pct: p2, at: atOf(val[sub]) || (found[id] ? found[id].at : 0) };
       });
     }
   });

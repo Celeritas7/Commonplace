@@ -1,5 +1,8 @@
 /* lesson-reader.js — drop-in for every lesson page.
    <script src="../lib/lesson-reader.js" defer></script>
+   (0) Toolbar — a labelled bar at the bottom of the screen on phones, a labelled
+       pill bottom-right on wide screens. Never over the breadcrumb/progress bar.
+       Colours come from lib/tokens.css (dark theme follows automatically).
    (1) Reader mode — flat paper, serif, comfortable measure.
    (2) Tap any sentence to flag it; flags persist per lesson and list in a bottom sheet.
    (3) Phase 0 — folds the cloud-sync account panel into a chip in the top pill and
@@ -18,43 +21,60 @@
   var css = document.createElement('style');
   css.textContent = [
     '.lr-s{border-radius:2px;transition:background .15s}',
-    '.lr-s.on{background:#f3d9a4;box-shadow:0 0 0 2px #f3d9a4;color:#211b13;cursor:pointer}',
-    '.lr-pop{position:fixed;z-index:2147483000;display:none;gap:4px;padding:4px;background:#211b13;border-radius:999px;box-shadow:0 10px 26px -10px rgba(0,0,0,.55);font:700 11px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.6px;-webkit-user-select:none;user-select:none;touch-action:manipulation}',
+    '.lr-s.on{background:var(--brass-soft);box-shadow:0 0 0 2px var(--brass-soft);color:var(--ink);cursor:pointer}',
+    '.lr-pop{position:fixed;z-index:2147483000;display:none;gap:4px;padding:4px;background:var(--green-deep);border-radius:999px;box-shadow:var(--shadow-lg);font:700 13px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.6px;-webkit-user-select:none;user-select:none;touch-action:manipulation}',
     '.lr-pop.open{display:flex}',
-    '.lr-pop button{all:unset;cursor:pointer;min-height:36px;padding:0 15px;border-radius:999px;color:#f6f0e2;line-height:36px;white-space:nowrap}',
+    '.lr-pop button{all:unset;cursor:pointer;min-height:40px;padding:0 16px;border-radius:999px;color:var(--on-deep);line-height:40px;white-space:nowrap}',
     '.lr-pop button:active{background:rgba(255,255,255,.16)}',
-    '.lr-ui{position:fixed;top:10px;right:10px;z-index:99999;display:flex;gap:4px;padding:4px;background:#f6f0e2;border:1px solid #cdbfa3;border-radius:999px;box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 22px -18px rgba(40,30,15,.5);font:700 11px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.5px}',
-    '.lr-ui button{all:unset;cursor:pointer;min-width:34px;height:32px;padding:0 10px;border-radius:999px;color:#564b3a;text-align:center;line-height:32px}',
-    '.lr-ui button.on{background:#8a2f22;color:#f6f0e2}',
-    '.lr-ui button.lr-authchip{color:#1f8a4e}',
-    '.lr-ui button.lr-authchip.on{color:#f6f0e2}',
-    '.lr-sheet{position:fixed;left:0;right:0;bottom:0;z-index:99998;max-height:60vh;overflow:auto;background:#f6f0e2;border-top:1px solid #cdbfa3;box-shadow:0 -10px 26px -18px rgba(40,30,15,.5);padding:14px 16px calc(24px + env(safe-area-inset-bottom,0px));font-family:"EB Garamond",Georgia,serif;color:#211b13;display:none}',
+    /* ---- toolbar: bottom bar on phones (every button labelled, 50px tall) ---- */
+    '.lr-ui{position:fixed;left:0;right:0;bottom:0;z-index:99999;display:flex;gap:2px;padding:4px 6px calc(6px + env(safe-area-inset-bottom,0px));background:var(--paper-2);border-top:1px solid var(--line);box-shadow:0 -10px 24px -20px rgba(var(--shade-rgb),.5)}',
+    '.lr-ui button{all:unset;cursor:pointer;flex:1 1 0;min-width:0;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:10px;color:var(--ink);text-align:center;-webkit-tap-highlight-color:transparent}',
+    '.lr-ui button .lr-g{font:600 17px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:0;height:18px;display:flex;align-items:center}',
+    '.lr-ui button .lr-l{font:600 12px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.2px;color:var(--ink-mute);white-space:nowrap}',
+    '.lr-ui button.on{background:var(--sage-soft)}',
+    '.lr-ui button.on .lr-l{color:var(--green)}',
+    '.lr-ui button:active{background:var(--sage-soft)}',
+    '.lr-ui button.lr-authchip .lr-g{width:22px;height:22px;border-radius:50%;background:var(--green-deep);color:var(--on-deep);font-size:12px;justify-content:center}',
+    '.lr-ui button.lr-authchip.off .lr-g{background:transparent;color:var(--ink-mute);border:1.5px solid var(--ink-mute);box-sizing:border-box}',
+    /* wide screens: a labelled pill in the bottom-right corner, clear of the top bar */
+    '@media (min-width:820px){',
+    ' .lr-ui{left:auto;right:18px;bottom:18px;padding:4px;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}',
+    ' .lr-ui button{flex:0 0 auto;min-width:62px;padding:0 6px}',
+    '}',
+    '.lr-sheet{position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:99998;max-height:60vh;overflow:auto;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -10px 26px -18px rgba(var(--shade-rgb),.5);padding:14px 16px 20px;font-family:"EB Garamond",Georgia,serif;color:var(--ink);display:none}',
     '.lr-sheet.open{display:block}',
-    '.lr-sheet h3{margin:0 0 10px;font:700 11px/1 "JetBrains Mono",monospace;letter-spacing:1.5px;text-transform:uppercase;color:#8a2f22;display:flex;justify-content:space-between;align-items:center;gap:12px}',
+    '.lr-sheet h3{margin:0 0 10px;font:700 12px/1 "JetBrains Mono",monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);display:flex;justify-content:space-between;align-items:center;gap:12px}',
     '.lr-sheet h3>span{white-space:nowrap}',
-    '.lr-sheet h3 button{all:unset;cursor:pointer;color:#8a7c63;font-size:11px;letter-spacing:.5px}',
-    '.lr-sheet li{list-style:none;display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #ddd1b8;font-size:16px;line-height:1.45}',
-    '.lr-sheet li a{flex:1;color:#211b13;text-decoration:none;cursor:pointer}',
-    '.lr-sheet li b{all:unset;cursor:pointer;color:#8a7c63;font:700 12px "JetBrains Mono",monospace}',
-    '.lr-sheet p.empty{color:#8a7c63;font-style:italic;margin:4px 0}',
+    '.lr-sheet h3 button{all:unset;cursor:pointer;color:var(--ink-mute);font-size:12px;letter-spacing:.5px;min-height:44px;line-height:44px;padding:0 6px}',
+    '.lr-sheet li{list-style:none;display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line-soft);font-size:16px;line-height:1.45}',
+    '.lr-sheet li a{flex:1;color:var(--ink);text-decoration:none;cursor:pointer}',
+    '.lr-sheet li b{all:unset;cursor:pointer;color:var(--ink-mute);font:700 13px "JetBrains Mono",monospace;min-width:44px;min-height:32px;text-align:center}',
+    '.lr-sheet p.empty{color:var(--ink-mute);font-style:italic;margin:4px 0}',
     /* Phase 0 — the account panel is hidden until its chip is tapped */
     '.lr-auth-dock{opacity:0!important;pointer-events:none!important;transform:translateY(14px)!important;transition:opacity .16s ease,transform .16s ease}',
     'html.lr-auth-open .lr-auth-dock{opacity:1!important;pointer-events:auto!important;transform:none!important}',
-    /* docked, it hangs under the pill instead of fighting it for the same corner */
-    '.lr-auth-dock{top:52px!important;right:10px!important;left:auto!important;bottom:auto!important}',
-    '@media (max-width:600px){.lr-auth-dock{left:8px!important;right:8px!important;top:50px!important}}',
+    /* docked, it sits just above the toolbar */
+    '.lr-auth-dock{top:auto!important;bottom:calc(74px + env(safe-area-inset-bottom,0px))!important;right:10px!important;left:auto!important}',
+    '@media (max-width:600px){.lr-auth-dock{left:8px!important;right:8px!important}}',
     '.lr-safe{margin-bottom:env(safe-area-inset-bottom,0px)!important}',
+    /* phones: the bottom toolbar is ~66px tall — floaters (backup ⇅, 🧠 Quiz, toasts) sit above it */
+    '@media (max-width:819px){.lr-safe:not(.toast){margin-bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}}',
+    /* wide screens: the toolbar is a pill in the bottom-right corner, so only right-hand floaters
+       (the study layer's 🔖 ★ ☰ buttons) need to sit above it */
+    '@media (min-width:820px){.lr-safe.lr-right:not(.toast){margin-bottom:76px!important}}',   /* the toast already clears the bar and hides by sliding down */
     /* reader mode */
-    'html.lr-reader,html.lr-reader body{background:#efe7d6!important;color:#211b13!important}',
-    'html.lr-reader .lr-flat{background:#f6f0e2!important;background-image:none!important;color:#211b13!important;box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 10px 26px -18px rgba(40,30,15,.5)!important;border:1px solid #cdbfa3!important;border-radius:5px!important;backdrop-filter:none!important}',
+    'html.lr-reader,html.lr-reader body{background:var(--paper)!important;color:var(--ink)!important}',
+    'html.lr-reader .lr-flat{background:var(--card)!important;background-image:none!important;color:var(--ink)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--line)!important;border-radius:6px!important;backdrop-filter:none!important}',
     'html.lr-reader .lr-flat *{color:inherit}',
-    'html.lr-reader p,html.lr-reader li,html.lr-reader blockquote{font-family:"EB Garamond",Georgia,serif!important;font-size:var(--lr-size,19px)!important;line-height:1.5!important;color:#211b13!important;max-width:34em;letter-spacing:0!important}',
-    'html.lr-reader h1,html.lr-reader h2,html.lr-reader h3{font-family:"Cormorant Garamond",Georgia,serif!important;font-weight:600!important;line-height:1.05!important;letter-spacing:-.3px!important;color:#211b13!important;background:none!important;-webkit-text-fill-color:#211b13!important}',
+    'html.lr-reader .step-num,html.lr-reader .eol-n,html.lr-reader .eol-btn{color:var(--on-deep)!important}html.lr-reader .eol-n{color:var(--green)!important}html.lr-reader .eol-btn.ghost{color:var(--green)!important}',
+    'html.lr-reader p,html.lr-reader li,html.lr-reader blockquote{font-family:"EB Garamond",Georgia,serif!important;font-size:var(--lr-size,19px)!important;line-height:1.5!important;color:var(--ink)!important;max-width:34em;letter-spacing:0!important}',
+    'html.lr-reader h1,html.lr-reader h2,html.lr-reader h3{font-family:"Cormorant Garamond",Georgia,serif!important;font-weight:600!important;line-height:1.05!important;letter-spacing:-.3px!important;color:var(--ink)!important;background:none!important;-webkit-text-fill-color:var(--ink)!important}',
     'html.lr-reader h1{font-size:calc(var(--lr-size,19px)*2)!important}',
     'html.lr-reader h2{font-size:calc(var(--lr-size,19px)*1.5)!important}',
     'html.lr-reader h3{font-size:calc(var(--lr-size,19px)*1.2)!important}',
-    'html.lr-reader strong{color:#8a2f22!important}',
+    'html.lr-reader strong{color:var(--green)!important}',
     'html.lr-reader pre,html.lr-reader code{font-family:"JetBrains Mono",ui-monospace,monospace!important}',
+    'html.lr-reader .code pre,html.lr-reader .code code{color:var(--code-ink)!important}',
     'html.lr-reader *{animation:none!important;transition:none!important}',
     /* the drill section keeps its own look even in reader mode */
     'html.lr-reader .lsd .fd-code,html.lr-reader .lsd .fd-b{font-family:"JetBrains Mono",ui-monospace,monospace!important}',
@@ -63,8 +83,7 @@
     '@media (min-width:820px){',
     ' html.lr-reader body{max-width:780px!important;margin:0 auto!important;padding:40px 32px 96px!important;box-sizing:border-box}',
     ' html.lr-reader p,html.lr-reader li,html.lr-reader blockquote{font-size:calc(var(--lr-size,19px) + 1px)!important;max-width:38em}',
-    ' .lr-ui{top:14px;right:18px}',
-    ' .lr-sheet{left:auto;right:18px;bottom:18px;width:420px;max-height:66vh;border:1px solid #cdbfa3;border-radius:5px}',
+    ' .lr-sheet{left:auto;right:18px;bottom:84px;width:420px;max-height:66vh;border:1px solid var(--line);border-radius:10px}',
     '}',
     '@media (min-width:1280px){ html.lr-reader body{max-width:840px!important} }'
   ].join('\n');
@@ -96,7 +115,7 @@
     var on = {};
     flags.forEach(function (f) { (f.sids || [f.id]).forEach(function (s) { on[s] = 1; }); });
     document.querySelectorAll('.lr-s').forEach(function (s) { s.classList.toggle('on', !!on[s.dataset.id]); });
-    flagBtn.textContent = '⚑ ' + flags.length;
+    setGlyph(flagBtn, '⚑'); setLabel(flagBtn, flags.length ? 'Saved · ' + flags.length : 'Saved');
     renderSheet();
   }
   function save() { localStorage.setItem(KEY, JSON.stringify(flags)); paint(); }
@@ -164,6 +183,9 @@
     selT = setTimeout(function () {
       var r = liveRange();
       if (!r) { if (popBtn.textContent.charAt(0) === '⚑') hidePop(); return; }
+      /* the study layer (extras.js: 🔖 coloured bookmarks) handles selections when it is on the page —
+         one bookmark tool, and nothing sitting on the phone's selection handles */
+      if (window.__cpx) return;
       var text = window.getSelection().toString().replace(/\s+/g, ' ').trim();
       var rect = r.getBoundingClientRect();
       if (!rect.width && !rect.height) return;
@@ -205,11 +227,37 @@
   });
 
   // --- UI ---
-  var ui = document.createElement('div'); ui.className = 'lr-ui';
-  var readBtn = btn('Aa', toggleReader), minus = btn('−', function () { setSize(size - 1); }), plus = btn('+', function () { setSize(size + 1); }), flagBtn = btn('⚑ 0', function () { sheet.classList.toggle('open'); });
-  ui.appendChild(readBtn); ui.appendChild(minus); ui.appendChild(plus); ui.appendChild(flagBtn); document.body.appendChild(ui);
+  var ui = document.createElement('div'); ui.className = 'lr-ui'; ui.setAttribute('role', 'toolbar'); ui.setAttribute('aria-label', 'Reading tools');
+  var readBtn = btn('Aa', 'Reader', toggleReader),
+      minus = btn('A−', 'Smaller', function () { setSize(size - 1); }),
+      plus = btn('A+', 'Larger', function () { setSize(size + 1); }),
+      themeBtn = btn('◐', 'Theme', cycleTheme),
+      flagBtn = btn('⚑', 'Saved', function () {
+        /* with the study layer on the page, bookmarks live in its 🔖 list — open that instead,
+           unless there are older ⚑ bookmarks to show */
+        var fab = window.__cpx && document.querySelector('#cpx-fab button');
+        if (fab && !flags.length) { sheet.classList.remove('open'); setTimeout(function () { fab.click(); }, 0); return; }   // after this tap's outside-click close
+        sheet.classList.toggle('open');
+      });
+  ui.appendChild(readBtn); ui.appendChild(minus); ui.appendChild(plus); ui.appendChild(themeBtn); ui.appendChild(flagBtn); document.body.appendChild(ui);
   var sheet = document.createElement('div'); sheet.className = 'lr-sheet'; document.body.appendChild(sheet);
-  function btn(t, fn) { var b = document.createElement('button'); b.textContent = t; b.onclick = fn; return b; }
+  /* every button is glyph + 12px label; setLabel() changes the label, setGlyph() the glyph */
+  function btn(g, l, fn) {
+    var b = document.createElement('button'); b.type = 'button';
+    var gs = document.createElement('span'); gs.className = 'lr-g'; gs.textContent = g;
+    var ls = document.createElement('span'); ls.className = 'lr-l'; ls.textContent = l;
+    b.appendChild(gs); b.appendChild(ls); b.setAttribute('aria-label', l); b.onclick = fn; return b;
+  }
+  function setLabel(b, l) { b.querySelector('.lr-l').textContent = l; b.setAttribute('aria-label', l); }
+  function setGlyph(b, g) { b.querySelector('.lr-g').textContent = g; }
+  /* theme: light → dark → system, via lib/theme.js (loaded in <head>) */
+  function paintTheme() {
+    var T = window.CPTheme; if (!T) { themeBtn.style.display = 'none'; return; }
+    var m = T.get(); setLabel(themeBtn, m === 'dark' ? 'Dark' : m === 'system' ? 'Auto' : 'Light');
+    setGlyph(themeBtn, m === 'dark' ? '●' : m === 'system' ? '◐' : '○');
+  }
+  function cycleTheme() { if (window.CPTheme) { window.CPTheme.cycle(); paintTheme(); } }
+  paintTheme();
 
   function renderSheet() {
     var h = '<h3><span>Bookmarks · ' + flags.length + '</span><span><button data-act="copy">copy</button> · <button data-act="close">close</button></span></h3>';
@@ -276,12 +324,14 @@
       p.classList.add('rs-open');
     }
     if (!authChip) {
-      authChip = btn('✓', function () { setAuthOpen(!document.documentElement.classList.contains('lr-auth-open')); });
+      authChip = btn('✓', 'Account', function () { setAuthOpen(!document.documentElement.classList.contains('lr-auth-open')); });
       authChip.className = 'lr-authchip';
       authChip.title = 'Account & cloud sync';
-      ui.insertBefore(authChip, flagBtn);
+      ui.appendChild(authChip);
     }
-    authChip.textContent = /sign\s?out/i.test(authPanel.textContent || '') ? '✓' : '○';
+    var signedIn = /sign\s?out/i.test(authPanel.textContent || '');
+    setGlyph(authChip, signedIn ? '✓' : '○'); setLabel(authChip, signedIn ? 'Account' : 'Sign in');
+    authChip.classList.toggle('off', !signedIn);
   }
   document.addEventListener('click', function (e) {
     if (!authPanel || !document.documentElement.classList.contains('lr-auth-open')) return;
@@ -300,8 +350,11 @@
       if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
       var cs = getComputedStyle(el);
       if (cs.position !== 'fixed' || cs.bottom === 'auto') return;
+      if (cs.top !== 'auto' && parseFloat(cs.top) < 60) return;   // full-screen overlays (the quiz) are not floaters
       if (parseFloat(cs.bottom) > 160) return;
       el.classList.add('lr-safe');
+      var r = el.getBoundingClientRect();
+      if (r.left + r.width / 2 > window.innerWidth / 2) el.classList.add('lr-right');
     });
   }
 
