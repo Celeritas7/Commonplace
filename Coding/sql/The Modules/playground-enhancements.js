@@ -221,7 +221,7 @@
     var nav = document.querySelector(".topnav, .module-hero, main");
     if (!nav) return;
     var pill = document.createElement("a");
-    pill.href = "../Practice/exercises.html";
+    pill.href = "../Practice/sqlzoo.html";
     pill.className = "module-progress-pill";
     pill.style.cssText = "display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:14px;background:#ede9fe;color:#4f46e5;text-decoration:none;margin-left:auto;white-space:nowrap;";
     pill.innerHTML = "📚 " + done + " / " + total + " done";
