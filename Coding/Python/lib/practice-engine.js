@@ -187,7 +187,11 @@ window.CommonplacePractice = (function () {
     ta.addEventListener("scroll",function(){ pre.scrollTop=ta.scrollTop; pre.scrollLeft=ta.scrollLeft; });
     ta.addEventListener("keydown",function(e){
       if((e.metaKey||e.ctrlKey)&&e.key==="Enter"){ e.preventDefault(); onCheck(); }
+      else if(e.key==="Enter"&&!e.altKey&&!e.shiftKey&&!e.isComposing&&window.PY_KEYS){ e.preventDefault(); window.PY_KEYS.insert(ta,"\u21b5"); }
       if(e.key==="Escape"&&api.isFull) setFull(false);
+    });
+    ta.addEventListener("beforeinput",function(e){
+      if(window.PY_KEYS&&(e.inputType==="insertLineBreak"||e.inputType==="insertParagraph")){ e.preventDefault(); window.PY_KEYS.insert(ta,"\u21b5"); }
     });
 
     var controls=document.createElement("div"); controls.className="pmb-controls";

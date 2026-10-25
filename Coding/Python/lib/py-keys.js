@@ -530,6 +530,28 @@
     setVal(ta, v.slice(0, ls) + v.slice(ls + m[0].length), Math.max(ls, s - m[0].length));
   }
 
+  /* ---------------- easy-mode guide ----------------
+     The model answer's next line, compared with what is on the caret line.
+     Spacing is ignored and ' == ", so "for i in" matches "for  i in". */
+  function squash(x) { return String(x).replace(/'/g, '"').replace(/\s+/g, ""); }
+  /* typed = caret line up to the caret, line = the whole caret line (palette keys add closers after the caret) */
+  function guideState(typed, line, expected) {
+    var a = squash(typed), b = squash(expected);
+    if (squash(line) === b) return "done";
+    if (!a) return "next";
+    return b.indexOf(a) === 0 ? "ok" : "off";
+  }
+  /* the next token of `expected` after `typed`, or "" when typed is off track / mid-word */
+  function guideNext(typed, expected) {
+    var A = lex(typed.trim()), E = lex(expected.trim()), i;
+    if (A.length > E.length) return "";
+    for (i = 0; i < A.length; i++) if (A[i].v !== E[i].v) return "";
+    var nx = E[A.length];
+    if (!nx) return "↵";
+    if (nx.t === "name" && E[A.length + 1] && E[A.length + 1].v === "(") return nx.v + "(";
+    return nx.v;
+  }
+
   /* ---------------- palette UI ---------------- */
   function kindOf(t) {
     if (t === "↵") return "enter";
@@ -586,6 +608,17 @@
 ".zk-top>span{box-shadow:0 0 0 1px currentColor inset,0 1px 0 rgba(20,40,30,.14)}" +
 ".zk-dash{color:rgba(26,40,32,.3);font-size:14px;padding-left:4px}" +
 ".zk-hint{font-family:'EB Garamond',Georgia,serif;font-style:italic;font-size:15px;color:rgba(26,40,32,.6);white-space:nowrap;padding:0 4px 0 2px}" +
+".zk.zk-easy{height:242px}.zk.zk-hard{height:auto}" +
+".zk-guide{display:flex;align-items:center;gap:8px;height:42px;flex:0 0 42px;margin:0 10px 2px;padding:0 10px;border:1px dashed #b9c9bc;border-radius:8px;background:#f4f8f0;min-width:0}" +
+".zk-guide code{flex:1;min-width:0;overflow-x:auto;white-space:pre;font:600 13.5px 'JetBrains Mono',ui-monospace,monospace;color:#16352a;scrollbar-width:none}" +
+".zk-guide code::-webkit-scrollbar{display:none}" +
+".zk-ind{font-style:normal;color:rgba(26,40,32,.35);margin-right:6px}" +
+".zk-gn{font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(26,40,32,.5);white-space:nowrap}" +
+".zk-gs{font-size:12px;font-weight:700;white-space:nowrap}" +
+".zk-guide.ok .zk-gs,.zk-guide.done .zk-gs{color:#2f7a4f}" +
+".zk-guide.off{border:1.5px solid #b5452e;background:#fbeee9}.zk-guide.off .zk-gs{color:#b5452e}" +
+".zk-seg button{padding:0 9px}" +
+"@media(max-width:420px){.zk-head .zk-kick{display:none}}" +
 ".zk.zk-off{height:auto;flex-direction:row;align-items:center;justify-content:space-between;padding:6px 8px 6px 12px}";
   function injectCss() {
     if (document.getElementById("zk-css")) return;
@@ -596,11 +629,14 @@
   function build(ctx, ta) {
     ctx = ctx || {};
     injectCss();
-    var lang = ctx.lang || "py", MK = "zk-mode-" + lang, HK = "zk-hide-" + lang;
-    var mode = lsGet(MK) === "all" ? "all" : "smart", hidden = lsGet(HK) === "1";
+    /* level: easy = smart keys + the model answer's next line (ctx.guide), medium = smart keys,
+       hard = no predictions, just the symbol bar. Replaces the old Smart / All switch. */
+    var lang = ctx.lang || "py", LK = "zk-level-" + lang, HK = "zk-hide-" + lang;
+    var level = lsGet(LK), hidden = lsGet(HK) === "1";
+    if (level !== "easy" && level !== "hard") level = "medium";
     var el = document.createElement("div");
     el.className = "zk"; el.setAttribute("data-keypal", lang);
-    var cur = res(), queued = false, sig = "";
+    var cur = res(), guide = null, queued = false, sig = "", lastState = "";
 
     function tgt() { return ctx.getTarget ? ctx.getTarget() : ta; }
     function peek() { return ctx.peekTarget ? ctx.peekTarget() : tgt(); }
@@ -609,15 +645,31 @@
 
     function compute() {
       var t = peek();
+      guide = null;
       if (!t) { cur = predict("", fullOf(null)); return; }
       var v = t.value, s = t.selectionStart == null ? v.length : t.selectionStart;
       cur = predict(v.slice(0, s), fullOf(t));
+      if (level === "easy" && ctx.guide) guide = ctx.guide(t) || null;
+      if (guide && guide.line != null) {
+        var ls = lsOf(v, s), le = v.indexOf("\n", s); if (le < 0) le = v.length;
+        var typed = v.slice(ls, s);
+        guide.state = guideState(typed, v.slice(ls, le), guide.line);
+        var nx = guide.state === "done" ? "↵" : (guide.state === "off" ? "" : guideNext(typed, guide.line));
+        /* the answer's next key goes first; skipped while a half-typed word is being completed */
+        if (nx && !(cur.replace && nx !== "↵")) { cur.now = [nx].concat(cur.now.filter(function (x) { return x !== nx; })); cur.guided = true; }
+      }
+      var st = guide ? guide.state || "end" : "";
+      if (st !== lastState) {
+        if (st === "off") { try { if (root.navigator && root.navigator.vibrate) root.navigator.vibrate(30); } catch (e) {} }
+        lastState = st;
+        if (ctx.onGuide) { try { ctx.onGuide(st); } catch (e) {} }
+      }
     }
     function keys(list, src, top) {
       var h = "";
       for (var i = 0; i < list.length; i++) {
-        var t = list[i];
-        h += '<button type="button" class="zk-k zk-' + kindOf(t) + (top && i === 0 ? " zk-top" : "") + '" data-tok="' + esc(t) + '" data-src="' + src + '"><span>' + esc(labelOf(t)) + "</span></button>";
+        var t = list[i], k = t === "↵" ? "zk-enter" : "zk-" + kindOf(t);
+        h += '<button type="button" class="zk-k ' + k + (top && i === 0 ? " zk-top" : "") + '" data-tok="' + esc(t) + '" data-src="' + src + '"><span>' + esc(labelOf(t)) + "</span></button>";
       }
       return h;
     }
@@ -630,12 +682,20 @@
     function bar(syms) {
       return '<div class="zk-lane zk-bar"><div class="zk-fixed">' + ctl("⌫") + ctl("↵") + ctl("⇥") + ctl("⇤") + '</div><span class="zk-div"></span><div class="zk-row">' + keys(syms, "bar") + "</div></div>";
     }
-    function allFuncs() {
-      var t = peek(), v = t ? t.value : "", sc = scopeOf(v + "\n", fullOf(t) + "\n");
-      return uniq(cat(sc.vars, sc.funcs.map(call), BUILTINS.map(call)));
+    var MARK = { next: "", ok: "✓", done: "✓ ↵", off: "✕" };
+    /* one ⇥ per indent level keeps the line short on a phone and makes the indent visible */
+    function guideCode(line) {
+      var n = indentOf(line), tabs = "";
+      for (var i = 0; i < Math.floor(n / 4); i++) tabs += '<i class="zk-ind">⇥</i>';
+      return tabs + esc(line.slice(Math.floor(n / 4) * 4));
+    }
+    function guideLane() {
+      if (!guide) return '<div class="zk-guide"><span class="zk-gn">LINE</span><code>—</code></div>';
+      if (guide.line == null) return '<div class="zk-guide done"><span class="zk-gn">' + guide.total + "/" + guide.total + '</span><code>All lines written — run it</code></div>';
+      return '<div class="zk-guide ' + guide.state + '"><span class="zk-gn">' + guide.n + "/" + guide.total + "</span><code>" + guideCode(guide.line) + '</code><span class="zk-gs">' + MARK[guide.state] + "</span></div>";
     }
     function paint(force) {
-      var s = hidden ? "h" : mode + JSON.stringify(cur) + (mode === "all" ? allFuncs().join() : "");
+      var s = hidden ? "h" : level + JSON.stringify(cur) + JSON.stringify(guide);
       if (!force && s === sig) return;
       sig = s;
       if (hidden) {
@@ -643,19 +703,17 @@
         el.innerHTML = '<span class="zk-kick">KEYS HIDDEN</span><button type="button" class="zk-btn" data-act="show">Show keys ⌄</button>';
         return;
       }
-      el.className = "zk";
+      el.className = "zk" + (level === "medium" ? "" : " zk-" + level);
+      function seg(v, label) { return '<button type="button" data-act="' + v + '" class="' + (level === v ? "on" : "") + '">' + label + "</button>"; }
       var h = '<div class="zk-head"><span class="zk-kick">KEY PALETTE</span><span class="zk-sp"></span><div class="zk-seg">' +
-        '<button type="button" data-act="smart" class="' + (mode === "smart" ? "on" : "") + '">Smart</button>' +
-        '<button type="button" data-act="all" class="' + (mode === "all" ? "on" : "") + '">All</button></div>' +
+        seg("easy", "Easy") + seg("medium", "Medium") + seg("hard", "Hard") + "</div>" +
         '<button type="button" class="zk-btn" data-act="hide">Hide</button></div>';
-      if (mode === "smart") {
+      if (level === "hard") h += bar(ALL_SYMS.concat(PAD));
+      else {
+        if (level === "easy") h += guideLane();
         h += lane("NEXT", (cur.hint ? '<span class="zk-hint">' + esc(cur.hint) + "</span>" : "") + keys(cur.now, "now", true), !cur.now.length && !cur.hint);
         h += lane("THEN", keys(cur.then, "then"), !cur.then.length);
         h += bar(cur.pad ? PAD : SYMS);
-      } else {
-        h += lane("KEYS", keys(ALL_KW, "all"));
-        h += lane("FUNCS", keys(allFuncs(), "all"));
-        h += bar(ALL_SYMS.concat(PAD));
       }
       el.innerHTML = h;
     }
@@ -675,13 +733,14 @@
       var act = b.getAttribute("data-act");
       if (act) {
         if (act === "hide" || act === "show") { hidden = act === "hide"; lsSet(HK, hidden ? "1" : "0"); }
-        else { mode = act; lsSet(MK, mode); }
+        else { level = act; lsSet(LK, level); }
         compute(); paint(true);
         return;
       }
       var tok = b.getAttribute("data-tok"), t = tgt();
       if (!tok || !t) return;
-      insert(t, tok, b.getAttribute("data-src") === "now" ? cur.replace : 0);
+      var guided = cur.guided && b.getAttribute("data-src") === "now" && b === el.querySelector('[data-src="now"]');
+      insert(t, tok, b.getAttribute("data-src") === "now" && !guided ? cur.replace : 0);
       schedule();
     });
 
