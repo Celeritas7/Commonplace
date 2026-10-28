@@ -340,7 +340,16 @@
           if(focusedIdx===i) focusedIdx=-1;
           errBlockIdx=-1; sync(); renderStack(); renderPal();
         });
-        head.appendChild(chev); head.appendChild(del);
+        /* duplicate: an editable copy goes right below, so the same code can be reused or varied */
+        var dup=document.createElement("button"); dup.type="button"; dup.className="cb-hbtn cb-dup"; dup.textContent="⧉"; dup.title="Duplicate block";
+        dup.setAttribute("aria-label","Duplicate block");
+        dup.addEventListener("click",function(){
+          blocks.splice(i+1,0,{ n:(b.n||"block")+" copy", c:b.c||"", col:false, auto:false });
+          focusedIdx=-1; errBlockIdx=-1; sync(); renderStack(); renderPal();
+          var nc=stackEl.querySelector('[data-i="'+(i+1)+'"]');
+          if(nc){ try{ nc.scrollIntoView({ block:"nearest", behavior:"smooth" }); }catch(e){} }
+        });
+        head.appendChild(dup); head.appendChild(chev); head.appendChild(del);
         card.appendChild(head);
 
         var body=document.createElement("div"); body.className="cb-body";
