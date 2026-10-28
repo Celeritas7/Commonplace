@@ -1,7 +1,7 @@
 # HOOKS.md — notebook player ⇄ Python worker
 
-For Claude Code. The player (`lib/notebook-player.js`) owns **all UI**: the queue,
-Run all, the status pill, the strip, and the restart flow. The worker engine only
+For Claude Code. The player (`lib/notebook-player.js`) owns **all UI**: the busy rule,
+Run all (the only queue), the status pill, the strip, and the restart flow. The worker engine only
 loads Python, runs code, and kills or restarts itself. One seam: `NotebookPlayer.engine`.
 
 No notebook HTML page changes. Load the engine after the player and before `mount()`:
@@ -71,7 +71,7 @@ up. The banner then reads "Python stopped unexpectedly and restarted."
 | `NotebookPlayer.setStatus(state, detail)` | Sets the pill and strip. States in §4. |
 | `NotebookPlayer.sessionRestarted({cell, secs?, reason?})` | Runs the restart flow: aborts the running cell, clears the queue, marks cells cleared, shows the banner, sets `ready`. `reason`: `"stopped"` (default) or `"crashed"`. |
 | `NotebookPlayer.askInput(cellIndex, prompt)` → `Promise<string>` | The same field as `io.input`, for engines that prefer a global. |
-| `NotebookPlayer.runCell(n)` / `stopCell(n)` | The same as tapping Run or Stop on `In [n+1]`. |
+| `NotebookPlayer.runCell(n, {noPre?})` / `stopCell(n)` | The same as tapping Run or Stop on `In [n+1]`. `runCell` returns `false` and does nothing while Python is busy. |
 | `NotebookPlayer.runAll()` / `stopAll()` | Run all, and Stop (whatever is running or queued). |
 | `NotebookPlayer.rerunAbove(k)` | Runs cells `0 … k-1` as a batch ("Re-run 1–k"). |
 | `NotebookPlayer.load()` | Starts Python now. |
@@ -95,7 +95,7 @@ up. The banner then reads "Python stopped unexpectedly and restarted."
 
 ## 3. Stop → restart sequence (what the player does)
 
-1. Tap **■ Stop** on `In [5]`. Everything queued goes back to its previous state. Any Run all or
+1. Tap **■ Stop** on `In [5]`. Any Run all / Re-run cells still waiting go back to their previous state. Any Run all or
    Re-run batch is cancelled. Cell → `data-state="stopping"` ("Stopping…"). Pill → `restarting`.
 2. `onStop(4)` is called if set, then `engine.stop(4)`.
 3. `engine.stop` resolves, and then:
@@ -168,8 +168,8 @@ section.np-cell[data-state] (.ran | .cleared)
 
 | data-state | `.np-run` | `.np-cstat` | look |
 |---|---|---|---|
-| `idle` | ▶ Run | — | outlined while another cell runs (`body.np-busy`): a tap queues it |
-| `queued` | `.queued` "Queued ×" (tap to remove from the queue) | "Waiting for Python" / "Up next" / "Queued · 3rd" | dim green frame |
+| `idle` | ▶ Run | — | while Python is busy: **disabled**, and `.np-cstat` shows `span.busy` "Python is busy · In [5]" / "Python is starting" / "Python is restarting" (also the button `title`). The previous status comes back when Python is free. |
+| `queued` | `.queued` "Queued" (disabled) | "Waiting for Python" (the one cell you pressed before Python was up) / "Up next" / "Queued · 3rd" (Run all / Re-run only) | dim green frame |
 | `running` | `.stop` ■ Stop | "Running", then "Running · 4s" after 2s; "Cells above · 2/4" during prereqs | mint frame + sweep line |
 | `waiting` | `.stop` ■ Stop | "Waiting for input" | amber frame, `form.np-ask` shown and focused, page scrolled so it is clear of the floating buttons |
 | `stopping` | `.stopping` "Stopping" (disabled) | "Stopping…" | red frame |
@@ -181,12 +181,21 @@ Output states (`.np-outw`): text; `.long` (more than 20 lines: the first 20 are 
 `.np-outmore` reads "▾ Show all 240 lines"; `.open` shows everything in a 70vh scroll); `.quiet` "(ran — no output)";
 figures; `form.np-ask`. The output keeps at most 5,000 lines ("[… N earlier lines not kept]").
 
-Header row 2 (scrolls away): `#np-runall` (`.go` "▶ Run all" ⇄ `.stop` "■ Stop · 3 / 10"), `#np-resetall`
-(disabled while busy), `.np-jump` > `.np-selw` > `select#np-sel`, `.np-prog`.
+Header row 2 (scrolls away): `#np-runall` (`.go` "▶ Run all" ⇄ `.stop` "■ Stop · 3 / 10"; disabled while a single cell runs),
+`#np-resetall` (disabled while busy, enabled again as soon as a run finishes or a Stop completes), `.np-jump` > `.np-selw` > `select#np-sel`, `.np-prog`.
+
+**Busy rule.** One shared session, so there is no per-cell queue. While a cell runs, Python is starting, or Python is restarting,
+every other Run, Run all and Reset all is disabled and says why. Run all / Re-run 1–k is the only queue. `body.np-busy` is set while busy.
 
 ## 7. Floating buttons
 
 Nothing in the player is fixed to the bottom of the screen. Every control that must stay reachable lives in the sticky header.
-`--np-fab-clear` (200px on phones, 120px from 821px) is the bottom padding of the page, so the last cell and the colophon can scroll clear
+`--np-fab-clear` (200px on phones, 120px from 821px, plus `env(safe-area-inset-bottom)`) is padding at the **end of the page only** (on `.np-layout`, not on cells), so the last cell and the colophon can scroll clear
 of 🔖 ★ ☰ / 🧠 ⇅. `keepVisible()` uses the same value for the input field. If the real button stack is taller, raise the variable;
 nothing else changes.
+
+## 8. practice/set.html
+
+That page builds its own pre-Step-4 header in `lib/practice-set.js`: `.np-crumb`, `.np-mast`, a body-level `.np-jump`,
+and `.np-led` with the `.loading/.ready/.err/.off` classes and a `.t` label. Those styles now live at the end of
+`lib/practice-set.css` (the "Step 6 patch" block). It doesn't use the hooks above. A header rebuild to match the notebooks is a later step.

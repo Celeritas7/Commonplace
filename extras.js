@@ -79,6 +79,9 @@
     '#cpx-pop .cpx-save{background:#4f46e5;border-color:#4f46e5!important;color:#fff}' +
     '#cpx-pop .cpx-del{color:#dc2626}' +
     '#cpx-rsmenu{position:fixed;right:74px;bottom:18px;z-index:10002;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.16);padding:12px;width:270px;max-height:70vh;overflow-y:auto;' + FONT + 'font-size:13px;color:#1f2937}' +
+    /* phones: open the bookmark panel at the top, clear of lesson toolbars, the OS selection menu and the
+       search sheet Android slides up from the bottom; keep messages above a bottom toolbar too */
+    '@media (max-width:819px){#cpx-rsmenu{top:calc(56px + env(safe-area-inset-top,0px));bottom:auto;left:12px;right:12px;width:auto;max-height:60vh}#cpx-rsmenu .cpx-dot{width:30px;height:30px}#cpx-toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}' +
     '#cpx-rsmenu h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#6b7280}' +
     '#cpx-rsmenu .cpx-dots{display:flex;gap:4px;margin-bottom:6px}' +
     '#cpx-rsmenu .cpx-item{border:1px solid #e5e7eb;border-radius:8px;padding:7px 9px;margin-top:6px;cursor:pointer;line-height:1.4;font-size:12.5px}' +
@@ -258,6 +261,9 @@
     var range = sel.getRangeAt(0);
     if (range.startContainer.parentElement && range.startContainer.parentElement.closest('#cpx-panel,#cpx-rsmenu,#cpx-pop,.katex')) return;
     pendingSel = { text: text.trim().slice(0, 90), occ: occurrenceOfRange(range, text) };
+    /* the sentence is remembered now, so drop the live selection: on phones it keeps the OS copy/search
+       menu, the drag handles and Android's search sheet on screen, right over the colour panel */
+    try { sel.removeAllRanges(); } catch (e) {}
   }
   var ribbons = {}; // id -> ribbon div (lives in the paint layer, never in the page's own DOM)
   var paintTimer = null;

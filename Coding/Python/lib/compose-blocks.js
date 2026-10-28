@@ -53,6 +53,7 @@
 ".cb-stack{display:flex;flex-direction:column;gap:12px}"+
 ".cb-card{background:"+PAPER+";border:1px solid "+LINE+";border-radius:12px;box-shadow:0 10px 22px -16px rgba(var(--shade-rgb),.5);overflow:hidden}"+
 ".cb-card.cb-focus{border:2px solid "+GREEN+"}"+
+".cb-card.cb-off{border:2px solid "+VERM+"}"+
 ".cb-card.cb-err{border:1px solid "+VERM+";box-shadow:0 12px 26px -18px rgba(var(--bad-rgb),.6)}"+
 ".cb-card.cb-lift{border:1px solid "+GREEN+";box-shadow:0 18px 34px -20px rgba(var(--shade-rgb),.75);transform:rotate(-2deg)}"+
 ".cb-dim{opacity:.45}"+
@@ -141,6 +142,13 @@
     ta.value=before+ins+v.slice(e);
     ta.dispatchEvent(new Event("input",{bubbles:true}));
     ta.focus(); var p=s+ins.length-back; ta.setSelectionRange(p,p);
+  }
+
+  /* Enter (on-screen or hardware keyboard) keeps the indent, +4 after a ':' line, -4 after return/break/… */
+  function newline(ta){
+    if(window.PY_KEYS){ window.PY_KEYS.insert(ta,"\u21b5"); return; }
+    var s=ta.selectionStart, v=ta.value, ls=v.lastIndexOf("\n",s-1)+1, ind=/^ */.exec(v.slice(ls))[0];
+    insertAtCaret(ta,"\n"+ind);
   }
 
   function labelFor(code, fallback){
@@ -243,11 +251,29 @@
       });
       return b;
     }
+    /* Easy level: the model answer's line for the caret's position in the assembled program.
+       Position = how many non-blank, non-comment lines come before the caret line. */
+    function solLines(){
+      return String((ex&&ex.sol)||"").split("\n").filter(function(l){ return l.trim() && !/^\s*#/.test(l); });
+    }
+    function guideFor(t){
+      var sol=solLines(); if(!sol.length || !t) return null;
+      var card=t.closest?t.closest(".cb-card"):null, i=card?+card.getAttribute("data-i"):0, prev=[];
+      for(var j=0;j<i;j++) prev.push(blocks[j].c||"");
+      prev.push(t.value.slice(0,t.selectionStart==null?t.value.length:t.selectionStart));
+      var lines=prev.join("\n").split("\n"); lines.pop();
+      var k=lines.filter(function(l){ return l.trim() && !/^\s*#/.test(l); }).length;
+      return k<sol.length ? { line:sol[k], n:k+1, total:sol.length } : { line:null, total:sol.length };
+    }
+    function markGuide(st){
+      [].forEach.call(stackEl.querySelectorAll(".cb-card.cb-off"),function(c){ c.classList.remove("cb-off"); });
+      if(st==="off" && focusedIdx>=0){ var c=stackEl.querySelector('[data-i="'+focusedIdx+'"]'); if(c) c.classList.add("cb-off"); }
+    }
     function renderPal(){
       if(window.PY_KEYS){
         if(!smartPal) smartPal=window.PY_KEYS.build({ lang:"py", getTarget:cbTarget, peekTarget:cbFocused,
           accepts:function(el){ return !!(el && el.classList && el.classList.contains("cb-ta") && stackEl.contains(el)); },
-          fullText:function(){ return ta.value; } }, null);
+          fullText:function(){ return ta.value; }, guide:guideFor, onGuide:markGuide }, null);
         palEl.className="cb-pal-smart";
         if(smartPal.parentNode!==palEl){ palEl.innerHTML=""; palEl.appendChild(smartPal); }
         smartPal.refresh();
@@ -314,7 +340,16 @@
           if(focusedIdx===i) focusedIdx=-1;
           errBlockIdx=-1; sync(); renderStack(); renderPal();
         });
-        head.appendChild(chev); head.appendChild(del);
+        /* duplicate: an editable copy goes right below, so the same code can be reused or varied */
+        var dup=document.createElement("button"); dup.type="button"; dup.className="cb-hbtn cb-dup"; dup.textContent="⧉"; dup.title="Duplicate block";
+        dup.setAttribute("aria-label","Duplicate block");
+        dup.addEventListener("click",function(){
+          blocks.splice(i+1,0,{ n:(b.n||"block")+" copy", c:b.c||"", col:false, auto:false });
+          focusedIdx=-1; errBlockIdx=-1; sync(); renderStack(); renderPal();
+          var nc=stackEl.querySelector('[data-i="'+(i+1)+'"]');
+          if(nc){ try{ nc.scrollIntoView({ block:"nearest", behavior:"smooth" }); }catch(e){} }
+        });
+        head.appendChild(dup); head.appendChild(chev); head.appendChild(del);
         card.appendChild(head);
 
         var body=document.createElement("div"); body.className="cb-body";
@@ -332,11 +367,16 @@
           if(errBlockIdx>=0){ errBlockIdx=-1; card.classList.remove("cb-err"); var s=head.querySelector(".cb-stamp"); if(s&&s.textContent!=="KEYS INSERT HERE") s.remove(); }
           paint(); sync();
         });
+        /* Android sends Enter as keyCode 229, so keydown can't see it: catch the line break itself */
+        bta.addEventListener("beforeinput",function(e){
+          if(e.inputType==="insertLineBreak"||e.inputType==="insertParagraph"){ e.preventDefault(); newline(bta); }
+        });
         bta.addEventListener("scroll",function(){ pre.scrollTop=bta.scrollTop; pre.scrollLeft=bta.scrollLeft; });
         bta.addEventListener("focus",function(){ setFocus(i,true); });
         bta.addEventListener("keydown",function(e){
           if((e.metaKey||e.ctrlKey)&&e.key==="Enter"){ e.preventDefault(); onCheck(); }
           if(e.key==="Tab"){ e.preventDefault(); insertAtCaret(bta,"    "); }
+          if(e.key==="Enter"&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); newline(bta); }
           if(e.key==="Escape"&&api.isFull) setFull(false);
         });
         body.appendChild(pre); body.appendChild(bta);

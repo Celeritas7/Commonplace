@@ -57,6 +57,11 @@
     '.lr-auth-dock{top:auto!important;bottom:calc(74px + env(safe-area-inset-bottom,0px))!important;right:10px!important;left:auto!important}',
     '@media (max-width:600px){.lr-auth-dock{left:8px!important;right:8px!important}}',
     '.lr-safe{margin-bottom:env(safe-area-inset-bottom,0px)!important}',
+    /* phones: the bottom toolbar is ~66px tall — floaters (backup ⇅, 🧠 Quiz, toasts) sit above it */
+    '@media (max-width:819px){.lr-safe:not(.toast){margin-bottom:calc(66px + env(safe-area-inset-bottom,0px))!important}}',
+    /* wide screens: the toolbar is a pill in the bottom-right corner, so only right-hand floaters
+       (the study layer's 🔖 ★ ☰ buttons) need to sit above it */
+    '@media (min-width:820px){.lr-safe.lr-right:not(.toast){margin-bottom:76px!important}}',   /* the toast already clears the bar and hides by sliding down */
     /* reader mode */
     'html.lr-reader,html.lr-reader body{background:var(--paper)!important;color:var(--ink)!important}',
     'html.lr-reader .lr-flat{background:var(--card)!important;background-image:none!important;color:var(--ink)!important;box-shadow:var(--shadow-sm)!important;border:1px solid var(--line)!important;border-radius:6px!important;backdrop-filter:none!important}',
@@ -178,6 +183,9 @@
     selT = setTimeout(function () {
       var r = liveRange();
       if (!r) { if (popBtn.textContent.charAt(0) === '⚑') hidePop(); return; }
+      /* the study layer (extras.js: 🔖 coloured bookmarks) handles selections when it is on the page —
+         one bookmark tool, and nothing sitting on the phone's selection handles */
+      if (window.__cpx) return;
       var text = window.getSelection().toString().replace(/\s+/g, ' ').trim();
       var rect = r.getBoundingClientRect();
       if (!rect.width && !rect.height) return;
@@ -224,7 +232,13 @@
       minus = btn('A−', 'Smaller', function () { setSize(size - 1); }),
       plus = btn('A+', 'Larger', function () { setSize(size + 1); }),
       themeBtn = btn('◐', 'Theme', cycleTheme),
-      flagBtn = btn('⚑', 'Saved', function () { sheet.classList.toggle('open'); });
+      flagBtn = btn('⚑', 'Saved', function () {
+        /* with the study layer on the page, bookmarks live in its 🔖 list — open that instead,
+           unless there are older ⚑ bookmarks to show */
+        var fab = window.__cpx && document.querySelector('#cpx-fab button');
+        if (fab && !flags.length) { sheet.classList.remove('open'); setTimeout(function () { fab.click(); }, 0); return; }   // after this tap's outside-click close
+        sheet.classList.toggle('open');
+      });
   ui.appendChild(readBtn); ui.appendChild(minus); ui.appendChild(plus); ui.appendChild(themeBtn); ui.appendChild(flagBtn); document.body.appendChild(ui);
   var sheet = document.createElement('div'); sheet.className = 'lr-sheet'; document.body.appendChild(sheet);
   /* every button is glyph + 12px label; setLabel() changes the label, setGlyph() the glyph */
@@ -336,8 +350,11 @@
       if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
       var cs = getComputedStyle(el);
       if (cs.position !== 'fixed' || cs.bottom === 'auto') return;
+      if (cs.top !== 'auto' && parseFloat(cs.top) < 60) return;   // full-screen overlays (the quiz) are not floaters
       if (parseFloat(cs.bottom) > 160) return;
       el.classList.add('lr-safe');
+      var r = el.getBoundingClientRect();
+      if (r.left + r.width / 2 > window.innerWidth / 2) el.classList.add('lr-right');
     });
   }
 
