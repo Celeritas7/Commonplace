@@ -22,7 +22,7 @@
   var MIN_SESSION = 30;     // seconds of reading before a session is logged
   var SLOW_SEL = 'pre,code,.CodeMirror,.cm-editor,.monaco-editor,table,svg,img,canvas,figure,.katex-display,.mermaid';
   var STOP_SEL = '#eol,.eol,[data-autoscroll-stop]';
-  var MINE = '#cpa-pill,#cpa-strip,#cpa-card,#cpa-hist,.cpa-btn,#cpq-pill,#cpq-root,#cpx-panel,#cpx-fab,#cpx-tools,.cpb-pill,.lr-ui,.lr-sheet,.lr-pop';
+  var MINE = '#cpa-pill,#cpa-hbtn,#cpa-strip,#cpa-card,#cpa-hist,.cpa-btn,#cpq-pill,#cpq-root,#cpx-panel,#cpx-fab,#cpx-tools,.cpb-pill,.lr-ui,.lr-sheet,.lr-pop';
   var PAGE; try { PAGE = decodeURIComponent(location.pathname); } catch (e) { PAGE = location.pathname; }
 
   function load(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
@@ -35,7 +35,7 @@
   var raf = 0, stuck = 0, last = 0, acc = 0, factor = 1, expectY = null, holdUntil = 0, lastRewind = 0, stopAt = null, scroller = null;
   var density = 0;          // words per pixel of page height
   var sess = null;          // the reading session in progress
-  var pill = null, toolBtn = null, strip = null, label = null;
+  var pill = null, histBtn = null, toolBtn = null, strip = null, label = null;
 
   /* ---------- the thing that scrolls: the page, or the biggest scrolling box on app-style pages ---------- */
   function findScroller() {
@@ -236,6 +236,9 @@
   css.textContent =
     '#cpa-pill{position:fixed;left:140px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:9998;height:30px;padding:0 12px 0 10px;border-radius:999px;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;' + FONT + 'font-size:12.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.72;display:flex;align-items:center;gap:6px}' +
     '#cpa-pill:hover,#cpa-pill.on{opacity:1;border-color:#8a5a2b}' +
+    '#cpa-hbtn{position:fixed;left:230px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:9998;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.72;display:flex;align-items:center;justify-content:center}' +
+    '#cpa-hbtn:hover{opacity:1;border-color:#8a5a2b}' +
+    '@media (max-width:419px){.lr-ui.cpa-crowd{gap:0;padding-left:2px;padding-right:2px}.lr-ui.cpa-crowd button .lr-l{font-size:10px;letter-spacing:-.2px}}' +   /* eight buttons on a narrow phone */
     '#cpa-strip{position:fixed;left:50%;bottom:calc(52px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:99999;display:none;align-items:center;gap:2px;padding:4px;border-radius:999px;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;box-shadow:0 4px 16px rgba(0,0,0,.14);' + FONT + 'font-size:12.5px;font-weight:600;-webkit-user-select:none;user-select:none;max-width:calc(100vw - 16px);box-sizing:border-box}' +
     '#cpa-strip.show{display:flex}' +
     '#cpa-strip button{all:unset;cursor:pointer;min-width:30px;height:30px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:15px;-webkit-tap-highlight-color:transparent}' +
@@ -307,7 +310,7 @@
     label.innerHTML = (density > 0 ? '≈ ' + w + ' wpm' : SPEEDS[idx] + ' px/s') +
       '<small>' + (state === 'paused' ? 'paused · tap page' : slow ? 'slow — mind may wander' : 'speed ' + (idx + 1) + '/' + SPEEDS.length) + '</small>';
     label.title = 'Words per minute on this page at this speed (code and diagrams scroll at about half). Below ' + SLOW_WPM + ' wpm the mind tends to wander.';
-    if (pill) { pill.classList.toggle('on', state !== 'off'); pill.innerHTML = state === 'off' ? '<span aria-hidden="true">▶</span>Scroll' : '<span aria-hidden="true">■</span>Stop'; }
+    if (pill) { pill.classList.toggle('on', state !== 'off'); pill.innerHTML = state === 'off' ? '<span aria-hidden="true">▶</span>Scroll' : '<span aria-hidden="true">■</span>Stop'; placePill(); }
     if (toolBtn) {
       toolBtn.classList.toggle('on', state !== 'off');
       toolBtn.querySelector('.lr-g').textContent = state === 'off' ? '▶' : '■';
@@ -386,17 +389,25 @@
     toolBtn = el('button', { type: 'button', class: 'cpa-btn' }, '<span class="lr-g">▶</span><span class="lr-l">Scroll</span>');
     toolBtn.onclick = toggle;
     ui.appendChild(toolBtn);
+    var hb = el('button', { type: 'button', class: 'cpa-btn cpa-hbtn', 'aria-label': 'Reading pace history' }, '<span class="lr-g">' + ICON.stats + '</span><span class="lr-l">Pace</span>');
+    hb.onclick = showHistory;
+    ui.appendChild(hb);
+    ui.classList.add('cpa-crowd');
     strip.classList.add('cpa-tb');
   }
   function mountPill() {
     pill = el('button', { id: 'cpa-pill', type: 'button', title: 'Auto-scroll the page at a steady reading pace' });
     pill.onclick = toggle;
     document.body.appendChild(pill);
+    histBtn = el('button', { id: 'cpa-hbtn', type: 'button', title: 'Reading pace history and verdicts', 'aria-label': 'Reading pace history' }, ICON.stats);
+    histBtn.onclick = showHistory;
+    document.body.appendChild(histBtn);
     placePill();
   }
   function placePill() {
     var q = document.getElementById('cpq-pill');
     if (q && pill && shown(q)) { var r = q.getBoundingClientRect(); pill.style.left = Math.round(r.right + 8) + 'px'; }
+    if (pill && histBtn) histBtn.style.left = Math.round(pill.getBoundingClientRect().right + 6) + 'px';
   }
 
   function mount() {
@@ -419,7 +430,7 @@
     var t = e.target;
     if (!t.closest) return;
     var hist = document.getElementById('cpa-hist');
-    if (hist && !t.closest('#cpa-hist,#cpa-strip,#cpa-card')) { hist.remove(); return; }
+    if (hist && !t.closest('#cpa-hist,#cpa-strip,#cpa-card,#cpa-hbtn,.cpa-hbtn')) { hist.remove(); return; }
     if (state === 'off' || t.closest(MINE)) return;
     if (Math.abs(e.clientX - downX) > 8 || Math.abs(e.clientY - downY) > 8 || Date.now() - downT > 600) return;   // a drag or long press, not a tap
     if (state === 'run') { pause(); return; }
