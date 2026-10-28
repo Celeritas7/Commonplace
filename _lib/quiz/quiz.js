@@ -708,12 +708,18 @@
     S.i++; show();
   }
 
+  /* tell the rest of the page the score is in (the auto-scroll pacer pairs it with the reading session) */
+  function announce(right, asked) {
+    if (!asked) return;
+    try { document.dispatchEvent(new CustomEvent('cpq:result', { detail: { right: right, asked: asked, pct: Math.round(right / asked * 100) } })); } catch (e) {}
+  }
   function results() {
     clearInterval(tick);
     if (CHECK) return checkResults();
     var asked = S.i + 1, pct = Math.round(S.right / asked * 100), secs = Math.round((Date.now() - S.t0) / 1000);
     var best = load(LS_BEST, null), isBest = !best || S.score > best.score;
     if (isBest) save(LS_BEST, { score: S.score, pct: pct, stress: S.stress, at: new Date().toISOString() });
+    announce(S.right, asked);
     var grade = pct >= 90 ? 'You own this page.' : pct >= 70 ? 'Solid — skim the misses below.' : pct >= 50 ? 'Halfway there. Re-read, then run it again.' : 'Worth another read before moving on.';
     if (S.stress && S.lives <= 0) grade = 'Out of lives after ' + asked + ' of ' + S.deck.length + '. ' + grade;
     var h = topBar('🧠 Results · ' + esc(pageTitle())) + '<div class="cpq-body"><div class="cpq-score"><div class="cpq-big">' + pct + '%</div><div class="cpq-grade">' + esc(grade) + (isBest ? ' <b style="color:var(--warn)">New best!</b>' : '') + '</div></div>' +
@@ -739,6 +745,7 @@
   function checkResults() {
     var c = CHECK, asked = S.i + 1, need = Math.min(c.pass, asked), pass = S.right >= need;
     var r = { pass: pass, right: S.right, asked: asked, at: Date.now() };
+    announce(S.right, asked);
     var secs = [];
     S.misses.forEach(function (m) { if (m.q.sec != null && secs.indexOf(m.q.sec) < 0) secs.push(m.q.sec); });
     secs.sort(function (a, b) { return a - b; });
