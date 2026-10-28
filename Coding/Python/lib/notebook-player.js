@@ -274,7 +274,10 @@
 
     /* ---- strip: one sticky line under the header for long-lived messages ---- */
     var stripEl = document.getElementById("np-strip"), stripMsg = null, stripTimer = 0, stripHTML = "";
-    function setStrip(m) { stripMsg = m; clearTimeout(stripTimer); if (m && m.ttl) stripTimer = setTimeout(function () { if (stripMsg === m) setStrip(null); }, m.ttl); paintStrip(); }
+    /* the restart / batch-error banner that the running strip pushed aside (guardStop); it comes
+       back when the running strip goes, and any other strip message forgets it */
+    var stripPrev = null;
+    function setStrip(m) { if ((!m || m.kind !== "running") && m !== stripPrev) stripPrev = null; stripMsg = m; clearTimeout(stripTimer); if (m && m.ttl) stripTimer = setTimeout(function () { if (stripMsg === m) setStrip(null); }, m.ttl); paintStrip(); }
     function statusStrip() {
       var s = status.state, d = status.detail || {};
       if (s === "downloading" && !seen()) {
@@ -549,12 +552,14 @@
       var r = rec.run.getBoundingClientRect(), shown = stripMsg && stripMsg.kind === "running";
       var vis = r.top >= headH() + (shown ? 8 : 0) && r.bottom <= root.innerHeight - fabClear();
       if (live && !vis) {
+        if (stripMsg && (stripMsg.kind === "restart" || stripMsg.kind === "batch-error")) stripPrev = stripMsg;
         var ms = Date.now() - rec.t0;
         setStrip({ kind: "running", msg: "<b>" + (rec.state === "waiting" ? "In [" + (rec.n + 1) + "] is waiting for input" : "Running In [" + (rec.n + 1) + "]") + "</b>" +
           (rec.state === "running" && !rec.phase && ms >= 2000 ? " &#183; " + Math.floor(ms / 1000) + "s" : ""),
           acts: [["goto", "Show", "np-btn", rec.n], ["stopall", "&#9632; Stop", "np-btn stop"]] });
-      } else if (shown) setStrip(null);
+      } else if (shown) dropRunning();
     }
+    function dropRunning() { var prev = stripPrev; stripPrev = null; setStrip(prev); }
     /* One shared session: while anything runs (or Python is starting/restarting), every other
        Run is disabled and says why. Run all / Re-run are the only queue. */
     function isBusy() { return !!current || queue.length > 0; }
@@ -685,7 +690,7 @@
         rec.secs = Date.now() - rec.t0; showErr(rec, tb); return "error";
       }).then(function (r) {
         rec.abort = null; hideAsk(rec);
-        if (stripMsg && stripMsg.kind === "running") setStrip(null);
+        if (stripMsg && stripMsg.kind === "running") dropRunning();
         setState(rec, r); outPaint(rec);
         return r;
       });
