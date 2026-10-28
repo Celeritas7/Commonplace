@@ -5,9 +5,12 @@
  *   · cross-origin (Pyodide CDN, fonts) → straight to network, never cached
  *     (Pyodide is ~10 MB; caching it here would blow the storage budget and
  *      is already handled by the browser's own HTTP cache)
+ *   · notebook pages + the Python worker → COOP/COEP added on the way out, so the
+ *     page is cross-origin isolated and input() can wait on a SharedArrayBuffer
+ *     (lib/py-worker-engine.js). Headers are added to the response only, never cached.
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v37";
+var VERSION = "cp-py-v38";
 var CORE = [
   "./",
   "index.html",
@@ -73,6 +76,8 @@ var CORE = [
   "lib/lesson-reader.js",
   "lib/notebook-player.css",
   "lib/notebook-player.js",
+  "lib/py-worker-engine.js",
+  "lib/py-worker.js",
   "lib/practice-engine.js",
   "lib/practice-set.css",
   "lib/practice-set.js",
@@ -149,6 +154,23 @@ self.addEventListener("message", function (e) {
   if (e.data === "skip-waiting") self.skipWaiting();
 });
 
+/* the 19 notebook pages (the fundamentals/libraries/practice entries above, minus the
+   card view practice/set.html, which runs Python in the page) and the worker script */
+var ISOLATE = {};
+CORE.forEach(function (u) {
+  if (/^(fundamentals|libraries|practice)\/[^/]+\.html$/.test(u) && u !== "practice/set.html")
+    ISOLATE[new URL(u, self.location.href).pathname] = 1;
+});
+ISOLATE[new URL("lib/py-worker.js", self.location.href).pathname] = 1;
+function isolate(req, res) {
+  if (!res || !ISOLATE[new URL(req.url).pathname]) return res;
+  if (res.type !== "basic" && res.type !== "default") return res;
+  var h = new Headers(res.headers);
+  h.set("Cross-Origin-Opener-Policy", "same-origin");
+  h.set("Cross-Origin-Embedder-Policy", "require-corp");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
 var OFFLINE_CARD =
   '<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
   '<title>Offline</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;' +
@@ -193,10 +215,10 @@ self.addEventListener("fetch", function (e) {
           return hit || cache.match(req, { ignoreSearch: true }) || null;
         });
 
-        if (hit) { e.waitUntil(live.catch(function () {})); return hit; }
+        if (hit) { e.waitUntil(live.catch(function () {})); return isolate(req, hit); }
 
         return live.then(function (res) {
-          if (res) return res;
+          if (res) return isolate(req, res);
           if (req.mode === "navigate")
             return new Response(OFFLINE_CARD, { headers: { "Content-Type": "text/html; charset=utf-8" } });
           return new Response("", { status: 504, statusText: "Offline" });
