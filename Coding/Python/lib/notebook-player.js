@@ -542,7 +542,9 @@
     }
     /* If the running cell's Stop is off screen (or under the floating buttons), offer Stop in the sticky strip. */
     function guardStop(rec) {
-      if (batch || (stripMsg && stripMsg.kind !== "running")) return;
+      /* a restart / batch-error / done banner gives way when a run's own Stop is off screen,
+         so a phone always has a reachable Stop; download/failed messages never do */
+      if (batch || (stripMsg && !/^(running|restart|batch-error|done)$/.test(stripMsg.kind))) return;
       var live = rec.state === "running" || rec.state === "waiting";
       var r = rec.run.getBoundingClientRect(), shown = stripMsg && stripMsg.kind === "running";
       var vis = r.top >= headH() + (shown ? 8 : 0) && r.bottom <= root.innerHeight - fabClear();

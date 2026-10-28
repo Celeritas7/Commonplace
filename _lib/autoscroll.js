@@ -51,7 +51,12 @@
   }
   function top() { return scroller.scrollTop; }
   function viewH() { return scroller === (document.scrollingElement || document.documentElement) ? innerHeight : scroller.clientHeight; }
-  function moveBy(px) { scroller.scrollTop = top() + px; }
+  /* always an instant jump: with scroll-behavior:smooth on the page (all SQL modules, and more) a plain
+     scrollTop write animates, top() still reads the old value, and the loop thought it was stuck */
+  function moveBy(px) {
+    var st = scroller.style, was = st.scrollBehavior;
+    st.scrollBehavior = 'auto'; scroller.scrollTop = top() + px; st.scrollBehavior = was;
+  }
 
   /* words per pixel, so a px/s speed can be shown as words per minute on this page */
   function measure() {
@@ -193,7 +198,7 @@
     } else if (backs >= 4) { v = 'fast'; step = -1; }
     else if (slow || (stops >= 3 && backs < 2)) { v = 'drift'; step = 1; }
     else { v = 'good'; step = 0; }
-    r.v = v; r.next = SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, nearest(r.pxs) + step))];
+    r.v = v; r.step = step; r.next = SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, nearest(r.pxs) + step))];
     r.floor = step < 0 && density > 0 && wpmOf(r.next) < SLOW_WPM;   // never coach below the wander line
     if (r.floor) r.next = r.pxs;
     return r;
@@ -219,6 +224,7 @@
   document.addEventListener('cpq:result', function (e) {
     var pct = e.detail && e.detail.pct; if (pct == null) return;
     if (state !== 'off') stop('quiet');
+    if (!density) { scroller = scroller || findScroller(); measure(); }   // not started on this load: wpm needs words per pixel
     var log = load(LOG, []);
     for (var i = log.length - 1; i >= 0; i--) {
       var r = log[i];
@@ -330,7 +336,7 @@
   function closeCard() { var c = document.getElementById('cpa-card'); if (c) c.remove(); }
   function showCard(r, head) {
     closeCard();
-    var change = r.next !== r.pxs && nearest(r.next) !== idx;
+    var change = !!r.step && !r.floor && nearest(r.next) !== idx;
     var c = el('div', { id: 'cpa-card', role: 'dialog', 'aria-label': 'Reading session' },
       '<button class="x" type="button" data-a="x" aria-label="Close">×</button>' +
       '<h4>' + esc(head) + '</h4>' +
@@ -340,7 +346,7 @@
       '<div class="cpa-acts">' +
         (r.quiz == null && window.CPQuiz ? '<button type="button" data-a="q">🧠 Quiz me now</button>' : '') +
         '<button type="button" data-a="h">History</button>' +
-        (change ? '<button type="button" class="pri" data-a="s">Use ' + (r.next > r.pxs ? 'faster' : 'slower') + ' speed</button>' : '') +
+        (change ? '<button type="button" class="pri" data-a="s">Use ' + (r.step > 0 ? 'faster' : 'slower') + ' speed</button>' : '') +
       '</div>');
     c.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
