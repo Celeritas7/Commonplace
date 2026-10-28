@@ -1,71 +1,68 @@
-# Step 3 — Lesson pages (toolbar, end-of-lesson block, section numbers, XP removed)
+# Steps 4 + 6 — Notebook pages (one download)
 
-Apply AFTER step 2 (sw.js here is v19 and includes step 2's `js/today-card.js` line).
-Copy into `Python/` at the same paths, then:
+Based on main @ 63238d5 (Step 4 was never pushed). Copy the contents of this folder into `Python/` at the
+same paths. **No notebook page (`fundamentals/*.html`, `libraries/*.html`, `practice/*.html`) changes.**
+Every page is drawn by the player.
+
+## Files
+
+| File | Step 4 | Step 6 | Action |
+|---|---|---|---|
+| `lib/notebook-player.js` | replaced | replaced again (this copy has both) | **replace** |
+| `lib/notebook-player.css` | replaced | replaced again (this copy has both) | **replace** |
+| `sw.js` | VERSION cp-py-v24 | VERSION **cp-py-v26** (the CORE list is unchanged from your v25) | **replace** |
+| `HOOKS.md` | — | new: element/class names and hooks for Claude Code | add (docs only; place it where you like, e.g. `lib/HOOKS.md`) |
+
+Needs `lib/tokens.css` (Step 1), which is already in your folder.
+
+## What each step does
+
+**Step 4**
+- One header (sticky: back · title · status pill) replaces the dark bar, breadcrumb and masthead.
+- A second row scrolls away: Run all · Reset all · jump · progress.
+- Cell Run → Stop with a timer.
+- Compact error block (type · line, last line big, traceback behind a toggle).
+- Dark mode on notebook pages.
+
+**Step 6**
+- ⌂ Home is back in the header.
+- Status pill has 8 states: `idle` (tap to load), `downloading` (with %), `starting`, `ready`, `busy`, `restarting`, `failed`, `offline`, with Retry for the last two.
+- On the first run, the strip under the header shows the download size and progress.
+- One queue for the shared session. Tapping Run while another cell runs queues the cell ("Queued · 2nd"; tap × to remove it).
+- The timer appears after 2s ("Running · 4s"). The running cell gets a mint frame. If its Stop scrolls out of view, ■ Stop appears in the sticky strip.
+- Run all: the button becomes "■ Stop · 3 / 10", and the strip shows "Running all · 3 / 10" with a bar. It stops at the first error, scrolls to that cell and offers Go to cell.
+- After a Stop:
+  - the cell shows "■ Stopped after 12s";
+  - earlier cells change from "· ran" to "· cleared";
+  - a one-time banner reads "Python restarted. Variables from earlier cells are gone…" and offers **↻ Re-run 1–4**.
+- Output:
+  - more than 20 lines collapses, with "Show all 240 lines";
+  - figures sit on a white card with a caption;
+  - "(ran — no output)";
+  - `input()` gets an inline field (16px so iOS doesn't zoom; Enter is 44px).
+- The jump `<select>` is restyled (§ mark, chevron).
+- The page keeps `--np-fab-clear` free at the bottom for the floating buttons.
+- `engine` seam: `NotebookPlayer.engine = { load, run, stop }`. Without it, the built-in in-page Pyodide is used (unchanged behaviour, but Stop can't interrupt).
+
+## Commit
 
 ```
-cd lessons/_build && python build.py
+python notebooks: one header, Run/Stop, queue, Run all, status, restart flow
+
+- notebook-player.js: Step 4 header + error block; Step 6 engine seam
+  (NotebookPlayer.engine), queue, Run all/Re-run batches, 8-state Python
+  status + sticky strip, Stop → restart flow, output states, input() field,
+  hooks + np:* events (HOOKS.md)
+- notebook-player.css: tokens only; all new states; 44px targets
+- sw.js: VERSION cp-py-v26
 ```
 
-Commit message:
+## Test at 390px (with the built-in engine)
 
-```
-python lessons: labelled bottom toolbar, end-of-lesson block, no XP HUD
+1. Open `fundamentals/02_for_loops.html`. The pill reads 34% / Starting / Ready. On the first visit, the strip shows the MB.
+2. Run In [1], then tap Run on In [3] at once. In [3] reads "Queued".
+3. Run all → "■ Stop · n / 10" and the strip shows progress. Add a typo to a cell and Run all again: it stops at that cell and scrolls to it.
+4. Airplane mode + a hard reload: offline pill and Retry.
+5. Stop needs the worker engine (HOOKS.md §1). Until then, Stop shows "Stopping…".
 
-- lib/lesson-reader.js: toolbar is a labelled bar at the bottom of the screen
-  on phones (Reader · Smaller · Larger · Theme · Saved · Account/Sign in), a
-  labelled pill bottom-right on ≥820px. It no longer covers the breadcrumb or
-  progress bar. New Theme button cycles light → dark → system via CPTheme.
-  Bookmark sheet and the account panel dock above the toolbar. All colours
-  from tokens.css (reader mode now follows the theme).
-- lessons/_build/build.py + lesson.css + lesson.js: every lesson ends with a
-  "Before you go" block (#eol): 1 Recall (3 questions from L["recall"], or a
-  muted "not written yet" row) → 2 notebook link (L["notebook"] or the nb-link
-  from section 4) → 3 "Mark N.N done" (writes PYPROGRESS 100). Previous/Next
-  become a two-card pager under it.
-- XP HUD removed (markup, CSS, counter); toasts just say the word.
-- Phones: section number sits above the heading; sections get 18px padding.
-- Cobra (desktop) lifted to bottom:96px so it clears the backup button.
-- lessons/Py_Lesson_0_1.html: same edits by hand, with three real recall
-  questions.
-- sw.js: VERSION cp-py-v19.
-```
-
-## Note
-
-Your generated lessons (`Py_Lesson_*.html`) are still the pre-step-1 build —
-they lack the `tokens.css` / `theme.js` head links, so step 1's dark mode and
-this step's toolbar theme button only work after `build.py` has been run.
-Running it once after copying step 3 covers both.
-
-## Recall data shape (for parts/part_N.py)
-
-```python
-"recall": [
-  {"q": "What does <code>list(range(1, 10, 3))</code> give?",
-   "opts": [("a", "[1, 4, 7, 10]"), ("b", "[1, 4, 7]"), ("c", "[3, 6, 9]")],
-   "answer": "b", "why": "It stops before 10."},
-  ...  # three per lesson
-],
-"notebook": ("../fundamentals/02_for_loops.html", "Open the For Loops notebook"),  # optional
-```
-
-Lessons without `recall` show "Not written for this lesson yet. Go on to the notebook."
-
-## For Claude Code
-
-- `#eol-done` click → `PYPROGRESS.write(id, 100)`. If the merged progress store
-  wants a separate "done" flag, this is the hook.
-- Recall answers are not recorded anywhere yet (wire a wrong answer into the
-  mistake bank here if wanted: `.rq .opt.wrong`).
-- Drills (`lib/lesson-drills.js`) still append their own section 9 after the
-  page; they are untouched.
-
-## Test at 390px
-
-- Toolbar at the bottom, six labelled buttons, none clipped; the top bar shows
-  breadcrumb + progress bar unobstructed.
-- Theme button: Light → Dark → Auto; the whole page recolours.
-- End of lesson: tap answers — the explanation appears under the question;
-  Mark done turns green; Previous/Next cards sit side by side.
-- Section headings that wrap to 2–3 lines have the number above them.
+States preview: `Notebook States.html` (phone 390, the Stop flow, desktop 1366). Every frame is this player, driven by a fake engine.
