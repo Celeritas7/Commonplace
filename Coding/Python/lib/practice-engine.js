@@ -663,6 +663,9 @@ window.CommonplacePractice = (function () {
 ".pmb-progtext{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-soft);white-space:nowrap;}",
 ".pmb-tabs{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;background:rgba(var(--paper-rgb),.92);backdrop-filter:blur(8px);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 18px;}",
 ".pmb-tabs{flex-direction:column;align-items:stretch;gap:0;}",
+/* the tab block is 136–255px tall (section chips + tabs): pinned, it ate a third of a phone screen.
+   It never actually pinned until body stopped being a scroll box, so keep it in the flow. */
+".pmb-tabs{position:relative;}",
 ".pmb-tabs-row{display:flex;align-items:center;gap:12px;}",
 ".pmb-mods{display:flex;flex-wrap:wrap;gap:6px;padding:9px 0 7px;border-bottom:1px dashed var(--line);}",
 ".pmb-mod{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12.5px;letter-spacing:.4px;color:var(--ink-soft);background:var(--paper-2);border:1px solid var(--line);}",
@@ -728,6 +731,10 @@ window.CommonplacePractice = (function () {
 ".pmb-fb.ok{color:var(--ok);background:var(--ok-soft);border:1px solid var(--ok-line);}.pmb-fb.err{color:var(--bad);background:var(--bad-soft);border:1px solid var(--bad-line);}",
 ".pmb-out{margin-top:10px;}.pmb-out-label{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-mute);margin-bottom:5px;}",
 ".pmb-out-pre{margin:0;background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.6;padding:12px 14px;border-radius:8px;overflow:auto;white-space:pre-wrap;}.pmb-out-pre.err{color:var(--err);}",
+/* after a solve, Next floats at the bottom of the screen while the output above/below stays scrollable;
+   it clears the floating ⇅ chip (bottom-left) and the 🔖 ★ ☰ buttons (bottom-right) */
+".pmb-next-wrap:not(:empty){position:sticky;bottom:calc(52px + env(safe-area-inset-bottom,0px));z-index:5;padding-right:60px;pointer-events:none}",
+".pmb-next-wrap:not(:empty) .pmb-next{pointer-events:auto;box-shadow:0 10px 24px -10px rgba(var(--shade-rgb,20,40,30),.55)}",
 ".pmb-next{margin-top:14px;width:100%;justify-content:center;display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;background:var(--ok);color:var(--on-fill);border:1px solid var(--ok);border-radius:8px;padding:11px 16px;cursor:pointer;}",
 ".pmb-att{margin-top:16px;border-top:1px dashed var(--line);padding-top:13px;}",
 ".pmb-att-head{display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute);cursor:pointer;user-select:none;}",
