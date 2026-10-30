@@ -1,0 +1,11 @@
+/* Authored quiz bank — Lesson 5.1 · try / except. Format: _lib/quiz/README.md
+   sec = the lesson section a question comes from (#s1…#s8), used by the lesson check. */
+window.CP_QUIZ_BANK = [
+  { type: "mcq", sec: 2, ask: "What does this print?", code: "try:\n    v = int(\"42\")\nexcept ValueError:\n    print(\"bad\")\nelse:\n    print(\"got\", v)\nfinally:\n    print(\"done\")", options: ["got 42\ndone", "bad\ndone", "got 42", "done"], answer: 0, html: false, why: "else runs only when nothing failed; finally runs every time." },
+  { type: "mcq", sec: 2, ask: "What does this print?", code: "try:\n    v = int(\"x\")\nexcept ValueError:\n    print(\"bad\")\nelse:\n    print(\"got\", v)\nfinally:\n    print(\"done\")", options: ["bad\ndone", "got x\ndone", "bad", "ValueError"], answer: 0, html: false },
+  { type: "mcq", sec: 6, ask: "Why is a bare <code>except:</code> dangerous?", options: ["It also catches KeyboardInterrupt, so Ctrl-C cannot stop the loop", "It is a SyntaxError", "It catches nothing", "It runs before try"], answer: 0, html: false, why: "If you must be broad, use <code>except Exception:</code>, which leaves Ctrl-C and SystemExit alone." },
+  { type: "mcq", sec: 2, ask: "Why put the code after the risky line in <code>else</code>, not in <code>try</code>?", options: ["So an exception raised by that code is not caught by mistake", "It runs faster", "try can only hold one line", "else always runs"], answer: 0, html: false },
+  { type: "mcq", sec: 3, ask: "What does this print?", code: "def f():\n    try:\n        return \"try\"\n    finally:\n        print(\"cleanup\")\n\nprint(f())", options: ["cleanup\ntry", "try\ncleanup", "try", "cleanup"], answer: 0, html: false, why: "finally runs even when try returns — before the value reaches the caller." },
+  { type: "fill", sec: 3, ask: "Handle two errors the same way.", code: "try:\n    data = load(path)\nexcept ({{1}}, PermissionError):\n    data = {}", blanks: ["FileNotFoundError"] },
+  { type: "match", sec: 2, ask: "Match each clause to when it runs", pairs: {"try": "always — the guarded block", "except": "only when that exception is raised", "else": "only when nothing failed", "finally": "always, even after return"} }
+];
