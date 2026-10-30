@@ -3,6 +3,7 @@
   "use strict";
 
   var db = null;
+  var SQLmod = null;       // sql.js module, kept so "Reset data" can rebuild the database
   var ready = false;
   var editor = document.getElementById("editor");
   var resultsEl = document.getElementById("results");
@@ -12,8 +13,8 @@
   // ---------- boot the engine ----------
   initSqlJs({ locateFile: function (f) { return (function(){var s=document.querySelector('script[src*="sql-wasm"]');return s?s.src.slice(0,s.src.lastIndexOf("/")+1):"";})() + f; } })
     .then(function (SQL) {
-      db = new SQL.Database();
-      db.run(window.SQL_LAB_SEED);
+      SQLmod = SQL;
+      db = freshDb();
       ready = true;
       led.classList.add("ready");
       ledText.textContent = "engine ready";
@@ -25,6 +26,30 @@
       showError("Could not load the SQL engine.\n" + e.message);
     });
 
+  function freshDb() {
+    var d = new SQLmod.Database();
+    d.run(window.SQL_LAB_SEED);
+    return d;
+  }
+
+  // Statements that change the data or the schema. After one of these the
+  // results panel offers "Reset data" so a stray DROP/DELETE isn't a dead end.
+  var CHANGES_DATA = /^\s*(DROP|CREATE|ALTER|INSERT|UPDATE|DELETE|REPLACE)\b/im;
+  var dataChanged = false;
+  function changedNote() {
+    if (!dataChanged) return "";
+    return '<div class="res-msg empty">⚠ The data has been changed by an earlier statement. ' +
+           '<button class="chip" id="reset-inline">Reset data ↺</button></div>';
+  }
+  function resetData() {
+    if (!ready) return;
+    try { db.close(); } catch (e) {}
+    db = freshDb();
+    dataChanged = false;
+    resultsEl.innerHTML = '<div class="res-msg ok">✓ Data reset to its original state.</div>';
+    led.classList.remove("err"); led.classList.add("ready"); ledText.textContent = "engine ready";
+  }
+
   // ---------- run a query ----------
   function runQuery() {
     if (!ready) return;
@@ -34,9 +59,10 @@
     try {
       var res = db.exec(sql);
       var ms = (performance.now() - t0).toFixed(1);
+      if (CHANGES_DATA.test(sql)) dataChanged = true;
       if (!res.length) {
         resultsEl.innerHTML = '<div class="res-msg ok">✓ Statement ran. No rows returned.</div>' +
-          '<div class="res-foot"><span>' + ms + ' ms</span></div>';
+          '<div class="res-foot"><span>' + ms + ' ms</span></div>' + changedNote();
         led.classList.remove("err"); led.classList.add("ready"); ledText.textContent = "engine ready";
         return;
       }
@@ -66,13 +92,16 @@
     h += '<div class="res-foot"><span>' + rows.length + (rows.length === 1 ? " row" : " rows") +
          "</span><span>" + cols.length + (cols.length === 1 ? " column" : " columns") +
          "</span><span>" + ms + " ms</span></div>";
-    resultsEl.innerHTML = h;
+    resultsEl.innerHTML = h + changedNote();
     resultsEl.scrollTop = 0;
   }
 
   function showError(msg) {
-    resultsEl.innerHTML = '<div class="res-msg err">✕ ' + esc(msg) + "</div>";
+    resultsEl.innerHTML = '<div class="res-msg err">✕ ' + esc(msg) + "</div>" + changedNote();
   }
+  resultsEl.addEventListener("click", function (e) {
+    if (e.target && e.target.id === "reset-inline") resetData();
+  });
 
   function esc(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -86,6 +115,13 @@
   }
   function insertAtCursor(text) {
     var s = editor.selectionStart, e = editor.selectionEnd, v = editor.value;
+    // If the caret sits after the closing semicolon (where it lands after a
+    // table peek), insert before it so the name lands inside the statement.
+    var tail = v.slice(s);
+    if (/^\s*$/.test(tail)) {
+      var m = v.slice(0, s).match(/;\s*$/);
+      if (m) { s = e = s - m[0].length; }
+    }
     // add a leading space if needed so tokens don't run together
     var before = v.slice(0, s);
     var needSpace = before.length && !/\s$/.test(before) && !/[(,.]$/.test(before);
@@ -101,8 +137,17 @@
     editor.value = ""; editor.focus();
     resultsEl.innerHTML = '<div class="res-msg empty">Editor cleared.</div>';
   });
+  var resetBtn = document.getElementById("reset-btn");
+  if (resetBtn) resetBtn.addEventListener("click", resetData);
   editor.addEventListener("keydown", function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); runQuery(); }
+    // Tab indents instead of leaving the editor
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      var s = editor.selectionStart, en = editor.selectionEnd, v = editor.value;
+      editor.value = v.slice(0, s) + "  " + v.slice(en);
+      editor.setSelectionRange(s + 2, s + 2);
+    }
   });
 
   // ---------- starter chips ----------
@@ -189,9 +234,12 @@
   var funnelEl = document.getElementById("funnel");
   var asideEl = document.getElementById("funnel-aside");
 
-  function selectRung(i) {
+  // run=true (a click) loads the clause's example into the Lab and runs it, as
+  // the section note promises; the initial selection on page load only shows it.
+  function selectRung(i, run) {
     var f = FUNNEL[i];
     Array.prototype.forEach.call(funnelEl.children, function (c, j) { c.classList.toggle("active", j === i); });
+    if (run) setQuery(f.sql);
     asideEl.innerHTML =
       '<div class="fk">Clause ' + (i + 1) + " of 7</div>" +
       "<h3>" + f.kw + "</h3>" +
@@ -210,12 +258,15 @@
     b.style.background = f.color;
     b.innerHTML = '<span><span class="kw">' + f.kw + '</span> <span class="sub">' + f.sub + "</span></span>" +
                   '<span class="pin">tap →</span>';
-    b.addEventListener("click", function () { selectRung(i); });
+    b.addEventListener("click", function () { selectRung(i, true); });
     funnelEl.appendChild(b);
   });
-  selectRung(0);
+  selectRung(0, false);
 
   // ---------- modules + progress ----------
+  // Challenge counts come from lib/exercises-index.js (the one list every
+  // counter uses); the numbers here are only a fallback if it failed to load.
+  var COUNTS = window.SQL_EXERCISES_BY_MODULE || {};
   var MODULES = [
     { t: "Retrieving Data", n: 11 },
     { t: "Filtering & Sorting", n: 15 },
@@ -228,6 +279,7 @@
     { t: "PostgreSQL with Python", n: 9 },
     { t: "Capstone — Tiffinly", n: 9 }
   ];
+  MODULES.forEach(function (m, i) { if (COUNTS[String(i + 1)] != null) m.n = COUNTS[String(i + 1)]; });
   var doneByModule = {};
   try {
     var prog = JSON.parse(localStorage.getItem("commonplace_module_exercises_progress") || "{}");
