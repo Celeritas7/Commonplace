@@ -115,6 +115,53 @@
     });
   });
 
+  // ---- "Reset data" on every playground ----
+  // The page's engine script exposes SQL_PG_RESET (all playgrounds share one db).
+  if (typeof window.SQL_PG_RESET === "function") {
+    document.querySelectorAll(".playground .left-actions").forEach(function (left) {
+      if (left.querySelector(".pg-reset-data")) return;
+      var b = document.createElement("button");
+      b.className = "btn pg-reset-data";
+      b.type = "button";
+      b.textContent = "Reset data";
+      b.title = "Rebuild the sample database from its seed (undoes DROP/DELETE/UPDATE on this page)";
+      b.addEventListener("click", function () { window.SQL_PG_RESET(); });
+      left.appendChild(b);
+    });
+  }
+
+  // ---- challenges with no playground (bug-spotting, concept checks) ----
+  // They still count toward the module, so they get their own "Mark as done"
+  // right under the heading. Same key format as the playground ones.
+  function keyFromHeading(h4) {
+    var dm = h4.id.match(/^challenge-(\d+)/);
+    if (!dm) return null;
+    var d = dm[1], mod, les, ch;
+    if (d.substring(0, 2) === "10") { mod = 10; les = d.charAt(2); ch = d.charAt(3); }
+    else { mod = d.charAt(0); les = d.charAt(1); ch = d.charAt(2); }
+    return "ex_" + mod + "_" + les + "_" + ch;
+  }
+  var hasPlayground = {};
+  Object.values(challengeMap).forEach(function (info) { hasPlayground[info.key] = true; });
+  document.querySelectorAll('h4[id^="challenge-"]').forEach(function (h4) {
+    var key = keyFromHeading(h4);
+    if (!key || hasPlayground[key]) return;
+    var btn = document.createElement("button");
+    btn.className = "pg-done-btn pg-done-inline";
+    btn.type = "button";
+    btn.style.cssText = "font-size:11px;font-weight:700;padding:5px 10px;border-radius:14px;border:1px solid #16a34a;background:#fff;color:#16a34a;cursor:pointer;font-family:inherit;margin-left:12px;vertical-align:middle;";
+    var paint = function (done) {
+      btn.textContent = done ? "✓ Done" : "Mark as done";
+      btn.style.background = done ? "#dcfce7" : "";
+      btn.style.cursor = done ? "default" : "pointer";
+      btn.disabled = !!done;
+    };
+    try { paint(JSON.parse(localStorage.getItem(attemptStateKey()) || "{}")[key] === "done"); }
+    catch (e) { paint(false); }
+    btn.addEventListener("click", function () { setChallengeStatus(key, "done"); paint(true); });
+    h4.appendChild(btn);
+  });
+
   // ---- "Mark as done" button on challenge playgrounds ----
   function addChallengeControls(pg, info) {
     if (pg.querySelector(".pg-done-btn")) return;
@@ -153,22 +200,28 @@
   });
 
   // ---- top-of-page badge: "X / Y exercises done in this module" ----
+  // Counts come from lib/exercises-index.js — the same list the home page and
+  // the module progress bar use — so all three numbers agree. The DOM walk is
+  // only a fallback if that file didn't load.
   (function () {
-    if (Object.keys(challengeMap).length === 0) return;
-    var total = Object.keys(challengeMap).length;
+    var keys = [];
+    if (Array.isArray(window.SQL_EXERCISES)) {
+      window.SQL_EXERCISES.forEach(function (e) { if (e.m === MODULE_NUM) keys.push(e.k); });
+    }
+    if (!keys.length) Object.values(challengeMap).forEach(function (info) { keys.push(info.key); });
+    if (keys.length === 0) return;
+    var total = keys.length;
     var done = 0;
     try {
       var st = JSON.parse(localStorage.getItem(attemptStateKey()) || "{}");
-      Object.values(challengeMap).forEach(function (info) {
-        if (st[info.key] === "done") done++;
-      });
+      keys.forEach(function (k) { if (st[k] === "done") done++; });
     } catch (e) {}
 
     // Inject a small status pill in the topnav if present, else near the module hero
     var nav = document.querySelector(".topnav, .module-hero, main");
     if (!nav) return;
     var pill = document.createElement("a");
-    pill.href = "../Practice/exercises.html";
+    pill.href = "../Practice/sqlzoo.html";
     pill.className = "module-progress-pill";
     pill.style.cssText = "display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:14px;background:#ede9fe;color:#4f46e5;text-decoration:none;margin-left:auto;white-space:nowrap;";
     pill.innerHTML = "📚 " + done + " / " + total + " done";

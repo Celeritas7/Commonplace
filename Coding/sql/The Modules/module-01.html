@@ -186,14 +186,33 @@ document.addEventListener('DOMContentLoaded', async function() {
     var h = a.getAttribute("href");
     if (!h) return;
     if (h === "index.html" || h.indexOf("index.html#") === 0) a.setAttribute("href", "../" + h);
-    else if (h === "exercises.html") a.setAttribute("href", "../Practice/exercises.html");
+    else if (h === "exercises.html") a.setAttribute("href", "../Practice/sqlzoo.html");
     else if (h === "sqlzoo.html") a.setAttribute("href", "../Practice/sqlzoo.html");
     else if (h === "mistake-drill.html") a.setAttribute("href", "../Practice/mistake-drill.html");
   }
   function sweep(root) {
     if (root.querySelectorAll) root.querySelectorAll("a[href]").forEach(fix);
   }
+  /* Phone fix: the packed nav never wraps, so these two legacy pages scrolled
+     sideways on a 390px screen. Re-attached after the bundle swaps <head>. */
+  function ensureMobileStyle() {
+    if (!document.head || document.getElementById("cp-mobile-fix")) return;
+    var st = document.createElement("style");
+    st.id = "cp-mobile-fix";
+    st.textContent = "@media (max-width:680px){" +
+      ".topbar{position:static}.topbar__row{flex-wrap:wrap;height:auto;padding:10px 20px;gap:8px 14px}" +
+      ".crumbs{display:none}.rail{top:0}" +
+      ".topnav{flex-wrap:wrap;gap:8px 14px;width:100%}" +
+      ".topnav .pill{padding:8px 12px;white-space:nowrap}" +
+      "nav,header{flex-wrap:wrap}" +
+      "table{display:block;overflow-x:auto;max-width:100%}" +
+      "pre{max-width:100%;overflow-x:auto}" +
+      "html,body{overflow-x:hidden;max-width:100vw}" +
+      "}";
+    document.head.appendChild(st);
+  }
   var mo = new MutationObserver(function (muts) {
+    ensureMobileStyle();
     muts.forEach(function (m) {
       if (m.type === "attributes" && m.target.tagName === "A") { fix(m.target); return; }
       if (m.addedNodes) m.addedNodes.forEach(function (n) {
@@ -205,6 +224,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
   mo.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
   sweep(document);
+  ensureMobileStyle();
 })();
 </script>
 <script src="../../../_lib/progress-backup.js"></script>
