@@ -1,0 +1,11 @@
+/* Authored quiz bank — Lesson 3.6 · Comprehensions. Format: _lib/quiz/README.md
+   sec = the lesson section a question comes from (#s1…#s8), used by the lesson check. */
+window.CP_QUIZ_BANK = [
+  { type: "mcq", sec: 2, ask: "What does this print?", code: "print([n * n for n in range(5) if n % 2 == 0])", options: ["[0, 4, 16]", "[0, 1, 4, 9, 16]", "[1, 9]", "[4, 16]"], answer: 0, html: false, why: "Read the middle first: for each n in 0–4, if n is even, keep n squared: 0, 4, 16." },
+  { type: "mcq", sec: 3, ask: "What does this print?", code: "stock = {\"bolt\": 40, \"nut\": 0, \"pin\": 7}\nprint({k: v for k, v in stock.items() if v > 0})", options: ["{'bolt': 40, 'pin': 7}", "{'nut': 0}", "['bolt', 'pin']", "{'bolt': 40, 'nut': 0, 'pin': 7}"], answer: 0, html: false },
+  { type: "mcq", sec: 3, ask: "What does this print?", code: "lines = [\"  a \", \"\", \" b\", \"   \"]\nprint([l.strip() for l in lines if l.strip()])", options: ["['a', 'b']", "['  a ', ' b']", "['a', '', 'b', '']", "['a', 'b', '']"], answer: 0, html: false, why: "The filter drops lines that are empty after stripping; the expression strips the rest." },
+  { type: "mcq", sec: 6, ask: "Why is <code>sum(n ** 2 for n in range(10_000_000))</code> better than <code>sum([n ** 2 for n in range(10_000_000)])</code>?", options: ["Without the brackets it is a generator: same answer, almost no memory", "It is a different answer", "The brackets are a syntax error", "Generators are always faster to type"], answer: 0, html: false },
+  { type: "mcq", sec: 6, ask: "When should you write a plain for loop instead of a comprehension?", options: ["When you are not collecting a result, or it needs three levels of nesting", "Never — comprehensions are always better", "Whenever the list has more than ten items", "Only for dictionaries"], answer: 0, html: false },
+  { type: "fill", sec: 2, ask: "A set of remainders.", code: "nums = [1, 2, 3, 4]\nrems = {{1}}n % 3 for n in nums{{2}}", blanks: ["{", "}"] },
+  { type: "match", sec: 2, ask: "Match each part of a comprehension to its job", pairs: {"the expression on the left": "what to keep", "for … in …": "where items come from", "if … at the end": "which items to keep", "[ ]": "build a list", "{k: v …}": "build a dict"} }
+];

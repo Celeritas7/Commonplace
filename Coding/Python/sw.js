@@ -10,7 +10,7 @@
  *     (lib/py-worker-engine.js). Headers are added to the response only, never cached.
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v40";
+var VERSION = "cp-py-v41";
 var CORE = [
   "./",
   "index.html",
@@ -121,6 +121,22 @@ var CORE = [
   "lessons/quiz/Py_Lesson_2_3.js",
   "lessons/quiz/Py_Lesson_2_4.js",
   "lessons/quiz/Py_Lesson_2_5.js",
+  "lessons/quiz/Py_Lesson_3_1.js",
+  "lessons/quiz/Py_Lesson_3_2.js",
+  "lessons/quiz/Py_Lesson_3_3.js",
+  "lessons/quiz/Py_Lesson_3_4.js",
+  "lessons/quiz/Py_Lesson_3_5.js",
+  "lessons/quiz/Py_Lesson_3_6.js",
+  "lessons/quiz/Py_Lesson_4_1.js",
+  "lessons/quiz/Py_Lesson_4_2.js",
+  "lessons/quiz/Py_Lesson_4_3.js",
+  "lessons/quiz/Py_Lesson_4_4.js",
+  "lessons/quiz/Py_Lesson_4_5.js",
+  "lessons/quiz/Py_Lesson_4_6.js",
+  "lessons/quiz/Py_Lesson_5_1.js",
+  "lessons/quiz/Py_Lesson_5_2.js",
+  "lessons/quiz/Py_Lesson_5_3.js",
+  "lessons/quiz/Py_Lesson_5_4.js",
   "../../_lib/supabase.js",
   "../../_lib/marked.min.js",
   "../../_lib/fonts/gf-135340b0.css",
