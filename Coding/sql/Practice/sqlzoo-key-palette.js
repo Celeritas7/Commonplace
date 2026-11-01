@@ -9,6 +9,7 @@
 // "All" switches back to the full v2 palette. Choice is remembered per device (localStorage "zk-mode").
 // v3.1: chips NEVER focus the textarea (no focus() call) and never steal focus from it (mousedown is
 // cancelled on the palette), so a chip tap can't summon the soft keyboard. Only a tap in the code does.
+// v3.2: the TABLES lookup row (⤢ schema & first rows) is drawn in both Smart and All.
 (function () {
   "use strict";
 
@@ -711,7 +712,11 @@
         });
       }
 
-      // table layout lookup — opens schema & first rows, types nothing
+      tableLayout(card);
+    }
+
+    // table layout lookup — opens schema & first rows, types nothing. Shown in Smart and All.
+    function tableLayout(card) {
       var tabs = TABLES[ds] || [];
       if (tabs.length) {
         var sr = row(card);
@@ -748,7 +753,7 @@
       r2.appendChild(keycap("\u21B5", CAP_PUNCT, function () { insertKey(ta, "\n", "p"); }, true));
 
       var tables = TABLES[ds] || [];
-      if (!tables.length) return;
+      if (!tables.length) return tableLayout(card);
       card.appendChild(el("div", "border-top:1px dashed #d8ccb2;margin:10px 0 0;"));
       var tr = row(card);
       tr.appendChild(el("span", "display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;margin-right:3px;",
@@ -768,6 +773,7 @@
           '<span style="' + LABEL + '">' + act.t.toUpperCase() + ' \u00B7</span>'));
         act.cols.forEach(function (cn) { cr.appendChild(colPill(cn, function () { insertKey(ta, cn, "id"); })); });
       }
+      tableLayout(card);
     }
   }
 

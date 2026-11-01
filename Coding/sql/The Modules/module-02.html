@@ -1,258 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>try{var t=localStorage.getItem('cp_theme')||'auto';if(t==='dark'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');var s=localStorage.getItem('cp_text_size');if(s&&s!=='m')document.documentElement.setAttribute('data-text-size',s)}catch(e){}</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>SQL · Filtering & Sorting — Module 02</title>
 <link href="../../../_lib/fonts/gf-1a97295f.css" rel="stylesheet" />
+<link href="../../../_lib/fonts/gf-a896b6d9.css" rel="stylesheet" />
+<link rel="stylesheet" href="../lib/tokens.css?v=1" />
+<link rel="stylesheet" href="../lib/book.css?v=2" />
 <script src="../../../_lib/sqljs/sql-wasm.js"></script>
-<style>
-:root {
-  --paper:#f0eadd; --paper-2:#e9e2d2; --paper-3:#e2dac8;
-  --ink:#2b2620; --ink-soft:#5a5247; --ink-faint:#8c8273; --ink-ghost:#a99e8c;
-  --rule:rgba(43,38,32,0.16); --rule-soft:rgba(43,38,32,0.09);
-  --wine:#6e2230; --wine-ink:#f3e7e2; --mauve:#7c6a90; --forest:#2f5d44;
-  --accent:var(--wine); --accent-ink:var(--wine-ink);
-  --term-bg:#161719; --term-bg-2:#1e2024; --term-line:#2c2f35;
-  --term-text:#d7d2c8; --term-dim:#7e8590; --term-green:#6fd49b; --term-blue:#8fb4e3;
-  --term-amber:#d8a361; --term-mauve:#b89cd4; --term-rose:#df8f93;
-  --serif:'Newsreader', Georgia, 'Times New Roman', serif;
-  --mono:'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  --maxw:1160px; --gut:40px;
-}
-* { box-sizing:border-box; }
-html { scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
-body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--serif); font-size:18px; line-height:1.65; font-synthesis:none; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
-body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:0.5;
-  background-image:radial-gradient(rgba(43,38,32,0.025) 0.5px, transparent 0.5px); background-size:4px 4px; }
-body > * { position:relative; z-index:1; }
-a { color:inherit; text-decoration:none; }
-::selection { background:rgba(110,34,48,0.18); }
-.shell { max-width:var(--maxw); margin:0 auto; padding:0 var(--gut); }
-
-/* ── topbar ── */
-.topbar { position:sticky; top:0; z-index:40; background:color-mix(in oklab, var(--paper) 88%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--rule); }
-.topbar__row { display:flex; align-items:center; justify-content:space-between; gap:24px; height:60px; }
-.crumbs { display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-faint); }
-.crumbs .sep { color:var(--ink-ghost); }
-.crumbs .cur { color:var(--ink); }
-.crumbs a:hover { color:var(--ink); }
-.topnav { display:flex; align-items:center; gap:22px; }
-.topnav > a { font-family:var(--mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-faint); position:relative; padding:4px 0; }
-.topnav > a:hover { color:var(--ink); }
-.topnav > a.active { color:var(--ink); }
-.topnav > a.active::after { content:""; position:absolute; left:0; right:0; bottom:-2px; height:1.5px; background:var(--accent); }
-.topnav .pill { display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:var(--accent-ink); font-family:var(--mono); font-size:11px; letter-spacing:0.16em; text-transform:uppercase; padding:9px 16px; border-radius:999px; transition:transform .15s ease, filter .15s ease; }
-.topnav .pill:hover { filter:brightness(1.08); transform:translateY(-1px); color:var(--accent-ink); }
-.topnav .pill::after { display:none; }
-.topnav .pill .tri { font-size:9px; opacity:0.9; }
-
-/* ── module rail ── */
-.rail { border-bottom:1px solid var(--rule); background:color-mix(in oklab, var(--paper) 92%, transparent); position:sticky; top:60px; z-index:39; }
-.rail__track { display:flex; gap:0; overflow-x:auto; scrollbar-width:none; }
-.rail__track::-webkit-scrollbar { display:none; }
-.rail__item { flex:0 0 auto; display:flex; align-items:baseline; gap:9px; padding:13px 20px; border-right:1px solid var(--rule-soft); cursor:pointer; white-space:nowrap; transition:background .15s ease; }
-.rail__item:hover { background:var(--paper-2); }
-.rail__item .num { font-family:var(--mono); font-size:11px; letter-spacing:0.1em; color:var(--ink-ghost); }
-.rail__item .nm { font-family:var(--mono); font-size:12px; letter-spacing:0.04em; color:var(--ink-faint); text-transform:lowercase; }
-.rail__item.active { background:var(--paper-2); position:relative; }
-.rail__item.active::after { content:""; position:absolute; left:0; right:0; bottom:0; height:2px; background:var(--accent); }
-.rail__item.active .num { color:var(--accent); }
-.rail__item.active .nm { color:var(--ink); }
-
-/* ── layout ── */
-.layout { max-width:var(--maxw); margin:0 auto; padding:0 var(--gut) 40px; display:grid; grid-template-columns:212px minmax(0,1fr); gap:56px; align-items:start; }
-.sidebar { position:sticky; top:140px; align-self:start; padding-top:56px; }
-.sidebar h4 { font-family:var(--mono); font-size:10.5px; letter-spacing:0.2em; text-transform:uppercase; color:var(--ink-faint); font-weight:500; margin:0 0 14px; }
-.toc-link { display:block; font-family:var(--mono); font-size:12.5px; line-height:1.45; color:var(--ink-faint); padding:7px 10px; margin:0 -10px; border-radius:6px; transition:all .14s ease; }
-.toc-link:hover { color:var(--ink); background:var(--paper-2); }
-.toc-link.active { color:var(--accent); }
-main { min-width:0; }
-
-/* ── module header ── */
-.mhead { padding:56px 0 34px; }
-.mhead__grid { display:grid; grid-template-columns:1fr auto; gap:48px; align-items:end; }
-.eyebrow { font-family:var(--mono); font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent); font-weight:500; }
-.label-mono { font-family:var(--mono); font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--ink-faint); }
-.mhead__eyebrow { margin-bottom:18px; display:flex; gap:14px; align-items:center; }
-.mhead__title { font-family:var(--serif); font-weight:500; font-size:clamp(52px,7vw,88px); line-height:0.96; letter-spacing:-0.02em; margin:0; }
-.mhead__stand { font-style:italic; font-size:clamp(20px,2.2vw,26px); line-height:1.45; color:var(--ink-soft); max-width:30ch; margin:24px 0 0; text-wrap:pretty; }
-.mhead__meta { display:flex; flex-wrap:wrap; gap:8px 30px; margin-top:36px; font-family:var(--mono); font-size:12px; color:var(--ink-faint); }
-.mhead__meta b { color:var(--ink); font-weight:500; }
-.spec { border:1px solid var(--rule); background:color-mix(in oklab, var(--paper-2) 60%, var(--paper)); padding:18px 22px; min-width:250px; }
-.spec__row { display:flex; justify-content:space-between; gap:28px; font-family:var(--mono); font-size:12.5px; padding:6px 0; }
-.spec__row + .spec__row { border-top:1px solid var(--rule-soft); }
-.spec__k { color:var(--ink-faint); letter-spacing:0.14em; text-transform:uppercase; font-size:10.5px; align-self:center; }
-.spec__v { color:var(--ink); }
-.spec__v.accent { color:var(--accent); }
-.mhead__progress { margin-top:30px; }
-.pbar { height:5px; background:var(--paper-3); border-radius:999px; overflow:hidden; border:1px solid var(--rule-soft); }
-.pbar__fill { height:100%; background:var(--accent); border-radius:999px; transition:width .5s cubic-bezier(.2,.7,.2,1); }
-.pbar__meta { display:flex; justify-content:space-between; margin-top:8px; font-family:var(--mono); font-size:11px; letter-spacing:0.08em; color:var(--ink-faint); text-transform:uppercase; }
-
-/* ── content typography ── */
-main h2 { font-family:var(--serif); font-weight:500; font-size:clamp(26px,2.8vw,33px); letter-spacing:-0.01em; margin:60px 0 22px; padding-bottom:13px; border-bottom:1px solid var(--rule); scroll-margin-top:130px; }
-main h2::before { content:"§"; color:var(--accent); font-family:var(--mono); font-size:13px; margin-right:14px; vertical-align:4px; }
-main h3 { font-family:var(--serif); font-weight:500; font-size:23px; letter-spacing:-0.01em; margin:38px 0 12px; scroll-margin-top:130px; }
-main h4 { font-family:var(--mono); font-size:12.5px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:36px 0 10px; scroll-margin-top:130px; }
-main p { color:var(--ink-soft); max-width:66ch; text-wrap:pretty; margin:0 0 16px; }
-main p strong, main li strong { color:var(--ink); font-weight:600; }
-main ul, main ol { color:var(--ink-soft); max-width:64ch; padding-left:22px; margin:0 0 18px; }
-main li { margin:6px 0; }
-main li em, main p em { color:var(--ink-soft); }
-main hr { border:none; border-top:1px solid var(--rule); margin:46px 0; }
-code { font-family:var(--mono); font-size:0.86em; background:var(--paper-2); border:1px solid var(--rule-soft); padding:1px 6px; border-radius:4px; color:var(--ink); }
-main table { border-collapse:collapse; font-size:15.5px; margin:14px 0 22px; }
-main table th { font-family:var(--mono); font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-faint); text-align:left; padding:8px 26px 8px 0; border-bottom:1px solid var(--rule); font-weight:500; }
-main table td { padding:9px 26px 9px 0; border-bottom:1px solid var(--rule-soft); color:var(--ink-soft); }
-
-/* ── admonitions → callouts ── */
-.admonition { padding:16px 20px; margin:22px 0; background:color-mix(in oklab, var(--accent) 7%, var(--paper)); border:1px solid color-mix(in oklab, var(--accent) 22%, var(--rule)); }
-.admonition-title { font-family:var(--mono); font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--accent); margin:0 0 9px; font-weight:600; }
-.admonition p { margin:0 0 9px; font-size:15.5px; font-style:italic; color:var(--ink-soft); }
-.admonition p:last-child { margin-bottom:0; }
-
-/* ── static code blocks → terminal snippets ── */
-.highlight { margin:16px 0 22px; }
-.highlight pre { margin:0; padding:16px 18px; background:var(--term-bg); color:var(--term-text); font-family:var(--mono); font-size:13.5px; line-height:1.65; border-radius:8px; border:1px solid #0d0e10; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
-.highlight .k { color:var(--term-blue); } .highlight .n { color:var(--term-text); }
-.highlight .mi, .highlight .mf { color:var(--term-amber); }
-.highlight .o, .highlight .p { color:var(--term-dim); }
-.highlight .s, .highlight .s1, .highlight .s2 { color:var(--term-green); }
-.highlight .c, .highlight .c1, .highlight .cm { color:var(--term-dim); font-style:italic; }
-
-/* ── funnel diagrams on a dark card ── */
-.funnel-wrap { background:var(--term-bg); border:1px solid #0d0e10; border-radius:10px; padding:18px 22px; margin:22px 0; max-width:460px; }
-.funnel-wrap.mini { max-width:220px; padding:12px 16px; }
-.funnel-wrap svg { display:block; width:100%; height:auto; }
-
-/* ── playground → terminal console ── */
-.playground { margin:24px 0; border-radius:10px; overflow:hidden; background:var(--term-bg); border:1px solid #0d0e10; box-shadow:0 24px 50px -28px rgba(43,38,32,0.5), 0 2px 0 rgba(43,38,32,0.04); }
-.pg-header { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:11px 14px; background:var(--term-bg-2); border-bottom:1px solid #0d0e10; font-family:var(--mono); }
-.pg-header .left { display:flex; align-items:center; gap:9px; color:var(--term-text); font-size:12.5px; }
-.pg-header .hint { color:var(--term-dim); font-size:11px; }
-.led { width:9px; height:9px; border-radius:50%; background:var(--term-green); box-shadow:0 0 8px var(--term-green); flex:0 0 auto; }
-.led.loading { background:var(--term-amber); box-shadow:0 0 8px var(--term-amber); }
-.led.err { background:var(--term-rose); box-shadow:0 0 8px var(--term-rose); }
-.playground textarea { display:block; width:100%; border:none; outline:none; resize:vertical; background:var(--term-bg); color:var(--term-text); caret-color:var(--term-text); font-family:var(--mono); font-size:14px; line-height:1.65; padding:16px 18px; min-height:84px; }
-.pg-actions { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 14px; background:var(--term-bg); border-top:1px solid var(--term-line); flex-wrap:wrap; }
-.left-actions { display:flex; gap:8px; flex-wrap:wrap; }
-.playground .btn { font-family:var(--mono); font-size:11.5px; color:var(--term-dim); background:transparent; border:1px solid var(--term-line); border-radius:999px; padding:6px 13px; cursor:pointer; transition:all .14s ease; }
-.playground .btn:hover { color:var(--term-text); border-color:#3a3e46; background:#1c1e22; }
-.playground .btn.primary { background:var(--term-green); color:#0c2417; border-color:var(--term-green); font-weight:600; border-radius:7px; }
-.playground .btn.primary:hover { filter:brightness(1.06); }
-.pg-result { overflow:auto; max-height:340px; }
-.pg-result table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:13px; }
-.pg-result th { text-align:left; padding:10px 18px; color:var(--term-blue); font-weight:500; background:var(--term-bg-2); border-top:1px solid var(--term-line); border-bottom:1px solid var(--term-line); white-space:nowrap; }
-.pg-result td { padding:9px 18px; color:var(--term-text); border-bottom:1px solid rgba(44,47,53,0.55); white-space:nowrap; }
-.pg-status { font-family:var(--mono); font-size:11.5px; margin:10px 14px; display:inline-block; }
-.pg-status.ok { color:var(--term-green); }
-.pg-status.err { color:var(--term-rose); }
-
-/* ── bottom module nav → next cards ── */
-.module-nav { margin-top:70px; border-top:1px solid var(--rule); display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:40px 0 70px; }
-.module-nav a { color:inherit; padding:24px 28px; border:1px solid var(--rule); background:var(--paper-2); min-width:260px; flex:1; transition:all .18s ease; }
-.module-nav a:hover { background:var(--paper-3); transform:translateY(-2px); }
-.module-nav .label { display:block; font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); letter-spacing:0.2em; text-transform:uppercase; margin-bottom:8px; }
-.module-nav .title { display:block; font-family:var(--serif); font-size:24px; font-weight:500; }
-
-/* ── recolor the enhancement pills (injected with inline styles) ── */
-.module-progress-pill { background:var(--wine) !important; color:var(--wine-ink) !important; box-shadow:0 4px 12px rgba(110,34,48,0.22) !important; }
-.pg-restored { background:var(--paper-2) !important; color:var(--mauve) !important; }
-.pg-done-btn { border-color:var(--forest) !important; color:var(--forest) !important; background:transparent !important; }
-
-@media (max-width:900px) {
-  .layout { grid-template-columns:1fr; gap:0; }
-  .sidebar { position:static; padding-top:30px; }
-  .mhead__grid { grid-template-columns:1fr; }
-  .spec { justify-self:start; }
-  .crumbs { display:none; }
-}
-/* phones: nothing wider than the screen */
-@media (max-width:680px) {
-  .topbar { position:static; }                    /* sticky + wrapped rows overlapped the rail */
-  .topbar__row { flex-wrap:wrap; height:auto; padding:10px 20px; gap:8px 14px; }
-  .crumbs { display:none; }
-  .rail { top:0; }
-  .topnav { flex-wrap:wrap; gap:8px 14px; width:100%; }
-  .topnav .pill { padding:8px 12px; white-space:nowrap; }
-  .module-progress-pill { margin-left:0 !important; }
-  main table { display:block; overflow-x:auto; max-width:100%; }
-  pre, .highlight { max-width:100%; overflow-x:auto; }
-  .playground textarea { font-size:13px; }
-  .pg-actions { flex-wrap:wrap; gap:8px; }
-  .pg-actions .btn { padding:8px 12px; }
-}
-</style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="shell topbar__row">
-    <nav class="crumbs">
-      <a href="../../../index.html">Commonplace</a><span class="sep">/</span>
-      <a href="../../index.html">Coding</a><span class="sep">/</span>
-      <a href="../index.html">SQL</a><span class="sep">/</span>
-      <span class="cur">Filtering &amp; Sorting</span>
+<header class="bk-bar">
+  <div class="bk-bar__in">
+    <nav class="bk-crumbs" aria-label="Breadcrumb">
+      <span class="bk-crumbs__long"><a href="../../../index.html">Commonplace</a> <span class="sep">/</span> <a href="../../index.html">Coding</a> <span class="sep">/</span></span>
+      <a class="bk-crumbs__book" href="../index.html">SQL</a><span class="sep">/</span>
     </nav>
-    <nav class="topnav">
-      <a href="../index.html#lab">Lab</a>
-      <a href="../index.html#funnel-top">Funnel</a>
-      <a class="active" href="../index.html#modules-top">Modules</a>
-      <a class="pill" href="../Practice/sqlzoo.html"><span class="tri">▸</span> Practice &amp; Exercises</a>
-    </nav>
+    <button class="bk-picker" type="button" data-sheet="bk-modules" aria-haspopup="dialog" aria-expanded="false">
+      <span class="bk-only-phone">Module <span class="n">2</span> of 10</span>
+      <span class="bk-only-wide"><span class="n">02</span> · <span class="t">Filtering &amp; sorting</span></span>
+      <span class="car" aria-hidden="true">▾</span>
+    </button>
+    <div class="bk-bar__tools">
+      <a class="bk-btn bk-btn--ghost bk-only-wide" href="../index.html#lab">Lab</a>
+      <a class="bk-btn bk-btn--ghost bk-only-wide" href="../Practice/sqlzoo.html">Practice</a>
+      <button class="bk-btn bk-btn--ghost bk-btn--icon" type="button" data-sheet="bk-reading" aria-haspopup="dialog" aria-expanded="false" aria-label="Reading settings">Aa</button>
+    </div>
   </div>
 </header>
 
-<div class="rail">
-  <div class="shell">
-    <div class="rail__track">
-      <a class="rail__item" href="module-01.html"><span class="num">01</span><span class="nm">retrieving data</span></a>
-      <a class="rail__item active" href="module-02.html"><span class="num">02</span><span class="nm">filtering &amp; sorting</span></a>
-      <a class="rail__item" href="module-03.html"><span class="num">03</span><span class="nm">aggregating data</span></a>
-      <a class="rail__item" href="module-04.html"><span class="num">04</span><span class="nm">joins</span></a>
-      <a class="rail__item" href="module-05.html"><span class="num">05</span><span class="nm">advanced sql</span></a>
-      <a class="rail__item" href="module-06.html"><span class="num">06</span><span class="nm">creating &amp; modifying tables</span></a>
-      <a class="rail__item" href="module-07.html"><span class="num">07</span><span class="nm">conditional expressions &amp; views</span></a>
-      <a class="rail__item" href="module-08.html"><span class="num">08</span><span class="nm">importing &amp; exporting data</span></a>
-      <a class="rail__item" href="module-09.html"><span class="num">09</span><span class="nm">postgresql with python</span></a>
-      <a class="rail__item" href="module-10.html"><span class="num">10</span><span class="nm">capstone — tiffinly</span></a>
-    </div>
+<nav class="bk-tabs" aria-label="Modules">
+  <div class="bk-tabs__track">
+    <a class="bk-tab" href="module-01.html" data-mod="01"><span class="num">01</span>Retrieving data</a>
+    <a class="bk-tab" href="module-02.html" data-mod="02" aria-current="page"><span class="num">02</span>Filtering &amp; sorting</a>
+    <a class="bk-tab" href="module-03.html" data-mod="03"><span class="num">03</span>Aggregating data</a>
+    <a class="bk-tab" href="module-04.html" data-mod="04"><span class="num">04</span>JOINs</a>
+    <a class="bk-tab" href="module-05.html" data-mod="05"><span class="num">05</span>Advanced SQL</a>
+    <a class="bk-tab" href="module-06.html" data-mod="06"><span class="num">06</span>Creating &amp; modifying tables</a>
+    <a class="bk-tab" href="module-07.html" data-mod="07"><span class="num">07</span>Conditional expressions &amp; views</a>
+    <a class="bk-tab" href="module-08.html" data-mod="08"><span class="num">08</span>Importing &amp; exporting data</a>
+    <a class="bk-tab" href="module-09.html" data-mod="09"><span class="num">09</span>PostgreSQL with Python</a>
+    <a class="bk-tab" href="module-10.html" data-mod="10"><span class="num">10</span>Capstone — Tiffinly</a>
   </div>
-</div>
+</nav>
 
-<div class="layout">
-  <aside class="sidebar">
-    <h4>In this module</h4>
-    <div id="toc"></div>
+<div class="bk-layout">
+  <aside class="bk-side">
+    <span class="bk-k">In this module</span>
+    <nav class="bk-toc" id="toc" aria-label="In this module"></nav>
   </aside>
 
-  <main>
-    <div class="mhead">
-      <div class="mhead__grid">
-        <div>
-          <div class="mhead__eyebrow"><span class="eyebrow">Module 02 · of 10</span><span class="label-mono">Interactive study</span></div>
-          <h1 class="mhead__title">Filtering &amp; Sorting</h1>
-          <p class="mhead__stand">Narrow the rows you retrieve, decide what order they come back in, and cap how many you see. Three knobs that turn “fetch some data” into “answer a question”.</p>
-          <div class="mhead__meta">
-            <span>Estimated <b>60–90 min</b></span>
-            <span>Prerequisites · <b>Module 1 · SELECT, DISTINCT, COUNT</b></span>
-          </div>
-          <div class="mhead__progress">
-            <div class="pbar"><div class="pbar__fill" id="mod-pbar" style="width:0%"></div></div>
-            <div class="pbar__meta"><span id="mod-pbar-label">0 challenges done</span><span id="mod-pbar-pct">0% complete</span></div>
-          </div>
-        </div>
-        <aside class="spec">
-          <div class="spec__row"><span class="spec__k">Lessons</span><span class="spec__v">3</span></div>
-          <div class="spec__row"><span class="spec__k">Challenges</span><span class="spec__v" id="spec-challenges">—</span></div>
-          <div class="spec__row"><span class="spec__k">Engine</span><span class="spec__v accent">SQLite · wasm</span></div>
-          <div class="spec__row"><span class="spec__k">Schema</span><span class="spec__v">dvdrental</span></div>
-          <div class="spec__row"><span class="spec__k">Runs</span><span class="spec__v">in your browser</span></div>
-        </aside>
-      </div>
+  <main class="bk-main">
+    <div class="bk-mhead">
+<div class="bk-mhead__k"><span class="bk-k bk-k--accent">Module 02 · of 10</span><span class="bk-k">Interactive study</span></div>
+<h1>Filtering &amp; Sorting</h1>
+<p class="bk-mhead__stand">Narrow the rows you retrieve, decide what order they come back in, and cap how many you see. Three knobs that turn “fetch some data” into “answer a question”.</p>
+<div class="bk-mhead__meta">
+<span class="bk-meta">Estimated <b>60–90 min</b></span>
+<span class="bk-meta"><b>3</b> lessons · <b id="spec-challenges">—</b> challenges</span>
+<span class="bk-meta">SQLite · wasm · <b>dvdrental</b></span>
+<span class="bk-unchecked" data-check-mark>Not checked yet</span>
+</div>
+<p class="bk-meta">Prerequisites · <b>Module 1 · SELECT, DISTINCT, COUNT</b></p>
+<div class="bk-progress">
+<div class="bk-pbar"><i id="mod-pbar" style="width:0%"></i></div>
+<div class="bk-progress__meta"><span class="bk-meta" id="mod-pbar-label">0 challenges done</span><span class="bk-meta" id="mod-pbar-pct">0% complete</span></div>
+</div>
     </div>
-
     <h2 id="what-this-module-covers">What this module covers</h2>
 <p>After Module 1 you can pull columns out of a table. This module gives you three operators that turn a raw column dump into a focused answer — keep the rows you want, sort them, and show only the top few.</p>
 <ul>
@@ -1003,43 +820,125 @@ LIMIT 5 OFFSET 5;</textarea>
 <hr />
 <h2 id="whats-next">What's next</h2>
 <p>You can now pick columns, filter rows, sort them and cap the result. Module 3 adds the second great pattern of SQL: collapsing many rows into one with <strong>aggregation</strong> — totals, averages and counts per group.</p>
+
+    <section class="bk-check" id="check" data-next="Module 3"></section>
     <div class="module-nav">
-        <a href="module-01.html"><span class="label">← Previous · Module 1</span><span class="title">Retrieving Data</span></a>
-        <a href="module-03.html"><span class="label">Next · Module 3 →</span><span class="title">Aggregating Data</span></a>
+        <a href="module-01.html" rel="prev"><span class="label">← Previous · Module 1</span><span class="title">Retrieving Data</span></a>
+        <a href="module-03.html" rel="next" data-gate><span class="label">Next · Module 3 →</span><span class="title">Aggregating Data</span></a>
     </div>
   </main>
+</div>
+
+<nav class="bk-dock" aria-label="Module navigation">
+  <a class="prev" href="module-01.html">← <span class="sub">Module 1</span></a>
+  <button class="mid" type="button" data-sheet="bk-sections" aria-haspopup="dialog" aria-expanded="false">☰ Sections</button>
+  <a class="next" href="module-03.html" data-gate>Module 3 →</a>
+</nav>
+
+<nav class="bk-pager" aria-label="Module navigation">
+  <a href="module-01.html" aria-label="Previous · Module 1">← 01</a>
+  <span class="pos">02 / 10</span>
+  <a class="next" href="module-03.html" data-gate aria-label="Next · Module 3">03 →</a>
+</nav>
+
+<div class="bk-sheet" id="bk-modules" role="dialog" aria-label="Modules" hidden>
+  <div class="bk-sheet__head"><h2>Modules</h2><button class="bk-btn bk-btn--ghost bk-btn--icon" type="button" data-sheet-close aria-label="Close">✕</button></div>
+  <nav class="bk-modlist">
+    <a href="module-01.html" data-mod="01"><span class="n">01</span><span class="t">Retrieving data</span><span class="p"></span></a>
+    <a href="module-02.html" data-mod="02" aria-current="page"><span class="n">02</span><span class="t">Filtering &amp; sorting</span><span class="p"></span></a>
+    <a href="module-03.html" data-mod="03"><span class="n">03</span><span class="t">Aggregating data</span><span class="p"></span></a>
+    <a href="module-04.html" data-mod="04"><span class="n">04</span><span class="t">JOINs</span><span class="p"></span></a>
+    <a href="module-05.html" data-mod="05"><span class="n">05</span><span class="t">Advanced SQL</span><span class="p"></span></a>
+    <a href="module-06.html" data-mod="06"><span class="n">06</span><span class="t">Creating &amp; modifying tables</span><span class="p"></span></a>
+    <a href="module-07.html" data-mod="07"><span class="n">07</span><span class="t">Conditional expressions &amp; views</span><span class="p"></span></a>
+    <a href="module-08.html" data-mod="08"><span class="n">08</span><span class="t">Importing &amp; exporting data</span><span class="p"></span></a>
+    <a href="module-09.html" data-mod="09"><span class="n">09</span><span class="t">PostgreSQL with Python</span><span class="p">read-only</span></a>
+    <a href="module-10.html" data-mod="10"><span class="n">10</span><span class="t">Capstone — Tiffinly</span><span class="p"></span></a>
+  </nav>
+  <div class="bk-sheet__sec">
+    <div class="bk-row">
+      <a class="bk-btn" href="../index.html#lab">Lab</a>
+      <a class="bk-btn" href="../index.html#funnel-top">Funnel</a>
+      <a class="bk-btn" href="../index.html#modules-top">All modules</a>
+      <a class="bk-btn bk-btn--primary" href="../Practice/sqlzoo.html">Practice &amp; Exercises</a>
+    </div>
+  </div>
+</div>
+
+<div class="bk-sheet" id="bk-sections" role="dialog" aria-label="In this module" hidden>
+  <div class="bk-sheet__head"><h2>In this module</h2><button class="bk-btn bk-btn--ghost bk-btn--icon" type="button" data-sheet-close aria-label="Close">✕</button></div>
+  <nav class="bk-toc" id="bk-sections-toc"></nav>
+</div>
+
+<div class="bk-sheet" id="bk-reading" role="dialog" aria-label="Reading settings" hidden>
+  <div class="bk-sheet__head"><h2>Reading</h2><button class="bk-btn bk-btn--ghost bk-btn--icon" type="button" data-sheet-close aria-label="Close">✕</button></div>
+  <div class="bk-sheet__sec">
+    <span class="bk-k">Text size</span>
+    <div class="bk-seg" role="group" aria-label="Text size">
+      <button type="button" data-set-size="s">S</button><button type="button" data-set-size="m">M</button><button type="button" data-set-size="l">L</button><button type="button" data-set-size="xl">XL</button>
+    </div>
+  </div>
+  <div class="bk-sheet__sec">
+    <span class="bk-k">Theme</span>
+    <div class="bk-seg" role="group" aria-label="Theme">
+      <button type="button" data-set-theme="light">Light</button><button type="button" data-set-theme="dark">Dark</button><button type="button" data-set-theme="auto">Auto</button>
+    </div>
+  </div>
+</div>
+
+<div class="bk-sheet bk-sheet--dialog" id="bk-gate" role="dialog" aria-labelledby="bk-gate-title" hidden>
+  <div class="bk-sheet__head"><h2 id="bk-gate-title">Check Module 2 first?</h2><button class="bk-btn bk-btn--ghost bk-btn--icon" type="button" data-sheet-close aria-label="Close">✕</button></div>
+  <p>Five quick questions on Filtering &amp; Sorting, about three minutes. Get 4 of 5 and this module is checked.</p>
+  <div class="bk-sheet__actions">
+    <button class="bk-btn bk-btn--primary bk-btn--tap" type="button" data-gate-check>Take the check</button>
+    <button class="bk-btn bk-btn--tap" type="button" data-gate-go>Continue anyway</button>
+  </div>
 </div>
 
 <script>
 const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
 let dbPromise = null;
+let SQLLib = null; // the sql.js module, for the throwaway databases the grader builds
 let dataChanged = false; // set after any statement that alters data or schema
-const CHANGES_DATA = /^\s*(DROP|CREATE|ALTER|INSERT|UPDATE|DELETE|REPLACE)\b/im;
+const PROGRESS_KEY = "commonplace_module_exercises_progress";
+// FIXES-PR19-20.md §3: strip comments and strings, then look at the first keyword of each statement.
+function changesData(sql){
+  var s = String(sql).replace(/'(?:[^']|'')*'|"(?:[^"]|"")*"|--[^\n]*|\/\*[\s\S]*?\*\//g, " ");
+  return s.split(";").some(function(st){
+    var m = st.trim().match(/^\(*\s*([a-z]+)/i); if (!m) return false;
+    var k = m[1].toUpperCase();
+    if (/^(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER|TRUNCATE|ATTACH|DETACH|VACUUM|REINDEX|PRAGMA)$/.test(k)) return true;
+    return k === "WITH" && /\)\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i.test(st);
+  });
+}
+function changeLabel(sql, n) {
+  const m = String(sql).replace(/'(?:[^']|'')*'|--[^\n]*|\/\*[\s\S]*?\*\//g, " ").match(/\b(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER)\b/i);
+  const verb = m ? m[1].toUpperCase() : "This query";
+  const did = { INSERT: "added", UPDATE: "updated", DELETE: "removed", REPLACE: "replaced" }[verb];
+  if (did && n > 0) return `${verb} ${did} ${n} row${n === 1 ? "" : "s"}`;
+  return `${verb} modified the shared database`;
+}
+function pgSet(pg, state, data) { if (window.SQLBook) SQLBook.pg.set(pg, state, data); }
 // All playgrounds on this page share one database on purpose (a CREATE TABLE in
 // one lesson is used by the next). This rebuilds it from the seed.
-window.SQL_PG_RESET = async function () {
-  try { const old = await dbPromise; if (old) old.close(); } catch (e) {}
-  dbPromise = null; dataChanged = false;
-  await getDb();
-  document.querySelectorAll(".pg-changed").forEach(n => n.remove());
-  document.querySelectorAll(".playground .pg-result").forEach(r => { r.innerHTML = ""; });
-  const first = document.querySelector(".playground .pg-result");
-  if (first) first.innerHTML = '<div class="pg-status ok">✓ Data reset to its original state — every playground on this page now sees the seed data again.</div>';
+let resetting = null;
+window.SQL_PG_RESET = function () {
+  if (resetting) return resetting;
+  resetting = (async () => {
+    try { const old = await dbPromise; if (old) old.close(); } catch (e) {}
+    dbPromise = null; dataChanged = false;
+    await getDb();
+    document.querySelectorAll('.playground[data-state="dirty"]').forEach(pg => pgSet(pg, "idle"));
+    if (window.SQLBook) SQLBook.toast("Data reset · every playground on this page sees the seed data again");
+  })().finally(() => { resetting = null; });
+  return resetting;
 };
-function changedNote(pg) {
-  pg.querySelectorAll(".pg-changed").forEach(n => n.remove());
-  if (!dataChanged) return;
-  const n = document.createElement("div");
-  n.className = "pg-status pg-changed";
-  n.style.cssText = "margin-top:8px;opacity:0.9";
-  n.innerHTML = '⚠ The data was changed by a statement on this page. <button type="button" class="btn" style="margin-left:6px" onclick="SQL_PG_RESET()">Reset data ↺</button>';
-  pg.querySelector(".pg-result").appendChild(n);
-}
-function escapeHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+document.addEventListener("sqlbook:reset-data", () => SQL_PG_RESET());
 async function getDb() {
   if (!dbPromise) {
     dbPromise = (async () => {
       const SQL = await initSqlJs({ locateFile: f => (function(){var s=document.querySelector('script[src*="sql-wasm"]');return s?s.src.slice(0,s.src.lastIndexOf("/")+1):"";})() + f });
+      SQLLib = SQL;
       const db = new SQL.Database();
       db.exec(SEED_SQL);
       return db;
@@ -1047,35 +946,197 @@ async function getDb() {
   }
   return dbPromise;
 }
-function renderResult(el, columns, rows, msg) {
-  let html = "";
-  if (msg) html += `<div class="pg-status ok">${escapeHtml(msg)}</div>`;
-  if (!columns || columns.length === 0) { if (!msg) html += `<div class="pg-status ok">(no rows returned)</div>`; el.innerHTML = html; return; }
-  html += "<table><thead><tr>" + columns.map(c => `<th>${escapeHtml(c)}</th>`).join("") + "</tr></thead><tbody>";
-  for (const r of rows) html += "<tr>" + r.map(v => `<td>${v === null ? '<em style="color:#9ca3af">NULL</em>' : escapeHtml(v)}</td>`).join("") + "</tr>";
-  html += "</tbody></table>";
-  if (rows.length > 0) html += `<div class="pg-status ok" style="margin-top:8px">${rows.length} row${rows.length===1?'':'s'}</div>`;
-  el.innerHTML = html;
+
+// ── grading (FIXES-PR19-20.md §1) ──
+// Numbers are compared to 9 decimals so SUM() over a different join order still matches.
+function cellKey(v){ return v === null ? "\u0000NULL" : typeof v === "number" ? "number:" + (+v.toFixed(9)) : typeof v + ":" + String(v); }
+function rowKey(r){ return r.map(cellKey).join("\u0001"); }
+function rowsBag(rows){ return rows.map(rowKey).sort().join("\u0002"); }
+function findColumnPermutation(expected, actual){          // returns p (actual col p[j] → expected col j) or null
+  var n = expected.columns.length, E = expected.values, A = actual.values;
+  if (E.length !== A.length) return null;
+  var colBag = function(rows, j){ return rows.map(function(r){ return cellKey(r[j]); }).sort().join("\u0001"); };
+  var cand = [];
+  for (var j = 0; j < n; j++){ cand[j] = []; for (var k = 0; k < n; k++) if (colBag(E, j) === colBag(A, k)) cand[j].push(k); if (!cand[j].length) return null; }
+  var target = rowsBag(E), used = [], p = [];
+  (function search(j){
+    if (j === n) return rowsBag(A.map(function(r){ return p.map(function(k){ return r[k]; }); })) === target;
+    for (var i = 0; i < cand[j].length; i++){ var k = cand[j][i]; if (used[k]) continue; used[k] = 1; p[j] = k; if (search(j + 1)) return true; used[k] = 0; }
+    return false;
+  })(0) || (p = null);
+  return p && p.some(function(k, j){ return k !== j; }) ? p : null;   // identity permutation means it isn't a column-order problem
 }
-async function runQuery(pg) {
-  const led = pg.querySelector(".led");
-  const ta = pg.querySelector("textarea");
-  const result = pg.querySelector(".pg-result");
-  const sql = ta.value.trim();
-  if (!sql) { result.innerHTML = ""; return; }
-  led.classList.add("loading");
-  try {
-    const db = await getDb();
-    const out = db.exec(sql);
-    if (CHANGES_DATA.test(sql)) dataChanged = true;
-    if (out.length === 0) renderResult(result, null, null, "Statement executed");
-    else { const last = out[out.length-1]; renderResult(result, last.columns, last.values); }
-    changedNote(pg);
-    led.classList.remove("loading","err");
-  } catch (e) {
-    led.classList.remove("loading"); led.classList.add("err");
-    result.innerHTML = `<div class="pg-status err">Error: ${escapeHtml(e.message || String(e))}</div>`;
+// The reference's top-level ORDER BY, mapped onto output column indexes, so rows that tie
+// on every sort key may come back in any order. null = no ORDER BY; [] = keys not in the output.
+function orderKeys(solution, columns) {
+  const s = solution.replace(/'(?:[^']|'')*'/g, "''").replace(/;\s*$/, "");
+  let depth = 0, at = -1;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "(") depth++; else if (s[i] === ")") depth--;
+    else if (!depth && /^order\s+by\b/i.test(s.slice(i)) && /\W/.test(s[i - 1] || " ")) at = i;
   }
+  if (at < 0) return null;
+  const names = columns.map(c => c.toLowerCase());
+  const keys = s.slice(at).replace(/^order\s+by\s+/i, "").replace(/\blimit\b[\s\S]*$/i, "").split(",").map(k => {
+    const name = k.trim().replace(/\s+(asc|desc)\b.*$/i, "").replace(/^.*\./, "").toLowerCase();
+    return names.indexOf(name);
+  });
+  return keys.indexOf(-1) > -1 ? [] : keys;
+}
+function compare(expected, actual, keys) {
+  const E = expected.values, A = actual.values, nE = expected.columns.length, nA = actual.columns.length;
+  const yours = { columns: actual.columns, rows: A }, exp = { columns: expected.columns, rows: E };
+  const v = (reason, detail, diff) => ({ ok: false, verdict: { reason, detail, yours, expected: exp, diff: diff || {} } });
+  if (nA !== nE) {
+    const names = expected.columns.map(c => c.toLowerCase());
+    const cols = actual.columns.map((c, i) => names.indexOf(c.toLowerCase()) < 0 ? i : -1).filter(i => i > -1);
+    return v("Column count differs", `You returned ${nA} column${nA === 1 ? "" : "s"}; the answer has ${nE}.`, { cols });
+  }
+  const sameBag = E.length === A.length && rowsBag(E) === rowsBag(A);
+  if (sameBag) {
+    if (!keys) return { ok: true };
+    const proj = (rows, ks) => rows.map(r => ks.map(k => cellKey(r[k])).join("\u0001"));
+    const ks = keys.length ? keys : expected.columns.map((_, i) => i);
+    const pe = proj(E, ks), pa = proj(A, ks);
+    if (pe.every((x, i) => x === pa[i])) return { ok: true };
+  }
+  const p = findColumnPermutation(expected, actual);
+  if (p) return v("Columns in the wrong order", "Right data, but the columns are in the wrong order. The answer lists them as " + expected.columns.join(", ") + ".", { cols: p.filter((k, j) => k !== j) });
+  if (sameBag) {
+    const cells = [];
+    A.forEach((r, i) => { if (rowKey(r) !== rowKey(E[i])) r.forEach((_, j) => cells.push([i, j])); });
+    return v("Wrong row order", "Right rows, wrong order. Check your ORDER BY.", { cells });
+  }
+  const left = {}; E.forEach((r, i) => { const k = rowKey(r); (left[k] = left[k] || []).push(i); });
+  const extra = []; A.forEach((r, i) => { const l = left[rowKey(r)]; if (l && l.length) l.shift(); else extra.push(i); });
+  const missing = [].concat.apply([], Object.keys(left).map(k => left[k])).sort((a, b) => a - b);
+  if (E.length !== A.length) return v("Row count differs", `You returned ${A.length} row${A.length === 1 ? "" : "s"}; the answer has ${E.length}.`, { extra, missing });
+  return v("Values differ", `${extra.length} of your rows ${extra.length === 1 ? "isn't" : "aren't"} in the answer.`, { extra, missing });
+}
+// Challenges whose reference changes data (CREATE / INSERT / UPDATE …) are graded on the
+// database they leave behind: every table and view, compared with compare() above.
+function snapshot(db) {
+  const out = {};
+  const objs = db.exec("SELECT type, name FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name");
+  (objs.length ? objs[0].values : []).forEach(([type, name]) => {
+    const q = '"' + name.replace(/"/g, '""') + '"';
+    const r = db.exec("SELECT * FROM " + q);
+    const columns = r.length ? r[0].columns : (db.exec("PRAGMA table_info(" + q + ")")[0] || { values: [] }).values.map(c => c[1]);
+    out[name] = { type, columns, values: r.length ? r[0].values : [] };
+  });
+  return out;
+}
+function compareState(expected, actual) {
+  const names = Object.keys(expected).concat(Object.keys(actual)).filter((n, i, a) => a.indexOf(n) === i).sort();
+  for (const n of names) {
+    const e = expected[n], a = actual[n];
+    if (!a) return { ok: false, verdict: { reason: "Values differ", detail: `The answer has a ${e.type} called ${n}; your database doesn't.`, yours: { columns: [], rows: [] }, expected: { columns: e.columns, rows: e.values }, diff: {} } };
+    if (!e) return { ok: false, verdict: { reason: "Values differ", detail: `Your database has a ${a.type} called ${n} that the answer doesn't.`, yours: { columns: a.columns, rows: a.values }, expected: { columns: [], rows: [] }, diff: {} } };
+    const r = compare(e, a, null);
+    if (!r.ok) { r.verdict.detail = `In ${n}: ` + r.verdict.detail; return r; }
+  }
+  return { ok: true };
+}
+
+// ── challenge state ──
+function readProgress() { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}"); } catch (e) { return {}; } }
+function writeProgress(key, value) {
+  try { const st = readProgress(); if (value) st[key] = value; else delete st[key]; localStorage.setItem(PROGRESS_KEY, JSON.stringify(st)); } catch (e) {}
+  if (window.SQLSync) SQLSync.changed();
+  if (window.paintModProgress) paintModProgress();
+}
+const CH_LAST = {}; // key → last options passed to SQLBook.challenge.set
+function chSet(key, o) { CH_LAST[key] = o; if (window.SQLBook) SQLBook.challenge.set(key, o); }
+function nextChallenge(box) {
+  const all = Array.from(document.querySelectorAll('main h4[id^="challenge-"]'));
+  const h = all[all.indexOf(box.querySelector("h4")) + 1];
+  return h ? { href: "#" + h.id, label: "Next · " + h.textContent.split(" — ")[0].trim() } : { href: "#check", label: "Next · Check yourself" };
+}
+function foreignKeys(db) { const r = db.exec("PRAGMA foreign_keys"); return r.length ? r[0].values[0][0] : 0; }
+function setForeignKeys(db, on) { db.exec("PRAGMA foreign_keys = " + (on ? "ON" : "OFF")); }
+function solutionOf(pg) {
+  const box = pg.closest('.ch[data-kind="auto"]'), solBtn = pg.querySelector('[data-action="solution"]');
+  return (solBtn && solBtn.dataset.solution) || (box && window.SQLBook && (SQLBook.challenge.get(box.getAttribute("data-ch")) || {}).solution) || "";
+}
+// ── Mistake Bank (lib/sql-bank.js): misses and reveals go in, right answers move them on ──
+function bankMiss(box, pg, reason) {
+  if (!window.SQLBank) return false;
+  const h4 = box.querySelector("h4"), key = box.getAttribute("data-ch"), hint = pg.querySelector('[data-action="hint"]');
+  const m = key.match(/^ex_(\d+)_(\d+)_(\d+)$/), typed = pg.querySelector("textarea").value.trim();
+  SQLBank.miss({
+    id: key, src: "module", srcLabel: m ? "Module " + m[1] + " · " + m[1] + "." + m[2] + "." + m[3] : key,
+    title: (h4.textContent.split(" — ")[1] || h4.textContent).trim(),
+    prompt: Array.from(box.querySelectorAll(":scope > p")).map(p => p.innerHTML).join(" "),
+    hint: hint ? hint.dataset.hint || "" : "",
+    href: "The Modules/" + location.pathname.split("/").pop() + "#" + h4.id,
+    solution: solutionOf(pg), reason: reason, sql_wrong: /^--[^\n]*$/.test(typed) ? "" : typed
+  });
+  return true;
+}
+function bankFix(key) { if (window.SQLBank) SQLBank.fix(key); }
+async function grade(pg, db, last, error, before) {
+  const box = pg.closest('.ch[data-kind="auto"]'); if (!box || !window.SQLBook) return;
+  const key = box.getAttribute("data-ch"), c = SQLBook.challenge.get(key); if (!c) return;
+  const attempt = (c.attempt || 0) + 1;
+  const keep = () => chSet(key, Object.assign({}, CH_LAST[key], { attempt }));
+  if (error) return keep();
+  const solution = solutionOf(pg);
+  if (!solution) return keep();
+  if (changesData(solution)) {
+    if (!before || !SQLLib) return keep();
+    const refDb = new SQLLib.Database(before.bytes);
+    setForeignKeys(refDb, before.fk);
+    try { refDb.exec(solution); } catch (e) {   // the reference can't run from this state (e.g. the table already exists)
+      refDb.close();
+      SQLBook.toast("Can't check from the current data. Tap Reset data, then run again.");
+      return keep();
+    }
+    const r = compareState(snapshot(refDb), snapshot(db)); refDb.close();
+    if (r.ok) { chSet(key, { state: "right", attempt, verdict: { detail: "Your database matches the answer's." }, next: nextChallenge(box) }); writeProgress(key, "done"); bankFix(key); }
+    else chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: bankMiss(box, pg, r.verdict.reason.toLowerCase()) });
+    return;
+  }
+  let ref;
+  try { ref = db.exec(solution); } catch (e) { return chSet(key, Object.assign({}, CH_LAST[key], { attempt })); }
+  const expected = ref.length ? ref[ref.length - 1] : { columns: [], values: [] };
+  const actual = last || { columns: [], values: [] };
+  const r = compare(expected, actual, orderKeys(solution, expected.columns));
+  if (r.ok) {
+    chSet(key, { state: "right", attempt, rows: expected.values.length, next: nextChallenge(box) });
+    writeProgress(key, "done");
+    bankFix(key);
+  } else {
+    chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: bankMiss(box, pg, r.verdict.reason.toLowerCase()) });
+  }
+}
+
+async function runQuery(pg) {
+  const ta = pg.querySelector("textarea");
+  const sql = ta.value.trim();
+  if (!sql) { pgSet(pg, "idle"); return; }
+  pgSet(pg, "running");
+  let db, out, ms, before = null;
+  try {
+    db = await getDb();
+    if (pg.closest('.ch[data-kind="auto"]') && changesData(solutionOf(pg))) {   // state before the reader's query, for grading
+      const fk = foreignKeys(db);
+      before = { bytes: db.export(), fk };   // export() closes and reopens the db, which resets PRAGMA foreign_keys
+      setForeignKeys(db, fk);
+    }
+    const t0 = performance.now();
+    out = db.exec(sql);
+    ms = Math.max(1, Math.round(performance.now() - t0));
+  } catch (e) {
+    pgSet(pg, "error", { message: e.message || String(e) });
+    grade(pg, db, null, e);
+    return;
+  }
+  const last = out.length ? out[out.length - 1] : null;
+  const data = last ? { columns: last.columns, rows: last.values, ms } : { message: "Statement executed", ms };
+  if (changesData(sql)) { dataChanged = true; data.changed = changeLabel(sql, db.getRowsModified()); }
+  else if (dataChanged) data.changed = "an earlier query on this page changed the shared database";
+  pgSet(pg, dataChanged ? "dirty" : "ok", data);
+  grade(pg, db, last, null, before);
 }
 const ORIG = new WeakMap();
 document.querySelectorAll(".playground").forEach(pg => {
@@ -1083,22 +1144,7 @@ document.querySelectorAll(".playground").forEach(pg => {
   ORIG.set(pg, ta.value);
   pg.querySelector('[data-action="run"]').addEventListener("click", () => runQuery(pg));
   const reset = pg.querySelector('[data-action="reset"]');
-  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); pg.querySelector(".pg-result").innerHTML = ""; });
-  const hint = pg.querySelector('[data-action="hint"]');
-  if (hint) hint.addEventListener("click", () => {
-    // inline hint box under the actions, toggled; replaces the old alert()
-    let box = pg.querySelector(".pg-hint-box");
-    if (!box) {
-      box = document.createElement("div");
-      box.className = "pg-hint-box";
-      box.style.cssText = "margin:0 14px 12px;padding:10px 14px;border-left:3px solid var(--accent, #8a2f22);background:rgba(255,255,255,0.04);font-size:13.5px;line-height:1.5;color:var(--term-w, #c9d4e3);";
-      box.innerHTML = "<b style='font-family:var(--mono);font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7'>Hint</b> &nbsp;" + escapeHtml(hint.dataset.hint);
-      pg.querySelector(".pg-actions").insertAdjacentElement("afterend", box);
-      hint.textContent = "Hide hint";
-    } else { box.remove(); hint.textContent = "Show hint"; }
-  });
-  const sol = pg.querySelector('[data-action="solution"]');
-  if (sol) sol.addEventListener("click", () => { ta.value = sol.dataset.solution; ta.focus(); });
+  if (reset) reset.addEventListener("click", () => { ta.value = ORIG.get(pg); ta.dispatchEvent(new Event("input")); pgSet(pg, "idle"); });
   ta.addEventListener("keydown", e => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runQuery(pg); }
     if (e.key === "Tab" && !e.shiftKey) { // Tab indents instead of leaving the editor
@@ -1112,40 +1158,56 @@ document.querySelectorAll(".playground").forEach(pg => {
 getDb().then(() => document.querySelectorAll(".led.loading").forEach(l => l.classList.remove("loading")))
        .catch(() => document.querySelectorAll(".led").forEach(l => { l.classList.remove("loading"); l.classList.add("err"); }));
 
-// Auto-build sidebar TOC from h2 headings
-const tocEl = document.getElementById("toc");
+// Auto-build the side TOC and the Sections sheet from h2 headings
+const tocLists = [document.getElementById("toc"), document.getElementById("bk-sections-toc")];
 document.querySelectorAll("main h2").forEach(h => {
   if (!h.id) h.id = h.textContent.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
-  const a = document.createElement("a");
-  a.href = "#" + h.id; a.textContent = h.textContent; a.className = "toc-link";
-  tocEl.appendChild(a);
+  const m = h.textContent.match(/^Lesson\s+([\d.]+)\s*[—-]\s*(.*)$/);
+  tocLists.forEach(list => {
+    if (!list) return;
+    const a = document.createElement("a");
+    a.href = "#" + h.id; a.className = "toc-link";
+    if (m) { const s = document.createElement("span"); s.className = "s"; s.textContent = m[1]; a.append(s, m[2]); }
+    else a.textContent = h.textContent;
+    list.appendChild(a);
+  });
 });
-const sections = document.querySelectorAll("main h2[id]");
-function updateActiveToc() {
-  let id = null;
-  for (const s of sections) { if (s.getBoundingClientRect().top < window.innerHeight * 0.35) id = s.id; }
-  document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
+
+let bookReady = false;
+document.addEventListener("sqlbook:ready", () => {
+  bookReady = true;
+  // playground-enhancements.js adds its own Reset data buttons; route them through the hook
+  document.querySelectorAll(".pg-reset-data").forEach(b => { const n = b.cloneNode(true); n.setAttribute("data-action", "reset-data"); b.replaceWith(n); });
+  paintSaved();
+});
+// sql-sync.js merged progress or checks from another device
+document.addEventListener("sqlsync:pulled", () => { if (bookReady) { paintSaved(); if (window.paintModProgress) paintModProgress(); } });
+function paintSaved() {
+  const st = readProgress();
+  document.querySelectorAll(".ch[data-ch]").forEach(box => {
+    const key = box.getAttribute("data-ch");
+    if (st[key] !== "done" || ["right", "done"].indexOf(box.getAttribute("data-state")) > -1) return;
+    if (box.getAttribute("data-kind") === "text") chSet(key, { state: "done" });
+    else chSet(key, { state: "right", verdict: { detail: "Solved earlier on this device." }, next: nextChallenge(box) });
+  });
+  // Module list: challenges done per module, ✓ once its check is passed
+  let checks = {}; try { checks = JSON.parse(localStorage.getItem("cp_sql_check") || "{}"); } catch (e) {}
+  const per = {}; (window.SQL_EXERCISES || []).forEach(e => { const p = per[e.m] = per[e.m] || [0, 0]; p[1]++; if (st[e.k] === "done") p[0]++; });
+  document.querySelectorAll(".bk-modlist a[data-mod]").forEach(a => {
+    const mod = a.dataset.mod, p = per[parseInt(mod, 10)], out = a.querySelector(".p");
+    const ok = checks[mod] && checks[mod].pass ? ' <span class="ok">✓</span>' : "";
+    if (p && mod !== "09") out.innerHTML = p[0] + " / " + p[1] + ok; else out.innerHTML = (mod === "09" ? "read-only" : "") + ok;
+  });
 }
-window.addEventListener("scroll", updateActiveToc, { passive: true });
-updateActiveToc();
+document.addEventListener("sqlbook:markdone", e => writeProgress(e.detail.key, e.detail.done ? "done" : null));
+document.addEventListener("sqlbook:solution", e => {
+  // book-ui paints "revealed" (with its Mistake Bank line) right after this event
+  const box = document.querySelector('.ch[data-ch="' + e.detail.key + '"]');
+  if (box) bankMiss(box, box.querySelector(".playground"), "solution revealed");
+});
 </script>
 <script>
-// header progress: count this module's challenges marked done
-(function () {
-  var hs = document.querySelectorAll('main h4[id^="challenge-"]');
-  var total = hs.length;
-  var sc = document.getElementById('spec-challenges');
-  if (sc) sc.textContent = String(total);
-  var done = 0;
-  try {
-    var st = JSON.parse(localStorage.getItem('commonplace_module_exercises_progress') || '{}');
-    Object.keys(st).forEach(function (k) { if (st[k] === 'done' && /^ex_2_/.test(k)) done++; });
-  } catch (e) {}
-  var pct = total ? Math.min(100, Math.round(done / total * 100)) : 0;
-  var f = document.getElementById('mod-pbar'); if (f) f.style.width = pct + '%';
-  var l = document.getElementById('mod-pbar-label'); if (l) l.textContent = done + ' / ' + total + ' challenges done';
-  var p = document.getElementById('mod-pbar-pct'); if (p) p.textContent = pct + '% complete';
-})();
+window.paintModProgress=function(){var hs=document.querySelectorAll('main h4[id^="challenge-"]');var total=hs.length;var sc=document.getElementById("spec-challenges");if(sc)sc.textContent=String(total);var done=0;try{var st=JSON.parse(localStorage.getItem("commonplace_module_exercises_progress")||"{}");Object.keys(st).forEach(function(k){if(st[k]==="done"&&/^ex_2_/.test(k))done++;});}catch(e){}var pct=total?Math.min(100,Math.round(done/total*100)):0;var f=document.getElementById("mod-pbar");if(f)f.style.width=pct+"%";var l=document.getElementById("mod-pbar-label");if(l)l.textContent=done+" / "+total+" challenges done";var p=document.getElementById("mod-pbar-pct");if(p)p.textContent=pct+"% complete";};paintModProgress();
 </script>
 <script src="../lib/exercises-index.js"></script>
 <script src="playground-enhancements.js"></script>
@@ -1157,5 +1219,8 @@ updateActiveToc();
 <script src="funnel-interactive.js" defer></script>
 <script src="../../../_lib/progress-backup.js"></script>
 <script src="../lib/sql-kb-fix.js?v=2"></script>
+<script src="../lib/sql-bank.js?v=2"></script>
+<script src="../lib/sql-sync.js?v=1"></script>
+<script src="../lib/book-ui.js?v=3"></script>
 </body>
 </html>

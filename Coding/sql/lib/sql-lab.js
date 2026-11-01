@@ -1,30 +1,33 @@
-// sql-lab.js — powers the interactive SQL Lab
+// sql-lab.js — powers the SQL home page: the Lab console, the funnel, the module
+// cards and the Today card. Drawing goes through book-ui.js (window.SQLBook), which
+// loads after this file, so anything that paints waits for "sqlbook:ready".
 (function () {
   "use strict";
 
   var db = null;
   var SQLmod = null;       // sql.js module, kept so "Reset data" can rebuild the database
-  var ready = false;
+  var engineReady = false, bookReady = false;
   var editor = document.getElementById("editor");
+  var lab = document.getElementById("lab-console");
   var resultsEl = document.getElementById("results");
-  var led = document.getElementById("led");
-  var ledText = document.getElementById("led-text");
+  var PHONE = window.matchMedia("(max-width:720px)");
+
+  function onBook(fn) { if (bookReady) fn(); else document.addEventListener("sqlbook:ready", fn); }
+  document.addEventListener("sqlbook:ready", function () { bookReady = true; });
+  function pgSet(state, data) { if (window.SQLBook) SQLBook.pg.set(lab, state, data); }
 
   // ---------- boot the engine ----------
   initSqlJs({ locateFile: function (f) { return (function(){var s=document.querySelector('script[src*="sql-wasm"]');return s?s.src.slice(0,s.src.lastIndexOf("/")+1):"";})() + f; } })
     .then(function (SQL) {
       SQLmod = SQL;
       db = freshDb();
-      ready = true;
-      led.classList.add("ready");
-      ledText.textContent = "engine ready";
-      runQuery(); // run the default query so the page opens with live data
+      engineReady = true;
+      onBook(function () { runQuery(); });   // open with live data
     })
     .catch(function (e) {
-      led.classList.add("err");
-      ledText.textContent = "engine failed";
-      showError("Could not load the SQL engine.\n" + e.message);
+      onBook(function () { pgSet("error", { message: "Could not load the SQL engine. " + e.message }); });
     });
+  onBook(function () { if (!engineReady) pgSet("running"); });
 
   function freshDb() {
     var d = new SQLmod.Database();
@@ -32,86 +35,51 @@
     return d;
   }
 
-  // Statements that change the data or the schema. After one of these the
-  // results panel offers "Reset data" so a stray DROP/DELETE isn't a dead end.
-  var CHANGES_DATA = /^\s*(DROP|CREATE|ALTER|INSERT|UPDATE|DELETE|REPLACE)\b/im;
-  var dataChanged = false;
-  function changedNote() {
-    if (!dataChanged) return "";
-    return '<div class="res-msg empty">⚠ The data has been changed by an earlier statement. ' +
-           '<button class="chip" id="reset-inline">Reset data ↺</button></div>';
+  // FIXES-PR19-20.md §3: strip comments and strings, then look at the first keyword of each statement.
+  function changesData(sql) {
+    var s = String(sql).replace(/'(?:[^']|'')*'|"(?:[^"]|"")*"|--[^\n]*|\/\*[\s\S]*?\*\//g, " ");
+    return s.split(";").some(function (st) {
+      var m = st.trim().match(/^\(*\s*([a-z]+)/i); if (!m) return false;
+      var k = m[1].toUpperCase();
+      if (/^(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER|TRUNCATE|ATTACH|DETACH|VACUUM|REINDEX|PRAGMA)$/.test(k)) return true;
+      return k === "WITH" && /\)\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i.test(st);
+    });
   }
+  var dataChanged = false;
   function resetData() {
-    if (!ready) return;
+    if (!engineReady) return;
     try { db.close(); } catch (e) {}
     db = freshDb();
     dataChanged = false;
-    resultsEl.innerHTML = '<div class="res-msg ok">✓ Data reset to its original state.</div>';
-    led.classList.remove("err"); led.classList.add("ready"); ledText.textContent = "engine ready";
+    pgSet("idle");
+    if (window.SQLBook) SQLBook.toast("Data reset to its original state");
   }
+  document.addEventListener("sqlbook:reset-data", function (e) { if (e.detail && e.detail.pg === lab) resetData(); });
 
   // ---------- run a query ----------
   function runQuery() {
-    if (!ready) return;
+    if (!engineReady) return;
     var sql = editor.value.trim();
-    if (!sql) { resultsEl.innerHTML = '<div class="res-msg empty">Type a query and hit Run.</div>'; return; }
-    var t0 = performance.now();
-    try {
-      var res = db.exec(sql);
-      var ms = (performance.now() - t0).toFixed(1);
-      if (CHANGES_DATA.test(sql)) dataChanged = true;
-      if (!res.length) {
-        resultsEl.innerHTML = '<div class="res-msg ok">✓ Statement ran. No rows returned.</div>' +
-          '<div class="res-foot"><span>' + ms + ' ms</span></div>' + changedNote();
-        led.classList.remove("err"); led.classList.add("ready"); ledText.textContent = "engine ready";
-        return;
-      }
-      var last = res[res.length - 1]; // show the final result set
-      renderTable(last.columns, last.values, ms);
-      led.classList.remove("err"); led.classList.add("ready"); ledText.textContent = "engine ready";
-    } catch (e) {
-      showError(String(e.message || e));
-      led.classList.remove("ready"); led.classList.add("err"); ledText.textContent = "query error";
-    }
-  }
-
-  function renderTable(cols, rows, ms) {
-    var h = '<table class="grid"><thead><tr>';
-    cols.forEach(function (c) { h += "<th>" + esc(c) + "</th>"; });
-    h += "</tr></thead><tbody>";
-    rows.forEach(function (r) {
-      h += "<tr>";
-      r.forEach(function (v) {
-        if (v === null) h += '<td class="null">NULL</td>';
-        else if (typeof v === "number") h += '<td class="num">' + esc(v) + "</td>";
-        else h += "<td>" + esc(v) + "</td>";
-      });
-      h += "</tr>";
-    });
-    h += "</tbody></table>";
-    h += '<div class="res-foot"><span>' + rows.length + (rows.length === 1 ? " row" : " rows") +
-         "</span><span>" + cols.length + (cols.length === 1 ? " column" : " columns") +
-         "</span><span>" + ms + " ms</span></div>";
-    resultsEl.innerHTML = h + changedNote();
-    resultsEl.scrollTop = 0;
-  }
-
-  function showError(msg) {
-    resultsEl.innerHTML = '<div class="res-msg err">✕ ' + esc(msg) + "</div>" + changedNote();
-  }
-  resultsEl.addEventListener("click", function (e) {
-    if (e.target && e.target.id === "reset-inline") resetData();
-  });
-
-  function esc(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    if (!sql) { pgSet("idle"); return; }
+    var t0 = performance.now(), res;
+    try { res = db.exec(sql); }
+    catch (e) { pgSet("error", { message: String(e.message || e) }); return; }
+    var ms = Math.max(1, Math.round(performance.now() - t0));
+    var last = res.length ? res[res.length - 1] : null;   // show the final result set
+    var data = last ? { columns: last.columns, rows: last.values, ms: ms } : { message: "Statement ran. No rows returned.", ms: ms };
+    if (changesData(sql)) { dataChanged = true; data.changed = "this query changed the sample data"; }
+    else if (dataChanged) data.changed = "an earlier query changed the sample data";
+    pgSet(dataChanged ? "dirty" : "ok", data);
   }
 
   // ---------- editor helpers ----------
-  function setQuery(sql, run) {
+  // FIXES-PR19-20.md §2: callers that aren't typing (the funnel) pass {focus:false} so a
+  // tap never scrolls the page to the editor or opens the phone keyboard.
+  function setQuery(sql, opts) {
     editor.value = sql;
-    if (run !== false) runQuery();
-    editor.focus();
+    editor.dispatchEvent(new Event("input"));   // book-ui grows the textarea to fit
+    runQuery();
+    if (!opts || opts.focus !== false) editor.focus({ preventScroll: true });
   }
   function insertAtCursor(text) {
     var s = editor.selectionStart, e = editor.selectionEnd, v = editor.value;
@@ -129,16 +97,18 @@
     editor.value = before + ins + v.slice(e);
     var pos = s + ins.length;
     editor.setSelectionRange(pos, pos);
-    editor.focus();
+    editor.focus({ preventScroll: true });
+  }
+  function resultOnScreen() {
+    var r = lab.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight;
   }
 
   document.getElementById("run-btn").addEventListener("click", runQuery);
   document.getElementById("clear-btn").addEventListener("click", function () {
-    editor.value = ""; editor.focus();
-    resultsEl.innerHTML = '<div class="res-msg empty">Editor cleared.</div>';
+    editor.value = ""; editor.dispatchEvent(new Event("input")); editor.focus({ preventScroll: true });
+    pgSet("idle");
   });
-  var resetBtn = document.getElementById("reset-btn");
-  if (resetBtn) resetBtn.addEventListener("click", resetData);
   editor.addEventListener("keydown", function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); runQuery(); }
     // Tab indents instead of leaving the editor
@@ -162,171 +132,166 @@
   var chipsEl = document.getElementById("chips");
   CHIPS.forEach(function (c) {
     var b = document.createElement("button");
-    b.className = "chip"; b.textContent = c.label;
+    b.type = "button"; b.textContent = c.label;
     b.addEventListener("click", function () { setQuery(c.sql); });
     chipsEl.appendChild(b);
   });
 
   // ---------- schema explorer ----------
+  // Buttons go after the .hm-schema__t title row; it must not be replaced.
   var META = window.SQL_LAB_SCHEMA || [];
   var tEl = document.getElementById("schema-tables");
   META.forEach(function (t) {
-    var wrap = document.createElement("div");
-    wrap.className = "tbl";
-
     var row = document.createElement("button");
-    row.className = "tbl-row";
-    row.innerHTML = '<span class="car">▶</span><span class="nm">' + t.name + '</span><span class="ct">' + t.rows + "</span>";
-    row.addEventListener("click", function (e) {
-      // toggle open on the caret area, but also load a peek query
-      wrap.classList.toggle("open");
-      setQuery("SELECT * FROM " + t.name + " LIMIT 20;");
-    });
-    wrap.appendChild(row);
-
+    row.type = "button"; row.className = "hm-t"; row.setAttribute("aria-expanded", "false");
+    row.innerHTML = t.name + " <span>" + t.rows + "</span>";
     var cols = document.createElement("div");
-    cols.className = "cols";
+    cols.className = "hm-cols"; cols.hidden = true;
     t.cols.forEach(function (cn) {
       var cb = document.createElement("button");
-      cb.className = "col";
-      cb.innerHTML = '<span class="dot"></span>' + cn;
-      cb.addEventListener("click", function (ev) {
-        ev.stopPropagation();
-        insertAtCursor(cn);
-      });
+      cb.type = "button"; cb.className = "hm-col"; cb.textContent = cn;
+      cb.addEventListener("click", function () { insertAtCursor(cn); });
       cols.appendChild(cb);
     });
-    wrap.appendChild(cols);
-    tEl.appendChild(wrap);
+    row.addEventListener("click", function () {
+      var open = cols.hidden;
+      cols.hidden = !open; row.setAttribute("aria-expanded", String(open));
+      setQuery("SELECT * FROM " + t.name + " LIMIT 20;", { focus: !PHONE.matches });
+    });
+    tEl.appendChild(row);
+    tEl.appendChild(cols);
   });
 
   // ---------- interactive funnel ----------
   var FUNNEL = [
-    { kw: "SELECT", sub: "columns (AS aliases)", color: "#5f8c45",
+    { kw: "SELECT", sub: "columns (AS aliases)",
       desc: "Choose which columns come back, and rename them. This is the only clause that's required in every query.",
-      ex: "<span class='kw'>SELECT</span> title, rating, length\n<span class='kw'>FROM</span> film;",
       sql: "SELECT title, rating, length\nFROM film;" },
-    { kw: "FROM", sub: "the source table", color: "#3f7d74",
+    { kw: "FROM", sub: "the source table",
       desc: "Names the table the rows are drawn from. The engine actually resolves this before SELECT — it needs to know the table before it can find your columns.",
-      ex: "<span class='kw'>SELECT</span> *\n<span class='kw'>FROM</span> actor;",
       sql: "SELECT *\nFROM actor;" },
-    { kw: "WHERE", sub: "row filter", color: "#3a6ea5",
+    { kw: "WHERE", sub: "row filter",
       desc: "Keeps only the rows that pass a condition. It runs before any grouping, so it can't see aggregates like COUNT — that's what HAVING is for.",
-      ex: "<span class='kw'>SELECT</span> title, rating\n<span class='kw'>FROM</span> film\n<span class='kw'>WHERE</span> rating = 'PG';",
       sql: "SELECT title, rating\nFROM film\nWHERE rating = 'PG';" },
-    { kw: "GROUP BY", sub: "collapse into groups", color: "#6a54a3",
+    { kw: "GROUP BY", sub: "collapse into groups",
       desc: "Folds many rows into one per group, so aggregates can summarise each group. Here: one row per rating, with a count.",
-      ex: "<span class='kw'>SELECT</span> rating, <span class='kw'>COUNT</span>(*) <span class='kw'>AS</span> films\n<span class='kw'>FROM</span> film\n<span class='kw'>GROUP BY</span> rating;",
       sql: "SELECT rating, COUNT(*) AS films\nFROM film\nGROUP BY rating;" },
-    { kw: "HAVING", sub: "filter the groups", color: "#a8447a",
+    { kw: "HAVING", sub: "filter the groups",
       desc: "Like WHERE, but it filters groups after aggregation — so it can test a COUNT or SUM. Keep only ratings with more than two films.",
-      ex: "<span class='kw'>SELECT</span> rating, <span class='kw'>COUNT</span>(*) <span class='kw'>AS</span> films\n<span class='kw'>FROM</span> film\n<span class='kw'>GROUP BY</span> rating\n<span class='kw'>HAVING</span> <span class='kw'>COUNT</span>(*) > 2;",
       sql: "SELECT rating, COUNT(*) AS films\nFROM film\nGROUP BY rating\nHAVING COUNT(*) > 2;" },
-    { kw: "ORDER BY", sub: "sort the result", color: "#c07a2c",
+    { kw: "ORDER BY", sub: "sort the result",
       desc: "Arranges the final rows. Sorting happens late — after filtering and grouping — so you can order by an aggregate or an alias.",
-      ex: "<span class='kw'>SELECT</span> title, length\n<span class='kw'>FROM</span> film\n<span class='kw'>ORDER BY</span> length <span class='kw'>DESC</span>;",
       sql: "SELECT title, length\nFROM film\nORDER BY length DESC;" },
-    { kw: "LIMIT", sub: "cap the rows", color: "#5e7081",
+    { kw: "LIMIT", sub: "cap the rows",
       desc: "Returns only the first n rows. Applied dead last, so it caps whatever the clauses above produced — perfect for top-N questions.",
-      ex: "<span class='kw'>SELECT</span> title\n<span class='kw'>FROM</span> film\n<span class='kw'>ORDER BY</span> title\n<span class='kw'>LIMIT</span> 5;",
       sql: "SELECT title\nFROM film\nORDER BY title\nLIMIT 5;" }
   ];
   var funnelEl = document.getElementById("funnel");
   var asideEl = document.getElementById("funnel-aside");
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
-  // run=true (a click) loads the clause's example into the Lab and runs it, as
-  // the section note promises; the initial selection on page load only shows it.
+  // run=true (a tap) loads the clause's example into the Lab and runs it, as the
+  // section note promises; the initial selection on page load only shows it.
   function selectRung(i, run) {
     var f = FUNNEL[i];
-    Array.prototype.forEach.call(funnelEl.children, function (c, j) { c.classList.toggle("active", j === i); });
-    if (run) setQuery(f.sql);
-    asideEl.innerHTML =
-      '<div class="fk">Clause ' + (i + 1) + " of 7</div>" +
+    Array.prototype.forEach.call(funnelEl.children, function (c, j) { c.setAttribute("aria-pressed", String(j === i)); });
+    if (run) {
+      setQuery(f.sql, { focus: false });
+      if (!resultOnScreen()) {
+        if (PHONE.matches) { if (window.SQLBook) SQLBook.toast("Ran " + f.kw + " in the Lab", { action: { label: "See result ↑", href: "#lab" } }); }
+        else lab.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+    if (asideEl) asideEl.innerHTML =
+      '<span class="bk-k bk-k--accent">Clause ' + (i + 1) + " of 7</span>" +
       "<h3>" + f.kw + "</h3>" +
       "<p>" + f.desc + "</p>" +
-      '<div class="ex">' + f.ex + "</div>" +
-      '<div class="load"><button class="btn run" id="funnel-run">Run this in the Lab ↑</button></div>';
-    document.getElementById("funnel-run").addEventListener("click", function () {
-      setQuery(f.sql);
-      document.querySelector(".lab").scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+      '<pre class="bk-code"><code>' + esc(f.sql) + "</code></pre>";
   }
-
   FUNNEL.forEach(function (f, i) {
     var b = document.createElement("button");
-    b.className = "frung";
-    b.style.background = f.color;
-    b.innerHTML = '<span><span class="kw">' + f.kw + '</span> <span class="sub">' + f.sub + "</span></span>" +
-                  '<span class="pin">tap →</span>';
+    b.type = "button"; b.style.width = (100 - i * 5) + "%";
+    b.innerHTML = f.kw + " <span>" + f.sub + "</span>";
     b.addEventListener("click", function () { selectRung(i, true); });
     funnelEl.appendChild(b);
   });
   selectRung(0, false);
 
-  // ---------- modules + progress ----------
-  // Challenge counts come from lib/exercises-index.js (the one list every
-  // counter uses); the numbers here are only a fallback if it failed to load.
-  var COUNTS = window.SQL_EXERCISES_BY_MODULE || {};
+  // ---------- modules, progress, Today ----------
+  // Challenge lists come from lib/exercises-index.js (the one list every counter uses).
   var MODULES = [
-    { t: "Retrieving Data", n: 11 },
-    { t: "Filtering & Sorting", n: 15 },
-    { t: "Aggregating Data", n: 14 },
-    { t: "JOINs", n: 13 },
-    { t: "Advanced SQL", n: 16 },
-    { t: "Creating & Modifying Tables", n: 14 },
-    { t: "Conditional Expressions & Views", n: 11 },
-    { t: "Importing & Exporting Data", n: 8 },
-    { t: "PostgreSQL with Python", n: 9 },
-    { t: "Capstone — Tiffinly", n: 9 }
+    { t: "Retrieving data", b: "SELECT, columns, aliases, DISTINCT, COUNT." },
+    { t: "Filtering & sorting", b: "WHERE, AND/OR, IN, LIKE, ORDER BY, LIMIT." },
+    { t: "Aggregating data", b: "SUM, AVG, GROUP BY, HAVING." },
+    { t: "JOINs", b: "INNER, LEFT, RIGHT, FULL, UNION." },
+    { t: "Advanced SQL", b: "Dates, string functions, subqueries, self-joins." },
+    { t: "Creating & modifying tables", b: "CREATE, INSERT, UPDATE, DELETE, ALTER." },
+    { t: "Conditional expressions & views", b: "CASE, COALESCE, NULLIF, CAST, views." },
+    { t: "Importing & exporting data", b: "CSV in, CSV out, cleaning on the way." },
+    { t: "PostgreSQL with Python", b: "psycopg, parameters, transactions." },
+    { t: "Capstone — Tiffinly", b: "Design and query a real schema." }
   ];
-  MODULES.forEach(function (m, i) { if (COUNTS[String(i + 1)] != null) m.n = COUNTS[String(i + 1)]; });
-  var doneByModule = {};
-  try {
-    var prog = JSON.parse(localStorage.getItem("commonplace_module_exercises_progress") || "{}");
-    Object.keys(prog).forEach(function (k) {
-      if (prog[k] !== "done") return;
-      var m = k.match(/^ex_(\d+)_/);
-      if (m) { var mi = +m[1]; doneByModule[mi] = (doneByModule[mi] || 0) + 1; }
+  var READONLY = 9;
+  function nn(n) { return (n < 10 ? "0" : "") + n; }
+  function readJSON(k) { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (e) { return {}; } }
+
+  function progressModel() {
+    var prog = readJSON("commonplace_module_exercises_progress"), checks = readJSON("cp_sql_check");
+    var list = window.SQL_EXERCISES || [];
+    var mods = MODULES.map(function (m, i) {
+      var n = i + 1, ex = list.filter(function (e) { return e.m === n; });
+      var done = ex.filter(function (e) { return prog[e.k] === "done"; }).length;
+      var c = checks[nn(n)];
+      return { n: n, title: m.t, blurb: m.b, href: "The Modules/module-" + nn(n) + ".html", done: done, total: ex.length, ex: ex, checked: !!(c && c.pass), check: c || null };
     });
-  } catch (e) {}
-
-  var modsEl = document.getElementById("mods");
-  var totalDone = 0, totalAll = 0;
-  MODULES.forEach(function (mod, idx) {
-    var mi = idx + 1;
-    var done = doneByModule[mi] || 0;
-    var pct = mod.n ? Math.round(done / mod.n * 100) : 0;
-    totalDone += done; totalAll += mod.n;
-    var a = document.createElement("a");
-    a.className = "mod" + (done > 0 ? " done-some" : "");
-    a.href = "The Modules/module-" + String(mi).padStart(2, "0") + ".html";
-    a.innerHTML =
-      '<span class="num">' + String(mi).padStart(2, "0") + "</span>" +
-      '<span class="body"><span class="t">' + mod.t + "</span>" +
-      '<span class="meta">' + mod.n + " challenges</span></span>" +
-      '<span class="prog"><span class="bar"><span class="fill" style="width:' + pct + '%"></span></span>' +
-      '<span class="pct">' + done + "/" + mod.n + "</span></span>";
-    modsEl.appendChild(a);
-  });
-  document.getElementById("overall-prog").textContent = totalDone + " / " + totalAll + " done";
-
-  // ---------- collapse / expand The Modules ----------
-  var modsToggle = document.getElementById("mods-toggle");
-  if (modsToggle) {
-    var COLLAPSE_KEY = "commonplace_modules_collapsed";
-    var applyCollapsed = function (c) {
-      modsEl.style.display = c ? "none" : "";
-      modsToggle.textContent = c ? "Show" : "Hide";
-      modsToggle.setAttribute("aria-expanded", String(!c));
+    var current = mods.filter(function (m) { return m.done < m.total; })[0] || null;
+    mods.forEach(function (m) { m.state = m.n === READONLY ? "readonly" : m === current ? "current" : m.total && m.done === m.total ? "done" : ""; });
+    var any = Object.keys(prog).some(function (k) { return /^ex_\d+_/.test(k); }) || Object.keys(checks).length > 0 ||
+      !!(window.SQLBank && SQLBank.all().length);
+    var next = null;
+    list.some(function (e) { if (prog[e.k] !== "done") { next = e; return true; } return false; });
+    return {
+      mods: mods, current: current, next: next, fresh: !any,
+      done: mods.reduce(function (a, m) { return a + m.done; }, 0),
+      total: mods.reduce(function (a, m) { return a + m.total; }, 0),
+      checked: mods.filter(function (m) { return m.checked; }).length
     };
-    var collapsed = false;
-    try { collapsed = localStorage.getItem(COLLAPSE_KEY) === "1"; } catch (e) {}
-    applyCollapsed(collapsed);
-    modsToggle.addEventListener("click", function () {
-      collapsed = !collapsed;
-      try { localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0"); } catch (e) {}
-      applyCollapsed(collapsed);
-    });
   }
+
+  function paintHome() {
+    var P = progressModel();
+    SQLBook.modules.render("mods", P.mods.map(function (m) {
+      return { n: m.n, title: m.title, blurb: m.blurb, href: m.href, done: m.done, total: m.total, checked: m.checked, state: m.state };
+    }));
+    document.getElementById("overall-prog").textContent = P.done + " / " + P.total + " challenges · " + P.checked + " of 10 checked";
+
+    if (P.fresh) { SQLBook.today.render({ state: "fresh" }); return; }
+    var date = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    var resume = P.current
+      ? { href: P.current.href, title: "Continue Module " + P.current.n + " · " + P.current.title, sub: P.current.done + " / " + P.current.total + " challenges done" }
+      : { href: "Practice/sqlzoo.html", title: "All " + P.total + " challenges done", sub: "Keep sharp on SQLZoo, or retake a module check" };
+    var rows = [], due = window.SQLBank ? SQLBank.dueItems() : [];
+    if (due.length) rows.push({ tone: "due", mark: String(due.length), label: "Mistakes due to re-solve",
+      sub: due.slice(0, 3).map(function (it) { return it.srcLabel; }).join(" · "), value: "Re-solve →", href: "Practice/mistake-drill.html" });
+    if (P.next) rows.push({ mark: "›", label: "Next unfinished challenge", sub: P.next.t.replace(/^Challenge\s+/, ""), value: "Open →", href: "The Modules/" + P.next.u });
+    var partial = P.mods.filter(function (m) { return m.check && !m.check.pass; })[0];
+    var unchecked = P.mods.filter(function (m) { return !m.checked; })[0];
+    var target = partial || unchecked;
+    rows.push({
+      tone: P.checked ? "ok" : "", mark: "✓", label: "Module checks · " + P.checked + " of 10",
+      sub: partial ? "Module " + partial.n + " last try " + partial.check.right + " / " + partial.check.asked + " — try again"
+         : unchecked ? "Next: Module " + unchecked.n + " · " + unchecked.title : "Every module checked",
+      value: target ? "M" + target.n + " →" : "✓",
+      href: target ? target.href + "#check" : "#modules-top"
+    });
+    SQLBook.today.render({ date: date, resume: resume, rows: rows });
+  }
+  onBook(paintHome);
+  // another tab (a module page) may finish a challenge or a check while this one is open
+  window.addEventListener("storage", function (e) {
+    if (bookReady && (e.key === "commonplace_module_exercises_progress" || e.key === "cp_sql_check" || e.key === "cp_sql_bank")) paintHome();
+  });
+  // sql-sync.js merged another device's progress, checks or bank
+  document.addEventListener("sqlsync:pulled", function () { if (bookReady) paintHome(); });
 
 })();
