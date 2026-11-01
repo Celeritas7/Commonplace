@@ -15,7 +15,7 @@
 <script src="sqlzoo-exercises.js"></script>
 <script src="../lib/sql-module-seed.js?v=1"></script>
 <script src="../lib/sql-grade.js?v=1"></script>
-<script src="../lib/sql-bank.js?v=1"></script>
+<script src="../lib/sql-bank.js?v=2"></script>
 </head>
 <body>
 
@@ -116,12 +116,12 @@
 
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   function signedIn() { return !!(window.SQLSync && SQLSync.signedIn()); }
-  function stepDays(it) { return SQLBank.STEPS[it.step || 0]; }
+  function gapDays(it) { return Math.max(1, SQLBank.daysUntil(it.due)); }   // days until a fixed item comes back
 
   function view(it, state) {
     var v = { id: it.id, src: it.src, srcLabel: it.srcLabel, title: it.title, why: it.reason, peek: it.sql_wrong || "", href: "#drill", state: state || "" };
     v.due = SQLBank.isDue(it) ? "today" : SQLBank.when(it.due);
-    if (state === "fixed") v.next = stepDays(it) + (stepDays(it) === 1 ? " day" : " days");
+    if (state === "fixed") v.next = gapDays(it) + (gapDays(it) === 1 ? " day" : " days");
     return v;
   }
   function render() {
@@ -235,7 +235,7 @@
       var res = SQLBank.fix(it.id), now = SQLBank.get(it.id);
       markDone(it);
       justFixed[it.id] = true;
-      var days = stepDays(now);
+      var days = gapDays(now);
       chSet(key, { state: "right", attempt: attempt, rows: rows, verdict: { detail: "Fixed. It comes back in " + days + (days === 1 ? " day." : " days.") },
         next: nxt ? { href: "#resolve-" + encodeURIComponent(nxt.id), label: "Next mistake · " + nxt.srcLabel } : { href: "#bank-top", label: "Back to the bank" } });
       render();

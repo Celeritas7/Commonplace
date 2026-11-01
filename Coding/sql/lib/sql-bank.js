@@ -3,8 +3,9 @@
      {id, src:"module"|"sqlzoo", srcLabel, title, prompt, hint, href, sql_wrong, solution,
       reason, added, updated, due, step, state}
    href is relative to Coding/sql/. due is a local date "YYYY-MM-DD". added/updated are ms.
-   Schedule: a miss is due tomorrow (step 0). Each right answer moves one step along
-   1 → 3 → 7 → 14 days and marks the item "fixed"; a miss goes back to step 0.
+   Schedule: a miss is due today (step 0). Each right answer marks the item "fixed" and
+   schedules it STEPS[step] days out, then moves one step on, so the gaps run 1 → 3 → 7 → 14
+   days (14 repeats). A miss goes back to step 0, due today.
    Every write calls SQLSync.changed() so a signed-in reader's bank follows them. */
 (function () {
   "use strict";
@@ -33,7 +34,7 @@
       ["src", "srcLabel", "title", "prompt", "hint", "href", "solution"].forEach(function (k) { if (o[k] != null) it[k] = o[k]; });
       if (o.sql_wrong != null) it.sql_wrong = o.sql_wrong;
       it.reason = o.reason || it.reason || "wrong result";
-      it.updated = now; it.step = 0; it.due = day(STEPS[0]); it.state = "due";
+      it.updated = now; it.step = 0; it.due = day(0); it.state = "due";
       if (i < 0) list.push(it); else list[i] = it;
       write(list);
       return it;
@@ -44,8 +45,9 @@
       var list = read(), i = find(list, id); if (i < 0) return null;
       if (list[i].state === "fixed" && !isDue(list[i])) return null;
       var before = JSON.parse(JSON.stringify(list[i])), it = list[i];
+      it.due = day(STEPS[it.step || 0]);
       it.step = Math.min((it.step || 0) + 1, STEPS.length - 1);
-      it.due = day(STEPS[it.step]); it.state = "fixed"; it.updated = Date.now();
+      it.state = "fixed"; it.updated = Date.now();
       write(list);
       return { item: it, before: before };
     },
