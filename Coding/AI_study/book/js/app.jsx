@@ -147,9 +147,9 @@ function Contents({ prog, setMark, onOpen }) {
   return (
     <div>
       <nav className="crumb">
-        <a onClick={() => goExternal("../../index.html")}>Commonplace</a>
+        <a href="../../index.html">Commonplace</a>
         <span className="sep">/</span>
-        <a onClick={() => goExternal("../index.html")}>Coding</a>
+        <a href="../index.html">Coding</a>
         <span className="sep">/</span>
         <span className="here">Classical ML</span>
       </nav>
@@ -159,6 +159,7 @@ function Contents({ prog, setMark, onOpen }) {
           <div className="kicker"><span className="pulse"></span>Subject I · <span className="dim">Languages &amp; Models</span></div>
           <h1>Classical Machine&nbsp;<span className="hyper">Learning</span><span className="w">.</span></h1>
           <p className="tagline">Eighteen chapters of supervised and unsupervised learning — each one a live notebook you can edit and run, drawn here as a window into the high-dimensional spaces models actually live in.</p>
+          <a className="notes-link" href="notes/index.html">Study notes <span className="dim">· Géron chapters, flowcharts, gradient descent</span> <span className="arr">→</span></a>
         </div>
         <div className="seal">
           CHAPTERS · <b>18</b><br />
@@ -216,9 +217,10 @@ function Contents({ prog, setMark, onOpen }) {
 
       <div className="toolbar" style={{ marginTop: 36 }}>
         <div className="chips">
-          <a className="chip" onClick={() => goExternal("./lab/index.html")}>Open full JupyterLab ↗</a>
-          <a className="chip" onClick={() => goExternal("./tree/index.html")}>File browser ↗</a>
-          <a className="chip" onClick={() => goExternal("./repl/index.html")}>Python REPL ↗</a>
+          <a className="chip" href="notes/index.html">Study notes →</a>
+          <a className="chip" href="lab/index.html">Open full JupyterLab ↗</a>
+          <a className="chip" href="tree/index.html">File browser ↗</a>
+          <a className="chip" href="repl/index.html">Python REPL ↗</a>
         </div>
       </div>
 
@@ -239,11 +241,11 @@ function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
   return (
     <div className="cover" style={{ "--acc": ACCENTS[ch.id] }}>
       <nav className="crumb">
-        <a onClick={() => goExternal("../../index.html")}>Commonplace</a>
+        <a href="../../index.html">Commonplace</a>
         <span className="sep">/</span>
-        <a onClick={() => goExternal("../index.html")}>Coding</a>
+        <a href="../index.html">Coding</a>
         <span className="sep">/</span>
-        <a onClick={onHome}>Classical ML</a>
+        <a href="#" onClick={act(onHome)}>Classical ML</a>
         <span className="sep">/</span>
         <span className="here">{ch.id} · {ch.title}</span>
       </nav>
@@ -309,15 +311,15 @@ function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
 
       <div className="pager">
         {prev
-          ? <a onClick={() => onOpen(prev.id)}><span className="pl">← Previous · {prev.id}</span><span className="pt">{prev.title}</span></a>
+          ? <a href="#" onClick={act(() => onOpen(prev.id))}><span className="pl">← Previous · {prev.id}</span><span className="pt">{prev.title}</span></a>
           : <a className="ghost"><span className="pl">← Previous</span><span className="pt">—</span></a>}
         {next
-          ? <a className="next" onClick={() => onOpen(next.id)}><span className="pl">Next · {next.id} →</span><span className="pt">{next.title}</span></a>
+          ? <a className="next" href="#" onClick={act(() => onOpen(next.id))}><span className="pl">Next · {next.id} →</span><span className="pt">{next.title}</span></a>
           : <a className="next ghost"><span className="pl">Next →</span><span className="pt">—</span></a>}
       </div>
 
       <footer className="colophon">
-        <a className="motto" onClick={onHome}>← All eighteen chapters</a>
+        <a className="motto" href="#" onClick={act(onHome)}>← All eighteen chapters</a>
         <span>CHAPTER {ch.id} · CLASSICAL ML</span>
       </footer>
     </div>
@@ -325,7 +327,8 @@ function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
 }
 
 /* --------------------------------------------------- external navigation */
-function goExternal(url) { window.location.href = url; }
+/* in-app links: real <a href> so they are keyboard-focusable, but handled here */
+function act(fn) { return (e) => { e.preventDefault(); fn(); }; }
 
 /* =============================================================== APP */
 function App() {
