@@ -94,12 +94,14 @@ function Card({ ch, status, onOpen, onMark }) {
             <span className="status" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
               <span
                 className={"smark" + (status === "done" ? " on-done" : "")}
-                title="Mark understood"
-                onClick={(e) => { e.preventDefault(); onMark(ch.id, "done"); }}>✓</span>
+                title="Mark understood" aria-label="Mark understood" role="button" tabIndex={0}
+                onClick={(e) => { e.preventDefault(); onMark(ch.id, "done"); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onMark(ch.id, "done"); } }}>✓</span>
               <span
                 className={"smark" + (status === "revisit" ? " on-rev" : "")}
-                title="Mark to revisit"
-                onClick={(e) => { e.preventDefault(); onMark(ch.id, "revisit"); }}>↻</span>
+                title="Mark to revisit" aria-label="Mark to revisit" role="button" tabIndex={0}
+                onClick={(e) => { e.preventDefault(); onMark(ch.id, "revisit"); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onMark(ch.id, "revisit"); } }}>↻</span>
             </span>
           </div>
           <span className="open mono">Open notebook <span className="arr">→</span></span>
@@ -302,7 +304,7 @@ function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
               <button className={"mark-btn" + (status === "done" ? " on-done" : "")} onClick={() => setMark(ch.id, "done")}>✓ Understood</button>
               <button className={"mark-btn" + (status === "revisit" ? " on-rev" : "")} onClick={() => setMark(ch.id, "revisit")}>↻ Revisit</button>
             </div>
-            <p className="mono" style={{ fontSize: 10.5, color: "var(--ink-faint)", letterSpacing: "0.5px", marginTop: 16, marginBottom: 0, lineHeight: 1.7 }}>
+            <p className="mono" style={{ fontSize: 12, color: "var(--ink-faint)", letterSpacing: "0.5px", marginTop: 16, marginBottom: 0, lineHeight: 1.7 }}>
               First load fetches the Python runtime (~20–30s). Edit any cell and press Shift+Enter to re-run.
             </p>
           </div>

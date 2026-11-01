@@ -110,6 +110,7 @@ pre{{background:var(--code-bg);padding:.9rem 1rem;border-radius:10px;overflow:au
 .code-out:not(:empty){{padding:.7rem 1rem}}
 footer{{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}}
 </style>
+<link rel="stylesheet" href="../_touch.css"/>
 </head>
 <body>
 <div class="wrap">
