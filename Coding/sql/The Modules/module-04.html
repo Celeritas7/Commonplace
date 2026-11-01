@@ -962,6 +962,7 @@ SELECT customer_id FROM payment;</textarea>
 <script>
 const SEED_SQL = "-- dvdrental sample database, ported to SQLite for the in-browser playground.\n-- This is a representative subset of the standard PostgreSQL teaching DB\n-- (full version has ~15 tables; we include the 9 used in this book\u0027s examples).\n-- Row counts are deliberately small for instant query response and a tiny WASM payload.\n\nDROP TABLE IF EXISTS payment;\nDROP TABLE IF EXISTS rental;\nDROP TABLE IF EXISTS film_category;\nDROP TABLE IF EXISTS category;\nDROP TABLE IF EXISTS film;\nDROP TABLE IF EXISTS actor;\nDROP TABLE IF EXISTS customer;\nDROP TABLE IF EXISTS address;\nDROP TABLE IF EXISTS city;\n\n-- ========== SCHEMA ==========\n\nCREATE TABLE city (\n  city_id   INTEGER PRIMARY KEY,\n  city      TEXT NOT NULL,\n  country   TEXT NOT NULL\n);\n\nCREATE TABLE address (\n  address_id  INTEGER PRIMARY KEY,\n  address     TEXT,\n  district    TEXT,\n  city_id     INTEGER REFERENCES city(city_id),\n  postal_code TEXT,\n  phone       TEXT\n);\n\nCREATE TABLE customer (\n  customer_id  INTEGER PRIMARY KEY,\n  first_name   TEXT NOT NULL,\n  last_name    TEXT NOT NULL,\n  email        TEXT,\n  address_id   INTEGER REFERENCES address(address_id),\n  active       INTEGER DEFAULT 1,\n  create_date  TEXT\n);\n\nCREATE TABLE actor (\n  actor_id    INTEGER PRIMARY KEY,\n  first_name  TEXT NOT NULL,\n  last_name   TEXT NOT NULL\n);\n\nCREATE TABLE film (\n  film_id           INTEGER PRIMARY KEY,\n  title             TEXT NOT NULL,\n  description       TEXT,\n  release_year      INTEGER,\n  rating            TEXT,                  -- G, PG, PG-13, R, NC-17\n  length            INTEGER,               -- minutes\n  rental_rate       REAL,\n  rental_duration   INTEGER,\n  replacement_cost  REAL\n);\n\nCREATE TABLE category (\n  category_id  INTEGER PRIMARY KEY,\n  name         TEXT NOT NULL\n);\n\nCREATE TABLE film_category (\n  film_id      INTEGER REFERENCES film(film_id),\n  category_id  INTEGER REFERENCES category(category_id),\n  PRIMARY KEY (film_id, category_id)\n);\n\nCREATE TABLE rental (\n  rental_id     INTEGER PRIMARY KEY,\n  rental_date   TEXT,\n  film_id       INTEGER REFERENCES film(film_id),\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  return_date   TEXT\n);\n\nCREATE TABLE payment (\n  payment_id    INTEGER PRIMARY KEY,\n  customer_id   INTEGER REFERENCES customer(customer_id),\n  rental_id     INTEGER REFERENCES rental(rental_id),\n  amount        REAL,\n  payment_date  TEXT\n);\n\n-- ========== DATA ==========\n\nINSERT INTO city VALUES\n  (1, \u0027Mumbai\u0027,       \u0027India\u0027),\n  (2, \u0027Bangalore\u0027,    \u0027India\u0027),\n  (3, \u0027San Francisco\u0027,\u0027United States\u0027),\n  (4, \u0027New York\u0027,     \u0027United States\u0027),\n  (5, \u0027London\u0027,       \u0027United Kingdom\u0027),\n  (6, \u0027Tokyo\u0027,        \u0027Japan\u0027),\n  (7, \u0027Berlin\u0027,       \u0027Germany\u0027),\n  (8, \u0027Sao Paulo\u0027,    \u0027Brazil\u0027);\n\nINSERT INTO address VALUES\n  (1, \u002712 MG Road\u0027,         \u0027Maharashtra\u0027, 1, \u0027400001\u0027, \u0027+91-9876543210\u0027),\n  (2, \u00275 Brigade Road\u0027,     \u0027Karnataka\u0027,   2, \u0027560001\u0027, \u0027+91-9876543211\u0027),\n  (3, \u0027742 Evergreen Ter\u0027,  \u0027California\u0027,  3, \u002794110\u0027,  \u0027+1-415-5550101\u0027),\n  (4, \u00271 Wall St\u0027,          \u0027New York\u0027,    4, \u002710005\u0027,  \u0027+1-212-5550199\u0027),\n  (5, \u0027221B Baker St\u0027,      \u0027London\u0027,      5, \u0027NW1 6XE\u0027,\u0027+44-20-71234567\u0027),\n  (6, \u00271 Shibuya Crossing\u0027, \u0027Tokyo\u0027,       6, \u0027150-0002\u0027,\u0027+81-3-12345678\u0027),\n  (7, \u0027Unter den Linden 1\u0027, \u0027Berlin\u0027,      7, \u002710117\u0027,  \u0027+49-30-12345678\u0027),\n  (8, \u0027Av. Paulista 1000\u0027,  \u0027Sao Paulo\u0027,   8, \u002701310\u0027,  \u0027+55-11-12345678\u0027);\n\nINSERT INTO customer VALUES\n  (1,  \u0027Aniket\u0027,  \u0027Mangaonkar\u0027, \u0027aniket@example.com\u0027,   1, 1, \u00272024-01-15\u0027),\n  (2,  \u0027Priya\u0027,   \u0027Sharma\u0027,     \u0027priya@example.com\u0027,    2, 1, \u00272024-02-03\u0027),\n  (3,  \u0027Marcus\u0027,  \u0027Reed\u0027,       \u0027marcus@example.com\u0027,   3, 1, \u00272024-03-21\u0027),\n  (4,  \u0027Yuki\u0027,    \u0027Tanaka\u0027,     \u0027yuki@example.com\u0027,     6, 1, \u00272024-04-10\u0027),\n  (5,  \u0027Sofia\u0027,   \u0027Garcia\u0027,     \u0027sofia@example.com\u0027,    4, 1, \u00272024-04-18\u0027),\n  (6,  \u0027Chen\u0027,    \u0027Wei\u0027,        NULL,                   3, 1, \u00272024-05-02\u0027),\n  (7,  \u0027Amara\u0027,   \u0027Okafor\u0027,     \u0027amara@example.com\u0027,    5, 1, \u00272024-05-15\u0027),\n  (8,  \u0027Lucas\u0027,   \u0027Silva\u0027,      \u0027lucas@example.com\u0027,    8, 0, \u00272024-05-22\u0027),\n  (9,  \u0027Hans\u0027,    \u0027Mueller\u0027,    \u0027hans@example.com\u0027,     7, 1, \u00272024-06-01\u0027),\n  (10, \u0027Anna\u0027,    \u0027Petrov\u0027,     NULL,                   7, 1, \u00272024-06-08\u0027);\n\nINSERT INTO actor VALUES\n  (1,  \u0027Penelope\u0027,   \u0027Guiness\u0027),\n  (2,  \u0027Nick\u0027,       \u0027Wahlberg\u0027),\n  (3,  \u0027Ed\u0027,         \u0027Chase\u0027),\n  (4,  \u0027Jennifer\u0027,   \u0027Davis\u0027),\n  (5,  \u0027Johnny\u0027,     \u0027Lollobrigida\u0027),\n  (6,  \u0027Bette\u0027,      \u0027Nicholson\u0027),\n  (7,  \u0027Grace\u0027,      \u0027Mostel\u0027),\n  (8,  \u0027Matthew\u0027,    \u0027Johansson\u0027),\n  (9,  \u0027Joe\u0027,        \u0027Swank\u0027),\n  (10, \u0027Christian\u0027,  \u0027Gable\u0027);\n\nINSERT INTO category VALUES\n  (1,  \u0027Action\u0027),\n  (2,  \u0027Animation\u0027),\n  (3,  \u0027Children\u0027),\n  (4,  \u0027Classics\u0027),\n  (5,  \u0027Comedy\u0027),\n  (6,  \u0027Documentary\u0027),\n  (7,  \u0027Drama\u0027),\n  (8,  \u0027Family\u0027),\n  (9,  \u0027Foreign\u0027),\n  (10, \u0027Games\u0027),\n  (11, \u0027Horror\u0027),\n  (12, \u0027Music\u0027),\n  (13, \u0027New\u0027),\n  (14, \u0027Sci-Fi\u0027),\n  (15, \u0027Sports\u0027),\n  (16, \u0027Travel\u0027);\n\nINSERT INTO film VALUES\n  (1,  \u0027Academy Dinosaur\u0027,      \u0027A epic drama of a feminist and a mad scientist\u0027,                2006, \u0027PG\u0027,    86,  0.99, 6, 20.99),\n  (2,  \u0027Ace Goldfinger\u0027,        \u0027A astounding epistle of a database administrator\u0027,              2006, \u0027G\u0027,     48,  4.99, 3, 12.99),\n  (3,  \u0027Adaptation Holes\u0027,      \u0027A astounding reflection of a lumberjack\u0027,                       2006, \u0027NC-17\u0027, 50,  2.99, 7, 18.99),\n  (4,  \u0027Affair Prejudice\u0027,      \u0027A fanciful documentary of a frisbee\u0027,                           2006, \u0027G\u0027,     117, 2.99, 5, 26.99),\n  (5,  \u0027African Egg\u0027,           \u0027A fast-paced documentary of a pastry chef\u0027,                     2006, \u0027G\u0027,     130, 2.99, 6, 22.99),\n  (6,  \u0027Agent Truman\u0027,          \u0027A intrepid panorama of a robot\u0027,                                2006, \u0027PG\u0027,    169, 2.99, 3, 17.99),\n  (7,  \u0027Airplane Sierra\u0027,       \u0027A touching saga of a hunter and a butler\u0027,                      2006, \u0027PG-13\u0027, 62,  4.99, 6, 28.99),\n  (8,  \u0027Airport Pollock\u0027,       \u0027A epic tale of a moose and a girl\u0027,                             2006, \u0027R\u0027,     54,  4.99, 6, 15.99),\n  (9,  \u0027Alabama Devil\u0027,         \u0027A thoughtful panorama of a database administrator\u0027,             2006, \u0027PG-13\u0027, 114, 2.99, 3, 21.99),\n  (10, \u0027Aladdin Calendar\u0027,      \u0027A action-packed tale of a man\u0027,                                 2006, \u0027NC-17\u0027, 63,  4.99, 6, 24.99),\n  (11, \u0027Alamo Videotape\u0027,       \u0027A boring epistle of a butler and a cat\u0027,                        2006, \u0027G\u0027,     126, 0.99, 6, 10.99),\n  (12, \u0027Alaska Phantom\u0027,        \u0027A fanciful saga of a hunter and a pastry chef\u0027,                 2006, \u0027PG\u0027,    136, 0.99, 6, 22.99),\n  (13, \u0027Ali Forever\u0027,           \u0027A action-packed drama of a dentist who must overcome a feminist\u0027,2006, \u0027PG\u0027,    150, 4.99, 4, 21.99),\n  (14, \u0027Alice Fantasia\u0027,        \u0027A emotional drama of a a shark and a database administrator\u0027,   2006, \u0027NC-17\u0027, 94,  0.99, 6, 27.99),\n  (15, \u0027Alien Center\u0027,          \u0027A brilliant drama of a database administrator\u0027,                 2006, \u0027NC-17\u0027, 46,  2.99, 5, 10.99);\n\nINSERT INTO film_category VALUES\n  (1,7), (2,11), (3,6), (4,11), (5,8), (6,9), (7,5), (8,11),\n  (9,11), (10,8), (11,5), (12,5), (13,7), (14,12), (15,3);\n\nINSERT INTO rental VALUES\n  (1,  \u00272024-05-24\u0027, 1,  1, \u00272024-05-26\u0027),\n  (2,  \u00272024-05-24\u0027, 5,  1, \u00272024-05-30\u0027),\n  (3,  \u00272024-05-25\u0027, 3,  2, \u00272024-05-29\u0027),\n  (4,  \u00272024-05-25\u0027, 7,  3, \u00272024-05-28\u0027),\n  (5,  \u00272024-05-26\u0027, 2,  4, \u00272024-05-30\u0027),\n  (6,  \u00272024-05-26\u0027, 9,  5, \u00272024-06-01\u0027),\n  (7,  \u00272024-05-27\u0027, 11, 5, \u00272024-06-02\u0027),\n  (8,  \u00272024-05-27\u0027, 4,  7, \u00272024-05-30\u0027),\n  (9,  \u00272024-05-28\u0027, 8,  1, \u00272024-06-03\u0027),\n  (10, \u00272024-05-28\u0027, 6,  9, \u00272024-06-02\u0027),\n  (11, \u00272024-05-29\u0027, 10, 2, \u00272024-06-04\u0027),\n  (12, \u00272024-05-29\u0027, 12, 3, NULL),\n  (13, \u00272024-05-30\u0027, 13, 7, \u00272024-06-05\u0027);\n\nINSERT INTO payment VALUES\n  (1,  1, 1,  0.99, \u00272024-05-24\u0027),\n  (2,  1, 2,  2.99, \u00272024-05-24\u0027),\n  (3,  2, 3,  2.99, \u00272024-05-25\u0027),\n  (4,  3, 4,  4.99, \u00272024-05-25\u0027),\n  (5,  4, 5,  4.99, \u00272024-05-26\u0027),\n  (6,  5, 6,  2.99, \u00272024-05-26\u0027),\n  (7,  5, 7,  0.99, \u00272024-05-27\u0027),\n  (8,  7, 8,  2.99, \u00272024-05-27\u0027),\n  (9,  1, 9,  4.99, \u00272024-05-28\u0027),\n  (10, 9, 10, 2.99, \u00272024-05-28\u0027),\n  (11, 2, 11, 0.99, \u00272024-05-29\u0027),\n  (12, 3, 12, 0.99, \u00272024-05-29\u0027),\n  (13, 7, 13, 4.99, \u00272024-05-30\u0027),\n  (14, 1, NULL, 4.99, \u00272024-05-30\u0027);\n";
 let dbPromise = null;
+let SQLLib = null; // the sql.js module, for the throwaway databases the grader builds
 let dataChanged = false; // set after any statement that alters data or schema
 const PROGRESS_KEY = "commonplace_module_exercises_progress";
 // FIXES-PR19-20.md §3: strip comments and strings, then look at the first keyword of each statement.
@@ -1001,6 +1002,7 @@ async function getDb() {
   if (!dbPromise) {
     dbPromise = (async () => {
       const SQL = await initSqlJs({ locateFile: f => (function(){var s=document.querySelector('script[src*="sql-wasm"]');return s?s.src.slice(0,s.src.lastIndexOf("/")+1):"";})() + f });
+      SQLLib = SQL;
       const db = new SQL.Database();
       db.exec(SEED_SQL);
       return db;
@@ -1075,6 +1077,30 @@ function compare(expected, actual, keys) {
   if (E.length !== A.length) return v("Row count differs", `You returned ${A.length} row${A.length === 1 ? "" : "s"}; the answer has ${E.length}.`, { extra, missing });
   return v("Values differ", `${extra.length} of your rows ${extra.length === 1 ? "isn't" : "aren't"} in the answer.`, { extra, missing });
 }
+// Challenges whose reference changes data (CREATE / INSERT / UPDATE …) are graded on the
+// database they leave behind: every table and view, compared with compare() above.
+function snapshot(db) {
+  const out = {};
+  const objs = db.exec("SELECT type, name FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name");
+  (objs.length ? objs[0].values : []).forEach(([type, name]) => {
+    const q = '"' + name.replace(/"/g, '""') + '"';
+    const r = db.exec("SELECT * FROM " + q);
+    const columns = r.length ? r[0].columns : (db.exec("PRAGMA table_info(" + q + ")")[0] || { values: [] }).values.map(c => c[1]);
+    out[name] = { type, columns, values: r.length ? r[0].values : [] };
+  });
+  return out;
+}
+function compareState(expected, actual) {
+  const names = Object.keys(expected).concat(Object.keys(actual)).filter((n, i, a) => a.indexOf(n) === i).sort();
+  for (const n of names) {
+    const e = expected[n], a = actual[n];
+    if (!a) return { ok: false, verdict: { reason: "Values differ", detail: `The answer has a ${e.type} called ${n}; your database doesn't.`, yours: { columns: [], rows: [] }, expected: { columns: e.columns, rows: e.values }, diff: {} } };
+    if (!e) return { ok: false, verdict: { reason: "Values differ", detail: `Your database has a ${a.type} called ${n} that the answer doesn't.`, yours: { columns: a.columns, rows: a.values }, expected: { columns: [], rows: [] }, diff: {} } };
+    const r = compare(e, a, null);
+    if (!r.ok) { r.verdict.detail = `In ${n}: ` + r.verdict.detail; return r; }
+  }
+  return { ok: true };
+}
 
 // ── challenge state ──
 function readProgress() { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}"); } catch (e) { return {}; } }
@@ -1089,13 +1115,27 @@ function nextChallenge(box) {
   const h = all[all.indexOf(box.querySelector("h4")) + 1];
   return h ? { href: "#" + h.id, label: "Next · " + h.textContent.split(" — ")[0].trim() } : { href: "#check", label: "Next · Check yourself" };
 }
-async function grade(pg, db, last, error) {
+function solutionOf(pg) {
+  const box = pg.closest('.ch[data-kind="auto"]'), solBtn = pg.querySelector('[data-action="solution"]');
+  return (solBtn && solBtn.dataset.solution) || (box && window.SQLBook && (SQLBook.challenge.get(box.getAttribute("data-ch")) || {}).solution) || "";
+}
+async function grade(pg, db, last, error, before) {
   const box = pg.closest('.ch[data-kind="auto"]'); if (!box || !window.SQLBook) return;
   const key = box.getAttribute("data-ch"), c = SQLBook.challenge.get(key); if (!c) return;
   const attempt = (c.attempt || 0) + 1;
-  if (error) return chSet(key, Object.assign({}, CH_LAST[key], { attempt }));
-  const solBtn = pg.querySelector('[data-action="solution"]'), solution = (solBtn && solBtn.dataset.solution) || c.solution;
-  if (!solution || changesData(solution)) return chSet(key, Object.assign({}, CH_LAST[key], { attempt }));
+  const keep = () => chSet(key, Object.assign({}, CH_LAST[key], { attempt }));
+  if (error) return keep();
+  const solution = solutionOf(pg);
+  if (!solution) return keep();
+  if (changesData(solution)) {
+    if (!before || !SQLLib) return keep();
+    const refDb = new SQLLib.Database(before);
+    try { refDb.exec(solution); } catch (e) { refDb.close(); return keep(); }   // the reference can't run from this state (e.g. the table already exists)
+    const r = compareState(snapshot(refDb), snapshot(db)); refDb.close();
+    if (r.ok) { chSet(key, { state: "right", attempt, verdict: { detail: "Your database matches the answer's." }, next: nextChallenge(box) }); writeProgress(key, "done"); }
+    else chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: false });
+    return;
+  }
   let ref;
   try { ref = db.exec(solution); } catch (e) { return chSet(key, Object.assign({}, CH_LAST[key], { attempt })); }
   const expected = ref.length ? ref[ref.length - 1] : { columns: [], values: [] };
@@ -1114,9 +1154,10 @@ async function runQuery(pg) {
   const sql = ta.value.trim();
   if (!sql) { pgSet(pg, "idle"); return; }
   pgSet(pg, "running");
-  let db, out, ms;
+  let db, out, ms, before = null;
   try {
     db = await getDb();
+    if (pg.closest('.ch[data-kind="auto"]') && changesData(solutionOf(pg))) before = db.export();   // state before the reader's query, for grading
     const t0 = performance.now();
     out = db.exec(sql);
     ms = Math.max(1, Math.round(performance.now() - t0));
@@ -1130,7 +1171,7 @@ async function runQuery(pg) {
   if (changesData(sql)) { dataChanged = true; data.changed = changeLabel(sql, db.getRowsModified()); }
   else if (dataChanged) data.changed = "an earlier query on this page changed the shared database";
   pgSet(pg, dataChanged ? "dirty" : "ok", data);
-  grade(pg, db, last, null);
+  grade(pg, db, last, null, before);
 }
 const ORIG = new WeakMap();
 document.querySelectorAll(".playground").forEach(pg => {
