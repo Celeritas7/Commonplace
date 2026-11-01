@@ -371,6 +371,52 @@
   }
 
   /* ----------------------------------------------------------------- pyodide */
+  /* Notebook cells are written for Jupyter (IPython). Pyodide runs plain Python, so
+     IPython-only lines are rewritten first: `%matplotlib` is dropped, `%timeit` times
+     one run, `!pip install` / `%pip install` go through micropip, and other shell
+     commands or magics print a note instead of raising a SyntaxError.
+     Only lines starting in column 0 are touched, so a `% (a, b)` continuation line
+     inside a statement is left alone. */
+  const PY_HELPERS = [
+    "import time as _ipy_time, micropip as _ipy_micropip",
+    "_IPY_SKIP_PIP = {'pysqlite3', 'sklearn.utils', 'sklearn', 'scikit-learn', 'numpy', 'pandas', 'matplotlib', 'scipy', 'joblib'}",
+    "async def _ipy_pip(names):",
+    "    for n in names:",
+    "        if n.startswith('-') or n in _IPY_SKIP_PIP: continue",
+    "        try:",
+    "            await _ipy_micropip.install(n)",
+    "            print('installed ' + n)",
+    "        except Exception as e:",
+    "            print('could not install ' + n + ' in the browser: ' + str(e).splitlines()[0])",
+    "def _ipy_timeit(stmt, g):",
+    "    t = _ipy_time.perf_counter(); exec(stmt, g); d = _ipy_time.perf_counter() - t",
+    "    print('%.3g s (one run; the browser does not repeat like %%timeit)' % d)",
+    "def _ipy_skip(line):",
+    "    print('(skipped in the browser: ' + line + ')')"
+  ].join("\n");
+
+  /* import name -> PyPI name, for packages Pyodide does not load from imports */
+  const PIP_FOR = { seaborn: "seaborn", imblearn: "imbalanced-learn", nltk: "nltk" };
+
+  function toPython(code) {
+    const lines = code.split("\n");
+    const q = (t) => JSON.stringify(t);
+    if (/^%%/.test(lines[0] || "")) {
+      const m = lines[0].slice(2).trim().split(/\s+/)[0];
+      if (m === "time" || m === "timeit") lines.shift();
+      else return "_ipy_skip(" + q(lines[0]) + ")";
+    }
+    return lines.map((l) => {
+      let m;
+      if (/^%matplotlib\b/.test(l)) return "# " + l;
+      if ((m = l.match(/^%(?:timeit|time)\s+(.*)$/))) return "_ipy_timeit(" + q(m[1]) + ", globals())";
+      if ((m = l.match(/^(?:!\s*|%)pip\s+install\s+(.*)$/))) return "await _ipy_pip(" + q(m[1].trim().split(/\s+/)) + ")";
+      if (/^(!|%)/.test(l)) return "_ipy_skip(" + q(l.trim()) + ")";
+      return l;
+    }).join("\n");
+  }
+  if (typeof window !== "undefined") window.__toPython = toPython;
+
   let pyodide = null, booting = null;
   const kpill = document.getElementById("kpill"), ktext = document.getElementById("ktext");
   function kstate(cls, txt) { kpill.className = "kpill " + cls; ktext.textContent = txt; }
@@ -385,6 +431,8 @@
         try {
           pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
           await pyodide.runPythonAsync("import os\nos.environ['MPLBACKEND']='AGG'");
+          await pyodide.loadPackage("micropip");
+          await pyodide.runPythonAsync(PY_HELPERS);
           if (window.Lab) await pyodide.runPythonAsync("lab_points = " + JSON.stringify(window.Lab.DEFAULT));
           kstate("is-ready", "python ready");
           resolve(pyodide);
@@ -405,8 +453,21 @@
     const live = { stdout: "", result: "", err: "", imgs: [] };
     const figBg = prefs.skin === "paper" ? "#f5f6f8" : "#0e1422";
     try {
-      await py.loadPackagesFromImports(c.src);
-      const r = await py.runPythonAsync(c.src);
+      const code = toPython(c.src);
+      await py.loadPackagesFromImports(code);
+      let r;
+      try { r = await py.runPythonAsync(code); }
+      catch (e) {
+        /* a package Pyodide doesn't bundle (seaborn, imblearn…): install it once, retry */
+        const miss = String(e.message || e).match(/No module named '([\w]+)/);
+        const pkg = miss && PIP_FOR[miss[1]];
+        if (!pkg) throw e;
+        kstate("is-busy", "installing " + pkg + "…");
+        await py.loadPackage("micropip");
+        await py.runPythonAsync("await _ipy_micropip.install(" + JSON.stringify(pkg) + ")");
+        kstate("is-busy", "running…");
+        r = await py.runPythonAsync(code);
+      }
       if (r !== undefined && r !== null) {
         try { live.result = py.globals.get("repr")(r).toString(); } catch (e) { live.result = String(r); }
         if (r && r.destroy) try { r.destroy(); } catch (e) {}
