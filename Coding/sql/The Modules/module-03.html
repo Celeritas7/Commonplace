@@ -8,7 +8,7 @@
 <link href="../../../_lib/fonts/gf-1a97295f.css" rel="stylesheet" />
 <link href="../../../_lib/fonts/gf-a896b6d9.css" rel="stylesheet" />
 <link rel="stylesheet" href="../lib/tokens.css?v=1" />
-<link rel="stylesheet" href="../lib/book.css?v=1" />
+<link rel="stylesheet" href="../lib/book.css?v=2" />
 <script src="../../../_lib/sqljs/sql-wasm.js"></script>
 </head>
 <body>
@@ -1111,6 +1111,8 @@ function nextChallenge(box) {
   const h = all[all.indexOf(box.querySelector("h4")) + 1];
   return h ? { href: "#" + h.id, label: "Next · " + h.textContent.split(" — ")[0].trim() } : { href: "#check", label: "Next · Check yourself" };
 }
+function foreignKeys(db) { const r = db.exec("PRAGMA foreign_keys"); return r.length ? r[0].values[0][0] : 0; }
+function setForeignKeys(db, on) { db.exec("PRAGMA foreign_keys = " + (on ? "ON" : "OFF")); }
 function solutionOf(pg) {
   const box = pg.closest('.ch[data-kind="auto"]'), solBtn = pg.querySelector('[data-action="solution"]');
   return (solBtn && solBtn.dataset.solution) || (box && window.SQLBook && (SQLBook.challenge.get(box.getAttribute("data-ch")) || {}).solution) || "";
@@ -1125,8 +1127,13 @@ async function grade(pg, db, last, error, before) {
   if (!solution) return keep();
   if (changesData(solution)) {
     if (!before || !SQLLib) return keep();
-    const refDb = new SQLLib.Database(before);
-    try { refDb.exec(solution); } catch (e) { refDb.close(); return keep(); }   // the reference can't run from this state (e.g. the table already exists)
+    const refDb = new SQLLib.Database(before.bytes);
+    setForeignKeys(refDb, before.fk);
+    try { refDb.exec(solution); } catch (e) {   // the reference can't run from this state (e.g. the table already exists)
+      refDb.close();
+      SQLBook.toast("Can't check from the current data. Tap Reset data, then run again.");
+      return keep();
+    }
     const r = compareState(snapshot(refDb), snapshot(db)); refDb.close();
     if (r.ok) { chSet(key, { state: "right", attempt, verdict: { detail: "Your database matches the answer's." }, next: nextChallenge(box) }); writeProgress(key, "done"); }
     else chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: false });
@@ -1153,7 +1160,11 @@ async function runQuery(pg) {
   let db, out, ms, before = null;
   try {
     db = await getDb();
-    if (pg.closest('.ch[data-kind="auto"]') && changesData(solutionOf(pg))) before = db.export();   // state before the reader's query, for grading
+    if (pg.closest('.ch[data-kind="auto"]') && changesData(solutionOf(pg))) {   // state before the reader's query, for grading
+      const fk = foreignKeys(db);
+      before = { bytes: db.export(), fk };   // export() closes and reopens the db, which resets PRAGMA foreign_keys
+      setForeignKeys(db, fk);
+    }
     const t0 = performance.now();
     out = db.exec(sql);
     ms = Math.max(1, Math.round(performance.now() - t0));
@@ -1243,6 +1254,6 @@ window.paintModProgress=function(){var hs=document.querySelectorAll('main h4[id^
 <script src="funnel-interactive.js" defer></script>
 <script src="../../../_lib/progress-backup.js"></script>
 <script src="../lib/sql-kb-fix.js?v=2"></script>
-<script src="../lib/book-ui.js?v=1"></script>
+<script src="../lib/book-ui.js?v=2"></script>
 </body>
 </html>
