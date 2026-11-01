@@ -203,7 +203,7 @@
       } else if (c.state === "right") {
         h = '<div class="ch-verdict__head"><b>✓ Solved.</b><span>' + esc(v.detail || ("Matches all " + (o.rows != null ? o.rows + " " : "") + "rows.")) + "</span></div>" + (o.next ? '<div class="bk-row"><a class="bk-btn" href="' + esc(o.next.href) + '">' + esc(o.next.label) + " ↓</a></div>" : "");
       } else if (c.state === "revealed") {
-        h = '<div class="ch-verdict__head"><b>Solution revealed.</b><span>' + (o.banked === false ? "" : "Added to your Mistake Bank — re-solve it tomorrow.") + "</span></div><pre class=\"bk-code\"><code>" + esc(c.solution) + '</code></pre><div class="bk-row"><button class="bk-btn" data-do="copy">Put it in the editor</button></div>';
+        h = '<div class="ch-verdict__head"><b>Solution revealed.</b><span>' + (o.banked === false ? "" : "Added to your Mistake Bank — re-solve it today.") + "</span></div><pre class=\"bk-code\"><code>" + esc(c.solution) + '</code></pre><div class="bk-row"><button class="bk-btn" data-do="copy">Put it in the editor</button></div>';
       }
       c.verdict.setAttribute("data-verdict", c.state); c.verdict.innerHTML = h; fades(c.verdict);
       $$(".ch-diff__switch button", c.verdict).forEach(function (b) { b.onclick = function () { var dv = c.verdict.querySelector(".ch-diff"); dv.setAttribute("data-view", b.dataset.v); $$(".ch-diff__switch button", c.verdict).forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); fades(dv); }; });
