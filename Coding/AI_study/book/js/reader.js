@@ -378,13 +378,14 @@
      Only lines starting in column 0 are touched, so a `% (a, b)` continuation line
      inside a statement is left alone. */
   const PY_HELPERS = [
-    "import time as _ipy_time, micropip as _ipy_micropip",
+    "import time as _ipy_time",
     "_IPY_SKIP_PIP = {'pysqlite3', 'sklearn.utils', 'sklearn', 'scikit-learn', 'numpy', 'pandas', 'matplotlib', 'scipy', 'joblib'}",
     "async def _ipy_pip(names):",
+    "    import micropip",
     "    for n in names:",
     "        if n.startswith('-') or n in _IPY_SKIP_PIP: continue",
     "        try:",
-    "            await _ipy_micropip.install(n)",
+    "            await micropip.install(n)",
     "            print('installed ' + n)",
     "        except Exception as e:",
     "            print('could not install ' + n + ' in the browser: ' + str(e).splitlines()[0])",
@@ -417,6 +418,10 @@
   }
   if (typeof window !== "undefined") window.__toPython = toPython;
 
+  /* Pyodide lives in the shared Commonplace/_lib/pyodide (same 0.26.4 build). Its lock
+     file serves numpy from that folder, so numpy cells run offline; every other package
+     (pandas, scikit-learn, matplotlib…) still comes from the Pyodide CDN and needs internet. */
+  const PYO = new URL("../../../_lib/pyodide/", location.href).href;
   let pyodide = null, booting = null;
   const kpill = document.getElementById("kpill"), ktext = document.getElementById("ktext");
   function kstate(cls, txt) { kpill.className = "kpill " + cls; ktext.textContent = txt; }
@@ -426,26 +431,31 @@
     kstate("is-boot", "booting python…");
     booting = new Promise((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+      s.src = PYO + "pyodide.js";
       s.onload = async () => {
         try {
-          pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
+          pyodide = await loadPyodide({ indexURL: PYO });
           await pyodide.runPythonAsync("import os\nos.environ['MPLBACKEND']='AGG'");
-          await pyodide.loadPackage("micropip");
           await pyodide.runPythonAsync(PY_HELPERS);
           if (window.Lab) await pyodide.runPythonAsync("lab_points = " + JSON.stringify(window.Lab.DEFAULT));
           kstate("is-ready", "python ready");
           resolve(pyodide);
         } catch (e) { kstate("is-err", "boot failed"); reject(e); }
       };
-      s.onerror = () => { kstate("is-err", "no internet?"); reject(new Error("pyodide load failed")); };
+      s.onerror = () => { kstate("is-err", "python unavailable"); reject(new Error("Could not load Python from _lib/pyodide.")); };
       document.head.appendChild(s);
     });
     return booting;
   }
 
   async function exec(c) {
-    const py = await boot();
+    let py;
+    try { py = await boot(); }
+    catch (e) {
+      booting = null;   /* allow a retry on the next Run */
+      c.live = { stdout: "", result: "", imgs: [], err: "Python could not start. " + (e.message || e) };
+      return c.live;
+    }
     kstate("is-busy", "running…");
     let stdout = "";
     py.setStdout({ batched: (t) => { stdout += t + "\n"; } });
@@ -464,7 +474,7 @@
         if (!pkg) throw e;
         kstate("is-busy", "installing " + pkg + "…");
         await py.loadPackage("micropip");
-        await py.runPythonAsync("await _ipy_micropip.install(" + JSON.stringify(pkg) + ")");
+        await py.runPythonAsync("import micropip\nawait micropip.install(" + JSON.stringify(pkg) + ")");
         kstate("is-busy", "running…");
         r = await py.runPythonAsync(code);
       }
@@ -485,6 +495,8 @@
       kstate("is-ready", "python ready");
     } catch (e) {
       live.err = String(e.message || e).split("\n").filter((l) => !l.includes('File "/lib/python')).join("\n");
+      if (!navigator.onLine || /fetch|NetworkError|Failed to load|load package|included in the Pyodide distribution/i.test(live.err))
+        live.err += "\n\nOffline? Only numpy is stored locally. Other packages (pandas, scikit-learn, matplotlib…) need an internet connection.";
       kstate("is-ready", "python ready");
     }
     live.stdout = stdout.replace(/\n$/, "");

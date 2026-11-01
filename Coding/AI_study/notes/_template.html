@@ -17,7 +17,7 @@
 
 <!-- MathJax: write equations as $...$ inline or $$...$$ block. -->
 <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
-<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<script async src="../../../../_lib/mathjax/tex-mml-chtml.js"></script>
 
 <style>
 :root{
@@ -265,14 +265,15 @@ $('#pa').oninput=draw; $('#pb').oninput=draw; addEventListener('resize',draw); d
 let pyodide=null;
 $('#runBtn').onclick=async()=>{
   const st=$('#runStatus'), out=$('#out');
-  if(!pyodide){st.textContent='loading Python… (first run only)';
-    await new Promise(r=>{const s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=r;document.head.appendChild(s);});
-    pyodide=await loadPyodide();await pyodide.loadPackage('numpy');st.textContent='';}
-  out.textContent='';
-  pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});
-  try{await pyodide.runPythonAsync($('#code').value);}
-  catch(e){out.textContent+="\n"+e;}
+  try{
+    if(!pyodide){st.textContent='loading Python… (first run only)';
+      await new Promise((res,rej)=>{const s=document.createElement('script');
+        s.src='../../../../_lib/pyodide/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Python'));document.head.appendChild(s);});
+      pyodide=await loadPyodide();await pyodide.loadPackage('numpy');st.textContent='';}
+    out.textContent='';
+    pyodide.setStdout({batched:t=>out.textContent+=t+"\n"});
+    await pyodide.runPythonAsync($('#code').value);
+  }catch(e){out.textContent+="\n"+(e.message||e);st.textContent='error';}
 };
 </script>
 </body>
