@@ -12,7 +12,7 @@
   "use strict";
   if (window.__sqlzooUiPlus) return;
   window.__sqlzooUiPlus = true;
-  var VERSION = "v4";
+  var VERSION = "v5";
   document.documentElement.setAttribute("data-sqlzoo-ui-plus", VERSION);
   console.log("[sqlzoo-ui-plus] " + VERSION + " active");
   window.SQLZOO_SCHEMA = { open: function (table, ta, ds) { openSheet(table, ta, ds); }, close: function () { closeSheet(); } };
@@ -39,10 +39,6 @@
     ".zp-colrow:hover{background:#f4efe3}",
     ".zp-btn{font-family:" + MONO + ";font-size:12px;font-weight:600;color:" + SOFT + ";background:#fbf8ef;border:1px solid " + RULE + ";border-radius:8px;height:32px;padding:0 12px;cursor:pointer;white-space:nowrap;flex:0 0 auto}",
     ".zp-btn:hover{color:" + INK + ";border-color:#cdbfa3}",
-    "#ex-list .ex-out{margin:0;overflow:auto}",
-    "#ex-list .ex-out table.grid{font-size:12.5px}",
-    "#ex-list .ex-cards,#ex-list{max-width:760px;margin-left:auto;margin-right:auto}",
-    ".pp-tabs{max-width:760px;margin-left:auto;margin-right:auto}",
     "body.zp-locked{overflow:hidden}",
     /* --- Phase 6: fullscreen is a real overlay; the card itself never goes fixed --- */
     ".zp-full-ovl{position:fixed;inset:0;z-index:880;background:#efe7d6;overflow:auto;padding:18px 16px 64px;-webkit-overflow-scrolling:touch}",
@@ -52,25 +48,9 @@
     ".zp-full-q p{margin:4px 0 0;font-size:16px;line-height:1.5;color:" + SOFT + "}",
     ".zp-full-body{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:13px}",
     ".zp-full-body > *{flex:0 0 auto}",
-    /* --- typographic rebalance: one step between levels, breathing room on phones --- */
-    "#ex-list .ex-card{padding:16px 18px;display:flex;flex-direction:column;gap:13px;border-radius:12px}",
-    /* the card is a flex column; in fullscreen it also has a FIXED height (inset:0),
-       so flex children would shrink to fit instead of overflowing — squeezing the
-       result pane down to nothing. Pin every child to its natural height. */
-    "#ex-list .ex-card > *{flex:0 0 auto}",
-    "#ex-list .ex-head{flex-wrap:wrap;gap:9px;align-items:center}",
-    "#ex-list .ex-title{font-size:19px;line-height:1.3;flex:1 1 100%;order:3;text-wrap:pretty}",
-    "#ex-list .ex-id{font-size:10px;letter-spacing:1px;padding:3px 7px;color:#6b5d45;background:transparent;border:1px solid #cdbfa3;border-radius:6px}",
-    "#ex-list .ex-card.done .ex-id{color:#fff;background:#1f8a4e;border-color:#1f8a4e}",
+    /* the exercise cards themselves are styled by lib/book.css + lib/practice.css (book-ui .ch boxes) */
     "#ex-list .ex-star{margin-left:auto;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;font-size:19px;line-height:1;color:#8a7c63;background:transparent;border:0;cursor:pointer;padding:0}",
     "#ex-list .ex-star[aria-pressed=\"true\"]{color:#b5892a}",
-    "#ex-list .ex-prompt{margin:0;font-size:16.5px;line-height:1.55}",
-    "#ex-list .ex-editor{min-height:110px;font-size:13px;line-height:1.6;padding:12px 14px;border-radius:11px;background:#fff;color:" + INK + ";border:1px solid #cdbfa3}",
-    "#ex-list .ex-actions{margin:0;gap:10px}",
-    "#ex-list .ex-actions .btn{font-size:13px;padding:13px 16px;border-radius:11px}",
-    "#ex-list .ex-actions .btn.run{flex:1;min-width:180px;font-size:14px;padding:13px}",
-    "#ex-list .ex-hint,#ex-list .ex-feedback,#ex-list .ex-reveal{margin:0}",
-    "#ex-list .ex-hint{font-size:16px;line-height:1.55;border-radius:10px;padding:11px 14px}",
     "#ex-list .zk-host{margin:0!important}",
     /* problem tabs from sql-practice-plus.js, matched to the card's new rhythm */
     ".pp-tabs{gap:10px}",

@@ -22,6 +22,7 @@
     if (prev && prev.pass && !r.pass) return;
     all[MOD] = { pass: r.pass, right: r.right, asked: r.asked, at: r.at || Date.now() };
     try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (e) {}
+    if (window.SQLSync) SQLSync.changed();
   }
   function lessonEl(sec) { return document.querySelector('main h2[id^="lesson-' + String(sec).replace(".", "") + '-"]'); }
   function secName(sec) { var h = lessonEl(sec); return h ? h.textContent.trim() : "Lesson " + sec; }
@@ -71,6 +72,7 @@
       var tab = document.querySelector('.bk-tab[aria-current="page"]');
       if (tab && c.pass && !tab.querySelector(".ok")) tab.insertAdjacentHTML("beforeend", ' <span class="ok">✓</span>');
     };
+    document.addEventListener("sqlsync:pulled", paintBook);   // a check passed on another device
     document.addEventListener("sqlbook:ready", function () {
       paintBook();
       var all = checks();   // ✓ on the tabs of other modules that are checked

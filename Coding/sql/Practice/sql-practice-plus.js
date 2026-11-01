@@ -666,19 +666,14 @@
   function logAttempt(card) {
     var id = exIdOf(card);
     var ta = card.querySelector("textarea.ex-editor");
-    var fb = card.querySelector(".ex-feedback");
     if (!ta) return;
     var q = (ta.value || "").trim();
     if (!q) return;                              // nothing typed
-    var ok = !!(fb && fb.classList.contains("ok"));
-    var msg = "";
-    if (fb) {
-      var vline = fb.querySelector(".ex-verdict");   // verdict only — not the expected/yours diff under it
-      msg = (vline ? vline.textContent : fb.textContent).replace(/^[✓✕]\s*/, "").trim();
-      // tighten common phrasings for the compact reason line
-      if (/no result set/i.test(msg)) msg = "no rows returned";
-      else if (/^SQL error/i.test(msg)) msg = msg.split("—")[0].trim();
-    }
+    // the card is book-ui's .ch box: data-state is the verdict, .ch-reason its one-line reason
+    var err = card.querySelector('.playground[data-state="error"] .pg-error code');
+    var ok = !err && card.getAttribute("data-state") === "right";
+    var msg = ok ? "" : err ? "SQL error: " + err.textContent.trim()
+      : ((card.querySelector(".ch-reason") || {}).textContent || "wrong result").trim();
     var arr = ATT[id] || (ATT[id] = []);
     var last = arr[arr.length - 1];
     if (last && last.q === q && last.ok === ok) { renderAttempts(card); return; } // dedupe identical consecutive
@@ -710,7 +705,7 @@
     });
 
     // fires AFTER sqlzoo-lab's own check() handler (registered earlier), so
-    // the feedback element is already populated when we read it.
+    // the verdict is already painted when we read it.
     runB.addEventListener("click", function () { setTimeout(function () { logAttempt(card); }, 0); });
     // also catch ⌘/Ctrl-Enter runs from inside the editor
     var ta = card.querySelector("textarea.ex-editor");

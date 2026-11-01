@@ -246,7 +246,8 @@
     });
     var current = mods.filter(function (m) { return m.done < m.total; })[0] || null;
     mods.forEach(function (m) { m.state = m.n === READONLY ? "readonly" : m === current ? "current" : m.total && m.done === m.total ? "done" : ""; });
-    var any = Object.keys(prog).some(function (k) { return /^ex_\d+_/.test(k); }) || Object.keys(checks).length > 0;
+    var any = Object.keys(prog).some(function (k) { return /^ex_\d+_/.test(k); }) || Object.keys(checks).length > 0 ||
+      !!(window.SQLBank && SQLBank.all().length);
     var next = null;
     list.some(function (e) { if (prog[e.k] !== "done") { next = e; return true; } return false; });
     return {
@@ -269,7 +270,9 @@
     var resume = P.current
       ? { href: P.current.href, title: "Continue Module " + P.current.n + " · " + P.current.title, sub: P.current.done + " / " + P.current.total + " challenges done" }
       : { href: "Practice/sqlzoo.html", title: "All " + P.total + " challenges done", sub: "Keep sharp on SQLZoo, or retake a module check" };
-    var rows = [];
+    var rows = [], due = window.SQLBank ? SQLBank.dueItems() : [];
+    if (due.length) rows.push({ tone: "due", mark: String(due.length), label: "Mistakes due to re-solve",
+      sub: due.slice(0, 3).map(function (it) { return it.srcLabel; }).join(" · "), value: "Re-solve →", href: "Practice/mistake-drill.html" });
     if (P.next) rows.push({ mark: "›", label: "Next unfinished challenge", sub: P.next.t.replace(/^Challenge\s+/, ""), value: "Open →", href: "The Modules/" + P.next.u });
     var partial = P.mods.filter(function (m) { return m.check && !m.check.pass; })[0];
     var unchecked = P.mods.filter(function (m) { return !m.checked; })[0];
@@ -286,7 +289,9 @@
   onBook(paintHome);
   // another tab (a module page) may finish a challenge or a check while this one is open
   window.addEventListener("storage", function (e) {
-    if (bookReady && (e.key === "commonplace_module_exercises_progress" || e.key === "cp_sql_check")) paintHome();
+    if (bookReady && (e.key === "commonplace_module_exercises_progress" || e.key === "cp_sql_check" || e.key === "cp_sql_bank")) paintHome();
   });
+  // sql-sync.js merged another device's progress, checks or bank
+  document.addEventListener("sqlsync:pulled", function () { if (bookReady) paintHome(); });
 
 })();

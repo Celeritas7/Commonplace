@@ -1,17 +1,24 @@
 // sqlzoo-lab.js — powers the SQLZoo-style practice page (free sandbox + graded exercises)
+// Drawing goes through book-ui.js (window.SQLBook), which loads last, so anything that
+// paints waits for "sqlbook:ready". Grading uses lib/sql-grade.js, the module pages' grader.
 (function () {
   "use strict";
 
   var SQL = null;          // sql.js module
   var sandboxDb = null;    // mutable DB for the free Lab
-  var ready = false;
+  var ready = false, bookReady = false;
   var SEED = window.SQLZOO_SEED || "";
   var SCHEMA = window.SQLZOO_SCHEMA || [];
   var EXERCISES = window.SQLZOO_EXERCISES || [];
   var PROGRESS_KEY = "commonplace_sqlzoo_progress";
+  var G = window.SQLGrade;
 
   var led = document.getElementById("led");
   var ledText = document.getElementById("led-text");
+  var freeEl = document.getElementById("free");
+
+  function onBook(fn) { if (bookReady) fn(); else document.addEventListener("sqlbook:ready", fn); }
+  document.addEventListener("sqlbook:ready", function () { bookReady = true; });
 
   // ---------- progress ----------
   function loadProgress() {
@@ -29,22 +36,22 @@
       SQL = mod;
       sandboxDb = freshDb();
       ready = true;
-      led.classList.add("ready");
-      ledText.textContent = "engine ready";
+      setLed(true);
       buildSchema();
       buildChips();
-      buildExercises();
-      hydrateProgressFromSupabase();                     // pull cross-device solves now if a session exists…
-      if (window.sb && window.sb.auth) {                 // …and again once auth resolves (getSession is async)
-        window.sb.auth.onAuthStateChange(function () { hydrateProgressFromSupabase(); });
-      }
-      runSandbox(); // open with live data
+      onBook(function () {
+        buildExercises();
+        hydrateProgressFromSupabase();                     // pull cross-device solves now if a session exists…
+        if (window.sb && window.sb.auth) {                 // …and again once auth resolves (getSession is async)
+          window.sb.auth.onAuthStateChange(function () { hydrateProgressFromSupabase(); });
+        }
+        runSandbox(); // open with live data
+      });
     })
     .catch(function (e) {
-      led.classList.add("err");
+      led.classList.remove("loading"); led.classList.add("err");
       ledText.textContent = "engine failed";
-      var r = document.getElementById("results");
-      if (r) r.innerHTML = '<div class="res-msg err">Could not load the SQL engine.<br>' + esc(e.message) + "</div>";
+      onBook(function () { SQLBook.pg.set(freeEl, "error", { message: "Could not load the SQL engine. " + e.message }); });
     });
 
   function freshDb() {
@@ -55,7 +62,7 @@
 
   // ---------- helpers ----------
   function esc(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function lastResult(db, sql) {
     // returns {columns, values} of the final statement, or null for no result set
@@ -63,121 +70,45 @@
     if (!res.length) return null;
     return res[res.length - 1];
   }
-  function renderTableInto(el, cols, rows, ms) {
-    var h = '<table class="grid"><thead><tr>';
-    cols.forEach(function (c) { h += "<th>" + esc(c) + "</th>"; });
-    h += "</tr></thead><tbody>";
-    rows.forEach(function (r) {
-      h += "<tr>";
-      r.forEach(function (v) {
-        if (v === null) h += '<td class="null">NULL</td>';
-        else if (typeof v === "number") h += '<td class="num">' + esc(v) + "</td>";
-        else h += "<td>" + esc(v) + "</td>";
-      });
-      h += "</tr>";
-    });
-    h += "</tbody></table>";
-    h += '<div class="res-foot"><span>' + rows.length + (rows.length === 1 ? " row" : " rows") +
-         "</span><span>" + cols.length + (cols.length === 1 ? " column" : " columns") + "</span>" +
-         (ms != null ? "<span>" + ms + " ms</span>" : "") + "</div>";
-    el.innerHTML = h;
-    el.scrollTop = 0;
-  }
 
   // ---------- result-set comparison (the grader) ----------
-  function normCell(v) {
-    if (v === null) return "\u2400NULL";
-    if (typeof v === "number") return String(Math.round(v * 1e6) / 1e6); // float tolerance
-    return String(v);
-  }
-  // Cells are joined with a separator that can't appear in data, so (1,23) and
-  // (12,3) are different rows. Used for whole-row comparison.
-  function rowKey(r) { return r.map(normCell).join("\u241F"); }
-  // Column-order-free key: the same row with its columns shuffled. Lets the
-  // grader tell "right data, columns in the wrong order" from "wrong data".
-  function bagKey(r) { return r.map(normCell).slice().sort().join("\u241F"); }
-  function sortedKeys(rows, keyFn) { return rows.map(keyFn).sort(); }
-  function sameList(a, b) {
-    if (a.length !== b.length) return false;
-    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
-  }
-
-  // Four distinct verdicts, checked from the outside in:
-  //   1. shape    - column count / row count
-  //   2. columns  - every row has the right cells but in the wrong column order
-  //   3. order    - every row is right, the rows are in the wrong order (only when order matters)
-  //   4. values   - some cell is wrong (feedback shows the first expected/yours difference)
-  // compare() never says "check your ORDER BY" unless the rows really are right.
-  function compare(expected, actual, orderMatters) {
-    if (!actual) return { ok: false, kind: "shape", msg: "Your query returned no result set — write a SELECT that returns rows." };
-    if (actual.columns.length !== expected.columns.length)
-      return { ok: false, kind: "shape", msg: "Column count differs — expected " + expected.columns.length +
-               " column(s), your query returned " + actual.columns.length + "." };
-    if (actual.values.length !== expected.values.length)
-      return { ok: false, kind: "shape", msg: "Row count differs — expected " + expected.values.length +
-               " row(s), your query returned " + actual.values.length + "." };
-
-    if (sameList(expected.values.map(rowKey), actual.values.map(rowKey)))
-      return { ok: true, kind: "ok", msg: orderMatters ? "Correct — order and all." : "Correct!" };
-
-    if (sameList(sortedKeys(expected.values, rowKey), sortedKeys(actual.values, rowKey))) {
-      if (!orderMatters) return { ok: true, kind: "ok", msg: "Correct!" };
-      return { ok: false, kind: "order", msg: "Right rows, wrong order — check your ORDER BY." };
-    }
-
-    if (sameList(sortedKeys(expected.values, bagKey), sortedKeys(actual.values, bagKey)))
-      return { ok: false, kind: "columns", msg: "Right data, but the columns are in the wrong order — expected " +
-               expected.columns.join(", ") + "." };
-
-    return { ok: false, kind: "values", msg: "The values don't match the expected answer yet.",
-             diff: firstDifference(expected, actual, orderMatters) };
-  }
-
-  // The first expected row your result doesn't contain, and the row you
-  // returned in its place, so feedback can show "expected / yours".
-  function firstDifference(expected, actual, orderMatters) {
-    var exp = expected.values, act = actual.values;
-    if (!orderMatters) {
-      var byKey = function (a, b) { return rowKey(a) < rowKey(b) ? -1 : 1; };
-      exp = exp.slice().sort(byKey); act = act.slice().sort(byKey);
-    }
-    for (var i = 0; i < exp.length; i++) {
-      if (rowKey(exp[i]) !== rowKey(act[i])) return { index: i, expected: exp[i], actual: act[i], columns: expected.columns };
-    }
-    return null;
+  // FIXES-PR19-20.md §1: lib/sql-grade.js reports "columns in the wrong order" only when one
+  // column permutation fixes every row; anything else is a values / row-count / order verdict,
+  // with the cells and rows to flag in the challenge diff. Rows that tie on every ORDER BY key
+  // may come back in any order.
+  function compare(e, expected, actual) {
+    if (!actual) actual = { columns: [], values: [] };
+    return G.compare(expected, actual, e.order ? G.orderKeys(e.sol, expected.columns) : null);
   }
 
   // ---------- free sandbox ----------
   var editor = document.getElementById("editor");
-  var resultsEl = document.getElementById("results");
+  var dataChanged = false;
 
   function runSandbox() {
-    if (!ready) return;
+    if (!ready || !bookReady) return;
     var sql = (editor.value || "").trim();
-    if (!sql) { resultsEl.innerHTML = '<div class="res-msg empty">Type a query and hit Run.</div>'; return; }
-    var t0 = performance.now();
-    try {
-      var res = sandboxDb.exec(sql);
-      var ms = (performance.now() - t0).toFixed(1);
-      setLed(true);
-      if (!res.length) {
-        resultsEl.innerHTML = '<div class="res-msg ok">✓ Statement ran. No rows returned.</div>' +
-          '<div class="res-foot"><span>' + ms + ' ms</span></div>';
-        return;
-      }
-      var last = res[res.length - 1];
-      renderTableInto(resultsEl, last.columns, last.values, ms);
-    } catch (e) {
-      resultsEl.innerHTML = '<div class="res-msg err">✕ ' + esc(e.message || e) + "</div>";
-      setLed(false);
-    }
+    if (!sql) { SQLBook.pg.set(freeEl, "idle"); return; }
+    var t0 = performance.now(), res;
+    try { res = sandboxDb.exec(sql); }
+    catch (e) { SQLBook.pg.set(freeEl, "error", { message: String(e.message || e) }); setLed(false); return; }
+    var ms = Math.max(1, Math.round(performance.now() - t0));
+    setLed(true);
+    var last = res.length ? res[res.length - 1] : null;
+    var data = last ? { columns: last.columns, rows: last.values, ms: ms } : { message: "Statement ran. No rows returned.", ms: ms };
+    if (G.changesData(sql)) { dataChanged = true; data.changed = "this query changed the sample data"; }
+    else if (dataChanged) data.changed = "an earlier query changed the sample data";
+    SQLBook.pg.set(freeEl, dataChanged ? "dirty" : "ok", data);
   }
   function setLed(ok) {
-    led.classList.toggle("ready", ok); led.classList.toggle("err", !ok);
-    ledText.textContent = ok ? "engine ready" : "query error";
+    led.classList.remove("loading");
+    led.classList.toggle("ok", ok); led.classList.toggle("err", !ok);
+    ledText.textContent = ok ? "engine ready · " + SCHEMA.length + " tables" : "query error";
   }
-  function setQuery(sql) { editor.value = sql; runSandbox(); editor.focus(); }
+  function setQuery(sql) {
+    editor.value = sql; editor.dispatchEvent(new Event("input"));
+    runSandbox(); editor.focus({ preventScroll: true });
+  }
   function insertAtCursor(text) {
     var s = editor.selectionStart, e = editor.selectionEnd, v = editor.value;
     var before = v.slice(0, s);
@@ -185,17 +116,21 @@
     var ins = (needSpace ? " " : "") + text;
     editor.value = before + ins + v.slice(e);
     var pos = s + ins.length;
-    editor.setSelectionRange(pos, pos); editor.focus();
+    editor.setSelectionRange(pos, pos); editor.focus({ preventScroll: true });
   }
 
   document.getElementById("run-btn").addEventListener("click", runSandbox);
   document.getElementById("clear-btn").addEventListener("click", function () {
-    editor.value = ""; editor.focus();
-    resultsEl.innerHTML = '<div class="res-msg empty">Editor cleared.</div>';
+    editor.value = ""; editor.dispatchEvent(new Event("input")); editor.focus({ preventScroll: true });
+    SQLBook.pg.set(freeEl, "idle");
   });
-  document.getElementById("reset-btn").addEventListener("click", function () {
-    sandboxDb = freshDb();
-    resultsEl.innerHTML = '<div class="res-msg ok">✓ Data reset to its original state.</div>';
+  // #reset-btn carries data-action="reset-data"; book-ui turns its click into this event
+  document.addEventListener("sqlbook:reset-data", function (ev) {
+    if (!ready || !ev.detail || ev.detail.pg !== freeEl) return;
+    try { sandboxDb.close(); } catch (e) {}
+    sandboxDb = freshDb(); dataChanged = false;
+    SQLBook.pg.set(freeEl, "idle");
+    SQLBook.toast("Data reset to its original state");
   });
   editor.addEventListener("keydown", function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); runSandbox(); }
@@ -213,7 +148,7 @@
     var chipsEl = document.getElementById("chips");
     CHIPS.forEach(function (c) {
       var b = document.createElement("button");
-      b.className = "chip"; b.textContent = c.label;
+      b.type = "button"; b.className = "bk-chip"; b.textContent = c.label;
       b.addEventListener("click", function () { setQuery(c.sql); });
       chipsEl.appendChild(b);
     });
@@ -223,24 +158,21 @@
   function buildSchema() {
     var tEl = document.getElementById("schema-tables");
     SCHEMA.forEach(function (t) {
-      var wrap = document.createElement("div"); wrap.className = "tbl";
-      var row = document.createElement("button"); row.className = "tbl-row";
-      row.innerHTML = '<span class="car">▶</span><span class="nm">' + esc(t.name) +
-                      '</span><span class="ct">' + t.rows + "</span>";
-      row.addEventListener("click", function () {
-        wrap.classList.toggle("open");
-        setQuery("SELECT * FROM " + t.name + " LIMIT 20;");
-      });
-      wrap.appendChild(row);
-      var cols = document.createElement("div"); cols.className = "cols";
+      var row = document.createElement("button");
+      row.type = "button"; row.className = "pr-t"; row.setAttribute("aria-expanded", "false");
+      row.innerHTML = esc(t.name) + " <span>" + t.rows + "</span>";
+      var cols = document.createElement("div"); cols.className = "pr-cols"; cols.hidden = true;
       t.cols.forEach(function (cn) {
-        var cb = document.createElement("button"); cb.className = "col";
-        cb.innerHTML = '<span class="dot"></span>' + esc(cn);
-        cb.addEventListener("click", function (ev) { ev.stopPropagation(); insertAtCursor(cn); });
+        var cb = document.createElement("button"); cb.type = "button"; cb.className = "pr-col"; cb.textContent = cn;
+        cb.addEventListener("click", function () { insertAtCursor(cn); });
         cols.appendChild(cb);
       });
-      wrap.appendChild(cols);
-      tEl.appendChild(wrap);
+      row.addEventListener("click", function () {
+        var open = cols.hidden; cols.hidden = !open; row.setAttribute("aria-expanded", String(open));
+        setQuery("SELECT * FROM " + t.name + " LIMIT 20;");
+      });
+      tEl.appendChild(row);
+      tEl.appendChild(cols);
     });
   }
 
@@ -250,12 +182,9 @@
     nobel:    { label: "Nobel",    blurb: "Prize year, subject and winner." },
     football: { label: "Football", blurb: "A sample tournament: teams, games and goals (JOIN practice)." }
   };
-
-  function diffDots(n) {
-    var s = "";
-    for (var i = 1; i <= 3; i++) s += '<span class="dot' + (i <= n ? " on" : "") + '"></span>';
-    return '<span class="diff" title="difficulty ' + n + '/3">' + s + "</span>";
-  }
+  function chKey(id) { return "sqlzoo_" + id; }
+  var LAST = {};   // key → last options given to SQLBook.challenge.set, so an SQL error keeps the verdict on screen
+  function chSet(key, o) { LAST[key] = o; SQLBook.challenge.set(key, o); }
 
   function updateProgressBar() {
     var total = EXERCISES.length, done = 0;
@@ -265,6 +194,10 @@
     var txt = document.getElementById("prog-text");
     if (fill) fill.style.width = pct + "%";
     if (txt) txt.textContent = done + " / " + total + " solved";
+  }
+  function updateBankLink() {
+    var a = document.getElementById("bank-link"), n = window.SQLBank ? SQLBank.dueCount() : 0;
+    if (a) a.textContent = "Mistake Bank" + (n ? " · " + n : "");
   }
 
   /* ---------- cross-device solve-sync (commonplace_progress) ---------- */
@@ -348,20 +281,27 @@
             if (c) onServer[c] = true;
           });
           for (var code in SQL_EXERCISE_IDS) {
-            var card = document.getElementById("card-" + code);
-            if (onServer[code]) {
-              progress[code] = "done";
-              if (card) card.classList.add("done");
-            } else if (progress[code] === "done") {
-              delete progress[code];          // server reset reaches this device
-              if (card) card.classList.remove("done");
-            }
+            if (onServer[code]) progress[code] = "done";
+            else if (progress[code] === "done") delete progress[code];          // server reset reaches this device
+            paintSolved(code);
           }
           saveProgress(progress);
           updateProgressBar();
         })
         .catch(function () { /* offline — local progress stands */ });
     } catch (e) { /* sync read must never break the page */ }
+  }
+
+  // The .ch box book-ui wraps each exercise in keeps the old card hooks (#card-<id>,
+  // .ex-card, .done, .ex-editor, .ex-head/.ex-title/.ex-prompt, .ex-actions, .ex-out) so
+  // sql-practice-plus.js (tab strip, attempts log), sqlzoo-ui-plus.js (fullscreen, schema
+  // sheet) and sql-highlight.js keep working.
+  function paintSolved(code) {
+    var box = document.getElementById("card-" + code); if (!box) return;
+    var done = progress[code] === "done", c = SQLBook.challenge.get(chKey(code));
+    box.classList.toggle("done", done);
+    if (done && c && c.state !== "right") chSet(chKey(code), { state: "right", verdict: { detail: "Solved earlier on this device." } });
+    if (!done && c && c.state === "right") chSet(chKey(code), { state: "untried" });
   }
 
   function buildExercises() {
@@ -371,136 +311,138 @@
       var items = EXERCISES.filter(function (e) { return e.ds === ds; });
       if (!items.length) return;
       var meta = DS_META[ds] || { label: ds, blurb: "" };
-      var grp = document.createElement("div"); grp.className = "ex-group";
-      grp.innerHTML = '<div class="ex-group-head"><h3>' + esc(meta.label) +
-        '</h3><span class="ex-group-blurb">' + esc(meta.blurb) + "</span></div>";
-      var list = document.createElement("div"); list.className = "ex-cards";
-      items.forEach(function (e) { list.appendChild(buildCard(e)); });
-      grp.appendChild(list);
+      var grp = document.createElement("div"); grp.className = "ex-group"; grp.setAttribute("data-ds", ds);
+      grp.innerHTML = '<div class="pr-group ex-group-head"><h3>' + esc(meta.label) + '</h3><span class="bk-k">' + esc(meta.blurb) + "</span></div>";
+      items.forEach(function (e) { buildExercise(grp, e); });
       host.appendChild(grp);
     });
+    SQLBook.challenge.decorate(host);
+    EXERCISES.forEach(function (e) {
+      var box = host.querySelector('.ch[data-ch="' + chKey(e.id) + '"]'); if (!box) return;
+      box.id = "card-" + e.id;
+      box.classList.add("ex-card");
+      box.querySelector(".ch__head").classList.add("ex-head");
+      box.querySelector(".ex-actions [data-action=\"run\"]").classList.add("run");
+      addStar(box, e);
+      paintSolved(e.id);
+    });
     updateProgressBar();
+    updateBankLink();
   }
 
-  function buildCard(e) {
-    var card = document.createElement("div");
-    card.className = "ex-card" + (progress[e.id] === "done" ? " done" : "");
-    card.id = "card-" + e.id;
+  function buildExercise(grp, e) {
+    var h4 = document.createElement("h4");
+    h4.setAttribute("data-ch-key", chKey(e.id));
+    h4.className = "ex-title";
+    h4.innerHTML = esc(e.id.toUpperCase()) + " · " + esc(e.title) + ' <span class="pr-diff" title="difficulty ' + e.diff + '/3">' + "●●●".slice(0, e.diff) + '<i>' + "●●●".slice(e.diff) + "</i></span>";
+    var p = document.createElement("p"); p.className = "ex-prompt";
+    p.innerHTML = e.prompt; // trusted authored HTML (bold tags only)
 
-    var head = document.createElement("div"); head.className = "ex-head";
-    head.innerHTML =
-      '<span class="ex-id">' + esc(e.id.toUpperCase()) + "</span>" +
-      '<span class="ex-title">' + esc(e.title) + "</span>" +
-      diffDots(e.diff) +
-      '<span class="ex-check">✓</span>' +
-      '<button type="button" class="ex-star" aria-pressed="' +
-        (progress[e.id + ":star"] ? "true" : "false") + '" title="Bookmark this exercise">' +
-        (progress[e.id + ":star"] ? "\u2605" : "\u2606") + "</button>";
-    card.appendChild(head);
-
-    // Bookmarks are LOCAL ONLY. Stored as progress[id + ":star"] = true — never the
-    // string "done", and never under the bare id — because hydrateProgressFromSupabase()
-    // deletes any key whose value is "done" that the server does not know about.
-    // The ":code" draft keys survive the same way. There is no server sync for stars.
-    var starB = head.querySelector(".ex-star");
-    starB.addEventListener("click", function () {
-      var on = !progress[e.id + ":star"];
-      if (on) progress[e.id + ":star"] = true; else delete progress[e.id + ":star"];
-      saveProgress(progress);
-      starB.textContent = on ? "\u2605" : "\u2606";
-      starB.setAttribute("aria-pressed", on ? "true" : "false");
-    });
-
-    var prompt = document.createElement("div"); prompt.className = "ex-prompt";
-    prompt.innerHTML = e.prompt; // trusted authored HTML (bold tags only)
-    card.appendChild(prompt);
-
-    var ta = document.createElement("textarea");
-    ta.className = "ex-editor"; ta.spellcheck = false;
-    ta.placeholder = "Write your SQL here, then Run & Check…";
+    var pg = document.createElement("div"); pg.className = "playground"; pg.setAttribute("data-ex", e.id);
+    pg.innerHTML =
+      '<div class="pg-header"><div class="left"><span class="led"></span><span>Exercise ' + esc(e.id.toUpperCase()) + " · " + esc(e.ds) + "</span></div></div>" +
+      '<textarea class="ex-editor" spellcheck="false" placeholder="Write your SQL here, then Run &amp; check…"></textarea>' +
+      '<div class="pg-actions ex-actions"><div class="left-actions">' +
+        '<button class="btn" type="button" data-action="reset">Reset</button>' +
+        '<button class="btn" type="button" data-action="hint" data-hint="' + esc(e.hint || "") + '">Show hint</button>' +
+        '<button class="btn" type="button" data-action="solution" data-solution="' + esc(e.sol) + '">Show solution</button>' +
+      '</div><button class="btn primary" type="button" data-action="run">Run →</button></div>' +
+      '<div class="pg-result ex-out"></div>';
+    var ta = pg.querySelector("textarea");
     ta.value = progress[e.id + ":code"] || "";
-    card.appendChild(window.SQLZOO_KEYS.build(e.ds, ta));
-    card.appendChild(ta);
+    // the key palette sits between the editor and the buttons; its taps never focus the editor
+    var keys = document.createElement("div"); keys.className = "pr-keys";
+    keys.appendChild(window.SQLZOO_KEYS.build(e.ds, ta));
+    pg.insertBefore(keys, pg.querySelector(".pg-actions"));
 
-    var acts = document.createElement("div"); acts.className = "ex-actions";
-    var runB = document.createElement("button"); runB.className = "btn run"; runB.textContent = "Run & Check";
-    var hintB = document.createElement("button"); hintB.className = "btn ghost"; hintB.textContent = "💡 Hint";
-    var revB = document.createElement("button"); revB.className = "btn ghost"; revB.textContent = "Reveal answer";
-    acts.appendChild(runB); acts.appendChild(hintB); acts.appendChild(revB);
-    card.appendChild(acts);
-
-    var hint = document.createElement("div"); hint.className = "ex-hint";
-    hint.innerHTML = '<strong>Hint · </strong>' + esc(e.hint);
-    card.appendChild(hint);
-
-    var fb = document.createElement("div"); fb.className = "ex-feedback";
-    card.appendChild(fb);
-
-    var out = document.createElement("div"); out.className = "ex-out";
-    card.appendChild(out);
-
-    var reveal = document.createElement("div"); reveal.className = "ex-reveal";
-    reveal.innerHTML = '<div class="eyebrow">Reference answer</div><pre>' + esc(e.sol) + "</pre>";
-    card.appendChild(reveal);
+    grp.appendChild(h4); grp.appendChild(p); grp.appendChild(pg);
 
     ta.addEventListener("keydown", function (ev) {
       if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") { ev.preventDefault(); check(); }
     });
     ta.addEventListener("input", function () { progress[e.id + ":code"] = ta.value; saveProgress(progress); });
-    runB.addEventListener("click", check);
-    hintB.addEventListener("click", function () { hint.classList.toggle("open"); });
-    revB.addEventListener("click", function () {
-      reveal.classList.toggle("open");
-      revB.textContent = reveal.classList.contains("open") ? "Hide answer" : "Reveal answer";
+    pg.querySelector('[data-action="run"]').addEventListener("click", check);
+    pg.querySelector('[data-action="reset"]').addEventListener("click", function () {
+      ta.value = ""; ta.dispatchEvent(new Event("input")); SQLBook.pg.set(pg, "idle");
     });
+
+    function bankMiss(reason) {
+      if (!window.SQLBank) return false;
+      var typed = (ta.value || "").trim();
+      SQLBank.miss({ id: chKey(e.id), src: "sqlzoo", srcLabel: "SQLZoo · " + e.id.toUpperCase(), title: e.title,
+        prompt: e.prompt, hint: e.hint || "", href: "Practice/sqlzoo.html#card-" + e.id,
+        solution: e.sol, reason: reason, sql_wrong: typed });
+      updateBankLink();
+      return true;
+    }
+    pg.__bankMiss = bankMiss;
 
     function check() {
       if (!ready) return;
+      var key = chKey(e.id), c = SQLBook.challenge.get(key), attempt = ((c && c.attempt) || 0) + 1;
       var userSql = (ta.value || "").trim();
-      if (!userSql) { setFeedback(fb, false, "Write a query first."); return; }
+      if (!userSql) { SQLBook.pg.set(pg, "idle"); return; }
       var db = freshDb(); // isolated run — sandbox mutations can't affect grading
-      var expected, actual;
+      var expected, actual, t0 = performance.now();
       try { expected = lastResult(db, e.sol); }
-      catch (err) { db.close(); setFeedback(fb, false, "Internal: reference failed (" + esc(err.message) + ")"); return; }
+      catch (err) { db.close(); SQLBook.pg.set(pg, "error", { message: "Internal: reference failed (" + err.message + ")" }); return; }
       try { actual = lastResult(db, userSql); }
       catch (err) {
         db.close();
-        out.innerHTML = "";
-        setFeedback(fb, false, "SQL error: " + esc(err.message || err));
+        SQLBook.pg.set(pg, "error", { message: String(err.message || err) });
+        chSet(key, Object.assign({}, LAST[key], { attempt: attempt }));
         return;
       }
-      // show the user's output
-      if (actual) renderTableInto(out, actual.columns, actual.values, null);
-      else out.innerHTML = '<div class="res-msg ok">Statement ran — no rows returned.</div>';
-
-      var verdict = compare(expected, actual, !!e.order);
       db.close();
-      setFeedback(fb, verdict.ok, verdict.msg, verdict.diff);
+      var ms = Math.max(1, Math.round(performance.now() - t0));
+      SQLBook.pg.set(pg, "ok", actual ? { columns: actual.columns, rows: actual.values, ms: ms } : { message: "Statement ran — no rows returned.", ms: ms });
+
+      var verdict = compare(e, expected, actual);
       if (verdict.ok) {
+        var nxt = nextExercise(e);
+        chSet(key, { state: "right", attempt: attempt, rows: expected.values.length,
+          next: nxt ? { href: "#card-" + nxt.id, label: "Next · " + nxt.id.toUpperCase() } : null });
         progress[e.id] = "done"; saveProgress(progress);
-        card.classList.add("done");
         recordSolve(e.id);
+        if (window.SQLBank) SQLBank.fix(key);
+        updateBankLink();
+        document.getElementById("card-" + e.id).classList.add("done");
         updateProgressBar();
+      } else {
+        chSet(key, { state: "wrong", attempt: attempt, verdict: verdict.verdict, banked: bankMiss(verdict.verdict.reason.toLowerCase()) });
       }
     }
-
-    return card;
+  }
+  function nextExercise(e) {
+    var i = EXERCISES.indexOf(e);
+    for (var k = 1; k < EXERCISES.length; k++) { var n = EXERCISES[(i + k) % EXERCISES.length]; if (progress[n.id] !== "done") return n; }
+    return null;
   }
 
-  function setFeedback(el, ok, msg, diff) {
-    el.className = "ex-feedback show " + (ok ? "ok" : "err");
-    // The verdict sits in its own span so the attempts log can read just that line.
-    el.innerHTML = '<span class="ex-verdict">' + (ok ? "✓ " : "✕ ") + msg + "</span>";
-    if (!diff) return;
-    // Plain "expected / yours" rows. Deliberately unstyled beyond the basics —
-    // the designed verdict panel comes in a later phase.
-    var cell = function (v) { return v === null ? "NULL" : esc(v); };
-    el.innerHTML +=
-      '<div class="ex-diff" style="margin-top:8px;font-size:12px;line-height:1.55;font-family:\'JetBrains Mono\',monospace">' +
-        '<div style="opacity:0.8">first difference · row ' + (diff.index + 1) + ' · ' + esc(diff.columns.join(", ")) + "</div>" +
-        '<div><b>expected</b>&nbsp; ' + diff.expected.map(cell).join(" · ") + "</div>" +
-        '<div><b>yours</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ' + diff.actual.map(cell).join(" · ") + "</div>" +
-      "</div>";
+  // Revealing a solution banks the exercise too
+  document.addEventListener("sqlbook:solution", function (ev) {
+    var m = /^sqlzoo_(.+)$/.exec(ev.detail.key || ""); if (!m) return;
+    var pg = document.querySelector('.playground[data-ex="' + m[1] + '"]');
+    if (pg && pg.__bankMiss) pg.__bankMiss("solution revealed");
+  });
+
+  // Bookmarks are LOCAL ONLY. Stored as progress[id + ":star"] = true — never the
+  // string "done", and never under the bare id — because hydrateProgressFromSupabase()
+  // deletes any key whose value is "done" that the server does not know about.
+  // The ":code" draft keys survive the same way. There is no server sync for stars.
+  function addStar(box, e) {
+    var on0 = !!progress[e.id + ":star"];
+    var starB = document.createElement("button");
+    starB.type = "button"; starB.className = "ex-star"; starB.title = "Bookmark this exercise";
+    starB.setAttribute("aria-pressed", String(on0)); starB.textContent = on0 ? "★" : "☆";
+    starB.addEventListener("click", function () {
+      var on = !progress[e.id + ":star"];
+      if (on) progress[e.id + ":star"] = true; else delete progress[e.id + ":star"];
+      saveProgress(progress);
+      starB.textContent = on ? "★" : "☆";
+      starB.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    box.querySelector(".ch__head").insertBefore(starB, box.querySelector(".ch-badge"));
   }
 
 })();

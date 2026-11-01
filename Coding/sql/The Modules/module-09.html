@@ -865,6 +865,7 @@ function compareState(expected, actual) {
 function readProgress() { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}"); } catch (e) { return {}; } }
 function writeProgress(key, value) {
   try { const st = readProgress(); if (value) st[key] = value; else delete st[key]; localStorage.setItem(PROGRESS_KEY, JSON.stringify(st)); } catch (e) {}
+  if (window.SQLSync) SQLSync.changed();
   if (window.paintModProgress) paintModProgress();
 }
 const CH_LAST = {}; // key → last options passed to SQLBook.challenge.set
@@ -880,6 +881,22 @@ function solutionOf(pg) {
   const box = pg.closest('.ch[data-kind="auto"]'), solBtn = pg.querySelector('[data-action="solution"]');
   return (solBtn && solBtn.dataset.solution) || (box && window.SQLBook && (SQLBook.challenge.get(box.getAttribute("data-ch")) || {}).solution) || "";
 }
+// ── Mistake Bank (lib/sql-bank.js): misses and reveals go in, right answers move them on ──
+function bankMiss(box, pg, reason) {
+  if (!window.SQLBank) return false;
+  const h4 = box.querySelector("h4"), key = box.getAttribute("data-ch"), hint = pg.querySelector('[data-action="hint"]');
+  const m = key.match(/^ex_(\d+)_(\d+)_(\d+)$/), typed = pg.querySelector("textarea").value.trim();
+  SQLBank.miss({
+    id: key, src: "module", srcLabel: m ? "Module " + m[1] + " · " + m[1] + "." + m[2] + "." + m[3] : key,
+    title: (h4.textContent.split(" — ")[1] || h4.textContent).trim(),
+    prompt: Array.from(box.querySelectorAll(":scope > p")).map(p => p.innerHTML).join(" "),
+    hint: hint ? hint.dataset.hint || "" : "",
+    href: "The Modules/" + location.pathname.split("/").pop() + "#" + h4.id,
+    solution: solutionOf(pg), reason: reason, sql_wrong: /^--[^\n]*$/.test(typed) ? "" : typed
+  });
+  return true;
+}
+function bankFix(key) { if (window.SQLBank) SQLBank.fix(key); }
 async function grade(pg, db, last, error, before) {
   const box = pg.closest('.ch[data-kind="auto"]'); if (!box || !window.SQLBook) return;
   const key = box.getAttribute("data-ch"), c = SQLBook.challenge.get(key); if (!c) return;
@@ -898,8 +915,8 @@ async function grade(pg, db, last, error, before) {
       return keep();
     }
     const r = compareState(snapshot(refDb), snapshot(db)); refDb.close();
-    if (r.ok) { chSet(key, { state: "right", attempt, verdict: { detail: "Your database matches the answer's." }, next: nextChallenge(box) }); writeProgress(key, "done"); }
-    else chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: false });
+    if (r.ok) { chSet(key, { state: "right", attempt, verdict: { detail: "Your database matches the answer's." }, next: nextChallenge(box) }); writeProgress(key, "done"); bankFix(key); }
+    else chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: bankMiss(box, pg, r.verdict.reason.toLowerCase()) });
     return;
   }
   let ref;
@@ -910,8 +927,9 @@ async function grade(pg, db, last, error, before) {
   if (r.ok) {
     chSet(key, { state: "right", attempt, rows: expected.values.length, next: nextChallenge(box) });
     writeProgress(key, "done");
+    bankFix(key);
   } else {
-    chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: false });
+    chSet(key, { state: "wrong", attempt, verdict: r.verdict, banked: bankMiss(box, pg, r.verdict.reason.toLowerCase()) });
   }
 }
 
@@ -978,13 +996,20 @@ document.querySelectorAll("main h2").forEach(h => {
   });
 });
 
+let bookReady = false;
 document.addEventListener("sqlbook:ready", () => {
+  bookReady = true;
   // playground-enhancements.js adds its own Reset data buttons; route them through the hook
   document.querySelectorAll(".pg-reset-data").forEach(b => { const n = b.cloneNode(true); n.setAttribute("data-action", "reset-data"); b.replaceWith(n); });
+  paintSaved();
+});
+// sql-sync.js merged progress or checks from another device
+document.addEventListener("sqlsync:pulled", () => { if (bookReady) { paintSaved(); if (window.paintModProgress) paintModProgress(); } });
+function paintSaved() {
   const st = readProgress();
   document.querySelectorAll(".ch[data-ch]").forEach(box => {
     const key = box.getAttribute("data-ch");
-    if (st[key] !== "done") return;
+    if (st[key] !== "done" || ["right", "done"].indexOf(box.getAttribute("data-state")) > -1) return;
     if (box.getAttribute("data-kind") === "text") chSet(key, { state: "done" });
     else chSet(key, { state: "right", verdict: { detail: "Solved earlier on this device." }, next: nextChallenge(box) });
   });
@@ -994,14 +1019,14 @@ document.addEventListener("sqlbook:ready", () => {
   document.querySelectorAll(".bk-modlist a[data-mod]").forEach(a => {
     const mod = a.dataset.mod, p = per[parseInt(mod, 10)], out = a.querySelector(".p");
     const ok = checks[mod] && checks[mod].pass ? ' <span class="ok">✓</span>' : "";
-    if (p && mod !== "09") out.innerHTML = p[0] + " / " + p[1] + ok; else if (ok) out.innerHTML += ok;
+    if (p && mod !== "09") out.innerHTML = p[0] + " / " + p[1] + ok; else out.innerHTML = (mod === "09" ? "read-only" : "") + ok;
   });
-});
+}
 document.addEventListener("sqlbook:markdone", e => writeProgress(e.detail.key, e.detail.done ? "done" : null));
 document.addEventListener("sqlbook:solution", e => {
-  // book-ui paints "revealed" right after this event; repaint without the Mistake Bank line (the bank lands in pass 4)
-  const key = e.detail.key;
-  setTimeout(() => chSet(key, { state: "revealed", attempt: e.detail.attempts, banked: false }), 0);
+  // book-ui paints "revealed" (with its Mistake Bank line) right after this event
+  const box = document.querySelector('.ch[data-ch="' + e.detail.key + '"]');
+  if (box) bankMiss(box, box.querySelector(".playground"), "solution revealed");
 });
 </script>
 <script>
@@ -1017,6 +1042,8 @@ window.paintModProgress=function(){var hs=document.querySelectorAll('main h4[id^
 <script src="funnel-interactive.js" defer></script>
 <script src="../../../_lib/progress-backup.js"></script>
 <script src="../lib/sql-kb-fix.js?v=2"></script>
+<script src="../lib/sql-bank.js?v=1"></script>
+<script src="../lib/sql-sync.js?v=1"></script>
 <script src="../lib/book-ui.js?v=2"></script>
 </body>
 </html>
