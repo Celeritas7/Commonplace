@@ -396,17 +396,33 @@
     return booting;
   }
 
+  /* Jupyter-only lines (%matplotlib inline, !pip install …) are not Python and
+     make the whole cell a SyntaxError. Swap each for "pass" at the same indent;
+     %timeit/%time just run their statement once. "% (" format continuations are
+     ordinary Python and are left alone. */
+  function jupyterLines(src) {
+    const skipped = [];
+    const code = src.replace(/^([ \t]*)(%%?[a-zA-Z_]\w*|![ \t]*[a-zA-Z]).*$/gm, (line, ind) => {
+      const t = line.trim(), m = t.match(/^%%?time(?:it)?\b(.*)$/);
+      if (m && m[1].trim()) return ind + m[1].trim();
+      skipped.push(t);
+      return ind + "pass";
+    });
+    return { code, skipped };
+  }
+
   async function exec(c) {
     const py = await boot();
     kstate("is-busy", "running…");
-    let stdout = "";
+    const jl = jupyterLines(c.src);
+    let stdout = jl.skipped.length ? "Skipped Jupyter-only " + (jl.skipped.length > 1 ? "lines" : "line") + ": " + jl.skipped.join(" · ") + "\n" : "";
     py.setStdout({ batched: (t) => { stdout += t + "\n"; } });
     py.setStderr({ batched: (t) => { stdout += t + "\n"; } });
     const live = { stdout: "", result: "", err: "", imgs: [] };
     const figBg = prefs.skin === "paper" ? "#f5f6f8" : "#0e1422";
     try {
-      await py.loadPackagesFromImports(c.src);
-      const r = await py.runPythonAsync(c.src);
+      await py.loadPackagesFromImports(jl.code);
+      const r = await py.runPythonAsync(jl.code);
       if (r !== undefined && r !== null) {
         try { live.result = py.globals.get("repr")(r).toString(); } catch (e) { live.result = String(r); }
         if (r && r.destroy) try { r.destroy(); } catch (e) {}
