@@ -5,12 +5,20 @@ via JupyterLite/Pyodide — no install, no server account.
 
 ## Run it
 
-JupyterLite must be served over HTTP; double-clicking `index.html` will not work.
+Pages must be served over HTTP; double-clicking `index.html` will not work. Serve the
+**Commonplace root** (two folders up), not this folder, so the shared `_lib/` is reachable.
 
-- **Windows:** double-click `START_HERE.bat`, then open <http://localhost:8000>.
-- **Anything else:** `python -m http.server 8000` in this folder, then open the same URL.
+- **Windows:** double-click `START_HERE.bat`. It serves the root and opens
+  <http://localhost:8000/Coding/AI_study/index.html>. The root `run-commonplace-study.bat` works too.
+- **Anything else:** `python -m http.server 8000` in the Commonplace root, then open the same URL.
 
-First load takes ~20–30 s while the Python runtime downloads. Internet is required.
+### Offline
+
+Everything the pages need is loaded from `Commonplace/_lib/` (React, fonts, CodeMirror,
+marked, MathJax, mermaid, Pyodide), so the landing page, reader, notes, maths and flowcharts
+all work without internet. In the reader, **numpy cells run offline**; cells that need
+pandas, scikit-learn, matplotlib etc. download those packages and need internet. The raw
+JupyterLite apps (`lab/`, `notebooks/` …) still load their own Python kernel from the CDN.
 
 ## Where things live
 
@@ -30,6 +38,10 @@ AI_study/
 │  └─ data/
 │     ├─ data.js         chapter list (id, file, title, tag, lead)
 │     └─ study-data.js   per-chapter study layer: asides, recall, exercises, lab config
+├─ notes/                study notes: hub, Géron hub + PDF reader, chapter notes, flowcharts
+│  ├─ index.html         notes hub (linked from the landing page)
+│  ├─ _template.html     copy into a tag folder to start a note
+│  └─ _touch.css         shared by every note: 44px controls on touch screens, ≥12px labels
 ├─ files/                the 18 source notebooks (.ipynb) — the reader loads these
 ├─ START_HERE.bat        local server launcher
 └─ (everything else)     JupyterLite runtime — api/ build/ extensions/ lab/ notebooks/
@@ -45,6 +57,10 @@ AI_study/
 
 ## Notes
 
+- The notebooks were written for Jupyter. Before running a cell the reader rewrites
+  IPython-only lines: `%matplotlib` is dropped, `%timeit` times one run, `!pip install`
+  goes through micropip, other `!` / `%` lines print a note. Packages Pyodide doesn't
+  bundle (seaborn, imbalanced-learn, nltk) are installed on first import (needs internet).
 - Cells that fetch remote datasets need network access; a few original notebooks load
   local files that were never in the source folder and will error if re-run.
 - Edits live in the browser session only. Use File ▸ Download in JupyterLab to save.

@@ -371,6 +371,60 @@
   }
 
   /* ----------------------------------------------------------------- pyodide */
+  /* Notebook cells are written for Jupyter (IPython). Pyodide runs plain Python, so
+     IPython-only lines are rewritten first: `%matplotlib` is dropped, `%timeit` times
+     one run, `!pip install` / `%pip install` go through micropip, and other shell
+     commands or magics print a note instead of raising a SyntaxError.
+     Indented magics keep their indent; a `% (a, b)` continuation line is left alone. */
+  const PY_HELPERS = [
+    "import time as _ipy_time",
+    "_IPY_SKIP_PIP = {'pysqlite3', 'sklearn.utils', 'sklearn', 'scikit-learn', 'numpy', 'pandas', 'matplotlib', 'scipy', 'joblib'}",
+    "async def _ipy_pip(names):",
+    "    import micropip",
+    "    for n in names:",
+    "        if n.startswith('-') or n in _IPY_SKIP_PIP: continue",
+    "        try:",
+    "            await micropip.install(n)",
+    "            print('installed ' + n)",
+    "        except Exception as e:",
+    "            print('could not install ' + n + ' in the browser: ' + str(e).splitlines()[0])",
+    "def _ipy_timeit(stmt, g):",
+    "    t = _ipy_time.perf_counter(); exec(stmt, g); d = _ipy_time.perf_counter() - t",
+    "    print('%.3g s (one run; the browser does not repeat like %%timeit)' % d)",
+    "def _ipy_skip(line):",
+    "    print('(skipped in the browser: ' + line + ')')"
+  ].join("\n");
+
+  /* import name -> PyPI name, for packages Pyodide does not load from imports */
+  const PIP_FOR = { seaborn: "seaborn", imblearn: "imbalanced-learn", nltk: "nltk" };
+
+  function toPython(code) {
+    const lines = code.split("\n");
+    const q = (t) => JSON.stringify(t);
+    if (/^%%/.test(lines[0] || "")) {
+      const m = lines[0].slice(2).trim().split(/\s+/)[0];
+      if (m === "time" || m === "timeit") lines.shift();
+      else return "_ipy_skip(" + q(lines[0]) + ")";
+    }
+    return lines.map((line) => {
+      /* only lines that start (after any indent) with %name or !command;
+         a "% (a, b)" format continuation is ordinary Python and is left alone */
+      const mm = line.match(/^([ \t]*)((?:%%?[a-zA-Z_]\w*|![ \t]*[a-zA-Z]).*)$/);
+      if (!mm) return line;
+      const ind = mm[1], l = mm[2];
+      let m;
+      if (/^%matplotlib\b/.test(l)) return ind + "pass  # " + l;
+      if ((m = l.match(/^%(?:timeit|time)\s+(.*)$/))) return ind + "_ipy_timeit(" + q(m[1]) + ", globals())";
+      if ((m = l.match(/^(?:!\s*|%)pip\s+install\s+(.*)$/))) return ind + "await _ipy_pip(" + q(m[1].trim().split(/\s+/)) + ")";
+      return ind + "_ipy_skip(" + q(l.trim()) + ")";
+    }).join("\n");
+  }
+  if (typeof window !== "undefined") window.__toPython = toPython;
+
+  /* Pyodide lives in the shared Commonplace/_lib/pyodide (same 0.26.4 build). Its lock
+     file serves numpy from that folder, so numpy cells run offline; every other package
+     (pandas, scikit-learn, matplotlib…) still comes from the Pyodide CDN and needs internet. */
+  const PYO = new URL("../../../_lib/pyodide/", location.href).href;
   let pyodide = null, booting = null;
   const kpill = document.getElementById("kpill"), ktext = document.getElementById("ktext");
   function kstate(cls, txt) { kpill.className = "kpill " + cls; ktext.textContent = txt; }
@@ -380,49 +434,53 @@
     kstate("is-boot", "booting python…");
     booting = new Promise((resolve, reject) => {
       const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+      s.src = PYO + "pyodide.js";
       s.onload = async () => {
         try {
-          pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
+          pyodide = await loadPyodide({ indexURL: PYO });
           await pyodide.runPythonAsync("import os\nos.environ['MPLBACKEND']='AGG'");
+          await pyodide.runPythonAsync(PY_HELPERS);
           if (window.Lab) await pyodide.runPythonAsync("lab_points = " + JSON.stringify(window.Lab.DEFAULT));
           kstate("is-ready", "python ready");
           resolve(pyodide);
         } catch (e) { kstate("is-err", "boot failed"); reject(e); }
       };
-      s.onerror = () => { kstate("is-err", "no internet?"); reject(new Error("pyodide load failed")); };
+      s.onerror = () => { kstate("is-err", "python unavailable"); reject(new Error("Could not load Python from _lib/pyodide.")); };
       document.head.appendChild(s);
     });
     return booting;
   }
 
-  /* Jupyter-only lines (%matplotlib inline, !pip install …) are not Python and
-     make the whole cell a SyntaxError. Swap each for "pass" at the same indent;
-     %timeit/%time just run their statement once. "% (" format continuations are
-     ordinary Python and are left alone. */
-  function jupyterLines(src) {
-    const skipped = [];
-    const code = src.replace(/^([ \t]*)(%%?[a-zA-Z_]\w*|![ \t]*[a-zA-Z]).*$/gm, (line, ind) => {
-      const t = line.trim(), m = t.match(/^%%?time(?:it)?\b(.*)$/);
-      if (m && m[1].trim()) return ind + m[1].trim();
-      skipped.push(t);
-      return ind + "pass";
-    });
-    return { code, skipped };
-  }
-
   async function exec(c) {
-    const py = await boot();
+    let py;
+    try { py = await boot(); }
+    catch (e) {
+      booting = null;   /* allow a retry on the next Run */
+      c.live = { stdout: "", result: "", imgs: [], err: "Python could not start. " + (e.message || e) };
+      return c.live;
+    }
     kstate("is-busy", "running…");
-    const jl = jupyterLines(c.src);
-    let stdout = jl.skipped.length ? "Skipped Jupyter-only " + (jl.skipped.length > 1 ? "lines" : "line") + ": " + jl.skipped.join(" · ") + "\n" : "";
+    let stdout = "";
     py.setStdout({ batched: (t) => { stdout += t + "\n"; } });
     py.setStderr({ batched: (t) => { stdout += t + "\n"; } });
     const live = { stdout: "", result: "", err: "", imgs: [] };
     const figBg = prefs.skin === "paper" ? "#f5f6f8" : "#0e1422";
     try {
-      await py.loadPackagesFromImports(jl.code);
-      const r = await py.runPythonAsync(jl.code);
+      const code = toPython(c.src);
+      await py.loadPackagesFromImports(code);
+      let r;
+      try { r = await py.runPythonAsync(code); }
+      catch (e) {
+        /* a package Pyodide doesn't bundle (seaborn, imblearn…): install it once, retry */
+        const miss = String(e.message || e).match(/No module named '([\w]+)/);
+        const pkg = miss && PIP_FOR[miss[1]];
+        if (!pkg) throw e;
+        kstate("is-busy", "installing " + pkg + "…");
+        await py.loadPackage("micropip");
+        await py.runPythonAsync("import micropip\nawait micropip.install(" + JSON.stringify(pkg) + ")");
+        kstate("is-busy", "running…");
+        r = await py.runPythonAsync(code);
+      }
       if (r !== undefined && r !== null) {
         try { live.result = py.globals.get("repr")(r).toString(); } catch (e) { live.result = String(r); }
         if (r && r.destroy) try { r.destroy(); } catch (e) {}
@@ -440,6 +498,8 @@
       kstate("is-ready", "python ready");
     } catch (e) {
       live.err = String(e.message || e).split("\n").filter((l) => !l.includes('File "/lib/python')).join("\n");
+      if (!navigator.onLine || /fetch|NetworkError|Failed to load|load package|included in the Pyodide distribution/i.test(live.err))
+        live.err += "\n\nOffline? Only numpy is stored locally. Other packages (pandas, scikit-learn, matplotlib…) need an internet connection.";
       kstate("is-ready", "python ready");
     }
     live.stdout = stdout.replace(/\n$/, "");

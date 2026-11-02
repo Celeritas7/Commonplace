@@ -110,6 +110,7 @@ pre{{background:var(--code-bg);padding:.9rem 1rem;border-radius:10px;overflow:au
 .code-out:not(:empty){{padding:.7rem 1rem}}
 footer{{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)}}
 </style>
+<link rel="stylesheet" href="../_touch.css"/>
 </head>
 <body>
 <div class="wrap">
@@ -133,11 +134,13 @@ rb.onclick=()=>{{localStorage.setItem('reviewed-'+NID,new Date().toISOString().s
 let pyodide=null;
 document.querySelectorAll('.run').forEach(btn=>btn.onclick=async()=>{{
   const i=btn.dataset.i,st=document.getElementById('st'+i),out=document.getElementById('out'+i);
-  if(!pyodide){{st.textContent='loading Python… (first run only)';
-    await new Promise(r=>{{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js';s.onload=r;document.head.appendChild(s);}});
-    pyodide=await loadPyodide();await pyodide.loadPackage('numpy');st.textContent='';}}
-  out.textContent='';pyodide.setStdout({{batched:t=>out.textContent+=t+"\n"}});
-  try{{await pyodide.runPythonAsync(document.getElementById('code'+i).value);}}catch(e){{out.textContent+="\n"+e;}}
+  try{{
+    if(!pyodide){{st.textContent='loading Python… (first run only)';
+      await new Promise((res,rej)=>{{const s=document.createElement('script');s.src='../../../../_lib/pyodide/pyodide.js';s.onload=res;s.onerror=()=>rej(new Error('could not load Python'));document.head.appendChild(s);}});
+      pyodide=await loadPyodide();await pyodide.loadPackage('numpy');st.textContent='';}}
+    out.textContent='';pyodide.setStdout({{batched:t=>out.textContent+=t+"\n"}});
+    await pyodide.runPythonAsync(document.getElementById('code'+i).value);
+  }}catch(e){{out.textContent+="\n"+(e.message||e);st.textContent='error';}}
 }});
 </script>
 </body>
