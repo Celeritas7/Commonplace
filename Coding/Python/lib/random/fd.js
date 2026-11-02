@@ -4,7 +4,7 @@
  * Both call spec.onDone(correct) once resolved. Palette comes from the page. */
 (function () {
   "use strict";
-  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function seeded(a, seed){
     var h=0,i; for(i=0;i<seed.length;i++) h=(h*31+seed.charCodeAt(i))&0x7fffffff;
     a=a.slice(); for(i=a.length-1;i>0;i--){ h=(h*1103515245+12345)&0x7fffffff; var j=h%(i+1),t=a[i]; a[i]=a[j]; a[j]=t; }
@@ -16,6 +16,11 @@
     var pool = [], seen = {};
     spec.blanks.forEach(function(b){ pool.push(b.a); (b.lures||[]).forEach(function(l){ pool.push(l); }); });
     var chips = seeded(pool.filter(function(t){ if(seen[t]) return false; seen[t]=1; return true; }), spec.id);
+    /* a chip stays available until it fills as many blanks as need it (e.g. "above" twice) */
+    function usedUp(t){
+      var need = spec.blanks.filter(function(b){ return b.a===t; }).length || 1;
+      return fills.filter(function(f){ return f===t; }).length >= need;
+    }
 
     function draw(){
       var codeHtml = "", parts = spec.code.split(/\{\{(\d+)\}\}/);
@@ -31,7 +36,7 @@
       var h = '<p class="fd-ask">'+spec.ask+'</p><pre class="fd-code">'+codeHtml+"</pre>";
       if(!checked){
         h += '<div class="fd-tray">';
-        chips.forEach(function(t){ h += '<button type="button" class="fd-chip'+(fills.indexOf(t)>=0?" used":"")+'" data-t="'+esc(t)+'">'+esc(t)+"</button>"; });
+        chips.forEach(function(t){ h += '<button type="button" class="fd-chip'+(usedUp(t)?" used":"")+'" data-t="'+esc(t)+'">'+esc(t)+"</button>"; });
         h += '</div><div class="fd-acts"><button type="button" class="fd-btn pri" data-a="check"'+(done<spec.blanks.length?" disabled":"")+">Check</button>"+
              '<button type="button" class="fd-btn" data-a="clear"'+(done?"":" disabled")+">Clear</button></div>";
       } else {

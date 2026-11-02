@@ -10,7 +10,7 @@
  *     (lib/py-worker-engine.js). Headers are added to the response only, never cached.
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v42";
+var VERSION = "cp-py-v43";
 var CORE = [
   "./",
   "index.html",
@@ -90,9 +90,22 @@ var CORE = [
   "lib/theme.js",
   "js/today-card.js",
   "js/today.js",
+  "lib/drills/0_1.js",
   "lib/drills/0_2.js",
   "lib/drills/0_3.js",
   "lib/drills/0_4.js",
+  "lib/drills/1_1.js",
+  "lib/drills/1_2.js",
+  "lib/drills/1_3.js",
+  "lib/drills/1_4.js",
+  "lib/drills/1_5.js",
+  "lib/drills/1_6.js",
+  "lib/drills/1_7.js",
+  "lib/drills/2_1.js",
+  "lib/drills/2_2.js",
+  "lib/drills/2_3.js",
+  "lib/drills/2_4.js",
+  "lib/drills/2_5.js",
   "lib/drills/3_1.js",
   "lib/drills/3_2.js",
   "lib/drills/3_3.js",
