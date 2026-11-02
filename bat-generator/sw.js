@@ -1,5 +1,5 @@
 /* BatSmith offline cache. Bump CACHE whenever a file changes. */
-const CACHE = "batsmith-v1";
+const CACHE = "batsmith-v2";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));

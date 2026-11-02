@@ -57,6 +57,7 @@
   .ib{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;min-height:36px;padding:6px 12px;cursor:pointer;
     display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
   .ib:hover{background:var(--surface-2)}
+  @media(max-width:560px){.appbar{gap:6px;padding:10px 12px}.ib{padding:6px 8px}#themeTxt{display:none}.brand{font-size:16px}}
   .ib .n{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 7px;font-size:11px}
 
   .main{max-width:1440px;margin:0 auto;padding:18px 20px 60px;display:grid;grid-template-columns:250px minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}
@@ -146,6 +147,17 @@
   .li .nm{flex:1;min-width:160px}
   .li .nm b{display:block;font-family:var(--mono);font-size:13.5px}
   .li .nm small{color:var(--text-3)}
+  dialog.wide{width:min(860px,calc(100vw - 32px))}
+  .idxnote{margin:0;padding:10px 16px;font-size:13px;color:var(--text-3);border-bottom:1px solid var(--line-2)}
+  .idxnote .opt{color:var(--text-3);border:1px dashed var(--line);border-radius:999px;padding:0 6px}
+  .ir{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;padding:8px 16px;border-bottom:1px solid var(--line-2);align-items:start}
+  @media(max-width:560px){.ir{grid-template-columns:minmax(0,1fr)}}
+  .ir b{font-family:var(--mono);font-size:13px}
+  .ir small{display:block;color:var(--text-3);font-size:12px}
+  .ir .ts{display:flex;flex-wrap:wrap;gap:5px}
+  .ir .ts button{border:1px solid transparent;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;cursor:pointer;min-height:26px}
+  .ir .ts button.opt{background:transparent;color:var(--text-3);border:1px dashed var(--line)}
+  .ir .none{color:var(--bad);font-size:12.5px;padding:0}
   .empty{padding:28px 16px;text-align:center;color:var(--text-3)}
 
   .help{max-width:1440px;margin:0 auto;padding:0 20px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
@@ -167,6 +179,7 @@
   </div>
   <span class="spacer"></span>
   <span class="pill">Works offline</span>
+  <button class="ib" id="idxBtn" type="button">Commands</button>
   <button class="ib" id="libBtn" type="button">Saved <span class="n" id="libN">0</span></button>
   <button class="ib" id="themeBtn" type="button" aria-label="Switch colour theme"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg> <span id="themeTxt">Auto</span></button>
 </header>
@@ -226,6 +239,11 @@
   </div>
 </section>
 
+<dialog id="idxDlg" aria-labelledby="idxTitle" class="wide">
+  <div class="dh"><h2 id="idxTitle">Command index</h2><input type="search" id="idxQ" placeholder="Filter…" aria-label="Filter commands" style="max-width:180px" /><button class="btn sm" id="idxClose" type="button">Close</button></div>
+  <p class="idxnote">Every command from a batch reference, and the script types whose generated code uses it — found by scanning the actual output. Click a type to open it. <span class="opt">Grey</span> = only with certain options turned on.</p>
+  <div class="lib" id="idx"></div>
+</dialog>
 <dialog id="libDlg" aria-labelledby="libTitle">
   <div class="dh"><h2 id="libTitle">Saved scripts</h2><button class="btn sm" id="libClose" type="button">Close</button></div>
   <div class="lib" id="lib"></div>
@@ -240,7 +258,7 @@
 /* ───────────────────────── helpers ───────────────────────── */
 var L = function (c, w) { return { c: c, w: w || "" }; };
 var B = function () { return { c: "", w: "" }; };
-function rem(o, t) { return o.comments ? [L("REM " + t)] : []; }
+function rem(o, t) { return o.comments ? [L((o.cstyle === "colons" ? ":: " : "REM ") + t)] : []; }
 /* text shown by ECHO / TITLE: escape the characters cmd would otherwise act on */
 function et(s, delayed) {
   s = String(s == null ? "" : s).replace(/\^/g, "^^").replace(/%/g, "%%").replace(/[&|<>()]/g, function (m) { return "^" + m; });
@@ -287,7 +305,9 @@ function COMMON(title, endDef) {
     { k: "title", label: "Window title", type: "text", def: title, help: "Shown in the cmd window's title bar. Leave empty for none." },
     { k: "end", label: "When it finishes", type: "select", def: endDef || "pause",
       opts: [["pause", "Wait for a key (pause)"], ["timeout", "Close after 5 seconds"], ["none", "Close straight away"]] },
-    { k: "comments", label: "Add REM comments to the file", type: "check", def: true }
+    { k: "comments", label: "Add comments to the file", type: "check", def: true },
+    { k: "cstyle", label: "Comment style", type: "select", def: "rem", opts: [["rem", "REM  (works everywhere)"], ["colons", ":: (a label nobody jumps to — shorter, but breaks inside ( ) blocks)"]],
+      show: function (o) { return o.comments; }, help: "<code>::</code> is really a label that can never be a <code>goto</code> target, so cmd skips it. The generator only puts comments outside <code>( … )</code> blocks, so both are safe here." }
   ];
 }
 function head(o, delayed) {
@@ -888,26 +908,64 @@ T.push({
 });
 
 /* 10 · launch */
+/* keep %VAR%, %~dp0, %1, %* working; any other % is a real percent sign in a file name → %% */
+function pctSmart(s) { return String(s).replace(/%~[a-z]*[0-9]|%[0-9*]|%[A-Za-z_][\w()]*%|%/gi, function (m) { return m === "%" ? "%%" : m; }); }
+function kindOf(t) {
+  if (/^www\./i.test(t)) t = "https://" + t;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(t)) return ["web", t, "a website — opens in your default browser"];
+  if (/^(mailto|ms-settings|ms-[a-z-]+|spotify|steam|zoommtg|tel|shell):/i.test(t)) return ["link", t, "a link Windows hands to the app that owns it (Settings, mail, Spotify…)"];
+  var ext = (/\.([A-Za-z0-9]{1,5})$/.exec(t) || [])[1];
+  ext = ext ? ext.toLowerCase() : "";
+  var map = {
+    exe: "a program — it starts", lnk: "a shortcut — whatever it points to opens", bat: "another batch file — it runs in its own window", cmd: "another batch file — it runs in its own window",
+    pdf: "a PDF — opens in your default PDF viewer", xlsx: "an Excel file — opens in Excel (or your default spreadsheet app)", xls: "an Excel file — opens in Excel", xlsm: "an Excel macro file — opens in Excel", csv: "a CSV — opens in your default app for .csv (usually Excel)",
+    docx: "a Word file — opens in Word", doc: "a Word file — opens in Word", pptx: "a PowerPoint file — opens in PowerPoint", txt: "a text file — opens in Notepad (or your default editor)", md: "a Markdown file — opens in your default app for .md",
+    html: "a web page file — opens in your browser", png: "an image — opens in your photo viewer", jpg: "an image — opens in your photo viewer", jpeg: "an image — opens in your photo viewer", mp4: "a video — opens in your video player", mp3: "audio — opens in your music player",
+    zip: "a zip — opens in Explorer", py: "a Python file — opens or runs with whatever .py is set to", url: "an internet shortcut — opens in the browser"
+  };
+  if (map[ext]) return ["file", t, map[ext]];
+  if (ext) return ["file", t, "a ." + ext + " file — opens in the program Windows uses for ." + ext];
+  if (/^[A-Za-z]:\\|^\\\\|^%|\\/.test(t)) return ["folder", t, "a folder — opens in File Explorer (if it is actually a file without an extension, Windows asks which app to use)"];
+  return ["app", t, "a program name — works when Windows can find it by name (PATH or App Paths), e.g. <code>notepad</code>, <code>excel</code>, <code>code</code>, <code>calc</code>"];
+}
 T.push({
-  id: "launch", g: "▶", name: "Launch apps & sites", cat: "Startup", file: "start_work.bat",
-  blurb: "One double-click opens your whole set-up: programs, folders, websites, documents.",
-  concepts: ["start \"\" \"…\"", "timeout /nobreak"],
+  id: "launch", g: "▶", name: "Open apps, files & sites", cat: "Startup", file: "start_work.bat",
+  blurb: "Paste any path — folder, program, PDF, Excel, Word, image, website, shortcut — and one double-click opens them all.",
+  concepts: ["start \"\" \"…\"", "start /wait", "timeout /nobreak", "file associations"],
   fields: [{ group: "What to open" },
-    { k: "items", label: "One per line — a program, folder, file or URL.  Add  | arguments  if needed", type: "area",
-      def: "https://github.com\n%USERPROFILE%\\Documents\ncode | D:\\Coding\\MyProject\nnotepad.exe | %USERPROFILE%\\Desktop\\todo.txt" },
-    { k: "delay", label: "Seconds to wait between each (0 = none)", type: "number", def: 1, min: 0, max: 120 }
+    { k: "items", label: "One per line — paste a path, file, program or web address.  Add  | file-or-arguments  to open it with that program", type: "area",
+      def: "https://github.com\n%USERPROFILE%\\Documents\nD:\\Reports\\Budget 2026.xlsx\nD:\\Manuals\\Car manual.pdf\ncode | D:\\Coding\\MyProject\nexcel | D:\\Reports\\Budget 2026.xlsx",
+      help: "Quotes from Explorer's “Copy as path” are fine. <code>www.</code> addresses get <code>https://</code> added. A real <code>%</code> in a file name is handled; <code>%USERPROFILE%</code>-style variables still work." },
+    { k: "delay", label: "Seconds to wait between each (0 = none)", type: "number", def: 1, min: 0, max: 120 },
+    { k: "wait", label: "Wait for each one to be closed before opening the next (start /wait)", type: "check", def: false,
+      help: "Only works for programs that keep running — browsers and Office often hand off to an already-open window and return at once." }
   ].concat(COMMON("", "none")),
   build: function (o) {
     var items = String(o.items || "").split(/\r?\n/).map(function (l) { var p = l.split("|"); return { t: nq(p[0]), args: p.slice(1).join("|").trim() }; }).filter(function (x) { return x.t; });
-    var d = parseInt(o.delay, 10) || 0;
+    var d = parseInt(o.delay, 10) || 0, sw = o.wait ? "start /wait" : "start";
     var a = head(o); a.push(B());
     items.forEach(function (it, i) {
-      /* a single path/file argument gets quoted (spaces in %USERPROFILE% etc.); switches like --x or /x are left alone */
-      var args = it.args ? " " + (!/"/.test(it.args) && !/^[-\/]/.test(it.args) ? '"' + it.args + '"' : it.args) : "";
-      a.push(L('start "" "' + it.t + '"' + args, i ? "" : "<code>start</code> hands the item to Windows, which opens it with the right program — a URL in the browser, a folder in Explorer — and the script carries on without waiting. The empty <code>\"\"</code> is the window title; without it the quoted path would be taken as the title."));
+      var k = kindOf(it.t), target = pctSmart(k[1]);
+      var arg = it.args, args = "";
+      if (arg) { arg = pctSmart(arg); args = " " + (!/"/.test(arg) && !/^[-\/]/.test(arg) ? '"' + arg + '"' : arg); }
+      var why = (i ? "" : "<code>start</code> hands the item to Windows, exactly like double-clicking it in Explorer, so every file type opens in the program set as its default. The empty <code>\"\"</code> is the window title — without it a quoted path would be taken as the title. ") +
+        (it.args ? "Opens <code>" + esc(it.args) + "</code> with <b>" + esc(it.t) + "</b> instead of the default program." : "This is " + k[2] + ".") +
+        (k[1] !== it.t ? " <code>https://</code> was added — without it Windows looks for a file called “" + esc(it.t) + "”." : "") +
+        (o.wait && !i ? " <code>/wait</code> holds the script until the program is closed." : "");
+      a = a.concat(rem(o, it.args ? it.t + " opens " + it.args : k[0] + ": " + it.t));
+      a.push(L(sw + ' "" "' + target + '"' + args, why));
       if (d && i < items.length - 1) a.push(L("timeout /t " + d + " /nobreak >nul", i ? "" : "Pause between launches so heavy programs don't all start at once. <code>/nobreak</code> ignores key presses."));
     });
     return a.concat(endLines(o));
+  },
+  warn: function (o) {
+    var w = [];
+    String(o.items || "").split(/\r?\n/).forEach(function (l) {
+      var t = nq(l.split("|")[0]); if (!t) return;
+      if (/^[a-z]:[^\\]/i.test(t)) w.push("<code>" + esc(t) + "</code> looks like a path missing the <code>\\</code> after the drive letter.");
+      if (/^(spotify|whatsapp|teams|calculator)$/i.test(t)) w.push("<code>" + esc(t) + "</code>: Store apps have no normal .exe path. Try its link form (e.g. <code>spotify:</code>) or a shortcut (.lnk) to it.");
+    });
+    return w;
   }
 });
 
@@ -935,6 +993,683 @@ T.push({
   }
 });
 
+/* ═════════════════════ more templates: files & text ═════════════════════ */
+function lst(s) { return String(s || "").split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean); }
+function setv(name, val) { return 'set "' + name + "=" + pctSmart(nq(val)) + '"'; }
+
+/* project skeleton: MD, ECHO >, >>, TREE, TYPE, RD */
+T.push({
+  id: "skeleton", g: "▦", name: "Project folder skeleton", cat: "Files", file: "new_project.bat",
+  blurb: "Create a new project folder with sub-folders and starter files (README, .gitignore), then show the tree.",
+  concepts: ["md", "> file", ">> file", "tree /f /a", "type", "rd /s /q"],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "fixed"]), [{ group: "Project" },
+    { k: "ask", label: "Ask for the project name when it runs", type: "check", def: true },
+    { k: "name", label: "Project name (or default)", type: "text", def: "MyProject" },
+    { k: "dirs", label: "Sub-folders — one per line (nested ones like src\\assets are fine)", type: "area", def: "docs\nsrc\nsrc\\assets\ntests\ndata" },
+    { k: "exists", label: "If the folder already exists", type: "select", def: "stop", opts: [["stop", "Stop and change nothing"], ["add", "Add whatever is missing"], ["replace", "Delete it and start fresh (rd /s /q)"]] },
+    { group: "Starter files" },
+    { k: "readme", label: "README.md", type: "check", def: true },
+    { k: "readmeText", label: "README lines", type: "area", def: "One-line description of the project.\n\n## How to run\nTo be written.", show: function (o) { return o.readme; } },
+    { k: "gi", label: ".gitignore", type: "check", def: true },
+    { k: "giText", label: ".gitignore lines", type: "area", def: "node_modules/\n__pycache__/\n.venv/\n*.log", show: function (o) { return o.gi; } },
+    { k: "tree", label: "Show the folder tree at the end", type: "check", def: true },
+    { k: "open", label: "Open the new folder in Explorer", type: "check", def: true }
+  ], COMMON("New project")),
+  build: function (o) {
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o));
+    a.push(L(setv("NAME", o.name || "MyProject"), "The default project name."));
+    if (o.ask) {
+      a.push(L('set /p "NAME=Project name [%NAME%]: "', "Shows the default in brackets. Pressing Enter keeps it, because <code>set /p</code> leaves the variable unchanged on an empty answer."));
+    }
+    a.push(B());
+    if (o.exists === "stop") a = a.concat(block(L('if exist "%NAME%\\" (', "A trailing <code>\\</code> = “exists <em>as a folder</em>”."), [L('echo Folder "%NAME%" already exists - nothing was changed.'), L("pause"), L("exit /b 1")]));
+    if (o.exists === "replace") {
+      a = a.concat(block(L('if exist "%NAME%\\" ('), [
+        L('choice /c YN /m "Delete the existing %NAME% folder and everything in it"', "Deleting a whole tree deserves a question first."),
+        L("if errorlevel 2 exit /b 1"),
+        L('rd /s /q "%NAME%"', "<code>rd</code> removes a folder. <code>/s</code> = including everything inside, <code>/q</code> = don't ask per folder. Nothing goes to the Recycle Bin.")]));
+    }
+    a.push(L('md "%NAME%" 2>nul', "<code>md</code> makes the folder. <code>2&gt;nul</code> hides the error when it already exists."));
+    a.push(L('cd /d "%NAME%"'));
+    lst(o.dirs).forEach(function (d, i) {
+      a.push(L('md "' + cleanPath(d) + '" 2>nul', i ? "" : "One folder per line. <code>md</code> creates any missing parent folders on the way, so <code>src\\assets</code> works even before <code>src</code> exists."));
+    });
+    function writeFile(name, lines, first) {
+      lines.forEach(function (t, i) {
+        a.push(L((i ? ">> " : "> ") + '"' + name + '" ' + (t === "" ? "echo." : "echo " + et(t)),
+          i === 0 && first ? "<code>&gt;</code> sends the line into a file, <b>replacing</b> it; <code>&gt;&gt;</code> <b>adds</b> to the end. Writing the redirect at the <em>front</em> avoids a trap: <code>echo Version 2&gt; file</code> would treat <code>2&gt;</code> as “redirect errors” and lose the 2." : ""));
+      });
+    }
+    if (o.readme) { a.push(B()); writeFile("README.md", ["# %NAME%"].concat(String(o.readmeText || "").split(/\r?\n/)).map(function (t, i) { return i ? t : t; }), true); }
+    if (o.gi) { a.push(B()); writeFile(".gitignore", lst(o.giText), !o.readme); }
+    /* README title uses %NAME% — undo the escaping et() did for that one line */
+    a.forEach(function (l) { if (/^> "README\.md" echo # %%NAME%%$/.test(l.c)) l.c = '> "README.md" echo # %NAME%'; });
+    a.push(B(), L("echo."), L("echo Created %CD%"));
+    if (o.tree) a.push(L("tree /f /a", "<code>tree</code> draws the folder structure. <code>/f</code> lists files too, <code>/a</code> uses plain ASCII lines so it looks right in any font or when saved to a file."));
+    if (o.readme) a.push(L("echo."), L("type README.md", "<code>type</code> prints a text file on screen — a quick check of what was written."));
+    if (o.open) a.push(L('start "" "%CD%"', "Opens the new folder in Explorer."));
+    return a.concat(endLines(o));
+  },
+  warn: function (o) { return o.exists === "replace" ? [{ bad: 1, t: "<code>rd /s /q</code> deletes the existing folder and everything in it (after a Y/N question)." }] : []; }
+});
+
+/* search text: FINDSTR, |, MORE, >, < */
+T.push({
+  id: "search", g: "⌕", name: "Search text in files", cat: "Text", file: "find_text.bat",
+  blurb: "Find every line containing a word or pattern across many files, with line numbers, and save or page through the results.",
+  concepts: ["findstr /s /i /n", "/c:\"…\"", "| more", "> results", "find /c < file"],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "drag", "fixed"]), [{ group: "What" },
+    { k: "ask", label: "Ask for the text when it runs", type: "check", def: true },
+    { k: "text", label: "Text (or default)", type: "text", def: "TODO" },
+    { k: "mode", label: "Match", type: "select", def: "literal", opts: [["literal", "The exact phrase"], ["any", "Any of the words"], ["regex", "A pattern (regular expression)"]] },
+    { k: "pat", label: "In files matching", type: "text", def: "*.txt *.md *.py *.js *.html *.bat" },
+    { k: "sub", label: "Include sub-folders", type: "check", def: true },
+    { k: "icase", label: "Ignore upper/lower case", type: "check", def: true },
+    { k: "names", label: "Only list the file names (not the lines)", type: "check", def: false },
+    { group: "Results" },
+    { k: "out", label: "Results", type: "select", def: "file", opts: [["file", "Save to a file and open it in Notepad"], ["more", "Show on screen, one page at a time"]] }
+  ], COMMON("Find text")),
+  build: function (o) {
+    var pats = words(o.pat); if (!pats.length) pats = ["*.txt"];
+    var sw = (o.sub ? " /s" : "") + (o.icase ? " /i" : "") + (o.names ? " /m" : " /n");
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o));
+    a.push(L(setv("TEXT", o.text || "TODO")));
+    if (o.ask) a.push(L('set /p "TEXT=Search for [%TEXT%]: "', "Enter keeps the default shown in brackets."));
+    var q = o.mode === "literal" ? '/c:"%TEXT%"' : o.mode === "regex" ? '/r /c:"%TEXT%"' : '"%TEXT%"';
+    var cmd = "findstr" + sw + " " + q + " " + pats.join(" ");
+    var why = "<code>findstr</code> searches inside files. " + (o.sub ? "<code>/s</code> sub-folders, " : "") + (o.icase ? "<code>/i</code> ignore case, " : "") +
+      (o.names ? "<code>/m</code> print only file names. " : "<code>/n</code> show line numbers. ") +
+      (o.mode === "literal" ? "<code>/c:\"…\"</code> = the whole phrase literally — without it, <code>\"a b\"</code> means “a <em>or</em> b”." :
+        o.mode === "regex" ? "<code>/r</code> = regular expression: <code>.</code> any character, <code>*</code> repeat, <code>^</code> line start, <code>$</code> line end, <code>[0-9]</code> a digit." :
+        "Several words in quotes = lines containing <em>any</em> of them.");
+    a.push(L("echo Searching for: %TEXT%"), L("echo."));
+    if (o.out === "more") {
+      a.push(L(cmd + " | more", why + " <code>| more</code> pipes the output into <code>more</code>, which shows one screen at a time (Space = next page, Q = quit)."));
+    } else {
+      a.push(L('set "OUT=%TEMP%\\search_results.txt"', "Results go to the Windows temp folder, so they are never searched themselves next time."));
+      a.push(L(cmd + ' > "%OUT%"', why + " <code>&gt;</code> saves the output in a file instead of the screen."));
+      a = a.concat(block(L("if errorlevel 1 (", "<code>findstr</code> sets exit code 1 when nothing matched."), [L("echo No matches found."), L("pause"), L("exit /b 1")]));
+      a.push(L("for /f %%c in ('find /c /v \"\" ^< \"%OUT%\"') do set \"N=%%c\"", "<code>&lt;</code> feeds the file in as if it were typed; <code>find /c /v \"\"</code> counts its lines. Inside <code>'…'</code> the <code>&lt;</code> needs a <code>^</code>."));
+      a.push(L("echo %N% " + (o.names ? "file^(s^)" : "matching line^(s^)") + "."));
+      a.push(L('start "" notepad "%OUT%"', "Opens the results; Ctrl+F works there."));
+    }
+    return a.concat(endLines(o));
+  }
+});
+
+/* attrib */
+T.push({
+  id: "attrib", g: "◌", name: "Hide / protect files", cat: "Files", file: "hide_files.bat",
+  blurb: "Hide, unhide, lock (read-only) or unlock files and folders with ATTRIB.",
+  concepts: ["attrib +h +r", "attrib -h -r", "/s /d"],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "drag", "fixed"]), [{ group: "What" },
+    { k: "target", label: "File, folder or pattern", type: "text", def: "private", help: "e.g. <code>secret.txt</code>, <code>*.pdf</code> or a folder name." },
+    { k: "act", label: "Action", type: "select", def: "hide", opts: [["hide", "Hide (+h)"], ["unhide", "Unhide (-h)"], ["ro", "Make read-only (+r)"], ["rw", "Make writable again (-r)"],
+      ["lock", "Hide and make read-only (+h +r)"], ["unlock", "Unhide and make writable (-h -r)"], ["super", "Super-hide (+s +h)"], ["unsuper", "Undo super-hide (-s -h)"], ["show", "Just show the current flags"]] },
+    { k: "sub", label: "Apply to everything inside too (/s /d)", type: "check", def: false }
+  ], COMMON("")),
+  build: function (o) {
+    var t = nq(o.target) || "secret.txt";
+    var F = { hide: "+h", unhide: "-h", ro: "+r", rw: "-r", lock: "+h +r", unlock: "-h -r", super: "+s +h", unsuper: "-s -h", show: "" }[o.act];
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o));
+    a = a.concat(block(L('if not exist "' + t + '" ('), fail("Nothing called " + t + " here.", null, ["Current folder: %CD%"])));
+    if (F) {
+      a.push(L("attrib " + F + ' "' + t + '"' + (o.sub ? " /s /d" : ""),
+        "<code>+</code> sets a flag, <code>-</code> clears it. <b>h</b> hidden, <b>r</b> read-only, <b>s</b> system, <b>a</b> archive." +
+        (/s/.test(F) ? " System + hidden files stay invisible even when Explorer shows hidden files (unless “Hide protected operating system files” is turned off)." : "") +
+        (o.sub ? " <code>/s</code> = files in sub-folders too, <code>/d</code> = the folders themselves as well." : " Without <code>/s</code>, a folder is flagged but not the files inside it.") +
+        " Hidden is not secret — anyone can unhide it."));
+      a.push(L("echo."), L("echo Flags now:"));
+    }
+    a.push(L('attrib "' + t + '"', "<code>attrib</code> with no flags just shows them: letters at the start of the line (A, H, R, S) are the flags that are set."));
+    return a.concat(endLines(o));
+  }
+});
+
+/* text file tools: TYPE, MORE, SORT, FC, <, >>, echo( */
+T.push({
+  id: "textfile", g: "≡", name: "Text file tools", cat: "Text", file: "text_tool.bat",
+  blurb: "View, sort, count, read the first line, compare two files, or append a timestamped note — on a file you name or drag onto the .bat.",
+  concepts: ["type / more", "sort /o", "fc", "set /p <", ">>", "echo("],
+  fields: [{ group: "File" },
+    { k: "src", label: "Which file?", type: "select", def: "drag", opts: [["drag", "The file dragged onto the .bat"], ["name", "A file name I type"]] },
+    { k: "file", label: "File (in the .bat's folder, or a full path)", type: "text", def: "notes.txt", show: function (o) { return o.src === "name"; } },
+    { group: "Action" },
+    { k: "act", label: "Do", type: "select", def: "append", opts: [["append", "Add a line (journal / log)"], ["view", "Show it"], ["sort", "Sort its lines"], ["count", "Count its lines"], ["first", "Read the first line into a variable"], ["fc", "Compare with another file"]] },
+    { k: "stamp", label: "Put date and time in front of the line", type: "check", def: true, show: function (o) { return o.act === "append"; } },
+    { k: "page", label: "One screen at a time (more)", type: "check", def: true, show: function (o) { return o.act === "view"; } },
+    { k: "rev", label: "Reverse order (Z→A, 9→0)", type: "check", def: false, show: function (o) { return o.act === "sort"; } },
+    { k: "inplace", label: "Overwrite the original (otherwise writes name_sorted.ext)", type: "check", def: false, show: function (o) { return o.act === "sort"; } },
+    { k: "file2", label: "Compare with", type: "text", def: "notes_old.txt", show: function (o) { return o.act === "fc"; } },
+    { k: "fcw", label: "Ignore differences in spaces/tabs (/w)", type: "check", def: false, show: function (o) { return o.act === "fc"; } },
+    { k: "fcc", label: "Ignore upper/lower case (/c)", type: "check", def: false, show: function (o) { return o.act === "fc"; } }
+  ].concat(COMMON("")),
+  build: function (o) {
+    var delayed = o.act === "append";
+    var a = head(o, delayed); a.push(B());
+    a.push(L('cd /d "%~dp0"', "Relative names are looked up next to the .bat."));
+    if (o.src === "drag") {
+      a = a.concat(block(L('if "%~1"=="" (', "<code>%~1</code> = the first file dragged onto the .bat (quotes removed)."), fail("Drag a text file onto this .bat to use it.")));
+      a.push(L('set "F=%~f1"', "<code>%~f1</code> = argument 1 as a full path."));
+    } else a.push(L(setv("F", o.file || "notes.txt")));
+    if (o.act !== "append") a = a.concat(block(L('if not exist "%F%" ('), [L("echo File not found: %F%"), L("pause"), L("exit /b 1")]));
+    a.push(B());
+    if (o.act === "append") {
+      a.push(L('set "LINE="'), L('set /p "LINE=Text to add: "'));
+      a = a.concat(block(L("if not defined LINE ("), [L("echo Nothing typed - file unchanged."), L("pause"), L("exit /b")]));
+      a.push(L('>> "!F!" echo(' + (o.stamp ? "[%DATE% %TIME:~0,5%] " : "") + "!LINE!",
+        "<code>&gt;&gt;</code> appends to the file (creating it the first time). <code>echo(</code> instead of <code>echo </code> is safe even if the text is empty or looks like <code>/?</code>; <code>!LINE!</code> (delayed expansion) prints <code>&amp; | &lt; &gt;</code> in your text literally instead of running them." +
+        (o.stamp ? " <code>%TIME:~0,5%</code> takes the first 5 characters of the time — <code>HH:MM</code>." : "")));
+      a.push(L("echo Added to !F!"));
+    } else if (o.act === "view") {
+      a.push(o.page ? L('more "%F%"', "<code>more</code> shows one screen, then waits: Space = next page, Enter = next line, Q = quit.") : L('type "%F%"', "<code>type</code> prints the whole file at once."));
+    } else if (o.act === "sort") {
+      if (o.inplace) {
+        a.push(L('sort' + (o.rev ? " /r" : "") + ' "%F%" /o "%F%.tmp"', "<code>sort</code> puts lines in alphabetical order; <code>/o</code> writes the result to a file" + (o.rev ? ", <code>/r</code> reverses it" : "") + ". Sorting into a temporary file first means a failure never leaves the original half-written."));
+        a.push(L('move /y "%F%.tmp" "%F%" >nul', "Replace the original with the sorted copy."));
+        a.push(L("echo Sorted %F%"));
+      } else {
+        a.push(L('for %%q in ("%F%") do set "OUT=%%~dpnq_sorted%%~xq"', "A <code>for</code> over one item, just to use the <code>~</code> modifiers: <code>%%~dpnq</code> = folder + name without extension, <code>%%~xq</code> = the extension. (<code>q</code> is used as the loop letter because <code>d p n x</code> are modifier letters.)"));
+        a.push(L('sort' + (o.rev ? " /r" : "") + ' "%F%" /o "%OUT%"', "<code>sort</code> puts lines in alphabetical order; <code>/o</code> writes the result to a file" + (o.rev ? ", <code>/r</code> reverses it" : "") + "."));
+        a.push(L("echo Sorted copy: %OUT%"));
+      }
+    } else if (o.act === "count") {
+      a.push(L("for /f %%c in ('find /c /v \"\" ^< \"%F%\"') do set \"N=%%c\"", "<code>find /v \"\"</code> matches every line, <code>/c</code> counts them. <code>&lt;</code> feeds the file in, so <code>find</code> prints just the number (with a file name argument it would print the name too)."));
+      a.push(L("echo %F% has %N% lines."));
+    } else if (o.act === "first") {
+      a.push(L('set "FIRST="'), L('set /p FIRST=<"%F%"', "<code>set /p</code> normally waits for typing; <code>&lt;</code> makes it read from the file instead — so it grabs the first line."));
+      a.push(L("echo First line: %FIRST%"));
+    } else {
+      a.push(L(setv("F2", o.file2 || "other.txt")));
+      a.push(L("fc /n" + (o.fcw ? " /w" : "") + (o.fcc ? " /c" : "") + ' "%F%" "%F2%"', "<code>fc</code> = file compare; it prints the differing blocks. <code>/n</code> shows line numbers" + (o.fcw ? ", <code>/w</code> ignores whitespace" : "") + (o.fcc ? ", <code>/c</code> ignores case" : "") + "."));
+      a.push(L('set "RC=%errorlevel%"'));
+      a.push(L('if "%RC%"=="0" echo The files are identical.', "<code>fc</code> exit codes: 0 = same, 1 = different, 2 = could not read a file."));
+      a.push(L('if "%RC%"=="1" echo The files are different - see above.'));
+    }
+    return a.concat(endLines(o));
+  }
+});
+
+/* every sub-folder: FOR /D, FOR /D /R, PUSHD, RD */
+T.push({
+  id: "subdirs", g: "⊞", name: "Do something in every sub-folder", cat: "Loops", file: "each_folder.bat",
+  blurb: "Go into each sub-folder (or every level below) and run a command — e.g. git pull in every repo, or delete every __pycache__.",
+  concepts: ["for /d", "for /d /r", "pushd / popd", "rd /s /q"],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "drag", "fixed"]), [{ group: "Which folders" },
+    { k: "depth", label: "Look at", type: "select", def: "top", opts: [["top", "Direct sub-folders only (for /d)"], ["all", "Every level below (for /d /r)"]] },
+    { k: "only", label: "Only folders that contain (optional)", type: "text", def: ".git", help: "e.g. <code>.git</code> = only git repositories, <code>package.json</code> = only Node projects. Empty = all." },
+    { group: "Action" },
+    { k: "act", label: "In each folder", type: "select", def: "pull", opts: [["list", "Just list them"], ["pull", "git pull"], ["status", "git status --short"], ["cmd", "Run my command"], ["del", "Delete folders with a given name"]] },
+    { k: "cmd", label: "Command (runs inside each folder)", type: "text", def: "dir /b", show: function (o) { return o.act === "cmd"; } },
+    { k: "delname", label: "Folder name to delete", type: "text", def: "__pycache__", show: function (o) { return o.act === "del"; } }
+  ], COMMON("Each folder")),
+  build: function (o) {
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o));
+    var only = nq(o.only);
+    if (o.act === "del") {
+      var dn = nq(o.delname) || "__pycache__";
+      a.push(L("echo Folders named " + et(dn) + " under %CD%:"));
+      a.push(L("for /d /r %%d in (" + dn + ") do if exist \"%%d\\\" echo   %%d", "<code>for /d /r</code> walks the whole tree. With a plain name in the brackets it yields that name in <em>every</em> folder — existing or not — so <code>if exist \"%%d\\\"</code> keeps only the real ones."));
+      a.push(L('choice /c YN /m "Delete all of them"'), L("if errorlevel 2 exit /b"));
+      a.push(L("for /d /r %%d in (" + dn + ") do if exist \"%%d\\\" rd /s /q \"%%d\"", "<code>rd /s /q</code> removes each folder and everything inside it, without asking again."));
+      a.push(L("echo Done."));
+      return a.concat(endLines(o));
+    }
+    var loop = o.depth === "all" ? "for /d /r %%d in (*) do (" : "for /d %%d in (*) do (";
+    var body = [];
+    var inner = [];
+    if (o.act === "list") inner.push(L("echo %%~fd", "<code>%%~fd</code> = the folder's full path."));
+    else {
+      inner.push(L('pushd "%%d"', "<code>pushd</code> goes into the folder and remembers where we were; <code>popd</code> comes back. Safer than <code>cd</code> + <code>cd ..</code> inside a loop."));
+      inner.push(L("echo ===== %%~nxd =====", "<code>%%~nxd</code> = just the folder's name."));
+      inner.push(L(o.act === "pull" ? "git pull" : o.act === "status" ? "git status --short" : (String(o.cmd || "dir /b").trim())));
+      inner.push(L("echo."), L("popd"));
+    }
+    if (only) body = block(L('if exist "%%d\\' + only + '" (', "Skip folders that don't contain <code>" + esc(only) + "</code>."), inner);
+    else body = inner;
+    a = a.concat(block(L(loop, o.depth === "all" ? "<code>for /d /r</code> = every folder at every level below this one. <code>*</code> matches all names." : "<code>for /d</code> loops over folders (not files) matching <code>*</code> — the direct sub-folders here."), body));
+    return a.concat(endLines(o));
+  },
+  warn: function (o) { return o.act === "del" ? [{ bad: 1, t: "Deletes every folder with that name below this one (after one Y/N question)." }] : []; }
+});
+
+/* number loop: FOR /L, %var:~-n% */
+T.push({
+  id: "count", g: "#", name: "Repeat with numbers", cat: "Loops", file: "make_numbered.bat",
+  blurb: "Count from one number to another and make numbered folders or files (Day_01 … Day_30), or run a command for each number.",
+  concepts: ["for /l (start,step,end)", "!N:~-2!", "type nul > file"],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "fixed"]), [{ group: "Numbers" },
+    { k: "from", label: "From", type: "number", def: 1 }, { k: "step", label: "Step", type: "number", def: 1 }, { k: "to", label: "To", type: "number", def: 30 },
+    { k: "pad", label: "Pad to this many digits (0 = no padding)", type: "number", def: 2, min: 0, max: 6, help: "2 gives 01, 02 … 10 — so the names sort correctly." },
+    { group: "Action" },
+    { k: "act", label: "For each number", type: "select", def: "dirs", opts: [["dirs", "Make a folder"], ["files", "Make an empty file"], ["echo", "Just print it"], ["cmd", "Run my command"]] },
+    { k: "pat", label: "Name ( {n} = the number )", type: "text", def: "Day_{n}", show: function (o) { return o.act === "dirs" || o.act === "files"; } },
+    { k: "cmd", label: "Command ( {n} = the number )", type: "text", def: "echo Lap {n}", show: function (o) { return o.act === "cmd"; } }
+  ], COMMON("")),
+  build: function (o) {
+    var f = parseInt(o.from, 10) || 0, s = parseInt(o.step, 10) || 1, t = parseInt(o.to, 10); if (isNaN(t)) t = 10;
+    var pad = Math.max(0, Math.min(6, parseInt(o.pad, 10) || 0)), N = pad ? "!N!" : "%%i";
+    var a = head(o, !!pad); a.push(B());
+    a = a.concat(folderLines(o));
+    var body = [];
+    if (pad) {
+      body.push(L('set "N=' + "000000".slice(0, pad) + '%%i"', "Stick zeros in front of the number…"));
+      body.push(L('set "N=!N:~-' + pad + '!"', "…then keep only the last " + pad + " characters: <code>:~-" + pad + "</code> is substring syntax (negative = from the end). <code>!N!</code> because <code>N</code> changes inside the loop."));
+    }
+    var pat = (nq(o.pat) || "Item_{n}").replace(/\{n\}/g, N);
+    if (o.act === "dirs") body.push(L('md "' + pat + '" 2>nul', "Make the folder; <code>2&gt;nul</code> hides “already exists”."));
+    else if (o.act === "files") body.push(L('if not exist "' + pat + '" type nul > "' + pat + '"', "<code>type nul &gt; file</code> creates an empty file. The <code>if not exist</code> protects files that already have content."));
+    else if (o.act === "echo") body.push(L("echo " + N));
+    else body.push(L(String(o.cmd || "echo {n}").replace(/\{n\}/g, N)));
+    a = a.concat(block(L("for /l %%i in (" + f + "," + s + "," + t + ") do (", "<code>for /l</code> counts: <code>(start,step,end)</code>. Here " + f + ", " + (f + s) + ", " + (f + 2 * s) + " … up to " + t + ". A negative step counts down."), body));
+    a.push(L("echo Done."));
+    return a.concat(endLines(o));
+  },
+  warn: function (o) { var n = Math.floor(((parseInt(o.to, 10) || 0) - (parseInt(o.from, 10) || 0)) / (parseInt(o.step, 10) || 1)) + 1; return n > 1000 ? ["That is " + n + " items."] : n < 1 ? ["With these numbers the loop runs zero times."] : []; }
+});
+
+/* string tricks */
+T.push({
+  id: "strings", g: "Aa", name: "Text tricks (strings)", cat: "Text", file: "text_tricks.bat",
+  blurb: "Take part of a piece of text, replace words in it, strip spaces and measure its length — the batch string toolbox.",
+  concepts: ["!T:~0,5!", "!T:~-3!", "!T:old=new!", "!T: =!", "length loop"],
+  fields: [{ group: "Input" },
+    { k: "src", label: "Text comes from", type: "select", def: "ask", opts: [["ask", "Typed when it runs (set /p)"], ["arg", "First argument / dragged file name"], ["fixed", "Fixed text"]] },
+    { k: "text", label: "Fixed text", type: "text", def: "Report_2026_final.docx", show: function (o) { return o.src === "fixed"; } },
+    { group: "Show" },
+    { k: "first", label: "First N characters", type: "number", def: 5, min: 0 },
+    { k: "last", label: "Last N characters", type: "number", def: 4, min: 0 },
+    { k: "midS", label: "Middle — start position (0 = first char)", type: "number", def: 7, min: 0 },
+    { k: "midL", label: "Middle — length", type: "number", def: 4, min: 0 },
+    { k: "from", label: "Replace this…", type: "text", def: "_" }, { k: "to", label: "…with this", type: "text", def: " " },
+    { k: "nospace", label: "Without spaces", type: "check", def: true },
+    { k: "len", label: "Length", type: "check", def: true }
+  ].concat(COMMON("")),
+  build: function (o) {
+    var clean = function (s) { return String(s || "").replace(/[=!%"]/g, ""); };
+    var a = head(o, true); a.push(B());
+    if (o.src === "ask") a.push(L('set "T="'), L('set /p "T=Type some text: "'));
+    else if (o.src === "arg") a.push(L('set "T=%~1"', "<code>%~1</code> = the first argument without quotes — drag a file on to play with its name."));
+    else a.push(L(setv("T", clean(o.text) || "Hello world")));
+    a = a.concat(block(L("if not defined T (", "String tricks on an empty variable print odd things, so stop early."), fail("No text given.")));
+    a.push(B(), L("echo(Text:          [!T!]", "<code>echo(</code> is a safe echo; <code>!T!</code> prints the text even if it contains <code>&amp;</code> or <code>&lt;</code>. Delayed expansion is on, so <code>!</code> marks variables."));
+    var f = parseInt(o.first, 10) || 0, l = parseInt(o.last, 10) || 0, ms = parseInt(o.midS, 10) || 0, ml = parseInt(o.midL, 10) || 0;
+    if (f) a.push(L("echo(First " + f + ":        [!T:~0," + f + "!]", "<code>:~start,length</code> — start at position 0 (the first character), take " + f + "."));
+    if (l) a.push(L("echo(Last " + l + ":         [!T:~-" + l + "!]", "A negative start counts from the end."));
+    if (ml) a.push(L("echo(From " + ms + ", " + ml + " chars: [!T:~" + ms + "," + ml + "!]", "Positions start at 0, so position " + ms + " is character number " + (ms + 1) + "."));
+    var fr = clean(o.from);
+    if (fr) { a.push(L('set "R=!T:' + fr.replace(/^\*/, "") + "=" + clean(o.to) + '!"', "<code>:old=new</code> replaces every <code>" + esc(fr) + "</code> (case-insensitive). The result goes in a new variable; <code>T</code> is unchanged."), L("echo(Replaced:      [!R!]")); }
+    if (o.nospace) a.push(L("echo(No spaces:     [!T: =!]", "Replace a space with nothing = remove all spaces."));
+    if (o.len) {
+      a.push(L('set "LEN=0"'), L(":len_loop", "There is no length command, so count: keep looking at the character at position <code>LEN</code> until there is none."));
+      a.push(L('if not "!T:~%LEN%,1!"=="" (set /a LEN+=1 & goto len_loop)', "<code>%LEN%</code> is read each time the line is reached (the <code>goto</code> re-reads it). <code>&amp;</code> runs two commands on one line."));
+      a.push(L("echo(Length:        %LEN% characters"));
+    }
+    return a.concat(endLines(o));
+  }
+});
+
+/* dropped files: SHIFT, %~z1 %~t1 */
+T.push({
+  id: "dropped", g: "⇣", name: "Handle files dropped on it", cat: "Files", file: "drop_here.bat",
+  blurb: "Drag any number of files onto the .bat: list their size and date, copy them somewhere, or open each one.",
+  concepts: ["%~1", "shift", "%~z1 %~t1 %~nx1", "goto loop"],
+  fields: [{ group: "Action" },
+    { k: "act", label: "For each dropped file", type: "select", def: "info", opts: [["info", "Show name, size and date"], ["copy", "Copy into a folder"], ["open", "Open it"], ["cmd", "Run my command"]] },
+    { k: "dest", label: "Folder (next to the .bat, or a full path)", type: "text", def: "Collected", show: function (o) { return o.act === "copy"; } },
+    { k: "cmd", label: "Command ( {file} = full quoted path, {name} = name.ext )", type: "text", def: "echo {name}", show: function (o) { return o.act === "cmd"; } }
+  ].concat(COMMON("")),
+  build: function (o) {
+    var a = head(o); a.push(B());
+    a = a.concat(block(L('if "%~1"=="" (', "Nothing was dropped — the script was just double-clicked."), fail("Drag one or more files onto this .bat file.")));
+    a.push(L('cd /d "%~dp0"', "When you drop files, the starting folder is unpredictable — fix it to the .bat's own folder."));
+    var dest = cleanPath(o.dest) || "Collected";
+    if (o.act === "copy") a.push(L('if not exist "' + dest + '\\" md "' + dest + '"'));
+    a.push(L('set "COUNT=0"'), B());
+    a.push(L(":next", "Loop label. Each pass handles <code>%1</code>, then <code>shift</code> moves the next file into its place."));
+    a.push(L('if "%~1"=="" goto done', "No more arguments → finished."));
+    if (o.act === "info") a.push(L('echo "%~nx1"   %~z1 bytes   modified %~t1', "Modifiers on an argument: <code>%~nx1</code> name + extension, <code>%~z1</code> size in bytes, <code>%~t1</code> date/time. The name is quoted so a <code>&amp;</code> in it can't break the line."));
+    else if (o.act === "copy") a.push(L('copy /y "%~1" "' + dest + '\\" >nul && echo Copied "%~nx1"', "<code>&amp;&amp;</code> prints the message only if the copy worked."));
+    else if (o.act === "open") a.push(L('start "" "%~1"', "Opens each file with its default program."));
+    else a.push(L(String(o.cmd || "echo {file}").replace(/\{file\}/g, '"%~f1"').replace(/\{name\}/g, "%~nx1")));
+    a.push(L("set /a COUNT+=1"));
+    a.push(L("shift", "<code>shift</code> slides the arguments along: <code>%2</code> becomes <code>%1</code>, <code>%3</code> becomes <code>%2</code>… This is how a script handles any number of arguments."));
+    a.push(L("goto next"));
+    a.push(B(), L(":done"), L("echo."), L("echo %COUNT% file^(s^) handled."));
+    return a.concat(endLines(o));
+  }
+});
+
+/* ═════════════════════ interactive / projects ═════════════════════ */
+T.push({
+  id: "pick", g: "☷", name: "Pick from a list (arrays)", cat: "Interactive", file: "pick_folder.bat",
+  blurb: "Keep a numbered list of places — type a number to open one in Explorer, a terminal or VS Code. Built with a batch “array”.",
+  concepts: ["set \"ITEM[1]=…\"", "for /l", "!ITEM[%%i]!", "if defined ITEM[%PICK%]"],
+  fields: [{ group: "List" },
+    { k: "items", label: "One per line —  Name | path", type: "area", def: "Notes | %USERPROFILE%\\Documents\\Notes\nWork | D:\\Work\nCoding | D:\\Coding\nDownloads | %USERPROFILE%\\Downloads" },
+    { k: "with", label: "Open with", type: "select", def: "explorer", opts: [["explorer", "File Explorer / default program"], ["cmd", "A cmd window in that folder"], ["code", "VS Code"], ["ask", "Ask each time"]] },
+    { k: "again", label: "Show the list again afterwards", type: "check", def: false }
+  ].concat(COMMON("Pick", "none")),
+  build: function (o) {
+    var items = lst(o.items).map(function (l) { var p = l.split("|"); return { n: String(p[0]).replace(/[!%"]/g, "").trim(), p: nq(p.slice(1).join("|")) || nq(p[0]) }; }).filter(function (x) { return x.n; }).slice(0, 99);
+    if (!items.length) items = [{ n: "Documents", p: "%USERPROFILE%\\Documents" }];
+    var a = head(o, true); a.push(B());
+    items.forEach(function (it, i) {
+      a.push(L('set "NAME[' + (i + 1) + "]=" + it.n + '"', i ? "" : "Batch has no real arrays — but a name like <code>NAME[1]</code> is just a variable, so numbering the names gives you one."));
+      a.push(L('set "ITEM[' + (i + 1) + "]=" + it.p.replace(/!/g, "") + '"'));
+    });
+    a.push(L('set "COUNT=' + items.length + '"'), B());
+    a.push(L(":menu"));
+    a.push(L("echo."), L("echo Where to?"));
+    a.push(L("for /l %%i in (1,1,%COUNT%) do echo   %%i. !NAME[%%i]!", "Count 1…COUNT and print each name. <code>!NAME[%%i]!</code> builds the variable name from the counter, then reads it — this is “indexing” the array."));
+    a.push(L('set "PICK="'), L('set /p "PICK=Number (Enter to quit): "'));
+    a.push(L("if not defined PICK exit /b"));
+    a = a.concat(block(L("if not defined ITEM[%PICK%] (", "A number that is not on the list means <code>ITEM[n]</code> was never set."), [L("echo Not on the list."), L("goto menu")]));
+    a.push(L('set "TARGET=!ITEM[%PICK%]!"', "<code>%PICK%</code> is filled in first, then <code>!ITEM[3]!</code> is read — two-step expansion."));
+    var openers = { explorer: ['start "" "!TARGET!"', "Opens the folder (or file) with its default program."], cmd: ['start "" /d "!TARGET!" cmd /k', "<code>/d</code> sets the new window's starting folder."], code: ['start "" code "!TARGET!"', "Opens it in VS Code (needs <code>code</code> on PATH — the installer's default)."] };
+    if (o.with === "ask") {
+      a.push(L('choice /c ECV /m "Open in E=Explorer, C=cmd, V=VS Code"'));
+      a.push(L("if errorlevel 3 (" + openers.code[0] + ") else if errorlevel 2 (" + openers.cmd[0] + ") else (" + openers.explorer[0] + ")", "Highest errorlevel first: V → 3, C → 2, E → 1."));
+    } else a.push(L(openers[o.with][0], openers[o.with][1]));
+    if (o.again) a.push(L("goto menu"));
+    return a.concat(endLines(o));
+  }
+});
+
+T.push({
+  id: "calc", g: "±", name: "Calculator", cat: "Projects", file: "calculator.bat",
+  blurb: "A whole-number calculator: input checking with findstr, arithmetic with set /a, and comparisons with EQU / LSS / GTR.",
+  concepts: ["set /a", "findstr /r", "EQU LSS GTR", "%% modulo", "choice"],
+  fields: [{ group: "Options" },
+    { k: "compare", label: "Also say which number is bigger", type: "check", def: true },
+    { k: "cls", label: "Clear the screen each round", type: "check", def: false }
+  ].concat(COMMON("Calculator", "none")),
+  build: function (o) {
+    var a = head(o); a.push(B());
+    a.push(L(":start"));
+    if (o.cls) a.push(L("cls"));
+    a.push(L("echo."), L("echo === Calculator - whole numbers only ==="));
+    a.push(L('set "A=" & set "OP=" & set "B=" & set "R="', "Clear the answers from the last round (<code>&amp;</code> = several commands on one line)."));
+    a.push(L('set /p "A=First number:  "'));
+    a.push(L('echo(%A%| findstr /r "^-*[0-9]$ ^-*[1-9][0-9]*$" >nul || (echo Not a whole number. & goto start)',
+      "Validation: pipe the input into <code>findstr /r</code> with a pattern meaning “optional minus, then digits only, no leading zero” (a space between patterns = either; a leading 0 would make cmd read the number as octal). <code>||</code> runs the bracket only if it did <em>not</em> match."));
+    a.push(L('set /p "OP=Operator (+ - * / %%): "', "Inside a .bat a literal percent sign is written <code>%%</code>."));
+    a.push(L('set /p "B=Second number: "'));
+    a.push(L('echo(%B%| findstr /r "^-*[0-9]$ ^-*[1-9][0-9]*$" >nul || (echo Not a whole number. & goto start)'));
+    a.push(L('set "OK="'));
+    ["+", "-", "*", "/", "%%"].forEach(function (op, i) { a.push(L('if "%OP%"=="' + op + '" set "OK=1"', i ? "" : "Check the operator against each allowed one (a <code>for</code> list can't be used: it would treat <code>*</code> as a file wildcard).")); });
+    a.push(L("if not defined OK (echo Unknown operator. & goto start)"));
+    a.push(L('if "%OP%"=="/" if %B% EQU 0 (echo Cannot divide by zero. & goto start)', "<code>EQU</code> compares as numbers (<code>==</code> compares text: <code>\"0\"==\"00\"</code> is false)."));
+    a.push(L('if "%OP%"=="%%" if %B% EQU 0 (echo Cannot divide by zero. & goto start)'));
+    a.push(L('set /a "R=A %OP% B"', "<code>set /a</code> does whole-number arithmetic; inside it, variable names don't need <code>%</code>. <code>/</code> drops the remainder, <code>%</code> gives the remainder. Range: about ±2.1 billion."));
+    a.push(L("echo."), L("echo   %A% %OP% %B% = %R%"));
+    if (o.compare) {
+      a.push(L("if %A% GTR %B% (echo   %A% is bigger.) else if %A% LSS %B% (echo   %B% is bigger.) else (echo   They are equal.)",
+        "<code>GTR</code> greater than, <code>LSS</code> less than (also <code>GEQ LEQ EQU NEQ</code>). <code>else if</code> chains several tests."));
+    }
+    a.push(L("echo."), L('choice /c YN /m "Another calculation"'), L("if errorlevel 2 exit /b", "N → 2 → leave."), L("goto start"));
+    return a;
+  }
+});
+
+T.push({
+  id: "guess", g: "?", name: "Guess the number", cat: "Projects", file: "guess.bat",
+  blurb: "A small game: %RANDOM%, a try counter, Too high / Too low, a tries limit and a coloured window.",
+  concepts: ["%RANDOM%", "set /a %%", "LSS GTR GEQ EQU", "color"],
+  fields: [{ group: "Game" },
+    { k: "max", label: "Highest number", type: "number", def: 100, min: 2, max: 32767 },
+    { k: "limit", label: "Allowed tries (0 = unlimited)", type: "number", def: 7, min: 0, max: 99 },
+    { k: "color", label: "Window colour", type: "select", def: "0A", opts: [["", "Leave as is"], ["0A", "Green on black (0A)"], ["0E", "Yellow on black (0E)"], ["1F", "White on blue (1F)"], ["F0", "Black on white (F0)"]] }
+  ].concat(COMMON("Guess the number", "none")),
+  build: function (o) {
+    var mx = Math.max(2, Math.min(32767, parseInt(o.max, 10) || 100)), lim = parseInt(o.limit, 10) || 0;
+    var a = head(o); a.push(B());
+    if (o.color) a.push(L("color " + o.color, "<code>color</code> takes two hex digits: background then text. 0 black, 1 blue, A light green, E yellow, F white. Plain <code>color</code> resets it."));
+    a.push(L(":new"));
+    a.push(L('set /a "SECRET=%RANDOM% %% ' + mx + ' + 1"', "<code>%RANDOM%</code> is a new number 0–32767 each time it is read. <code>%%</code> (a literal <code>%</code> in a .bat) is modulo, giving 0–" + (mx - 1) + "; <code>+ 1</code> makes it 1–" + mx + "."));
+    a.push(L('set "TRIES=0"'));
+    a.push(L(echo("I'm thinking of a number from 1 to " + mx + "." + (lim ? " You have " + lim + " tries." : ""))));
+    a.push(B(), L(":guess"));
+    a.push(L('set "G="'), L('set /p "G=Your guess: "'));
+    a.push(L('echo(%G%| findstr /r "^[1-9][0-9]*$" >nul || (echo Whole numbers only. & goto guess)', "Pattern: a digit 1–9, then any digits — rejects text, empty input and leading zeros (which cmd would read as octal)."));
+    a.push(L("if %G% GTR " + mx + " (echo Between 1 and " + mx + ", please. & goto guess)"));
+    a.push(L("set /a TRIES+=1"));
+    a.push(L("if %G% EQU %SECRET% goto win", "Numeric comparisons: <code>EQU</code> equal, <code>LSS</code> less, <code>GTR</code> greater, <code>GEQ</code> greater or equal."));
+    a.push(L("if %G% LSS %SECRET% (echo Too low.) else (echo Too high.)"));
+    if (lim) a.push(L("if %TRIES% GEQ " + lim + " goto lose"));
+    a.push(L("goto guess"));
+    a.push(B(), L(":win"), L("echo Correct! It was %SECRET% - you needed %TRIES% tries."), L("goto again"));
+    if (lim) a.push(B(), L(":lose"), L("echo Out of tries - it was %SECRET%."));
+    a.push(B(), L(":again"), L('choice /c YN /m "Play again"'), L("if errorlevel 2 (" + (o.color ? "color & " : "") + "exit /b)"), L("echo."), L("goto new"));
+    return a;
+  }
+});
+
+/* ═════════════════════ system & network ═════════════════════ */
+function adminCheck(o) {
+  var a = [L("net session >nul 2>&1", "<code>net session</code> only works in an elevated (administrator) window, so its exit code tells us whether we have admin rights.")];
+  if (o.elevate) a = a.concat(block(L("if errorlevel 1 (", "Not admin: start this same .bat again with “Run as administrator” (Windows shows the UAC prompt), and quit this copy."), [
+    L("echo Asking for administrator rights..."),
+    L("powershell -NoProfile -Command \"Start-Process -FilePath '%~f0' -Verb RunAs\"", "<code>%~f0</code> = this .bat's full path; <code>-Verb RunAs</code> = run as administrator."),
+    L("exit /b")]));
+  else a = a.concat(block(L("if errorlevel 1 ("), fail("This needs administrator rights.", null, ["Right-click the .bat and choose \"Run as administrator\"."])));
+  return a;
+}
+
+T.push({
+  id: "netcheck", g: "≋", name: "Network check", cat: "Network", file: "net_check.bat",
+  blurb: "Ping a list of sites/devices and show UP / DOWN, show your IP, optionally clear DNS, log to a file and repeat every few seconds.",
+  concepts: ["ping -n", "find \"TTL=\"", "ipconfig | findstr", "call :sub", ">> log", "&"],
+  fields: [{ group: "Check" },
+    { k: "hosts", label: "Hosts to ping (spaces between)", type: "text", def: "google.com 8.8.8.8 192.168.1.1" },
+    { k: "n", label: "Pings per host", type: "number", def: 2, min: 1, max: 20 },
+    { k: "ip", label: "Show my IP address and gateway", type: "check", def: true },
+    { k: "flush", label: "Clear the DNS cache first (ipconfig /flushdns)", type: "check", def: false },
+    { k: "log", label: "Also append results to network_log.txt next to the .bat", type: "check", def: true },
+    { k: "every", label: "Repeat every N seconds (0 = once)", type: "number", def: 0, min: 0, max: 3600 }
+  ].concat(COMMON("Network check")),
+  build: function (o) {
+    var hosts = words(o.hosts); if (!hosts.length) hosts = ["8.8.8.8"];
+    var ev = parseInt(o.every, 10) || 0, n = parseInt(o.n, 10) || 2;
+    var a = head(o); a.push(B());
+    if (o.log) a.push(L('set "LOG=%~dp0network_log.txt"'));
+    if (o.flush) a.push(L("ipconfig /flushdns >nul & echo DNS cache cleared.", "Forgets cached name → address lookups (fixes “site moved but my PC still goes to the old one”). <code>&amp;</code> runs the echo afterwards on the same line."));
+    if (ev) a.push(L(":check"));
+    a.push(L("echo."), L("echo ===== %DATE% %TIME:~0,8% ====="));
+    if (o.ip) a.push(L('ipconfig | findstr /i /c:"IPv4" /c:"Default Gateway"', "<code>ipconfig</code> prints every adapter's settings; piping into <code>findstr</code> keeps only the address and router lines. Several <code>/c:</code> = match any of them."));
+    a = a.concat(block(L("for %%h in (" + hosts.join(" ") + ") do (", "Loop over the host list (space-separated)."), [
+      L("ping -n " + n + " -w 1000 %%h | find \"TTL=\" >nul", "<code>-n</code> number of pings, <code>-w</code> wait 1000 ms each. A real reply contains <code>TTL=</code>; checking for it is more reliable than ping's own exit code, which can be 0 for “destination unreachable”."),
+      L("if errorlevel 1 (call :say DOWN %%h) else (call :say UP   %%h)", "<code>if errorlevel</code> inside a loop is checked each time it runs, so no delayed expansion is needed.")]));
+    if (ev) { a.push(L("timeout /t " + ev + " >nul", "Wait, then check again. Close the window (or Ctrl+C) to stop."), L("goto check")); }
+    a = a.concat(endLines(o));
+    a.push(L("exit /b", "Stop here so the subroutine below isn't run by falling into it."));
+    a.push(B(), L(":say", "A subroutine: <code>call :say UP host</code> jumps here with the words as <code>%1 %2</code> — <code>%*</code> is all of them."));
+    a.push(L("echo   %*"));
+    if (o.log) a.push(L('>> "%LOG%" echo %DATE% %TIME:~0,8%  %*', "<code>&gt;&gt;</code> appends one line per result to the log."));
+    a.push(L("goto :eof", "Return to the line after the <code>call</code>."));
+    return a;
+  },
+  warn: function (o) { return o.ip ? ["The IP line filters <code>ipconfig</code> for the English words “IPv4” and “Default Gateway”. On a Windows set to another language, change them in the file (or untick the option)."] : []; }
+});
+
+T.push({
+  id: "sysinfo", g: "ⓘ", name: "System info report", cat: "System", file: "system_report.bat",
+  blurb: "Collect Windows version, hardware, network settings, installed tools and running programs into one text file.",
+  concepts: ["systeminfo", "where", "ipconfig /all", "tasklist", "> / >> file"],
+  fields: [{ group: "Include" },
+    { k: "sys", label: "Windows + hardware (systeminfo — takes ~20 s)", type: "check", def: true },
+    { k: "tools", label: "Check these programs are installed (where)", type: "text", def: "git python node code" },
+    { k: "net", label: "Network settings (ipconfig /all)", type: "check", def: true },
+    { k: "disk", label: "Free space on C:", type: "check", def: true },
+    { k: "tasks", label: "Running programs (tasklist)", type: "check", def: false },
+    { group: "Output" },
+    { k: "where", label: "Save the report", type: "select", def: "bat", opts: [["bat", "Next to the .bat"], ["desk", "On the Desktop"], ["temp", "In the temp folder"]] },
+    { k: "open", label: "Open it in Notepad when done", type: "check", def: true }
+  ].concat(COMMON("System report")),
+  build: function (o) {
+    var dir = { bat: "%~dp0", desk: "%USERPROFILE%\\Desktop\\", temp: "%TEMP%\\" }[o.where];
+    var a = head(o); a.push(B());
+    a.push(L('set "OUT=' + dir + 'report_%COMPUTERNAME%.txt"', "<code>%COMPUTERNAME%</code> is a built-in variable — handy when you collect reports from several PCs." + (o.where === "desk" ? " If OneDrive moved your Desktop, use “Next to the .bat” instead." : "")));
+    a.push(L("echo Collecting information - please wait..."));
+    a.push(L('> "%OUT%" echo System report for %COMPUTERNAME% (user %USERNAME%) - %DATE% %TIME:~0,5%', "The first write uses <code>&gt;</code> to start a fresh file; every later one uses <code>&gt;&gt;</code> to add to it."));
+    function sec(t) { a.push(L('>> "%OUT%" echo.'), L('>> "%OUT%" echo ===== ' + t + " =====")); }
+    if (o.sys) { sec("SYSTEMINFO"); a.push(L('systeminfo >> "%OUT%"', "OS version, install date, uptime, CPU, RAM, hotfixes, network cards.")); }
+    var tools = words(o.tools);
+    if (tools.length) {
+      sec("PROGRAMS");
+      a = a.concat(block(L("for %%t in (" + tools.join(" ") + ") do (", "Check each program name."), [
+        L('where %%t >> "%OUT%" 2>nul || >> "%OUT%" echo %%t: NOT FOUND', "<code>where</code> prints the full path of the file that would run if you typed the name — and fails if there is none. <code>||</code> writes NOT FOUND in that case.")]));
+    }
+    if (o.net) { sec("NETWORK"); a.push(L('ipconfig /all >> "%OUT%"', "Every adapter: IP, MAC address, DNS servers, DHCP.")); }
+    if (o.disk) { sec("FREE SPACE ON C:"); a.push(L('dir C:\\ | find "bytes free" >> "%OUT%"', "The last line of any <code>dir</code> shows the drive's free space.")); }
+    if (o.tasks) { sec("RUNNING PROGRAMS"); a.push(L('tasklist >> "%OUT%"')); }
+    a.push(L("echo Report saved to %OUT%"));
+    if (o.open) a.push(L('start "" notepad "%OUT%"'));
+    return a.concat(endLines(o));
+  }
+});
+
+T.push({
+  id: "shutdown", g: "⏻", name: "Shutdown / restart timer", cat: "System", file: "shutdown_timer.bat",
+  blurb: "Shut down, restart, sign out or hibernate after N minutes — with a message, a Y/N check, and a cancel.",
+  concepts: ["shutdown /s /r /t", "shutdown /a", "set /a", "LEQ"],
+  fields: [{ group: "Timer" },
+    { k: "act", label: "Action", type: "select", def: "s", opts: [["s", "Shut down"], ["r", "Restart"], ["l", "Sign out"], ["h", "Hibernate"], ["a", "Cancel a pending shutdown/restart"]] },
+    { k: "ask", label: "Ask for the minutes when it runs", type: "check", def: true, show: function (o) { return o.act !== "a"; } },
+    { k: "min", label: "Minutes (or default)", type: "number", def: 30, min: 0, max: 10080, show: function (o) { return o.act !== "a"; } },
+    { k: "msg", label: "Message shown to the user", type: "text", def: "Time to stop - saving your work is a good idea.", show: function (o) { return o.act === "s" || o.act === "r"; } },
+    { k: "force", label: "Force-close programs (/f) — unsaved work is lost", type: "check", def: false, show: function (o) { return o.act !== "a"; } },
+    { k: "confirm", label: "Ask Y/N first", type: "check", def: true, show: function (o) { return o.act !== "a"; } }
+  ].concat(COMMON("Shutdown timer")),
+  build: function (o) {
+    var a = head(o); a.push(B());
+    if (o.act === "a") {
+      a.push(L("shutdown /a", "<code>/a</code> = abort a shutdown or restart that is counting down."));
+      a.push(L("if errorlevel 1 (echo Nothing was scheduled.) else (echo Cancelled.)"));
+      return a.concat(endLines(o));
+    }
+    var word = { s: "Shut down", r: "Restart", l: "Sign out", h: "Hibernate" }[o.act];
+    a.push(L('set "MIN=' + (parseInt(o.min, 10) || 0) + '"'));
+    if (o.ask) a.push(L('set /p "MIN=Minutes from now [%MIN%]: "'));
+    a.push(L('set "SECS=0"', "Start at 0 so the test below still works if the answer is empty."));
+    a.push(L('set /a "SECS=MIN*60" 2>nul', "<code>set /a</code> does the arithmetic. Text that isn't a number counts as 0."));
+    a = a.concat(block(L("if %SECS% LEQ 0 (", "<code>LEQ</code> = less than or equal."), fail("Please give a number of minutes greater than 0.")));
+    if (o.confirm) { a.push(L('choice /c YN /m "' + word + ' this PC in %MIN% minutes"'), L("if errorlevel 2 exit /b")); }
+    if (o.act === "s" || o.act === "r") {
+      a.push(L("shutdown /" + o.act + " /t %SECS%" + (o.force ? " /f" : "") + ' /c "' + nq(o.msg).replace(/%/g, "%%").slice(0, 500) + '"',
+        "<code>/" + o.act + "</code> = " + word.toLowerCase() + ", <code>/t</code> = delay in seconds, <code>/c</code> = message in the warning." + (o.force ? " <code>/f</code> closes programs without asking them to save." : "")));
+      a.push(L(echo(word + " scheduled in %MIN% minutes.").replace(/%%MIN%%/, "%MIN%")), L("echo To cancel, run:  shutdown /a"));
+    } else {
+      a.push(L("echo " + word + " in %MIN% minutes. Close this window to cancel."));
+      a.push(L("timeout /t %SECS% /nobreak", "<code>shutdown /" + o.act + "</code> can't take a <code>/t</code> delay, so the script waits itself. Closing the window cancels."));
+      a.push(L("shutdown /" + o.act + (o.force && o.act === "l" ? " /f" : ""), o.act === "h" ? "<code>/h</code> = hibernate (must be enabled on the PC)." : "<code>/l</code> = sign out."));
+    }
+    return a.concat(o.act === "s" || o.act === "r" ? endLines(o) : []);
+  },
+  warn: function (o) { return o.force ? [{ bad: 1, t: "<code>/f</code> closes programs without saving." }] : []; }
+});
+
+T.push({
+  id: "schedule", g: "⏲", name: "Schedule a script", cat: "System", file: "schedule_task.bat",
+  blurb: "Make Windows run a .bat or program automatically — daily, weekly, every N minutes, or at sign-in — with SCHTASKS.",
+  concepts: ["schtasks /create", "/sc /st /mo", "/query", "/delete", "/run"],
+  fields: [{ group: "Task" },
+    { k: "act", label: "Action", type: "select", def: "create", opts: [["create", "Create (or replace) the task"], ["run", "Run it now"], ["show", "Show its details"], ["delete", "Delete it"]] },
+    { k: "name", label: "Task name", type: "text", def: "Nightly backup" },
+    { k: "path", label: "What to run (full path)", type: "text", def: "D:\\Scripts\\backup.bat", show: function (o) { return o.act === "create"; } },
+    { k: "sc", label: "When", type: "select", def: "daily", opts: [["daily", "Every day"], ["weekly", "Every week"], ["minute", "Every N minutes"], ["hourly", "Every N hours"], ["onlogon", "When I sign in"], ["once", "Once, today"]], show: function (o) { return o.act === "create"; } },
+    { k: "st", label: "Time (24 h, HH:MM)", type: "text", def: "21:00", show: function (o) { return o.act === "create" && /daily|weekly|once/.test(o.sc); } },
+    { k: "day", label: "Day", type: "select", def: "MON", opts: [["MON", "Monday"], ["TUE", "Tuesday"], ["WED", "Wednesday"], ["THU", "Thursday"], ["FRI", "Friday"], ["SAT", "Saturday"], ["SUN", "Sunday"]], show: function (o) { return o.act === "create" && o.sc === "weekly"; } },
+    { k: "mo", label: "Every N", type: "number", def: 30, min: 1, max: 1439, show: function (o) { return o.act === "create" && /minute|hourly/.test(o.sc); } },
+    { k: "high", label: "Run with highest privileges (/rl highest)", type: "check", def: false, show: function (o) { return o.act === "create"; } }
+  ].concat(COMMON("Schedule task")),
+  build: function (o) {
+    var name = nq(o.name) || "My task", p = cleanPath(o.path) || "C:\\script.bat";
+    var a = head(o); a.push(B());
+    if (o.act === "create") {
+      var when = " /sc " + o.sc + (o.sc === "weekly" ? " /d " + o.day : "") + (/minute|hourly/.test(o.sc) ? " /mo " + (parseInt(o.mo, 10) || 1) : "") + (/daily|weekly|once/.test(o.sc) ? " /st " + (nq(o.st) || "21:00") : "");
+      a = a.concat(block(L('if not exist "' + p + '" ('), [L("echo Warning: " + et(p) + " does not exist yet - creating the task anyway.")]));
+      a.push(L('schtasks /create /tn "' + name + '" /tr "\\"' + p + '\\""' + when + (o.high ? " /rl highest" : "") + " /f",
+        "<code>/tn</code> task name, <code>/tr</code> what to run — the inner <code>\\\"…\\\"</code> keeps a path with spaces in one piece. <code>/sc</code> schedule" + (/minute|hourly/.test(o.sc) ? ", <code>/mo</code> every N" : "") + (/daily|weekly|once/.test(o.sc) ? ", <code>/st</code> start time" : "") + (o.sc === "weekly" ? ", <code>/d</code> day" : "") + ". <code>/f</code> replaces a task with the same name without asking." + (o.high ? " <code>/rl highest</code> runs it as administrator." : "")));
+      a = a.concat(block(L("if errorlevel 1 (", "Creating tasks for sign-in, or with highest privileges, needs an administrator window."), [L("echo Could not create the task - try right-click, Run as administrator.")]).slice(0, -1),
+        [L(") else ("), L('  echo Task "' + et(name) + '" created. Find it in Task Scheduler.'), L(")")]);
+    } else if (o.act === "run") a.push(L('schtasks /run /tn "' + name + '"', "Starts the task right now, regardless of its schedule."));
+    else if (o.act === "show") a.push(L('schtasks /query /tn "' + name + '" /v /fo list', "<code>/v</code> verbose, <code>/fo list</code> one setting per line: next run time, last result, what it runs…"));
+    else {
+      a.push(L('schtasks /delete /tn "' + name + '"', "Without <code>/f</code>, schtasks asks for confirmation."));
+    }
+    return a.concat(endLines(o));
+  },
+  warn: function (o) { return o.act === "create" && !/^\d{1,2}:\d{2}$/.test(nq(o.st)) && /daily|weekly|once/.test(o.sc) ? [{ bad: 1, t: "Time must look like <code>21:00</code>." }] : []; }
+});
+
+T.push({
+  id: "drive", g: "⛁", name: "Map a network drive", cat: "Network", file: "map_drive.bat",
+  blurb: "Connect a shared folder (\\\\server\\share) as a drive letter, disconnect it, or list what is connected — NET USE.",
+  concepts: ["net use Z: \\\\server\\share", "/persistent", "/user", "/delete"],
+  fields: [{ group: "Drive" },
+    { k: "act", label: "Action", type: "select", def: "map", opts: [["map", "Connect"], ["del", "Disconnect"], ["list", "List connected drives"]] },
+    { k: "letter", label: "Drive letter", type: "text", def: "Z:", show: function (o) { return o.act !== "list"; } },
+    { k: "share", label: "Shared folder", type: "text", def: "\\\\NAS\\Shared", show: function (o) { return o.act === "map"; } },
+    { k: "user", label: "Ask for a user name and password", type: "check", def: false, show: function (o) { return o.act === "map"; } },
+    { k: "persist", label: "Reconnect at every sign-in", type: "check", def: true, show: function (o) { return o.act === "map"; } },
+    { k: "open", label: "Open the drive afterwards", type: "check", def: true, show: function (o) { return o.act === "map"; } }
+  ].concat(COMMON("Network drive")),
+  build: function (o) {
+    var d = (nq(o.letter).replace(/[:\\]/g, "").slice(0, 1).toUpperCase() || "Z") + ":", sh = nq(o.share).replace(/\\+$/, "") || "\\\\server\\share";
+    var a = head(o); a.push(B());
+    if (o.act === "list") { a.push(L("net use", "Lists every mapped drive and connection, with its status.")); return a.concat(endLines(o)); }
+    if (o.act === "del") {
+      a.push(L("net use " + d + " /delete /y", "<code>/delete</code> disconnects; <code>/y</code> answers “yes” if files are still open."));
+      return a.concat(endLines(o));
+    }
+    a = a.concat(block(L("if exist " + d + "\\ (", d + " is already used — say so instead of failing with a cryptic error."), fail(d + " is already in use.", null, ["Disconnect it first with:  net use " + d + " /delete"])));
+    if (o.user) a.push(L('set /p "U=User name (e.g. NAS\\anna): "'));
+    a.push(L("net use " + d + ' "' + sh + '"' + (o.user ? ' * /user:"%U%"' : "") + " /persistent:" + (o.persist ? "yes" : "no"),
+      "Connects the share as drive " + d + "." + (o.user ? " The <code>*</code> makes Windows ask for the password without showing it." : " Uses your current Windows sign-in.") + " <code>/persistent:yes</code> = reconnect at every sign-in."));
+    a = a.concat(block(L("if errorlevel 1 (", "Usual causes: wrong path, the server is off, or wrong user name/password."), fail("Could not connect - check the path and that the server is on.")));
+    a.push(L("echo Connected " + d + " to " + et(sh)));
+    if (o.open) a.push(L('start "" ' + d + "\\"));
+    return a.concat(endLines(o));
+  }
+});
+
+T.push({
+  id: "service", g: "⚙", name: "Service manager", cat: "System", file: "service_manager.bat",
+  blurb: "Check, start, stop or restart a Windows service (e.g. Print Spooler) from a menu — SC and NET START, with an admin check.",
+  concepts: ["sc query", "net start / net stop", "net session", "RunAs", "choice menu"],
+  fields: [{ group: "Service" },
+    { k: "svc", label: "Service name", type: "text", def: "Spooler", help: "The short name from Services → Properties (e.g. <code>Spooler</code>, <code>wuauserv</code>, <code>MySQL80</code>)." },
+    { k: "mode", label: "Mode", type: "select", def: "menu", opts: [["menu", "Menu: status / start / stop / restart"], ["restart", "Just restart it"], ["status", "Just show the status"]] },
+    { k: "elevate", label: "Ask for administrator rights automatically", type: "check", def: true }
+  ].concat(COMMON("Service manager")),
+  build: function (o) {
+    var s = nq(o.svc) || "Spooler";
+    var a = head(o); a.push(B());
+    a.push(L(setv("SVC", s)));
+    a = a.concat(block(L('sc query "%SVC%" >nul 2>&1 || (', "<code>sc query</code> fails if no service has that name."), [L("echo No service called %SVC%."), L("pause"), L("exit /b 1")]));
+    if (o.mode !== "status") a = a.concat(adminCheck(o));
+    var status = [L('sc query "%SVC%" | find "STATE"', "<code>sc query</code> shows the service's state; <code>find</code> keeps just the STATE line (RUNNING, STOPPED…).")];
+    var stop = L('net stop "%SVC%"', "<code>net stop</code> stops the service and waits until it has stopped."), start = L('net start "%SVC%"', "<code>net start</code> starts it and waits until it is running.");
+    if (o.mode === "status") a = a.concat(status);
+    else if (o.mode === "restart") a.push(stop, start);
+    else {
+      a.push(B(), L(":menu"), L("cls"), L("echo Service: %SVC%"));
+      a = a.concat(status);
+      a.push(L("echo."), L("echo   1. Start"), L("echo   2. Stop"), L("echo   3. Restart"), L("echo   4. Refresh status"), L("echo   0. Exit"));
+      a.push(L('choice /c 12340 /n /m "Choose: "'));
+      a.push(L("if errorlevel 5 exit /b", "Highest errorlevel first — key 0 is the 5th key."), L("if errorlevel 4 goto menu"), L("if errorlevel 3 (" + stop.c + " & " + start.c + " & pause & goto menu)", "Everything in the brackets runs only for that key; <code>&amp;</code> chains the commands."),
+        L("if errorlevel 2 (" + stop.c + " & pause & goto menu)"), L("if errorlevel 1 (" + start.c + " & pause & goto menu)"));
+      return a;
+    }
+    return a.concat(endLines(o));
+  }
+});
+
 /* ───────────────────────── state ───────────────────────── */
 var KEY = "batsmith_v1";
 var S = (function () { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })();
@@ -948,7 +1683,7 @@ function vals(t) {
 }
 
 /* ───────────────────────── highlighter ───────────────────────── */
-var KW = "echo|set|if|else|for|do|in|goto|call|exit|pause|cd|start|setlocal|endlocal|not|exist|defined|errorlevel|choice|timeout|title|ren|del|copy|move|md|pushd|popd|robocopy|xcopy|dir|find|tasklist|taskkill|forfiles|cls|git|equ|neq|gtr|geq|lss|leq";
+var KW = "echo|set|if|else|for|do|in|goto|call|exit|pause|cd|start|setlocal|endlocal|not|exist|defined|errorlevel|choice|timeout|title|ren|del|copy|move|md|pushd|popd|robocopy|xcopy|dir|find|tasklist|taskkill|forfiles|cls|git|equ|neq|gtr|geq|lss|leq|findstr|more|type|sort|fc|attrib|tree|rd|shift|color|schtasks|shutdown|ping|ipconfig|systeminfo|where|net|sc|chcp";
 var VAR = "%%~?[A-Za-z]+|%~[a-z]*[0-9]|%[0-9*]|%[A-Za-z_][\\w()]*(?::[^%]*)?%|![A-Za-z_]\\w*!";
 var OP = "&&|\\|\\||\\d?>>?(?:&\\d)?|[|&<]|\\^.";
 var RX_FULL = new RegExp('("[^"]*"?)|(' + VAR + ")|\\b(" + KW + ")\\b|(" + OP + ")", "gi");
@@ -979,6 +1714,16 @@ function hl(line) {
 S.lib = S.lib || [];
 var $ = function (id) { return document.getElementById(id); };
 var lines = [], query = "";
+/* every build goes through here: non-English characters → switch cmd to UTF-8 right after @echo off */
+function gen(t, o) {
+  var ls = t.build(o);
+  if (/[^\x00-\x7f]/.test(ls.map(function (l) { return l.c; }).join(""))) {
+    ls.splice(1, 0, L("chcp 65001 >nul", "Your script contains non-English characters (accents, other alphabets, symbols). cmd normally reads a .bat in an old code page and would garble them; <code>chcp 65001</code> switches this window to UTF-8 — the encoding the file is saved in — before those lines are read. <code>&gt;nul</code> hides the “Active code page” message."));
+    ls._utf8 = true;
+  }
+  return ls;
+}
+var CAT_ORDER = ["Git", "Shell", "Web", "Python", "Files", "Text", "Loops", "Interactive", "Projects", "Startup", "System", "Network"];
 function valsFrom(t, v) { var o = {}; v = v || {}; t.fields.forEach(function (f) { if (f.k) o[f.k] = f.k in v ? v[f.k] : f.def; }); return o; }
 function byId(id) { return T.filter(function (t) { return t.id === id; })[0]; }
 function attr(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
@@ -986,6 +1731,7 @@ function attr(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;
 function renderList() {
   var cats = [], cur = tpl().id, h = "";
   T.forEach(function (t) { if (cats.indexOf(t.cat) < 0) cats.push(t.cat); });
+  cats.sort(function (x, y) { return (CAT_ORDER.indexOf(x) + 99) % 99 - (CAT_ORDER.indexOf(y) + 99) % 99; });
   cats.forEach(function (c) {
     var ts = T.filter(function (t) { return t.cat === c && (!query || (t.name + " " + t.blurb + " " + t.cat + " " + t.concepts.join(" ")).toLowerCase().indexOf(query) >= 0); });
     if (!ts.length) return;
@@ -1024,14 +1770,14 @@ function syncShow() {
 }
 function renderOut() {
   var t = tpl(), o = vals(t);
-  lines = t.build(o);
+  lines = gen(t, o);
   $("code").innerHTML = lines.map(function (l, i) {
     return '<div class="ln' + (l.w ? " has" : "") + '"' + (l.w ? ' title="Click for the explanation"' : "") + '><span class="no">' + (i + 1) + '</span><span class="tx">' + (hl(l.c) || " ") + "</span></div>" +
       (l.w ? '<div class="why">' + l.w + "</div>" : "");
   }).join("");
   $("meta").textContent = lines.length + " lines · " + lines.filter(function (l) { return l.w; }).length + " explained";
   var w = (t.warn ? t.warn(o) : []).map(function (x) { return typeof x === "string" ? { t: x } : x; });
-  if (/[^\x00-\x7f]/.test(lines.map(function (l) { return l.c; }).join(""))) w.push({ t: "Non-ASCII characters (accents, symbols) can show up garbled in cmd. Plain ASCII is safest." });
+  if (lines._utf8) w.push({ t: "Non-English characters found, so <code>chcp 65001</code> (UTF-8) was added at the top. Works on Windows 10 and 11." });
   $("warn").hidden = !w.length;
   $("warn").innerHTML = w.map(function (x) { return "<div" + (x.bad ? ' class="bad"' : "") + "><b>" + (x.bad ? "Careful: " : "Note: ") + "</b>" + x.t + "</div>"; }).join("");
 }
@@ -1074,12 +1820,80 @@ $("lib").addEventListener("click", function (e) {
   var a = b.getAttribute("data-a");
   if (a === "del") { if (confirm("Delete “" + en.name + "” from saved scripts?")) { S.lib.splice(i, 1); save(); renderLib(); } return; }
   if (!t) return;
-  if (a === "dl") { download(en.name, toText(t.build(valsFrom(t, en.vals)))); return; }
+  if (a === "dl") { download(en.name, toText(gen(t, valsFrom(t, en.vals)))); return; }
   S.tpl = t.id; S.vals[t.id] = JSON.parse(JSON.stringify(en.vals)); S.fname[t.id] = en.name; save(); all();
   $("libDlg").close(); toast("Opened " + en.name);
 });
 $("libBtn").addEventListener("click", function () { renderLib(); $("libDlg").showModal(); });
 $("libClose").addEventListener("click", function () { $("libDlg").close(); });
+
+/* command index — computed by scanning generated scripts, so it can never claim coverage that isn't there */
+var CMDS = [
+  ["@ECHO OFF", "hide the commands", /^@echo off/m], ["ECHO", "print text", /^\s*(>>? ?"[^"]*" )?echo[ .(]/mi], ["REM", "comment", /^REM /m], ["::", "comment as a label", /^:: /m],
+  ["PAUSE", "wait for a key", /^\s*pause\b/mi], ["CLS", "clear screen", /^\s*cls\b/mi], ["TITLE", "window title", /^title /m], ["COLOR", "window colours", /\bcolor [0-9A-F]{2}/i],
+  ["CALL", "run and come back", /\bcall /i], ["GOTO", "jump to a label", /\bgoto /i], [":label", "jump target", /^:[a-z_]/mi], ["EXIT", "leave the script", /\bexit\b/i],
+  ["SHIFT", "move arguments along", /^\s*shift\b/mi], ["TIMEOUT", "wait N seconds", /\btimeout \/t/i], ["CHOICE", "pick one key", /\bchoice \/c/i],
+  ["SETLOCAL", "private variables", /^setlocal/mi], ["ENDLOCAL", "end private area", /\bendlocal\b/i], ["CHCP", "code page (UTF-8)", /\bchcp 65001/i],
+  ["CD", "change folder", /\bcd \/d/i], ["PUSHD / POPD", "go in and come back", /\bpushd\b/i], ["DIR", "list a folder", /\bdir (\/|C:)/i], ["TREE", "draw folder tree", /^\s*tree \//m],
+  ["MD / MKDIR", "make folder", /\bmd "/i], ["RD / RMDIR", "remove folder", /\brd \/s/i], ["COPY", "copy files", /\bcopy \/y/i], ["XCOPY", "copy folder trees", /\bxcopy\b/i],
+  ["ROBOCOPY", "mirror folders", /\brobocopy\b/i], ["MOVE", "move / rename", /\bmove \/y/i], ["REN", "rename", /\bren "/i], ["DEL", "delete files", /\bdel \/q/i],
+  ["FORFILES", "files older than N days", /\bforfiles\b/i], ["ATTRIB", "file flags", /\battrib\b/i], ["TYPE", "print a file", /(^|\s)type (nul|")|^type [A-Za-z]/m], ["MORE", "page by page", /(^|\| )more\b/m],
+  ["FIND", "search text", /\bfind (\/[a-z] )*"/i], ["FINDSTR", "search with patterns", /\bfindstr\b/i], ["FC", "compare files", /\bfc \//i], ["SORT", "sort lines", /^\s*sort( \/r)? "/m],
+  ["SET", "make a variable", /^\s*set "/mi], ["SET /A", "arithmetic", /\bset \/a/i], ["SET /P", "ask for input", /\bset \/p/i], ["%name%", "read a variable", /%[A-Z_]+%/],
+  ["%1 %2 %*", "arguments", /%~?1|%\*/], ["%~dp0", "the script's folder", /%~dp0/], ["%~nx1 %~z1 %~t1", "argument modifiers", /%~(nx|z|t|f)1/], ["%%~nxf", "loop variable modifiers", /%%~[a-z]+[a-z]/i],
+  ["%var:~n,l%", "substring", /[%!][A-Z_]+:~-?\d/i], ["%var:a=b%", "replace in text", /![A-Z_]+:[^~!][^!]*=[^!]*!/i], ["!var!", "delayed expansion", /![A-Z_]+(\[[^\]]*\])?!/i],
+  ["%DATE% %TIME%", "date and time", /%DATE%|%TIME/], ["%RANDOM%", "random number", /%RANDOM%/], ["%COMPUTERNAME%", "built-in variables", /%(COMPUTERNAME|USERNAME|USERPROFILE|TEMP|LOCALAPPDATA)%/],
+  ["IF", "test", /\bif /i], ["IF NOT", "inverted test", /\bif not /i], ["IF EXIST", "file/folder there?", /\bif (not )?exist /i], ["IF DEFINED", "variable set?", /\bif (not )?defined /i],
+  ["IF ERRORLEVEL", "did it fail?", /\bif (not )?errorlevel /i], ["IF … ELSE", "either/or", /\) else (\(|if )/i], ["EQU NEQ LSS LEQ GTR GEQ", "compare numbers", /\b(EQU|NEQ|LSS|LEQ|GTR|GEQ)\b/],
+  ["FOR (list)", "each item", /\bfor %%/i], ["FOR /L", "count", /\bfor \/l/i], ["FOR /D", "each folder", /\bfor \/d/i], ["FOR /R", "walk the tree", /\bfor \/d \/r|\bfor \/r/i], ["FOR /F", "read output / lines", /\bfor \/f/i],
+  [">", "output to a file", /(^|\s)> ?"/m], [">>", "append to a file", /(^|\s)>> ?"/m], ["<", "file as input", /(\^?<) ?"/], ["|", "pipe", /\s\|\s/], ["&", "two commands", /\s&\s/],
+  ["&&", "only if it worked", /&&/], ["||", "only if it failed", /\|\|/], ["2>nul", "hide errors", /2\^?>nul/], ["^", "escape a symbol", /\^[<>|&()]/], ["%%", "a literal %", /%% |%%"|%%\)/],
+  ["START", "open anything", /\bstart (\/wait )?"/i], ["TASKLIST", "running programs", /\btasklist\b/i], ["TASKKILL", "close a program", /\btaskkill\b/i], ["SHUTDOWN", "shut down / restart", /\bshutdown \//i],
+  ["PING", "is it reachable?", /\bping -n/i], ["IPCONFIG", "network settings", /\bipconfig\b/i], ["SYSTEMINFO", "PC specification", /\bsysteminfo\b/i], ["WHERE", "which program runs", /(^|\s)where %%/m],
+  ["NET USE", "network drive", /\bnet use\b/i], ["SC / NET START", "Windows services", /\bsc query|\bnet start/i], ["NET SESSION", "admin check", /\bnet session\b/i], ["SCHTASKS", "scheduled tasks", /\bschtasks\b/i],
+  ["POWERSHELL", "call PowerShell", /\bpowershell\b/i]
+];
+/* option sets scanned per type besides the defaults */
+var SCAN = {
+  pull: [{ folder: "fixed", cstyle: "colons" }], sync: [{ notes: true, pullFirst: true }], term: [{ shell: "cmd" }, { shell: "wt" }], server: [{ root: "high" }, { root: "near" }],
+  py: [{ pip: true, env: "x" }], backup: [{ tool: "xcopy" }, { tool: "zip" }, { stamp: false, mirror: true, log: true }], clean: [{ days: 30 }],
+  loop: [{ act: "move", dry: false }, { act: "copy" }, { act: "suffix" }], menu: [{}], launch: [{ wait: true }, { items: "D:\\Fotos\\Café" }], skeleton: [{ exists: "replace" }],
+  search: [{ out: "more" }], attrib: [{ sub: true }], textfile: [{ act: "view" }, { act: "view", page: false }, { act: "sort" }, { act: "sort", inplace: true }, { act: "count" }, { act: "first" }, { act: "fc" }, { src: "name" }],
+  subdirs: [{ act: "del" }, { depth: "all" }, { act: "list", only: "" }], count: [{ act: "files" }, { pad: 0 }], strings: [{ src: "arg" }], dropped: [{ act: "copy" }, { act: "open" }],
+  pick: [{ with: "ask" }], netcheck: [{ flush: true, every: 5 }], sysinfo: [{ tasks: true }], shutdown: [{ act: "a" }, { act: "h" }], schedule: [{ act: "show" }, { act: "delete" }, { act: "run" }],
+  drive: [{ act: "del" }, { act: "list" }, { user: true }], service: [{ mode: "restart" }, { elevate: false }], restart: [{ force: true }]
+};
+var INDEX = null;
+function buildIndex() {
+  if (INDEX) return INDEX;
+  var texts = T.map(function (t) {
+    var base = valsFrom(t, {}), strip = function (s) { return s.split("\n").map(function (l) { return /^\s*(REM|::) /i.test(l) ? l.trim().split(" ")[0] + " " : l; }).join("\n"); }; /* comment text itself is not code */
+    var def = strip(gen(t, base).map(function (l) { return l.c; }).join("\n"));
+    var opt = (SCAN[t.id] || []).map(function (ov) { var o = valsFrom(t, {}); for (var k in ov) o[k] = ov[k]; return strip(gen(t, o).map(function (l) { return l.c; }).join("\n")); }).join("\n");
+    return { t: t, def: def, opt: opt };
+  });
+  INDEX = CMDS.map(function (c) {
+    var hit = [];
+    texts.forEach(function (x) { if (c[2].test(x.def)) hit.push({ id: x.t.id, name: x.t.name, opt: false }); else if (c[2].test(x.opt)) hit.push({ id: x.t.id, name: x.t.name, opt: true }); });
+    return { cmd: c[0], what: c[1], hit: hit };
+  });
+  return INDEX;
+}
+function renderIdx() {
+  var q = ($("idxQ").value || "").trim().toLowerCase();
+  $("idx").innerHTML = buildIndex().filter(function (r) { return !q || (r.cmd + " " + r.what).toLowerCase().indexOf(q) >= 0 || r.hit.some(function (h) { return h.name.toLowerCase().indexOf(q) >= 0; }); }).map(function (r) {
+    var hits = r.hit.slice().sort(function (a, b) { return a.opt - b.opt; });
+    return '<div class="ir"><div><b>' + esc(r.cmd) + "</b><small>" + esc(r.what) + '</small></div><div class="ts">' +
+      (hits.length ? hits.map(function (h) { return '<button type="button" data-id="' + h.id + '"' + (h.opt ? ' class="opt" title="Only with some options turned on"' : "") + ">" + h.name + "</button>"; }).join("") : '<p class="none">Not used by any type</p>') + "</div></div>";
+  }).join("");
+}
+$("idxBtn").addEventListener("click", function () { renderIdx(); $("idxDlg").showModal(); });
+$("idxClose").addEventListener("click", function () { $("idxDlg").close(); });
+$("idxQ").addEventListener("input", renderIdx);
+$("idx").addEventListener("click", function (e) {
+  var b = e.target.closest("button[data-id]"); if (!b) return;
+  S.tpl = b.getAttribute("data-id"); save(); all(); $("idxDlg").close();
+});
 
 /* theme */
 var THEMES = ["auto", "light", "dark"];
@@ -1121,7 +1935,7 @@ function toast(m) { var el = $("toast"); el.textContent = m; el.classList.add("s
 
 $("explain").checked = !!S.explain; $("code").classList.toggle("all", !!S.explain);
 applyTheme(); renderLib(); all();
-window.__batgen = { T: T, build: function (id, over) { var t = byId(id), o = vals(t); for (var k in over || {}) o[k] = over[k]; return t.build(o).map(function (l) { return l.c; }).join("\n"); } };
+window.__batgen = { T: T, build: function (id, over) { var t = byId(id), o = vals(t); for (var k in over || {}) o[k] = over[k]; return gen(t, o).map(function (l) { return l.c; }).join("\n"); }, index: buildIndex };
 
 /* installable + offline when served over http(s); a double-clicked file:// copy works offline anyway */
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
