@@ -32,7 +32,7 @@ Entry point: `index.html` → subject hubs. Libraries are made offline by `make_
 
 | Hub | Apps / sections |
 |---|---|
-| Coding | AI_study (JupyterLite), Python (practice), batch_study, c_and_cpp_study, sql, design_handoff_practice_mistake_bank |
+| Coding | AI_study (JupyterLite), Python (practice), batch_study, c_and_cpp_study, sql, design_handoff_practice_mistake_bank, **offline_apps_study** (Offline App Workshop: the course on building these apps; modules 1–5 written, 6–12 planned) |
 | Mechanical | Automobile, Brown_507_Movements, CMTI, Calc_Console, GD&T, Harness, Hose_routing, Machine_Design, Manufacturing, Motion_lab, Sheet_metal |
 | Maths | Algebra_Trigonometry, Calculus, Linear_Algebra, Statistics |
 | Language study, Office_work (VBA_macros), Exercises | single hubs |
