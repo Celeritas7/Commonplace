@@ -153,6 +153,15 @@
   }
 
   /* ------------------------------------------------------------------ header */
+  /* "read alongside": the study notes that cover this chapter (data.js AI_NOTES_FOR) */
+  function alongside() {
+    const list = (window.AI_NOTES_FOR || {})[ch.id] || [];
+    if (!list.length) return "";
+    return '<div class="alongside"><span class="eyebrow">read alongside</span>' +
+      list.map((n) => '<a href="../' + n[0] + '">' + esc(n[1]) + '</a><span class="why"> — ' + esc(n[2]) + "</span>").join("<br>") +
+      "</div>";
+  }
+
   function buildHead() {
     const prog = progress();
     document.getElementById("head").innerHTML =
@@ -164,6 +173,7 @@
           (ch.lead ? '<p class="blurb">' + ch.lead + "</p>" : "") +
           '<div class="meta"><span>~' + (ch.time || "—") + " min</span><span><b>" + cells.filter((c) => c.type === "code").length +
             "</b> runnable cells</span><span><b>" + sections.length + "</b> sections</span><span>" + file + "</span></div>" +
+          alongside() +
           '<div class="runall"><button class="btn btn-run" id="runAll" title="Run every code cell in the chapter, top to bottom">▶ Run all</button>' +
             '<span id="runAllMsg" class="runmsg" aria-live="polite"></span></div>' +
         "</div>" +
