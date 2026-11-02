@@ -390,6 +390,7 @@
   css.textContent =
     '#cpq-pill{position:fixed;left:48px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:9998;height:30px;padding:0 12px 0 10px;border-radius:999px;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;' + FONT + 'font-size:12.5px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.72;display:flex;align-items:center;gap:6px}' +
     '#cpq-pill:hover{opacity:1;border-color:#8a5a2b}' +
+    '@media (pointer:coarse){#cpq-pill{left:62px;height:44px;padding:0 14px 0 12px;font-size:14px}}' +   /* finger-sized; clears the 44px backup button */
     '#cpq-root{--bg:#fffdf8;--ink:#1f1a14;--soft:#5b5246;--mute:#8d8374;--line:#e6ddcf;--line2:#f1ebe1;--acc:#4f46e5;--acc-bg:#eef0ff;--ok:#047857;--ok-bg:#e7f6ef;--bad:#b42318;--bad-bg:#fdecea;--warn:#b45309;--code-bg:#1f2330;--code-ink:#e8e6df;' +
       'position:fixed;inset:0;z-index:2147483000;background:rgba(20,16,10,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(16px,4vh) 16px 40px;box-sizing:border-box;' + FONT + 'color:var(--ink);font-size:15px;line-height:1.5;text-align:left}' +
     '@media (prefers-color-scheme:dark){#cpq-root{--bg:#1b1916;--ink:#f1ece4;--soft:#c9c0b2;--mute:#958b7d;--line:#3a352e;--line2:#2a2722;--acc:#8b93ff;--acc-bg:#272a4a;--ok:#4ade80;--ok-bg:#16301f;--bad:#f87171;--bad-bg:#3a1c1a;--warn:#fbbf24;--code-bg:#111318}}' +
