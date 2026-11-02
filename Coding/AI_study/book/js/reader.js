@@ -375,8 +375,7 @@
      IPython-only lines are rewritten first: `%matplotlib` is dropped, `%timeit` times
      one run, `!pip install` / `%pip install` go through micropip, and other shell
      commands or magics print a note instead of raising a SyntaxError.
-     Only lines starting in column 0 are touched, so a `% (a, b)` continuation line
-     inside a statement is left alone. */
+     Indented magics keep their indent; a `% (a, b)` continuation line is left alone. */
   const PY_HELPERS = [
     "import time as _ipy_time",
     "_IPY_SKIP_PIP = {'pysqlite3', 'sklearn.utils', 'sklearn', 'scikit-learn', 'numpy', 'pandas', 'matplotlib', 'scipy', 'joblib'}",
@@ -407,13 +406,17 @@
       if (m === "time" || m === "timeit") lines.shift();
       else return "_ipy_skip(" + q(lines[0]) + ")";
     }
-    return lines.map((l) => {
+    return lines.map((line) => {
+      /* only lines that start (after any indent) with %name or !command;
+         a "% (a, b)" format continuation is ordinary Python and is left alone */
+      const mm = line.match(/^([ \t]*)((?:%%?[a-zA-Z_]\w*|![ \t]*[a-zA-Z]).*)$/);
+      if (!mm) return line;
+      const ind = mm[1], l = mm[2];
       let m;
-      if (/^%matplotlib\b/.test(l)) return "# " + l;
-      if ((m = l.match(/^%(?:timeit|time)\s+(.*)$/))) return "_ipy_timeit(" + q(m[1]) + ", globals())";
-      if ((m = l.match(/^(?:!\s*|%)pip\s+install\s+(.*)$/))) return "await _ipy_pip(" + q(m[1].trim().split(/\s+/)) + ")";
-      if (/^(!|%)/.test(l)) return "_ipy_skip(" + q(l.trim()) + ")";
-      return l;
+      if (/^%matplotlib\b/.test(l)) return ind + "pass  # " + l;
+      if ((m = l.match(/^%(?:timeit|time)\s+(.*)$/))) return ind + "_ipy_timeit(" + q(m[1]) + ", globals())";
+      if ((m = l.match(/^(?:!\s*|%)pip\s+install\s+(.*)$/))) return ind + "await _ipy_pip(" + q(m[1].trim().split(/\s+/)) + ")";
+      return ind + "_ipy_skip(" + q(l.trim()) + ")";
     }).join("\n");
   }
   if (typeof window !== "undefined") window.__toPython = toPython;

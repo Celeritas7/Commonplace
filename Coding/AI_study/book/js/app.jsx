@@ -159,9 +159,8 @@ function Contents({ prog, setMark, onOpen }) {
       <header className="masthead">
         <div>
           <div className="kicker"><span className="pulse"></span>Subject I · <span className="dim">Languages &amp; Models</span></div>
-          <h1>Classical Machine&nbsp;<span className="hyper">Learning</span><span className="w">.</span></h1>
+          <h1>Classical Machine <span className="hyper">Learning</span><span className="w">.</span></h1>
           <p className="tagline">Eighteen chapters of supervised and unsupervised learning — each one a live notebook you can edit and run, drawn here as a window into the high-dimensional spaces models actually live in.</p>
-          <a className="notes-link" href="notes/index.html">Study notes <span className="dim">· Géron chapters, flowcharts, gradient descent</span> <span className="arr">→</span></a>
         </div>
         <div className="seal">
           CHAPTERS · <b>18</b><br />
@@ -196,6 +195,19 @@ function Contents({ prog, setMark, onOpen }) {
           </span>
         </div>
       </div>
+
+      <section className="notes-links" aria-label="Notes and book">
+        <a className="nl" href="notes/geron/index.html">
+          <span className="k">Book</span>
+          <b>Géron — Hands-On ML</b>
+          <span className="d">Chapter hub and PDF reader with your highlights</span>
+        </a>
+        <a className="nl" href="notes/index.html">
+          <span className="k">Notes</span>
+          <b>All chapter notes</b>
+          <span className="d">Revision notes, flowcharts and the gradient-descent demo</span>
+        </a>
+      </section>
 
       {visibleGroups.length === 0 && (
         <div className="empty">No chapters match “{query}”.</div>
