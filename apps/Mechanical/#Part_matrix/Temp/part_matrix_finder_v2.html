@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part Matrix Finder</title>
+<style>
+:root{
+  --paper:#f2f4f3; --sheet:#ffffff; --ink:#1a1f24; --ink2:#55606a; --rule:#d5dbdf; --rule-soft:#e7ebed;
+  --items:#1f5faf; --items-wash:#e6eef8; --variant:#c2561a; --variant-wash:#fbeee5;
+  --mark:#1f5faf; --mark-ink:#ffffff; --other:#8a6a1f; --other-wash:#f6efdc;
+  --hover:#f4f7fa; --cross:#eaf1f9; --danger:#b3261e;
+  --frame:#1a1f24;
+}
+:root[data-theme="dark"]{
+  --paper:#15191c; --sheet:#1c2125; --ink:#e6eaed; --ink2:#99a3ab; --rule:#323a40; --rule-soft:#272e33;
+  --items:#7fb2ee; --items-wash:#1d2a3a; --variant:#ec9a64; --variant-wash:#35251a;
+  --mark:#5d9be4; --mark-ink:#0f1418; --other:#d9b765; --other-wash:#2f2a19;
+  --hover:#21282d; --cross:#1f2c3a; --danger:#f2938c;
+  --frame:#aab4bb;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:var(--paper);color:var(--ink);
+  font:13.5px/1.4 Bahnschrift,"DIN Alternate","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  font-variant-numeric:tabular-nums;display:flex;flex-direction:column;
+}
+button,input,textarea{font:inherit;color:inherit}
+button{white-space:nowrap;cursor:pointer;background:none;border:1px solid var(--rule);border-radius:4px;padding:5px 11px;background:var(--sheet)}
+button:hover{border-color:var(--ink2)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--items);outline-offset:1px}
+.hidden{display:none!important}
+
+/* ---------- top bar */
+.bar{display:flex;align-items:center;gap:14px;padding:10px 18px;flex-wrap:wrap}
+.bar h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.01em}
+.bar .src{color:var(--ink2);font-size:12.5px}
+.bar .sp{flex:1}
+.icon{width:32px;height:30px;padding:0;display:inline-grid;place-items:center}
+.icon svg{width:16px;height:16px}
+
+/* ---------- filter box: the user's own Excel box, kept */
+.top{display:flex;gap:18px;padding:0 18px 14px;align-items:stretch;flex-wrap:wrap}
+.box{flex:1 1 640px;border:2.5px solid var(--frame);background:var(--sheet);display:grid;grid-template-columns:96px 1fr}
+.box .lab{display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;border-right:1px solid var(--frame)}
+.box .row{display:contents}
+.box .row + .row .lab, .box .row + .row .field{border-top:1px solid var(--frame)}
+.lab.items{color:var(--items)} .lab.variant{color:var(--variant)}
+.field{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 9px;min-height:44px;cursor:text}
+.field input{border:0;outline:0;background:transparent;flex:1;min-width:150px;padding:4px 2px}
+.field input::placeholder{color:var(--ink2);opacity:.75}
+.tag{display:inline-flex;align-items:center;gap:4px;border-radius:3px;padding:3px 4px 3px 9px;font-weight:600;font-size:13px}
+.items .tag,.tag.i{background:var(--items-wash);color:var(--items)}
+.tag.v{background:var(--variant-wash);color:var(--variant)}
+.tag button{border:0;background:none;padding:0;width:18px;height:18px;border-radius:2px;color:inherit;opacity:.6;font-size:15px;line-height:16px}
+.tag button:hover{opacity:1;background:rgba(127,127,127,.2)}
+
+/* suggestion list */
+.sug{position:absolute;left:-2.5px;right:-2.5px;top:100%;z-index:30;background:var(--sheet);border:2.5px solid var(--frame);border-top-width:1px;max-height:320px;overflow:auto;box-shadow:0 10px 24px rgba(0,0,0,.14)}
+.sug div{display:flex;justify-content:space-between;gap:12px;padding:6px 12px;cursor:pointer}
+.sug div .n{color:var(--ink2);font-size:12px}
+.sug div.on{background:var(--items-wash)}
+.sug.v div.on{background:var(--variant-wash)}
+.sug div.zero{color:var(--ink2);opacity:.55}
+.sug .hint{color:var(--ink2);font-size:12px;cursor:default;border-bottom:1px solid var(--rule-soft)}
+
+/* result summary beside the box */
+.sum{flex:0 1 260px;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.big{font-size:40px;font-weight:700;line-height:1}
+.big small{font-size:14px;font-weight:600;color:var(--ink2);margin-left:6px}
+.sum .sub{color:var(--ink2);font-size:12.5px;margin-top:4px}
+.acts{display:flex;gap:6px;flex-wrap:wrap}
+.find{width:100%;border:1px solid var(--rule);background:var(--sheet);border-radius:4px;padding:6px 9px}
+
+/* ---------- options strip */
+.strip{display:flex;align-items:center;gap:16px;padding:6px 18px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--sheet);font-size:12.5px;color:var(--ink2);flex-wrap:wrap}
+.strip label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.legend{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:2px;vertical-align:-2px}
+.sw.a{background:var(--mark)} .sw.o{background:var(--other-wash);border:1px solid var(--other)} .sw.s{background:var(--items-wash);border:1px solid var(--items)}
+.strip .warn{color:var(--danger)}
+
+/* ---------- matrix */
+.wrap{flex:1;overflow:auto;background:var(--sheet)}
+table{border-collapse:separate;border-spacing:0;font-size:13px}
+th,td{border-bottom:1px solid var(--rule-soft);white-space:nowrap;background:var(--sheet)}
+thead th{position:sticky;top:0;z-index:4;background:var(--sheet);border-bottom:2px solid var(--frame);vertical-align:bottom;text-align:left;font-weight:700;padding:6px 10px;font-size:12px}
+.c-no{position:sticky;left:0;z-index:2;width:96px;min-width:96px;padding:5px 10px;font-weight:600}
+.c-nm{position:sticky;left:96px;z-index:2;min-width:290px;padding:5px 10px;border-right:2px solid var(--frame);cursor:pointer}
+.c-qty{padding:5px 10px;text-align:right;color:var(--ink2);border-right:1px solid var(--rule)}
+thead .c-no,thead .c-nm{z-index:6}
+td.c-nm:hover{color:var(--variant)}
+th.code{padding:8px 0 8px;width:26px;min-width:26px;max-width:26px;cursor:pointer;border-right:1px solid var(--rule-soft);text-align:center}
+th.code span{writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;font-weight:600;font-size:11.5px;letter-spacing:.03em;height:84px;text-align:left}
+th.code:hover{color:var(--items)}
+th.code.sel{background:var(--items-wash);color:var(--items)}
+th.code.sel.last,td.m.sel.last{border-right:2px solid var(--items)}
+td.m{width:26px;min-width:26px;padding:0;text-align:center;border-right:1px solid var(--rule-soft);height:27px}
+td.m.sel{background:var(--items-wash)}
+td.m i{display:inline-grid;place-items:center;width:20px;height:19px;border-radius:2px;font-style:normal;font-size:10.5px;font-weight:700}
+td.m.a i{background:var(--mark);color:var(--mark-ink)}
+td.m.o i{background:var(--other-wash);color:var(--other);outline:1px solid var(--other)}
+tbody tr.p:hover td{background:var(--hover)}
+tbody tr.p:hover td.m.sel{background:var(--items-wash)}
+td.m.x,th.code.x{background:var(--cross)!important}
+tr.g td{background:var(--paper);border-bottom:1px solid var(--rule);padding:0}
+tr.g .gl{position:sticky;left:0;display:inline-flex;gap:14px;padding:7px 10px 5px;font-size:12.5px;white-space:nowrap}
+tr.g .gl b{font-weight:700}
+tr.g .gl span{color:var(--ink2)}
+tr.g1 .gl{font-size:13.5px;padding-top:12px}
+.dup{color:var(--ink2);font-weight:400;font-size:11px;margin-left:6px;border:1px solid var(--rule);border-radius:3px;padding:0 4px}
+
+.empty{padding:60px 20px;text-align:center;color:var(--ink2)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.more{padding:14px 18px}
+
+/* ---------- load screen */
+.load{flex:1;display:grid;place-items:center;padding:24px 18px}
+.load .card{width:min(640px,100%);border:2.5px solid var(--frame);background:var(--sheet)}
+.load h2{margin:0;padding:14px 18px;font-size:17px;border-bottom:1px solid var(--frame)}
+.load .in{padding:16px 18px 18px}
+.load p{margin:0 0 14px;color:var(--ink2);max-width:62ch}
+.pastezone{position:relative;border:1.5px dashed var(--rule);border-radius:4px;transition:border-color .12s,background .12s}
+.pastezone.over{border-color:var(--items);background:var(--items-wash)}
+.pastezone textarea{display:block;width:100%;height:170px;border:0;background:transparent;resize:vertical;padding:12px;font-size:12.5px}
+.pastezone textarea:focus{outline:0}
+.load .row2{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.primary{background:var(--items);border-color:var(--items);color:#fff;font-weight:600}
+.primary:hover{filter:brightness(1.08);border-color:var(--items)}
+:root[data-theme="dark"] .primary{color:#0f1418}
+.err{color:var(--danger);font-size:13px;min-height:18px;margin-top:10px}
+
+@media (max-width:700px){
+  .box{grid-template-columns:76px 1fr}
+  .box .lab{font-size:14px}
+  .sum{flex-basis:100%}
+  .c-no{width:84px;min-width:84px}
+  .c-nm{position:static;min-width:170px;white-space:normal}
+}
+@media print{
+  .bar button,.strip,.acts,.find,.more{display:none!important}
+  .wrap{overflow:visible} body{display:block;background:#fff}
+  thead th{position:static}
+  .c-no,.c-nm{position:static}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>Part Matrix Finder</h1>
+  <span class="src" id="src"></span>
+  <span class="sp"></span>
+  <button id="btnReload" class="hidden">Load new data</button>
+  <button id="btnTheme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 2v12" /><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/></svg>
+  </button>
+</div>
+
+<!-- ============ load screen -->
+<section class="load" id="load">
+  <div class="card">
+    <h2>Load the parts matrix</h2>
+    <div class="in">
+      <p>Copy the whole Data sheet in Excel and paste it in the box, or drop a CSV file on it. The data stays in this browser, so next time it opens ready.</p>
+      <div class="pastezone" id="zone">
+        <textarea id="paste" spellcheck="false" placeholder="Paste here (Ctrl+V), or drop a .csv file"></textarea>
+      </div>
+      <div class="row2">
+        <button class="primary" id="btnLoad">Load data</button>
+        <label><button type="button" id="btnBrowse">Choose CSV file…</button><input type="file" id="file" accept=".csv,.tsv,.txt" class="hidden"></label>
+        <button id="btnCancel" class="hidden">Cancel</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ main -->
+<section id="main" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0">
+  <div class="top">
+    <div class="box">
+      <div class="row">
+        <div class="lab items">Items</div>
+        <div class="field items" id="fItems">
+          <span id="tagsI" style="display:contents"></span>
+          <input id="inI" placeholder="Spec code, e.g. TYPE-QM" autocomplete="off" aria-label="Add spec code">
+        </div>
+      </div>
+      <div class="row">
+        <div class="lab variant">Variant</div>
+        <div class="field variant" id="fVariant">
+          <span id="tagsV" style="display:contents"></span>
+          <input id="inV" placeholder="Part name, or part of one, e.g. HOSE" autocomplete="off" aria-label="Add part name">
+        </div>
+      </div>
+    </div>
+    <div class="sum">
+      <div>
+        <div class="big" id="nParts">0<small>parts</small></div>
+        <div class="sub" id="nSub"></div>
+      </div>
+      <input class="find" id="find" placeholder="Find item number or text" autocomplete="off">
+      <div class="acts">
+        <button id="btnClear">Clear</button>
+        <button id="btnCsv">Export CSV</button>
+        <button id="btnPrint">Print</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <span class="legend"><span class="sw a"></span>A, used</span>
+    <span class="legend"><span class="sw s"></span>your selected codes</span>
+    <label><input type="checkbox" id="loose"> Also show D, * and numbered marks</label>
+    <span class="sp" style="flex:1"></span>
+    <span id="note" class="warn"></span>
+  </div>
+
+  <div class="wrap" id="wrap"><div id="table"></div><div class="more" id="more"></div></div>
+</section>
+
+<script>
+function clean(s) {
+  return String(s == null ? '' : s)
+    .replace(/_x000D_/g, '')
+    .replace(/[\r\n]+/g, '')
+    .replace(/ /g, ' ')
+    .trim();
+}
+
+function guessDelim(text) {
+  const head = text.slice(0, 4000);
+  const tabs = (head.match(/\t/g) || []).length;
+  const commas = (head.match(/,/g) || []).length;
+  const semis = (head.match(/;/g) || []).length;
+  if (tabs > 0 && tabs >= commas && tabs >= semis) return '\t';
+  if (semis > commas) return ';';
+  return ',';
+}
+
+function parseDelimited(text) {
+  text = String(text).replace(/^﻿/, '');
+  const d = guessDelim(text);
+  const rows = [];
+  let row = [], field = '', inQ = false, i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQ = false; i++; continue;
+      }
+      field += ch; i++; continue;
+    }
+    if (ch === '"') { inQ = true; i++; continue; }
+    if (ch === d) { row.push(field); field = ''; i++; continue; }
+    if (ch === '\r') { i++; continue; }
+    if (ch === '\n') { row.push(field); field = ''; rows.push(row); row = []; i++; continue; }
+    field += ch; i++;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+
+function buildModel(rows) {
+  if (!rows.length) throw new Error('No rows found in that data.');
+  const cl = rows.map(r => r.map(clean));
+  let hdr = -1;
+  for (let i = 0; i < Math.min(cl.length, 20); i++) {
+    const low = cl[i].map(s => s.toLowerCase());
+    if (low.indexOf('item no') >= 0 && low.indexOf('item name') >= 0) { hdr = i; break; }
+  }
+  if (hdr < 0) {
+    // fall back to whichever of the first three rows has the most short code-like cells
+    let best = 0, bestScore = -1;
+    for (let i = 0; i < Math.min(cl.length, 3); i++) {
+      const score = cl[i].filter(s => s.length >= 2 && s.length <= 10 && /[A-Za-z]/.test(s)).length;
+      if (score > bestScore) { bestScore = score; best = i; }
+    }
+    hdr = best;
+  }
+  const low = cl[hdr].map(s => s.toLowerCase());
+  let iNo = low.indexOf('item no'), iName = low.indexOf('item name'), iQty = low.indexOf('qty');
+  if (iNo < 0) iNo = 0;
+  if (iName < 0) iName = 1;
+  if (iQty < 0) iQty = 2;
+  const start = Math.max(iNo, iName, iQty) + 1;
+
+  const codes = [];
+  for (let c = start; c < cl[hdr].length; c++) {
+    const n = cl[hdr][c];
+    if (n) codes.push({ name: n, col: c });
+  }
+  if (!codes.length) throw new Error('No spec-code columns found to the right of Qty.');
+
+  const parts = [];
+  const labelOrder = [];
+  let labels = {};
+  for (let r = hdr + 1; r < rows.length; r++) {
+    const no = cl[r][iNo] || '';
+    const nm = cl[r][iName] || '';
+    const lab = no.match(/^([A-Za-z][A-Za-z ]*):$/);
+    if (lab) {
+      const key = lab[1].trim().toLowerCase();
+      labels = Object.assign({}, labels);
+      labels[key] = nm;
+      if (labelOrder.indexOf(key) < 0) labelOrder.push(key);
+      continue;
+    }
+    if (!/^\d+$/.test(no)) continue;
+    const marks = {};
+    for (let ci = 0; ci < codes.length; ci++) {
+      const v = clean(rows[r][codes[ci].col] || '').toUpperCase();
+      if (v) marks[ci] = v;
+    }
+    parts.push({ no: no, name: nm, qty: cl[r][iQty] || '', labels: labels, marks: marks });
+  }
+  if (!parts.length) throw new Error('No part rows found (a part row needs a number in the Item No column).');
+
+  const names = Array.from(new Set(parts.map(p => p.name).filter(Boolean))).sort();
+  const markKinds = {};
+  parts.forEach(p => Object.keys(p.marks).forEach(k => { markKinds[p.marks[k]] = (markKinds[p.marks[k]] || 0) + 1; }));
+  return { codes: codes, parts: parts, names: names, labelKeys: labelOrder, markKinds: markKinds, headerRow: hdr };
+}
+
+function applyFilter(model, f) {
+  const strict = f.strictA !== false;
+  const hit = m => m != null && (strict ? m === 'A' : true);
+  const sel = f.codes || [];
+  const nm = (f.names || []).map(s => s.toUpperCase()).filter(Boolean);
+  const txt = (f.text || '').trim().toUpperCase();
+  const parts = model.parts.filter(p => {
+    for (let i = 0; i < sel.length; i++) if (!hit(p.marks[sel[i]])) return false;
+    if (nm.length) {
+      let any = false;
+      for (let i = 0; i < nm.length; i++) if (p.name.toUpperCase().indexOf(nm[i]) >= 0) { any = true; break; }
+      if (!any) return false;
+    }
+    if (txt && (p.no + ' ' + p.name).toUpperCase().indexOf(txt) < 0) return false;
+    return true;
+  });
+  const used = [];
+  for (let ci = 0; ci < model.codes.length; ci++) {
+    for (let i = 0; i < parts.length; i++) {
+      if (hit(parts[i].marks[ci])) { used.push(ci); break; }
+    }
+  }
+  return { parts: parts, cols: used };
+}
+var MODEL = null, CAP = 300, showAll = false, LAST = null;
+var sel = { codes: [], names: [], text: '' };
+var KEY = 'pmf.data.v1', TKEY = 'pmf.theme';
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function cap1(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/* theme */
+function setTheme(t) { document.documentElement.setAttribute('data-theme', t); try { localStorage.setItem(TKEY, t); } catch (e) {} }
+(function () {
+  var t = null; try { t = localStorage.getItem(TKEY); } catch (e) {}
+  if (!t) t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+$('btnTheme').onclick = function () { setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); };
+
+/* ---------------- loading */
+function showLoad(canCancel) {
+  $('load').classList.remove('hidden'); $('main').classList.add('hidden');
+  $('btnCancel').classList.toggle('hidden', !canCancel);
+  $('paste').focus();
+}
+function load(text, label, quiet) {
+  var m;
+  try { m = buildModel(parseDelimited(text)); }
+  catch (e) { if (!quiet) $('err').textContent = (e.message || String(e)) + ' Check that you copied the Data sheet including its header rows.'; return false; }
+  MODEL = m;
+  try { localStorage.setItem(KEY, JSON.stringify({ t: text, n: label || '' })); } catch (e) {}
+  $('err').textContent = ''; $('paste').value = '';
+  $('src').textContent = m.parts.length + ' parts, ' + m.codes.length + ' spec codes' + (label && label !== 'pasted' ? ' from ' + label : '');
+  $('load').classList.add('hidden'); $('main').classList.remove('hidden'); $('btnReload').classList.remove('hidden');
+  sel = { codes: [], names: [], text: '' }; $('find').value = ''; showAll = false;
+  render();
+  return true;
+}
+function readFile(f) {
+  var fr = new FileReader();
+  fr.onload = function () { load(fr.result, f.name); };
+  fr.onerror = function () { $('err').textContent = 'That file could not be read.'; };
+  fr.readAsText(f, 'utf-8');
+}
+$('btnLoad').onclick = function () {
+  if (!$('paste').value.trim()) { $('err').textContent = 'Paste the Data sheet into the box first, or choose a CSV file.'; return; }
+  load($('paste').value, 'pasted');
+};
+$('paste').addEventListener('paste', function () { setTimeout(function () { if ($('paste').value.trim()) load($('paste').value, 'pasted'); }, 30); });
+$('btnBrowse').onclick = function () { $('file').click(); };
+$('file').onchange = function (e) { if (e.target.files[0]) readFile(e.target.files[0]); e.target.value = ''; };
+$('btnReload').onclick = function () { showLoad(true); };
+$('btnCancel').onclick = function () { $('load').classList.add('hidden'); $('main').classList.remove('hidden'); };
+var zone = $('zone');
+document.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('over'); });
+document.addEventListener('dragleave', function (e) { if (!e.relatedTarget) zone.classList.remove('over'); });
+document.addEventListener('drop', function (e) {
+  e.preventDefault(); zone.classList.remove('over');
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) readFile(f);
+});
+
+/* ---------------- tag fields with live suggestions */
+function makeField(kind) {
+  var isI = kind === 'I';
+  var field = $(isI ? 'fItems' : 'fVariant'), input = $(isI ? 'inI' : 'inV');
+  var box = document.createElement('div'); box.className = 'sug hidden' + (isI ? '' : ' v'); field.appendChild(box);
+  var items = [], hi = 0;
+
+  function options() {
+    var q = clean(input.value).toUpperCase();
+    if (isI) {
+      // how many parts would remain if this code were added
+      var base = applyFilter(MODEL, { codes: sel.codes, names: sel.names, text: sel.text, strictA: true }).parts;
+      var out = [];
+      MODEL.codes.forEach(function (c, ci) {
+        if (sel.codes.indexOf(ci) >= 0) return;
+        if (q && c.name.toUpperCase().indexOf(q) < 0) return;
+        var n = 0; for (var i = 0; i < base.length; i++) if (base[i].marks[ci] === 'A') n++;
+        out.push({ v: ci, label: c.name, n: n, starts: c.name.toUpperCase().indexOf(q) === 0 });
+      });
+      out.sort(function (a, b) { return (b.starts - a.starts) || ((b.n > 0) - (a.n > 0)) || (b.n - a.n); });
+      return out;
+    }
+    var res = [];
+    if (q) res.push({ v: clean(input.value), label: 'Any name containing "' + clean(input.value) + '"', hint: true });
+    MODEL.names.forEach(function (n) {
+      if (sel.names.indexOf(n) >= 0) return;
+      if (!q || n.toUpperCase().indexOf(q) >= 0) res.push({ v: n, label: n });
+    });
+    return res;
+  }
+  function draw() {
+    items = options().slice(0, 60);
+    if (!items.length) { box.classList.add('hidden'); return; }
+    if (hi >= items.length) hi = items.length - 1;
+    box.innerHTML = items.map(function (o, i) {
+      var cls = (i === hi ? 'on ' : '') + (isI && o.n === 0 ? 'zero' : '');
+      var right = isI ? '<span class="n">' + (o.n ? o.n + ' left' : 'none left') + '</span>' : '';
+      return '<div class="' + cls + '" data-i="' + i + '"><span>' + esc(o.label) + '</span>' + right + '</div>';
+    }).join('');
+    box.classList.remove('hidden');
+    var on = box.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+  }
+  function pick(o) {
+    if (!o) return;
+    if (isI) { if (sel.codes.indexOf(o.v) < 0) sel.codes.push(o.v); }
+    else if (sel.names.indexOf(o.v) < 0) sel.names.push(o.v);
+    input.value = ''; hi = 0; showAll = false; render(); draw(); input.focus();
+  }
+  input.addEventListener('focus', function () { hi = 0; draw(); });
+  input.addEventListener('input', function () { hi = 0; draw(); });
+  input.addEventListener('blur', function () { setTimeout(function () { box.classList.add('hidden'); }, 150); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); hi = Math.min(hi + 1, items.length - 1); draw(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); hi = Math.max(hi - 1, 0); draw(); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!input.value.trim()) return;
+      if (isI) {
+        var q = clean(input.value).toUpperCase(), exact = null;
+        items.forEach(function (o) { if (o.label.toUpperCase() === q) exact = o; });
+        pick(exact || items[hi]);
+      } else pick(items[hi]);
+    }
+    else if (e.key === 'Escape') { box.classList.add('hidden'); input.blur(); }
+    else if (e.key === 'Backspace' && !input.value) {
+      var arr = isI ? sel.codes : sel.names;
+      if (arr.length) { arr.pop(); render(); draw(); }
+    }
+  });
+  box.addEventListener('mousedown', function (e) {
+    var d = e.target.closest('[data-i]'); if (!d) return;
+    e.preventDefault(); pick(items[+d.dataset.i]);
+  });
+  field.addEventListener('mousedown', function (e) { if (e.target === field) { e.preventDefault(); input.focus(); } });
+  return { draw: draw };
+}
+var FI = makeField('I'), FV = makeField('V');
+
+function tags() {
+  $('tagsI').innerHTML = sel.codes.map(function (ci, i) {
+    return '<span class="tag i">' + esc(MODEL.codes[ci].name) + '<button data-k="I" data-i="' + i + '" aria-label="Remove">×</button></span>';
+  }).join('');
+  $('tagsV').innerHTML = sel.names.map(function (n, i) {
+    return '<span class="tag v">' + esc(n) + '<button data-k="V" data-i="' + i + '" aria-label="Remove">×</button></span>';
+  }).join('');
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('.tag button'); if (!b) return;
+  (b.dataset.k === 'I' ? sel.codes : sel.names).splice(+b.dataset.i, 1); render();
+});
+$('find').addEventListener('input', function (e) { sel.text = e.target.value; showAll = false; render(); });
+$('loose').onchange = function () { render(); };
+$('btnClear').onclick = function () { sel = { codes: [], names: [], text: '' }; $('find').value = ''; showAll = false; render(); };
+
+/* ---------------- render */
+function render() {
+  if (!MODEL) return;
+  tags();
+  var loose = $('loose').checked;
+  var r = applyFilter(MODEL, { codes: sel.codes, names: sel.names, text: sel.text, strictA: !loose });
+  LAST = r;
+  var n = r.parts.length;
+  $('nParts').innerHTML = n + '<small>part' + (n === 1 ? '' : 's') + '</small>';
+  var nf = sel.codes.length + sel.names.length + (sel.text ? 1 : 0);
+  $('nSub').textContent = nf ? 'of ' + MODEL.parts.length + ', using ' + r.cols.length + ' of ' + MODEL.codes.length + ' spec codes' : 'No filter yet. Showing the whole catalogue.';
+
+  var shown = showAll ? n : Math.min(n, CAP);
+  $('note').textContent = shown < n ? 'Showing the first ' + shown + ' of ' + n + '. Add a filter or show all below.' : '';
+  $('more').innerHTML = shown < n ? '<button id="btnMore">Show all ' + n + ' rows</button>' : '';
+  if ($('btnMore')) $('btnMore').onclick = function () { showAll = true; render(); };
+
+  if (!n) {
+    $('table').innerHTML = '<div class="empty"><b>No part matches all of these.</b>Every Items code must be marked A on the same part. Remove one to widen the search.</div>';
+    return;
+  }
+
+  // selected codes first, then the rest in catalogue order
+  var cols = sel.codes.filter(function (ci) { return r.cols.indexOf(ci) >= 0; })
+    .concat(r.cols.filter(function (ci) { return sel.codes.indexOf(ci) < 0; }));
+  var nSel = cols.filter(function (ci) { return sel.codes.indexOf(ci) >= 0; }).length;
+
+  // group levels: drop any level whose value never changes in this result
+  var keys = MODEL.labelKeys.filter(function (k) {
+    var seen = {}; r.parts.forEach(function (p) { seen[p.labels[k] || ''] = 1; });
+    return Object.keys(seen).length > 1;
+  });
+  var constant = MODEL.labelKeys.filter(function (k) { return keys.indexOf(k) < 0 && r.parts[0].labels[k]; });
+
+  var count = {}; r.parts.forEach(function (p) { count[p.no] = (count[p.no] || 0) + 1; });
+  var span = 3 + cols.length;
+
+  var h = '<table><thead><tr><th class="c-no">Item No</th><th class="c-nm">Item name'
+    + (constant.length ? '<div style="font-weight:400;color:var(--ink2);font-size:11.5px;margin-top:2px">'
+      + constant.map(function (k) { return esc(cap1(k)) + ': ' + esc(r.parts[0].labels[k]); }).join('<br>') + '</div>' : '')
+    + '</th><th class="c-qty">Qty</th>';
+  cols.forEach(function (ci, j) {
+    var s = j < nSel;
+    h += '<th class="code' + (s ? ' sel' : '') + (s && j === nSel - 1 ? ' last' : '') + '" data-c="' + j + '" data-ci="' + ci + '" title="' + (s ? 'Remove from filter' : 'Add to filter') + '"><span>' + esc(MODEL.codes[ci].name) + '</span></th>';
+  });
+  h += '</tr></thead><tbody>';
+
+  var prev = {};
+  for (var i = 0; i < shown; i++) {
+    var p = r.parts[i];
+    var changed = false;
+    keys.forEach(function (k, lvl) {
+      if (changed || (p.labels[k] || '') !== (prev[k] || '')) {
+        if (!changed && lvl < keys.length - 1) { /* a higher level changed: lower levels re-print too */ }
+        changed = true;
+      }
+    });
+    if (changed && keys.length) {
+      // print from the highest level that changed
+      var from = 0;
+      for (var L = 0; L < keys.length; L++) if ((p.labels[keys[L]] || '') !== (prev[keys[L]] || '')) { from = L; break; }
+      if (keys.length === 2) {
+        h += '<tr class="g' + (from === 0 ? ' g1' : '') + '"><td colspan="' + span + '"><div class="gl">'
+          + '<b>' + esc(p.labels[keys[0]] || '') + '</b><span>' + esc(p.labels[keys[1]] || '') + '</span></div></td></tr>';
+      } else {
+        for (var L2 = from; L2 < keys.length; L2++) {
+          h += '<tr class="g' + (L2 === 0 ? ' g1' : '') + '"><td colspan="' + span + '"><div class="gl">'
+            + (L2 === 0 ? '<b>' : '<span>') + esc(p.labels[keys[L2]] || '') + (L2 === 0 ? '</b>' : '</span>') + '</div></td></tr>';
+        }
+      }
+    }
+    keys.forEach(function (k) { prev[k] = p.labels[k]; });
+
+    h += '<tr class="p"><td class="c-no">' + esc(p.no) + (nf && count[p.no] > 1 ? '<span class="dup" title="This item number appears ' + count[p.no] + ' times in the result, under different spec combinations">×' + count[p.no] + '</span>' : '')
+      + '</td><td class="c-nm" title="Filter by this name">' + esc(p.name) + '</td><td class="c-qty">' + esc(p.qty) + '</td>';
+    cols.forEach(function (ci, j) {
+      var s = j < nSel, mk = p.marks[ci];
+      var cls = 'm' + (s ? ' sel' : '') + (s && j === nSel - 1 ? ' last' : '');
+      if (mk === 'A') h += '<td class="' + cls + ' a" data-c="' + j + '"><i>A</i></td>';
+      else if (mk && loose) h += '<td class="' + cls + ' o" data-c="' + j + '"><i>' + esc(mk) + '</i></td>';
+      else h += '<td class="' + cls + '" data-c="' + j + '"></td>';
+    });
+    h += '</tr>';
+  }
+  $('table').innerHTML = h + '</tbody></table>';
+}
+
+/* header click toggles the code in the filter; name click adds it as a variant */
+$('table').addEventListener('click', function (e) {
+  var th = e.target.closest('th.code');
+  if (th) {
+    var ci = +th.dataset.ci, k = sel.codes.indexOf(ci);
+    if (k >= 0) sel.codes.splice(k, 1); else sel.codes.push(ci);
+    showAll = false; render(); return;
+  }
+  var nm = e.target.closest('td.c-nm');
+  if (nm) { var v = nm.textContent; if (sel.names.indexOf(v) < 0) { sel.names.push(v); showAll = false; render(); } }
+});
+
+/* column crosshair */
+var lastC = null;
+function cross(c) {
+  if (c === lastC) return;
+  if (lastC !== null) Array.prototype.forEach.call(document.querySelectorAll('[data-c="' + lastC + '"]'), function (x) { x.classList.remove('x'); });
+  lastC = c;
+  if (c !== null) Array.prototype.forEach.call(document.querySelectorAll('[data-c="' + c + '"]'), function (x) { x.classList.add('x'); });
+}
+$('table').addEventListener('mouseover', function (e) { var t = e.target.closest('[data-c]'); cross(t ? t.dataset.c : null); });
+$('table').addEventListener('mouseleave', function () { cross(null); });
+
+/* export / print */
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+$('btnCsv').onclick = function () {
+  if (!LAST || !LAST.parts.length) return;
+  var labs = MODEL.labelKeys;
+  var rows = [['Item No', 'Item Name', 'Qty'].concat(labs.map(cap1)).concat(LAST.cols.map(function (ci) { return MODEL.codes[ci].name; }))];
+  LAST.parts.forEach(function (p) {
+    rows.push([p.no, p.name, p.qty].concat(labs.map(function (k) { return p.labels[k] || ''; }))
+      .concat(LAST.cols.map(function (ci) { return p.marks[ci] || ''; })));
+  });
+  var blob = new Blob(['﻿' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'part_matrix_' + (sel.codes.map(function (ci) { return MODEL.codes[ci].name; }).join('_') || 'all') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+};
+$('btnPrint').onclick = function () { window.print(); };
+
+/* restore last data */
+(function () {
+  var o = null; try { o = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+  if (!(o && o.t && load(o.t, o.n, true))) showLoad(false);
+})();
+</script>
+</body>
+</html>

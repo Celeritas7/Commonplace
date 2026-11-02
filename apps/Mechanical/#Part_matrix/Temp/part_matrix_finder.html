@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part Matrix Finder</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --fg:#1b1d1f; --muted:#6a7076; --line:#dfe3e7;
+  --accent:#0b5cad; --accent-soft:#e8f0fa; --mark:#1d7a35; --mark-bg:#e3f3e6;
+  --other:#b07d1a; --other-bg:#fdf4e0; --chip:#0b5cad; --chip-bg:#e8f0fa;
+  --warn:#b3261e; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);
+}
+html[data-theme="dark"]{
+  --bg:#141719; --panel:#1b1f22; --fg:#e7eaec; --muted:#98a0a7; --line:#2d3338;
+  --accent:#6fb3f2; --accent-soft:#1d2b3a; --mark:#7ddc96; --mark-bg:#1c3324;
+  --other:#e3b55c; --other-bg:#342a14; --chip:#9bc9f5; --chip-bg:#1d2b3a;
+  --warn:#f2938c; --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 11px}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{opacity:.9;color:#fff}
+input[type=text],textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;width:100%}
+input[type=text]:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.2px}
+header .status{color:var(--muted);font-size:12px}
+header .sp{flex:1}
+
+#load{margin:auto;max-width:620px;padding:28px 18px}
+#load .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;box-shadow:var(--shadow)}
+#load h2{margin:0 0 4px;font-size:17px}
+#load p.sub{margin:0 0 18px;color:var(--muted);font-size:13px}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--muted);transition:.15s}
+#drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:16px 0 10px}
+.or:before,.or:after{content:"";flex:1;height:1px;background:var(--line)}
+#paste{height:120px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+#err{color:var(--warn);font-size:13px;margin-top:10px;min-height:18px}
+
+#filters{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.fgroup{min-width:260px;flex:1}
+.flabel{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:flex;gap:7px;align-items:center}
+.flabel .rule{font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted);opacity:.85}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--chip-bg);color:var(--chip);border-radius:20px;padding:2px 6px 2px 10px;font-size:12px;font-weight:600}
+.chip b{font-weight:600}
+.chip button{all:unset;cursor:pointer;width:16px;height:16px;line-height:14px;text-align:center;border-radius:50%;opacity:.65;font-size:13px}
+.chip button:hover{opacity:1;background:rgba(127,127,127,.25)}
+#toolbar{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap;font-size:13px}
+#count b{font-size:15px}
+#toolbar .note{color:var(--warn);font-size:12px}
+label.cb{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;cursor:pointer;user-select:none}
+
+#tablewrap{flex:1;overflow:auto;padding:0 0 60px}
+table{border-collapse:separate;border-spacing:0;font-size:12.5px}
+th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:4px 7px;white-space:nowrap;background:var(--panel)}
+thead th{position:sticky;top:0;z-index:3;background:var(--bg);font-weight:700;font-size:11px;text-align:left;vertical-align:bottom}
+th.code{writing-mode:vertical-rl;transform:rotate(180deg);height:94px;padding:6px 3px;text-align:left;font-size:11px;cursor:pointer;letter-spacing:.02em}
+th.code:hover{color:var(--accent);background:var(--accent-soft)}
+th.code.on{color:var(--accent);background:var(--accent-soft)}
+td.m{text-align:center;width:22px;min-width:22px;padding:4px 0;font-weight:700;font-size:11px}
+td.m.a{color:var(--mark);background:var(--mark-bg)}
+td.m.o{color:var(--other);background:var(--other-bg);font-weight:600}
+td.no{font-variant-numeric:tabular-nums;font-weight:600}
+td.nm{max-width:330px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+td.nm:hover{color:var(--accent);text-decoration:underline}
+td.qty{text-align:center;color:var(--muted)}
+td.lab{color:var(--muted);font-size:11.5px;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+tbody tr:hover td{background:var(--accent-soft)}
+tbody tr:hover td.m.a{background:var(--mark-bg)}
+#empty{padding:50px 20px;text-align:center;color:var(--muted)}
+#more{margin:14px 16px}
+.hidden{display:none!important}
+@media print{header,#filters,#toolbar button,#more{display:none}#tablewrap{overflow:visible}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Part Matrix Finder</h1>
+  <span class="status" id="status">no data loaded</span>
+  <span class="sp"></span>
+  <button id="btnImport" class="hidden">Load other data</button>
+  <button id="btnTheme" title="Light / dark">◐</button>
+</header>
+
+<section id="load">
+  <div class="card">
+    <h2>Load the parts matrix</h2>
+    <p class="sub">Save the <b>Data</b> sheet as CSV, or just select the cells in Excel and paste them below. The app keeps the data in this browser, so you only do this once.</p>
+    <div id="drop">
+      <div style="font-size:26px;line-height:1">⇪</div>
+      <div style="margin-top:6px">Drop a .csv / .tsv file here, or <label style="color:var(--accent);cursor:pointer;text-decoration:underline">browse<input type="file" id="file" accept=".csv,.tsv,.txt,text/csv" style="display:none"></label></div>
+    </div>
+    <div class="or">or paste straight from Excel</div>
+    <textarea id="paste" placeholder="Select the whole Data sheet in Excel, Ctrl+C, then Ctrl+V in here..." spellcheck="false"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="primary" id="btnPaste">Load pasted data</button>
+      <button id="btnCancel" class="hidden">Cancel</button>
+    </div>
+    <div id="err"></div>
+  </div>
+</section>
+
+<section id="filters" class="hidden">
+  <div class="fgroup">
+    <div class="flabel">Items <span class="rule">— spec codes, must match ALL</span></div>
+    <div class="chips" id="codeChips"></div>
+    <input type="text" id="codeIn" list="codeList" placeholder="type or pick a code, Enter to add" autocomplete="off">
+    <datalist id="codeList"></datalist>
+  </div>
+  <div class="fgroup">
+    <div class="flabel">Variant <span class="rule">— part name, ANY one, partial text works</span></div>
+    <div class="chips" id="nameChips"></div>
+    <input type="text" id="nameIn" list="nameList" placeholder="e.g. HOSE — Enter to add" autocomplete="off">
+    <datalist id="nameList"></datalist>
+  </div>
+  <div class="fgroup" style="max-width:230px;min-width:180px">
+    <div class="flabel">Quick find</div>
+    <input type="text" id="textIn" placeholder="item no. or any text" autocomplete="off">
+  </div>
+</section>
+
+<div id="toolbar" class="hidden">
+  <span id="count"></span>
+  <span id="trunc" class="note"></span>
+  <span class="sp" style="flex:1"></span>
+  <label class="cb"><input type="checkbox" id="strict" checked> count only "A"</label>
+  <button id="btnClear">Clear filters</button>
+  <button id="btnCsv">Export CSV</button>
+  <button id="btnPrint">Print</button>
+</div>
+
+<div id="tablewrap" class="hidden"><div id="table"></div><div id="more"></div></div>
+
+<script>
+function clean(s) {
+  return String(s == null ? '' : s)
+    .replace(/_x000D_/g, '')
+    .replace(/[\r\n]+/g, '')
+    .replace(/ /g, ' ')
+    .trim();
+}
+
+function guessDelim(text) {
+  const head = text.slice(0, 4000);
+  const tabs = (head.match(/\t/g) || []).length;
+  const commas = (head.match(/,/g) || []).length;
+  const semis = (head.match(/;/g) || []).length;
+  if (tabs > 0 && tabs >= commas && tabs >= semis) return '\t';
+  if (semis > commas) return ';';
+  return ',';
+}
+
+function parseDelimited(text) {
+  text = String(text).replace(/^﻿/, '');
+  const d = guessDelim(text);
+  const rows = [];
+  let row = [], field = '', inQ = false, i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQ = false; i++; continue;
+      }
+      field += ch; i++; continue;
+    }
+    if (ch === '"') { inQ = true; i++; continue; }
+    if (ch === d) { row.push(field); field = ''; i++; continue; }
+    if (ch === '\r') { i++; continue; }
+    if (ch === '\n') { row.push(field); field = ''; rows.push(row); row = []; i++; continue; }
+    field += ch; i++;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+
+function buildModel(rows) {
+  if (!rows.length) throw new Error('No rows found in that data.');
+  const cl = rows.map(r => r.map(clean));
+  let hdr = -1;
+  for (let i = 0; i < Math.min(cl.length, 20); i++) {
+    const low = cl[i].map(s => s.toLowerCase());
+    if (low.indexOf('item no') >= 0 && low.indexOf('item name') >= 0) { hdr = i; break; }
+  }
+  if (hdr < 0) {
+    // fall back to whichever of the first three rows has the most short code-like cells
+    let best = 0, bestScore = -1;
+    for (let i = 0; i < Math.min(cl.length, 3); i++) {
+      const score = cl[i].filter(s => s.length >= 2 && s.length <= 10 && /[A-Za-z]/.test(s)).length;
+      if (score > bestScore) { bestScore = score; best = i; }
+    }
+    hdr = best;
+  }
+  const low = cl[hdr].map(s => s.toLowerCase());
+  let iNo = low.indexOf('item no'), iName = low.indexOf('item name'), iQty = low.indexOf('qty');
+  if (iNo < 0) iNo = 0;
+  if (iName < 0) iName = 1;
+  if (iQty < 0) iQty = 2;
+  const start = Math.max(iNo, iName, iQty) + 1;
+
+  const codes = [];
+  for (let c = start; c < cl[hdr].length; c++) {
+    const n = cl[hdr][c];
+    if (n) codes.push({ name: n, col: c });
+  }
+  if (!codes.length) throw new Error('No spec-code columns found to the right of Qty.');
+
+  const parts = [];
+  const labelOrder = [];
+  let labels = {};
+  for (let r = hdr + 1; r < rows.length; r++) {
+    const no = cl[r][iNo] || '';
+    const nm = cl[r][iName] || '';
+    const lab = no.match(/^([A-Za-z][A-Za-z ]*):$/);
+    if (lab) {
+      const key = lab[1].trim().toLowerCase();
+      labels = Object.assign({}, labels);
+      labels[key] = nm;
+      if (labelOrder.indexOf(key) < 0) labelOrder.push(key);
+      continue;
+    }
+    if (!/^\d+$/.test(no)) continue;
+    const marks = {};
+    for (let ci = 0; ci < codes.length; ci++) {
+      const v = clean(rows[r][codes[ci].col] || '').toUpperCase();
+      if (v) marks[ci] = v;
+    }
+    parts.push({ no: no, name: nm, qty: cl[r][iQty] || '', labels: labels, marks: marks });
+  }
+  if (!parts.length) throw new Error('No part rows found (a part row needs a number in the Item No column).');
+
+  const names = Array.from(new Set(parts.map(p => p.name).filter(Boolean))).sort();
+  const markKinds = {};
+  parts.forEach(p => Object.keys(p.marks).forEach(k => { markKinds[p.marks[k]] = (markKinds[p.marks[k]] || 0) + 1; }));
+  return { codes: codes, parts: parts, names: names, labelKeys: labelOrder, markKinds: markKinds, headerRow: hdr };
+}
+
+function applyFilter(model, f) {
+  const strict = f.strictA !== false;
+  const hit = m => m != null && (strict ? m === 'A' : true);
+  const sel = f.codes || [];
+  const nm = (f.names || []).map(s => s.toUpperCase()).filter(Boolean);
+  const txt = (f.text || '').trim().toUpperCase();
+  const parts = model.parts.filter(p => {
+    for (let i = 0; i < sel.length; i++) if (!hit(p.marks[sel[i]])) return false;
+    if (nm.length) {
+      let any = false;
+      for (let i = 0; i < nm.length; i++) if (p.name.toUpperCase().indexOf(nm[i]) >= 0) { any = true; break; }
+      if (!any) return false;
+    }
+    if (txt && (p.no + ' ' + p.name).toUpperCase().indexOf(txt) < 0) return false;
+    return true;
+  });
+  const used = [];
+  for (let ci = 0; ci < model.codes.length; ci++) {
+    for (let i = 0; i < parts.length; i++) {
+      if (hit(parts[i].marks[ci])) { used.push(ci); break; }
+    }
+  }
+  return { parts: parts, cols: used };
+}
+/* ---------------------------------------------------------------- state */
+var MODEL = null, SRC = '', CAP = 250, showAll = false;
+var sel = { codes: [], names: [], text: '' };
+var KEY = 'pmf.data.v1', TKEY = 'pmf.theme';
+
+var $ = function (id) { return document.getElementById(id); };
+
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem(TKEY, t); } catch (e) {}
+}
+try {
+  var st = localStorage.getItem(TKEY);
+  setTheme(st || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+} catch (e) {}
+$('btnTheme').onclick = function () {
+  setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+};
+
+/* ---------------------------------------------------------------- load */
+function load(text, label) {
+  var m;
+  try {
+    m = buildModel(parseDelimited(text));
+  } catch (e) {
+    $('err').textContent = e.message || String(e);
+    return false;
+  }
+  MODEL = m; SRC = text;
+  try { localStorage.setItem(KEY, JSON.stringify({ t: text, n: label || '' })); } catch (e) {}
+  $('err').textContent = '';
+  $('status').textContent = m.parts.length + ' parts · ' + m.codes.length + ' spec codes'
+    + (label ? ' · ' + label : '');
+  $('load').classList.add('hidden');
+  ['filters', 'toolbar', 'tablewrap'].forEach(function (i) { $(i).classList.remove('hidden'); });
+  $('btnImport').classList.remove('hidden');
+  $('codeList').innerHTML = m.codes.map(function (c) { return '<option value="' + esc(c.name) + '">'; }).join('');
+  $('nameList').innerHTML = m.names.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('');
+  sel = { codes: [], names: [], text: '' };
+  render();
+  return true;
+}
+
+function readFile(f) {
+  var fr = new FileReader();
+  fr.onload = function () { load(fr.result, f.name); };
+  fr.onerror = function () { $('err').textContent = 'Could not read that file.'; };
+  fr.readAsText(f, 'utf-8');
+}
+
+$('file').onchange = function (e) { if (e.target.files[0]) readFile(e.target.files[0]); };
+$('btnPaste').onclick = function () {
+  var v = $('paste').value;
+  if (!v.trim()) { $('err').textContent = 'Nothing pasted yet.'; return; }
+  if (load(v, 'pasted')) $('paste').value = '';
+};
+$('paste').addEventListener('paste', function () {
+  setTimeout(function () { if ($('paste').value.trim()) $('btnPaste').click(); }, 30);
+});
+var drop = $('drop');
+['dragenter', 'dragover'].forEach(function (ev) {
+  document.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(function (ev) {
+  document.addEventListener(ev, function (e) { e.preventDefault(); if (ev === 'dragleave' && e.relatedTarget) return; drop.classList.remove('over'); });
+});
+document.addEventListener('drop', function (e) {
+  e.preventDefault();
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+    $('load').classList.remove('hidden');
+    readFile(e.dataTransfer.files[0]);
+  }
+});
+$('btnImport').onclick = function () {
+  $('load').classList.remove('hidden');
+  $('btnCancel').classList.remove('hidden');
+  window.scrollTo(0, 0);
+};
+$('btnCancel').onclick = function () { $('load').classList.add('hidden'); };
+
+/* ---------------------------------------------------------------- filters */
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+function chips() {
+  $('codeChips').innerHTML = sel.codes.map(function (ci, i) {
+    return '<span class="chip"><b>' + esc(MODEL.codes[ci].name) + '</b><button data-k="c" data-i="' + i + '">×</button></span>';
+  }).join('');
+  $('nameChips').innerHTML = sel.names.map(function (n, i) {
+    return '<span class="chip"><b>' + esc(n) + '</b><button data-k="n" data-i="' + i + '">×</button></span>';
+  }).join('');
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('.chip button') : null;
+  if (!b) return;
+  var i = +b.dataset.i;
+  if (b.dataset.k === 'c') sel.codes.splice(i, 1); else sel.names.splice(i, 1);
+  render();
+});
+
+function addCode(v) {
+  v = clean(v).toUpperCase();
+  if (!v) return;
+  var ci = -1;
+  for (var i = 0; i < MODEL.codes.length; i++) if (MODEL.codes[i].name.toUpperCase() === v) { ci = i; break; }
+  if (ci < 0) { $('codeIn').style.borderColor = 'var(--warn)'; setTimeout(function () { $('codeIn').style.borderColor = ''; }, 900); return; }
+  if (sel.codes.indexOf(ci) < 0) sel.codes.push(ci);
+  $('codeIn').value = '';
+  render();
+}
+function addName(v) {
+  v = clean(v);
+  if (!v || sel.names.indexOf(v) >= 0) return;
+  sel.names.push(v);
+  $('nameIn').value = '';
+  render();
+}
+$('codeIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') addCode(e.target.value); });
+$('codeIn').addEventListener('change', function (e) { if (e.target.value) addCode(e.target.value); });
+$('nameIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') addName(e.target.value); });
+$('nameIn').addEventListener('change', function (e) { if (e.target.value) addName(e.target.value); });
+$('textIn').addEventListener('input', function (e) { sel.text = e.target.value; render(); });
+$('strict').onchange = render;
+$('btnClear').onclick = function () {
+  sel = { codes: [], names: [], text: '' };
+  $('textIn').value = '';
+  render();
+};
+
+/* ---------------------------------------------------------------- render */
+var LAST = null;
+function render() {
+  if (!MODEL) return;
+  chips();
+  var strict = $('strict').checked;
+  var r = applyFilter(MODEL, { codes: sel.codes, names: sel.names, text: sel.text, strictA: strict });
+  LAST = r;
+  var n = r.parts.length;
+  $('count').innerHTML = '<b>' + n + '</b> part' + (n === 1 ? '' : 's')
+    + (r.cols.length ? ' · ' + r.cols.length + ' code column' + (r.cols.length === 1 ? '' : 's') : '');
+  var shown = showAll ? n : Math.min(n, CAP);
+  $('trunc').textContent = shown < n ? 'showing first ' + shown : '';
+  $('more').innerHTML = shown < n ? '<button id="btnMore">Show all ' + n + ' rows</button>' : '';
+  if ($('btnMore')) $('btnMore').onclick = function () { showAll = true; render(); };
+
+  if (!n) {
+    $('table').innerHTML = '<div id="empty">Nothing matches those filters.<br><small>Every <b>Items</b> code has to be marked on the same part.</small></div>';
+    return;
+  }
+  var labs = MODEL.labelKeys.filter(function (k) { return r.parts.some(function (p) { return p.labels[k]; }); });
+  var h = '<table><thead><tr>';
+  h += '<th>Item No</th><th>Item Name</th><th>Qty</th>';
+  labs.forEach(function (k) { h += '<th>' + esc(k.charAt(0).toUpperCase() + k.slice(1)) + '</th>'; });
+  r.cols.forEach(function (ci) {
+    h += '<th class="code' + (sel.codes.indexOf(ci) >= 0 ? ' on' : '') + '" data-ci="' + ci + '" title="click to filter on this code">' + esc(MODEL.codes[ci].name) + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  for (var i = 0; i < shown; i++) {
+    var p = r.parts[i];
+    h += '<tr><td class="no">' + esc(p.no) + '</td><td class="nm" data-nm="' + esc(p.name) + '">' + esc(p.name) + '</td><td class="qty">' + esc(p.qty) + '</td>';
+    labs.forEach(function (k) { h += '<td class="lab">' + esc(p.labels[k] || '') + '</td>'; });
+    r.cols.forEach(function (ci) {
+      var m = p.marks[ci];
+      if (m === 'A') h += '<td class="m a">A</td>';
+      else if (m && !strict) h += '<td class="m o">' + esc(m) + '</td>';
+      else h += '<td class="m"></td>';
+    });
+    h += '</tr>';
+  }
+  $('table').innerHTML = h + '</tbody></table>';
+
+  Array.prototype.forEach.call(document.querySelectorAll('th.code'), function (th) {
+    th.onclick = function () {
+      var ci = +th.dataset.ci, k = sel.codes.indexOf(ci);
+      if (k >= 0) sel.codes.splice(k, 1); else sel.codes.push(ci);
+      render();
+    };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('td.nm'), function (td) {
+    td.onclick = function () { addName(td.dataset.nm); };
+  });
+}
+
+/* ---------------------------------------------------------------- export */
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+$('btnCsv').onclick = function () {
+  if (!LAST || !LAST.parts.length) return;
+  var labs = MODEL.labelKeys;
+  var rows = [['Item No', 'Item Name', 'Qty'].concat(labs.map(function (k) { return k; }))
+    .concat(LAST.cols.map(function (ci) { return MODEL.codes[ci].name; }))];
+  LAST.parts.forEach(function (p) {
+    rows.push([p.no, p.name, p.qty].concat(labs.map(function (k) { return p.labels[k] || ''; }))
+      .concat(LAST.cols.map(function (ci) { return p.marks[ci] || ''; })));
+  });
+  var blob = new Blob([rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n')],
+    { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'part_matrix_filtered.csv';
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+};
+$('btnPrint').onclick = function () { window.print(); };
+
+/* ---------------------------------------------------------------- restore */
+try {
+  var saved = localStorage.getItem(KEY);
+  if (saved) { var o = JSON.parse(saved); load(o.t, o.n); }
+} catch (e) {}
+</script>
+</body>
+</html>
