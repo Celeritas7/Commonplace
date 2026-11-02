@@ -20,6 +20,21 @@ all work without internet. In the reader, **numpy cells run offline**; cells tha
 pandas, scikit-learn, matplotlib etc. download those packages and need internet. The raw
 JupyterLite apps (`lab/`, `notebooks/` …) still load their own Python kernel from the CDN.
 
+After one visit the section also works when the server can't be reached (phone or iPad away
+from home): `study-sw.js`, registered by `book/js/sw-register.js`, keeps an offline copy.
+- **Saved on the first visit:** every page in the book and notes, plus the libraries they need.
+- **Saved when first opened:** each notebook chapter, Pyodide + numpy, and font files.
+- A chapter never opened while online says so instead of failing.
+- The worker covers only `index.html`, `book/` and `notes/`, so it never takes over from
+  JupyterLite's own `service-worker.js` (`lab/`, `notebooks/` …).
+- Bump `VERSION` in `study-sw.js` when you add a page to its `CORE` list.
+
+### Progress backup
+
+Chapter progress, "Mark reviewed" dates, checkboxes, margin notes and recall answers live in
+this browser's storage. The **⇅** button (bottom-left, from `_lib/progress-backup.js`) exports
+them to a file and imports them on another device, the same as in the Python and SQL sections.
+
 ## Where things live
 
 ```
@@ -43,6 +58,7 @@ AI_study/
 │  ├─ _template.html     copy into a tag folder to start a note
 │  └─ _touch.css         shared by every note: 44px controls on touch screens, ≥12px labels
 ├─ files/                the 18 source notebooks (.ipynb) — the reader loads these
+├─ study-sw.js           offline copy of the book + notes (see Offline)
 ├─ START_HERE.bat        local server launcher
 └─ (everything else)     JupyterLite runtime — api/ build/ extensions/ lab/ notebooks/
                          repl/ tree/ static/ *.json service-worker.js bootstrap.js

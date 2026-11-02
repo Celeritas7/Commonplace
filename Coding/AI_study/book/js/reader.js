@@ -60,7 +60,12 @@
   fetch("../files/" + file)
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(init)
-    .catch((e) => { app.innerHTML = '<div class="loading">Could not load files/' + file + " — " + e.message + "</div>"; });
+    .catch((e) => {
+      const offline = !navigator.onLine || e.message === "504" || e instanceof TypeError;
+      app.innerHTML = '<div class="loading">' + (offline
+        ? "This chapter isn't saved for offline use yet. Open it once while online and it will be here next time."
+        : "Could not load files/" + file + " — " + e.message) + "</div>";
+    });
 
   function src(c) { return Array.isArray(c.source) ? c.source.join("") : c.source || ""; }
   function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
