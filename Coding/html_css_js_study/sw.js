@@ -1,9 +1,9 @@
 /* Commonplace · Web Dev Bootcamp — offline cache.
- * Scope is the web_bootcamp folder; the fonts, backup button and study layer come from
+ * Scope is the html_css_js_study folder; the fonts, backup button and study layer come from
  * ../../_lib and ../../extras.js, so those are precached too. Bump CACHE on any change.
  * The study-book links go to Google Drive and are never cached.
  */
-const CACHE = "web-bootcamp-v1";
+const CACHE = "html-css-js-study-v1";
 
 const PRECACHE = [
   "./",
@@ -31,7 +31,7 @@ self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
     /* only our own old versions: caches are shared by the whole site */
-    await Promise.all(keys.filter((k) => k.startsWith("web-bootcamp-") && k !== CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k.startsWith("html-css-js-study-") && k !== CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
