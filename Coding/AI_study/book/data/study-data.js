@@ -45,7 +45,8 @@ window.AI_STUDY = {
       },
       3: {
         aside: "hsplit cuts columns at the given indices and keeps every row; vsplit cuts rows and keeps every column.",
-        recall: {"q": "mat has shape (3,7). What shapes does np.hsplit(mat, [4,6]) produce?", "options": ["(3,4), (3,2), (3,1)", "(4,7), (2,7), (1,7)", "(3,4), (3,6)", "(3,4), (3,3)"], "answer": 0, "why": "hsplit cuts at column indices 4 and 6, giving columns 0-3, 4-5 and 6, while all 3 rows stay in each piece."}
+        recall: {"q": "mat has shape (3,7). What shapes does np.hsplit(mat, [4,6]) produce?", "options": ["(3,4), (3,2), (3,1)", "(4,7), (2,7), (1,7)", "(3,4), (3,6)", "(3,4), (3,3)"], "answer": 0, "why": "hsplit cuts at column indices 4 and 6, giving columns 0-3, 4-5 and 6, while all 3 rows stay in each piece."},
+        exercise: {"title": "Class assignment, part 2", "prompt": "Sum every overlapping 2×2 block of a (3, 5) matrix without a loop. The assert compares your answer with a slow loop.", "code": "import numpy as np\n\nrng = np.random.default_rng(0)\nmat = rng.integers(0, 6, size=(3, 5))\nprint(mat)\n\n# Sum every overlapping 2x2 block -> a (2, 4) result, with no loop.\n# Hint: add four shifted slices of mat together.\nblocks = None  # ← your turn\n\nslow = np.array([[mat[i:i+2, j:j+2].sum() for j in range(4)] for i in range(2)])\nassert blocks is not None, \"replace None with your one-liner\"\nassert np.array_equal(blocks, slow), \"compare with the loop version:\\n%s\" % slow\nprint(blocks)\nprint(\"ok — four shifted slices, no loop\")"}
       },
       4: {
         aside: "A slice is a view of the same memory: mat1 += 10 changes the original, mat1 = mat1 + 10 makes a new array.",
@@ -53,14 +54,15 @@ window.AI_STUDY = {
       },
       5: {
         aside: "Broadcasting stretches a lower-dimension array across a bigger one: a length-5 vector is added to every row of a (3,5) matrix.",
-        recall: {"q": "mat has shape (3,5) and v = np.array([10,20,30,40,50]). What does mat + v do?", "options": ["Raises an error because the shapes differ", "Adds v to every row of mat, giving shape (3,5)", "Adds v to every column of mat", "Appends v as a fourth row"], "answer": 1, "why": "v's 5 elements line up with mat's 5 columns, so NumPy broadcasts v over each of the 3 rows."}
+        recall: {"q": "mat has shape (3,5) and v = np.array([10,20,30,40,50]). What does mat + v do?", "options": ["Raises an error because the shapes differ", "Adds v to every row of mat, giving shape (3,5)", "Adds v to every column of mat", "Appends v as a fourth row"], "answer": 1, "why": "v's 5 elements line up with mat's 5 columns, so NumPy broadcasts v over each of the 3 rows."},
+        exercise: {"title": "Centre the columns", "prompt": "Subtract each column's mean from that column in one line. This is the first step of standardising features (chapter 05).", "code": "import numpy as np\n\nrng = np.random.default_rng(1)\ndata = rng.normal(loc=[10, 50, 200], scale=[1, 5, 20], size=(100, 3))\n\n# Centre every column: subtract that column's mean from it.\n# One line, using broadcasting — no loop over columns.\ncentred = None  # ← your turn\n\nassert centred is not None, \"replace None with your one-liner\"\nassert centred.shape == data.shape, \"the shape should not change\"\nassert np.allclose(centred.mean(axis=0), 0), \"each column's mean should now be 0\"\nprint(\"column means after centring:\", centred.mean(axis=0).round(12) + 0.0)\nprint(\"ok — a (3,) vector broadcast down 100 rows\")"}
       },
       6: {
         aside: "np.dot sums element-wise products (inner product); np.outer multiplies every pair, building a full matrix.",
         recall: {"q": "mat = np.arange(9).reshape(3,3) and vec1 = np.array([1,2,3]). What is np.dot(mat, vec1)?", "options": ["[0 4 16]", "[9 12 15]", "[[0 2 6] [3 8 15] [6 14 24]]", "[8 26 44]"], "answer": 3, "why": "Each entry is a row of mat dotted with vec1: 0+2+6=8, 3+8+15=26, 6+14+24=44."}
       },
       7: {
-        aside: "The axis you pass is the one that gets collapsed: axis=0 averages down the rows, leaving one value per column.",
+        aside: "The axis you pass is the one that gets collapsed: axis=0 averages down the rows, leaving one value per column. (The notebook's printed labels have row and column swapped.)",
         recall: {"q": "mat = np.arange(9).reshape(3,3) holds [[0,1,2],[3,4,5],[6,7,8]]. What does np.mean(mat, axis=0) give?", "options": ["[3. 4. 5.]", "[1. 4. 7.]", "4.0", "[0. 3. 6.]"], "answer": 0, "why": "axis=0 collapses the row axis, so each column is averaged: (0+3+6)/3=3, (1+4+7)/3=4, (2+5+8)/3=5."}
       },
       8: {
@@ -69,7 +71,8 @@ window.AI_STUDY = {
       },
       9: {
         aside: "The assignment drills the chapter's tools; many items, like a bordered matrix, are a single slice assignment.",
-        recall: {"q": "Assignment item 8: make a 2D array with 1 on the border and 0 inside. Starting from Z = np.ones((5,5)), which line works?", "options": ["Z[1:,1:] = 0", "Z[1:-1,1:-1] = 0", "Z[::2,::2] = 0", "Z[0,:] = 0"], "answer": 1, "why": "1:-1 skips the first and last index on each axis, so only the inner block becomes 0 and the border stays 1."}
+        recall: {"q": "Assignment item 8: make a 2D array with 1 on the border and 0 inside. Starting from Z = np.ones((5,5)), which line works?", "options": ["Z[1:,1:] = 0", "Z[1:-1,1:-1] = 0", "Z[::2,::2] = 0", "Z[0,:] = 0"], "answer": 1, "why": "1:-1 skips the first and last index on each axis, so only the inner block becomes 0 and the border stays 1."},
+        exercise: {"title": "Assignment 8, checked", "prompt": "Build the bordered array for real. The asserts check the border and the inside.", "code": "import numpy as np\n\n# Assignment 8: a 5x5 array with 1 on the border and 0 inside.\n# Start from np.ones and use one slice assignment.\nboard = None  # ← your turn\n\nassert board is not None, \"replace None with your code\"\nassert board.shape == (5, 5), \"it should be 5x5\"\nassert board[0].all() and board[-1].all() and board[:, 0].all() and board[:, -1].all(), \"the border should be all 1\"\nassert not board[1:-1, 1:-1].any(), \"the inside should be all 0\"\nprint(board)\nprint(\"ok\")"}
       }
     }
   },
