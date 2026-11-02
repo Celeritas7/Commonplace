@@ -177,7 +177,9 @@ self.addEventListener("install", function (e) {
 self.addEventListener("activate", function (e) {
   e.waitUntil(
     caches.keys().then(function (keys) {
-      return Promise.all(keys.map(function (k) { return k === VERSION ? null : caches.delete(k); }));
+      /* only our own old versions: caches are shared by the whole site, and other
+         sections (SQL, AI study, JupyterLite …) keep their offline copies here too */
+      return Promise.all(keys.map(function (k) { return k.indexOf("cp-py-") === 0 && k !== VERSION ? caches.delete(k) : null; }));
     }).then(function () { return self.clients.claim(); })
   );
 });

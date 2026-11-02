@@ -5,7 +5,8 @@
 const C = 'sql-lab-v2';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil((async () => {
-  for (const k of await caches.keys()) if (k !== C) await caches.delete(k);
+  /* only our own old versions: caches are shared by the whole site */
+  for (const k of await caches.keys()) if (k.startsWith('sql-lab-') && k !== C) await caches.delete(k);
   await self.clients.claim();
 })()));
 self.addEventListener('fetch', e => {
