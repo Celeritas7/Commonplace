@@ -136,10 +136,12 @@
 
     /* exercises become real cells at the end of their section */
     Object.keys(SSTUDY).forEach((k) => {
-      const ex = SSTUDY[k].exercise; if (!ex) return;
+      /* exercise can be one object or a list of them */
       const i = +k; if (!secOf[i]) return;
-      cells.push({ type: "code", src: ex.code, orig: ex.code, sec: i, ran: false, outs: [], live: null, exercise: ex, n: ++codeN });
-      secOf[i].push(cells.length - 1);
+      [].concat(SSTUDY[k].exercise || []).forEach((ex) => {
+        cells.push({ type: "code", src: ex.code, orig: ex.code, sec: i, ran: false, outs: [], live: null, exercise: ex, n: ++codeN });
+        secOf[i].push(cells.length - 1);
+      });
     });
 
     buildHead();
