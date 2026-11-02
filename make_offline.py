@@ -19,8 +19,7 @@ import hashlib, json, os, re, sys, urllib.request, urllib.error
 ROOT = os.path.dirname(os.path.abspath(__file__))
 LIB  = os.path.join(ROOT, "_lib")
 SKIP = {"Temp", "_archive", "_superseded_flat_build", ".git", "_lib",
-        "AI_study", "node_modules", "supabase",
-        "apps"}  # apps/ = standalone offline apps from Drive; already self-contained
+        "AI_study", "node_modules", "supabase"}
 UA   = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
 
 PYO = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/"
