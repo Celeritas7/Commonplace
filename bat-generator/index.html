@@ -3,211 +3,238 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>BAT Generator · Commonplace</title>
-<meta name="theme-color" content="#0d1017" />
-<link rel="icon" href="pwa/icon-192.png" />
-<link href="../../_lib/fonts/gf-135340b0.css" rel="stylesheet" />
+<title>BatSmith — BAT file generator</title>
+<meta name="description" content="Offline generator for Windows .bat files, with every line explained." />
+<meta name="theme-color" content="#2b59c3" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
 <style>
   :root{
-    --void:#0d1017; --panel:#141922; --panel-2:#1b2230; --panel-3:#222a3a;
-    --edge:#28313f; --edge-soft:#1e2531;
-    --txt:#d7dee9; --txt-soft:#9aa7b8; --txt-mute:#8592a6;
-    --amber:#e8b64c; --amber-2:#f5cd77;
-    --green:#6ee29a; --cyan:#56b6c2; --blue:#79b8ff; --pink:#e06c9f; --red:#e5674b;
-    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
-    --serif:"EB Garamond",Georgia,serif;
-    --display:"Cormorant Garamond",Georgia,serif;
+    --bg:#f4f5f7; --surface:#ffffff; --surface-2:#f0f2f5; --line:#dde1e7; --line-2:#e9ecf0;
+    --text:#1b1f27; --text-2:#4b5563; --text-3:#6b7280;
+    --accent:#2b59c3; --accent-ink:#ffffff; --accent-soft:#e7eefc;
+    --warn:#b45309; --warn-soft:#fef3e2; --bad:#b42318; --bad-soft:#fdecea; --ok:#15803d;
+    --ed-bg:#16191f; --ed-gutter:#555d6b; --ed-text:#e3e7ee; --ed-why:#1f2530; --ed-why-text:#c3cad6;
+    --tk-c:#7d8796; --tk-l:#f28fad; --tk-k:#f2c46d; --tk-s:#9fd89a; --tk-v:#7cc7d6; --tk-o:#8fb3ff;
+    --ui:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:"Cascadia Mono","Cascadia Code",Consolas,"SF Mono",Menlo,monospace;
+    --r:10px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1115; --surface:#171a20; --surface-2:#1e222a; --line:#2a2f39; --line-2:#22262e;
+      --text:#e8ebf0; --text-2:#b3bac6; --text-3:#8a93a2;
+      --accent:#7aa2ff; --accent-ink:#0f1115; --accent-soft:#1d2840;
+      --warn:#f0b866; --warn-soft:#2b2214; --bad:#ff8a7a; --bad-soft:#2e1714; --ok:#6fd38f;
+      --ed-bg:#0b0d11; --ed-why:#161b24; --shadow:none;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1115; --surface:#171a20; --surface-2:#1e222a; --line:#2a2f39; --line-2:#22262e;
+    --text:#e8ebf0; --text-2:#b3bac6; --text-3:#8a93a2;
+    --accent:#7aa2ff; --accent-ink:#0f1115; --accent-soft:#1d2840;
+    --warn:#f0b866; --warn-soft:#2b2214; --bad:#ff8a7a; --bad-soft:#2e1714; --ok:#6fd38f;
+    --ed-bg:#0b0d11; --ed-why:#161b24; --shadow:none;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--void);color:var(--txt);font-family:var(--serif);font-size:17px;line-height:1.55;
-    -webkit-font-smoothing:antialiased;
-    background-image:radial-gradient(circle at 14% 6%, rgba(232,182,76,0.055) 0%, rgba(232,182,76,0) 42%),
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 3px)}
-  .wrap{max-width:1360px;margin:0 auto;padding:22px 24px 80px}
-  a{color:var(--amber)}
-  code{font-family:var(--mono);font-size:.86em;color:var(--cyan)}
-  .crumb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;letter-spacing:1.5px;
-    text-transform:uppercase;color:var(--txt-mute);margin-bottom:22px}
-  .crumb a{color:var(--txt-mute);text-decoration:none}.crumb a:hover{color:var(--amber)}
-  .crumb .sep{color:var(--edge)}.crumb .here{color:var(--txt)}
-  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px}
-  header.top h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5vw,48px);line-height:1;margin:0;color:#f2f6fb}
-  header.top h1 span{color:var(--amber)}
-  header.top p{margin:8px 0 0;color:var(--txt-soft);font-style:italic;max-width:62ch}
-  .offline{font-family:var(--mono);font-size:10.5px;letter-spacing:1.2px;color:var(--green);border:1px solid rgba(110,226,154,.4);
-    background:rgba(110,226,154,.08);padding:5px 10px;border-radius:3px;white-space:nowrap}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  code{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 4px;border-radius:4px}
+  button{font:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-  .layout{display:grid;grid-template-columns:230px minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
-  @media(max-width:1180px){.layout{grid-template-columns:210px minmax(0,1fr)}.out{grid-column:1 / -1}}
-  @media(max-width:720px){.layout{grid-template-columns:minmax(0,1fr)}}
+  /* app bar */
+  .appbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--surface);
+    border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.2px}
+  .brand svg{width:28px;height:28px;flex:none}
+  .brand small{font-weight:500;color:var(--text-3);font-size:13px}
+  @media(max-width:560px){.brand small{display:none}}
+  .spacer{flex:1}
+  .pill{font-size:12px;font-weight:600;color:var(--ok);display:flex;align-items:center;gap:6px}
+  .pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok)}
+  @media(max-width:560px){.pill{display:none}}
+  .ib{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;min-height:36px;padding:6px 12px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+  .ib:hover{background:var(--surface-2)}
+  .ib .n{background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 7px;font-size:11px}
 
-  .box{background:var(--panel);border:1px solid var(--edge);border-radius:8px;overflow:hidden}
-  .box .hd{padding:10px 14px;background:var(--panel-2);border-bottom:1px solid var(--edge);font-family:var(--mono);font-size:10.5px;
-    letter-spacing:1.6px;text-transform:uppercase;color:var(--txt-mute);display:flex;align-items:center;gap:10px}
+  .main{max-width:1440px;margin:0 auto;padding:18px 20px 60px;display:grid;grid-template-columns:250px minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}
+  @media(max-width:1150px){.main{grid-template-columns:230px minmax(0,1fr)}.preview{grid-column:1 / -1}}
+  @media(max-width:760px){.main{grid-template-columns:minmax(0,1fr);padding:14px 16px 50px}}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
 
-  /* template list */
-  .tlist{display:flex;flex-direction:column}
-  @media(max-width:720px){.tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
-  .tbtn{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center;
-    padding:10px 12px;border-bottom:1px solid var(--edge-soft);min-height:48px}
-  .tbtn:hover{background:var(--panel-2)}
-  .tbtn .g{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--amber);border:1px solid var(--edge);border-radius:4px;
-    width:30px;height:30px;display:grid;place-items:center}
-  .tbtn b{display:block;font-family:var(--mono);font-size:12.5px;font-weight:600;color:#eaf0f7;line-height:1.25}
-  .tbtn small{display:block;font-family:var(--mono);font-size:9.5px;color:var(--txt-mute);letter-spacing:.3px;margin-top:2px}
-  .tbtn.on{background:rgba(232,182,76,.1);box-shadow:inset 3px 0 0 var(--amber)}
-  .tbtn:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+  /* type list */
+  .types{position:sticky;top:70px;max-height:calc(100vh - 88px);overflow:auto}
+  @media(max-width:760px){.types{position:static;max-height:none}}
+  .search{padding:12px;border-bottom:1px solid var(--line-2)}
+  .search input{width:100%}
+  .cat{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);padding:12px 14px 4px}
+  .tbtn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:10px;align-items:center;width:100%;padding:8px 14px;min-height:44px}
+  .tbtn:hover{background:var(--surface-2)}
+  .tbtn .g{width:28px;height:28px;border-radius:7px;background:var(--surface-2);color:var(--accent);display:grid;place-items:center;
+    font-family:var(--mono);font-size:12px;font-weight:700;flex:none}
+  .tbtn b{font-weight:600;font-size:14px}
+  .tbtn.on{background:var(--accent-soft)}
+  .tbtn.on .g{background:var(--accent);color:var(--accent-ink)}
+  .tbtn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .none{padding:14px;color:var(--text-3);margin:0}
+  @media(max-width:760px){.tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));padding-bottom:6px}.cat{grid-column:1 / -1}}
 
-  /* form */
-  .intro{padding:14px 16px 4px}
-  .intro h2{font-family:var(--display);font-weight:600;font-size:27px;line-height:1.1;margin:0;color:#eef3f9}
-  .intro p{margin:6px 0 0;color:var(--txt-soft);font-size:16px}
-  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
-  .chips span{font-family:var(--mono);font-size:10.5px;background:var(--panel-3);color:var(--cyan);padding:3px 7px;border-radius:3px}
-  .chips .from{color:var(--amber);background:rgba(232,182,76,.1)}
-  form{padding:6px 16px 16px}
-  .grp{font-family:var(--mono);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--amber);margin:18px 0 6px;
-    padding-top:12px;border-top:1px solid var(--edge-soft)}
+  /* options */
+  .intro{padding:18px 20px 6px}
+  .intro h1{font-size:22px;line-height:1.25;margin:0;letter-spacing:-.3px}
+  .intro p{margin:6px 0 0;color:var(--text-2)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .chips span{font-family:var(--mono);font-size:11.5px;background:var(--surface-2);color:var(--text-2);padding:3px 8px;border-radius:999px;border:1px solid var(--line-2)}
+  .chips .c{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-family:var(--ui);font-weight:600}
+  form{padding:4px 20px 20px}
+  .grp{font-size:12px;font-weight:700;color:var(--text);margin:20px 0 4px;padding-top:14px;border-top:1px solid var(--line-2)}
   .f{margin:12px 0}
-  .f label.t{display:block;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt);margin-bottom:5px}
-  .f .h{font-size:14px;color:var(--txt-mute);margin-top:4px;line-height:1.4}
-  input[type=text],input[type=number],select,textarea{width:100%;font-family:var(--mono);font-size:13px;color:var(--txt);
-    background:var(--void);border:1px solid var(--edge);border-radius:5px;padding:9px 10px;min-height:40px}
-  textarea{min-height:96px;resize:vertical;line-height:1.5}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 2px rgba(232,182,76,.18)}
-  .ck{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-family:var(--mono);font-size:12.5px;color:var(--txt);min-height:28px}
-  .ck input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--amber);flex:none}
-  .ck + .h{margin-left:27px}
+  .f label.t{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+  .f .h{font-size:12.5px;color:var(--text-3);margin-top:5px}
+  input[type=text],input[type=number],input[type=search],select,textarea{width:100%;font-family:var(--mono);font-size:13px;color:var(--text);
+    background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:38px}
+  select{font-family:var(--ui);font-size:14px}
+  input[type=search]{font-family:var(--ui);font-size:14px}
+  textarea{min-height:110px;resize:vertical;line-height:1.5}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .ck{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:14px}
+  .ck input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+  .ck + .h{margin-left:28px}
 
-  /* output */
-  .out{position:sticky;top:12px}
-  @media(max-width:1180px){.out{position:static}}
-  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--edge);background:var(--panel-2)}
-  .dots{display:flex;gap:6px;margin-right:4px}.dots i{width:10px;height:10px;border-radius:50%;display:block}
-  .bar input{flex:1;min-width:140px;min-height:36px;padding:6px 9px}
-  .btn{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.8px;border-radius:5px;padding:8px 13px;cursor:pointer;
-    border:1px solid var(--edge);background:var(--panel-3);color:var(--txt);min-height:36px}
-  .btn:hover{border-color:#3b465a}
-  .btn.pri{background:var(--amber);border-color:var(--amber);color:#0d1017}
-  .btn.pri:hover{background:var(--amber-2)}
-  .btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-  .sub{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--edge-soft);
-    font-family:var(--mono);font-size:11px;color:var(--txt-mute)}
-  .sub .ck{font-size:11px;color:var(--txt-soft);min-height:0}
-  .code{font-family:var(--mono);font-size:12.5px;line-height:1.6;max-height:calc(100vh - 220px);overflow:auto;padding:10px 0;background:#0b0e14}
-  @media(max-width:1180px){.code{max-height:none}}
-  .ln{display:grid;grid-template-columns:42px minmax(0,1fr);gap:0;white-space:pre-wrap;word-break:break-word}
-  .ln .no{color:#4a5568;text-align:right;padding-right:12px;user-select:none}
-  .ln code{color:var(--txt);font-size:inherit;padding-right:14px}
+  /* preview */
+  .preview{position:sticky;top:70px;overflow:hidden}
+  @media(max-width:1150px){.preview{position:static}}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+  .tools input{flex:1;min-width:150px}
+  .btn{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;min-height:38px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:600}
+  .btn:hover{background:var(--surface-2)}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn.pri:hover{filter:brightness(1.08)}
+  .btn.sm{min-height:30px;padding:4px 10px;font-size:12px}
+  .meta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:8px 12px;font-size:12.5px;color:var(--text-3);border-bottom:1px solid var(--line)}
+  .meta .ck{font-size:13px;color:var(--text-2)}
+  .code{background:var(--ed-bg);color:var(--ed-text);font-family:var(--mono);font-size:12.8px;line-height:1.6;padding:12px 0;
+    max-height:calc(100vh - 250px);overflow:auto}
+  @media(max-width:1150px){.code{max-height:none}}
+  .ln{display:grid;grid-template-columns:44px minmax(0,1fr);white-space:pre-wrap;word-break:break-word}
+  .ln .no{color:var(--ed-gutter);text-align:right;padding-right:14px;user-select:none}
+  .ln .tx{padding-right:16px}
   .ln.has{cursor:pointer}
-  .ln.has .no{color:var(--amber);opacity:.65}
-  .ln.has:hover{background:rgba(255,255,255,.025)}
-  .why{display:none;margin:2px 14px 8px 42px;padding:7px 11px;border-left:2px solid var(--amber);background:rgba(232,182,76,.06);
-    font-family:var(--serif);font-size:15px;line-height:1.45;color:var(--txt-soft);white-space:normal}
-  .why code{font-size:12px}
-  .ln.open + .why, .code.all .why{display:block}
-  .tk-c{color:#6b7a90;font-style:italic}.tk-l{color:var(--pink);font-weight:700}.tk-k{color:var(--amber)}
-  .tk-s{color:var(--green)}.tk-v{color:var(--cyan)}.tk-o{color:var(--blue)}
-  .warn{padding:10px 14px;border-top:1px solid var(--edge);font-size:15px}
-  .warn div{display:flex;gap:9px;margin:4px 0;color:var(--txt-soft)}
-  .warn div::before{content:"!";font-family:var(--mono);font-weight:700;color:#0d1017;background:var(--amber);border-radius:3px;
-    width:17px;height:17px;flex:none;display:grid;place-items:center;font-size:11px;margin-top:3px}
-  .warn div.bad::before{background:var(--red)}
-  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.2s;background:var(--green);
-    color:#0d1017;font-family:var(--mono);font-size:12px;font-weight:700;padding:9px 16px;border-radius:5px;pointer-events:none}
-  .toast.show{opacity:1;transform:translateX(-50%)}
+  .ln.has .no{color:var(--tk-k)}
+  .ln.has:hover{background:rgba(255,255,255,.04)}
+  .why{display:none;margin:3px 16px 8px 44px;padding:8px 12px;border-radius:6px;background:var(--ed-why);color:var(--ed-why-text);
+    font-family:var(--ui);font-size:13.5px;line-height:1.5;white-space:normal;border-left:3px solid var(--tk-k)}
+  .why code{background:rgba(255,255,255,.08);color:#fff}
+  .ln.open + .why,.code.all .why{display:block}
+  .tk-c{color:var(--tk-c);font-style:italic}.tk-l{color:var(--tk-l);font-weight:700}.tk-k{color:var(--tk-k)}
+  .tk-s{color:var(--tk-s)}.tk-v{color:var(--tk-v)}.tk-o{color:var(--tk-o)}
+  .warn{padding:10px 12px;display:grid;gap:6px;border-top:1px solid var(--line)}
+  .warn div{font-size:13.5px;padding:8px 10px;border-radius:7px;background:var(--warn-soft);color:var(--text)}
+  .warn div b:first-child{color:var(--warn)}
+  .warn div.bad{background:var(--bad-soft)}
+  .warn div.bad b:first-child{color:var(--bad)}
 
-  .help{margin-top:30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
-  .help .box{padding:14px 16px}
-  .help h3{font-family:var(--mono);font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--amber);margin:0 0 8px}
-  .help p,.help li{font-size:15.5px;color:var(--txt-soft);margin:0 0 6px}
-  .help ul{margin:0;padding-left:18px}
-  .colophon{margin-top:40px;padding-top:16px;border-top:1px solid var(--edge);font-family:var(--mono);font-size:11px;color:var(--txt-mute);
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
-  .colophon a{color:var(--txt-mute);text-decoration:none}.colophon a:hover{color:var(--amber)}
+  /* library dialog */
+  dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);padding:0;width:min(640px,calc(100vw - 32px));max-height:80vh}
+  dialog::backdrop{background:rgba(10,12,16,.45)}
+  .dh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .dh h2{font-size:17px;margin:0;flex:1}
+  .lib{max-height:60vh;overflow:auto}
+  .li{display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+  .li .nm{flex:1;min-width:160px}
+  .li .nm b{display:block;font-family:var(--mono);font-size:13.5px}
+  .li .nm small{color:var(--text-3)}
+  .empty{padding:28px 16px;text-align:center;color:var(--text-3)}
+
+  .help{max-width:1440px;margin:0 auto;padding:0 20px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+  @media(max-width:760px){.help{padding:0 16px 40px}}
+  .help .card{padding:16px 18px}
+  .help h3{font-size:14px;margin:0 0 8px}
+  .help ul{margin:0;padding-left:18px;color:var(--text-2);font-size:14px}
+  .help li{margin:4px 0}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);opacity:0;transition:.2s;background:var(--text);color:var(--bg);
+    font-size:13px;font-weight:600;padding:9px 16px;border-radius:8px;pointer-events:none;z-index:20}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="crumb">
-    <a href="../../index.html">Commonplace</a><span class="sep">/</span>
-    <a href="../index.html">Coding</a><span class="sep">/</span>
-    <a href="index.html">Batch Scripts</a><span class="sep">/</span>
-    <span class="here">Generator</span>
+<header class="appbar">
+  <div class="brand">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#2b59c3"/><path d="M14 22l10 10-10 10" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="30" y="39" width="20" height="5" rx="2.5" fill="#ffd166"/></svg>
+    <span>BatSmith <small>BAT file generator</small></span>
   </div>
+  <span class="spacer"></span>
+  <span class="pill">Works offline</span>
+  <button class="ib" id="libBtn" type="button">Saved <span class="n" id="libN">0</span></button>
+  <button class="ib" id="themeBtn" type="button" aria-label="Switch colour theme"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg> <span id="themeTxt">Auto</span></button>
+</header>
 
-  <header class="top">
-    <div>
-      <h1>BAT <span>Generator</span></h1>
-      <p>Pick a kind of script, set the options, download a ready-to-run <code>.bat</code>. Click any numbered line to see why it is there.</p>
+<main class="main">
+  <nav class="card types" aria-label="Script types">
+    <div class="search"><input type="search" id="q" placeholder="Search types…" aria-label="Search script types" /></div>
+    <div class="tlist" id="tlist"></div>
+  </nav>
+
+  <section class="card">
+    <div class="intro" id="intro"></div>
+    <form id="form" autocomplete="off" onsubmit="return false"></form>
+  </section>
+
+  <section class="card preview" aria-label="Generated script">
+    <div class="tools">
+      <input type="text" id="fname" aria-label="File name" spellcheck="false" />
+      <button class="btn" id="copy" type="button">Copy</button>
+      <button class="btn" id="saveBtn" type="button">Save</button>
+      <button class="btn pri" id="dl" type="button">Download .bat</button>
     </div>
-    <span class="offline">● WORKS OFFLINE</span>
-  </header>
+    <div class="meta">
+      <label class="ck"><input type="checkbox" id="explain" /> Explain every line</label>
+      <span id="meta"></span>
+      <button class="btn sm" id="reset" type="button">Reset options</button>
+    </div>
+    <div class="code" id="code" aria-live="polite"></div>
+    <div class="warn" id="warn" hidden></div>
+  </section>
+</main>
 
-  <div class="layout">
-    <nav class="box" aria-label="Script types">
-      <div class="hd">Script type</div>
-      <div class="tlist" id="tlist"></div>
-    </nav>
-
-    <section class="box">
-      <div class="intro" id="intro"></div>
-      <form id="form" autocomplete="off" onsubmit="return false"></form>
-    </section>
-
-    <section class="box out" aria-label="Generated script">
-      <div class="bar">
-        <span class="dots"><i style="background:#e5674b"></i><i style="background:#e8b64c"></i><i style="background:#6ee29a"></i></span>
-        <input type="text" id="fname" aria-label="File name" spellcheck="false" />
-        <button class="btn" id="copy" type="button">COPY</button>
-        <button class="btn pri" id="dl" type="button">DOWNLOAD .BAT</button>
-      </div>
-      <div class="sub">
-        <label class="ck"><input type="checkbox" id="explain" /> Explain every line</label>
-        <span id="meta"></span>
-        <button class="btn" id="reset" type="button" style="min-height:28px;padding:4px 10px;font-size:10.5px">RESET OPTIONS</button>
-      </div>
-      <div class="code" id="code" aria-live="polite"></div>
-      <div class="warn" id="warn" hidden></div>
-    </section>
+<section class="help">
+  <div class="card">
+    <h3>Running the file</h3>
+    <ul>
+      <li>Save the <code>.bat</code> where the script expects it. Most types use the folder the file sits in (<code>%~dp0</code>).</li>
+      <li>Double-click to run. While testing, open <code>cmd</code> in that folder and type the file name, so the window stays open and errors stay visible.</li>
+      <li>If Windows warns that the file came from the internet: right-click → Properties → <b>Unblock</b>.</li>
+    </ul>
   </div>
-
-  <div class="help">
-    <div class="box">
-      <h3>Running the file</h3>
-      <ul>
-        <li>Put the <code>.bat</code> where the template expects (most use the folder the file sits in, <code>%~dp0</code>).</li>
-        <li>Double-click to run. While testing, open <code>cmd</code> in that folder and type the name instead — the window stays open and errors stay visible.</li>
-        <li>If Windows says the file came from the internet: right-click → Properties → <b>Unblock</b>.</li>
-      </ul>
-    </div>
-    <div class="box">
-      <h3>What the generator takes care of</h3>
-      <ul>
-        <li>Windows line endings (CRLF) — <code>GOTO</code> and labels can fail with Unix ones.</li>
-        <li>Escaping text you type: <code>%</code> → <code>%%</code>, and <code>^ &amp; | &lt; &gt; ( )</code> get a <code>^</code> in <code>echo</code> lines.</li>
-        <li>Quoting paths so spaces are safe, and avoiding the <code>"C:\folder\"</code> trailing-backslash trap.</li>
-      </ul>
-    </div>
-    <div class="box">
-      <h3>Before you trust it</h3>
-      <ul>
-        <li>Read the explained lines once — the point is that you could write it yourself next time.</li>
-        <li>Test delete / move / mirror scripts on a copy of the folder first.</li>
-        <li>Git scripts: test in a throwaway repo, not inside Commonplace.</li>
-      </ul>
-    </div>
+  <div class="card">
+    <h3>Handled for you</h3>
+    <ul>
+      <li>Windows line endings (CRLF) in every download.</li>
+      <li>Escaping of text you type: <code>%</code> → <code>%%</code>, and <code>^ &amp; | &lt; &gt; ( )</code> get a <code>^</code> in messages.</li>
+      <li>Quoted paths, so folders with spaces work.</li>
+    </ul>
   </div>
+  <div class="card">
+    <h3>Before you trust it</h3>
+    <ul>
+      <li>Read the explained lines once, so you know what the script will do.</li>
+      <li>Test delete, move and mirror scripts on a copy of the folder first.</li>
+      <li>Test git scripts in a throwaway repository.</li>
+    </ul>
+  </div>
+</section>
 
-  <footer class="colophon">
-    <span>Options are remembered on this device.</span>
-    <span><a href="index.html">← Batch Scripts</a></span>
-  </footer>
-</div>
-<div class="toast" id="toast"></div>
+<dialog id="libDlg" aria-labelledby="libTitle">
+  <div class="dh"><h2 id="libTitle">Saved scripts</h2><button class="btn sm" id="libClose" type="button">Close</button></div>
+  <div class="lib" id="lib"></div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 (function () {
+"use strict";
 "use strict";
 
 /* ───────────────────────── helpers ───────────────────────── */
@@ -249,7 +276,7 @@ function FOLDER(def, opts) {
     { k: "folder", label: "Work in which folder?", type: "select", def: def || "script",
       opts: (opts || ["script", "drag", "up", "fixed"]).map(function (k) { return [k, all[k]]; }) },
     { k: "upLevels", label: "How many folders up?", type: "number", def: 2, min: 1, max: 8, show: function (o) { return o.folder === "up"; },
-      help: "2 = the folder two levels above, like START_HERE.bat does with <code>%~dp0..\\..</code>" },
+      help: "2 = the folder two levels above, written as <code>%~dp0..\\..</code>" },
     { k: "fixedPath", label: "Folder path", type: "text", def: "D:\\Coding\\MyProject", show: function (o) { return o.folder === "fixed"; },
       help: "Environment variables work here, e.g. <code>%USERPROFILE%\\Documents</code>." }
   ];
@@ -349,7 +376,7 @@ var T = [];
 
 /* 1 · git pull */
 T.push({
-  id: "pull", g: "↓", name: "Git pull", from: "0_pull.bat", file: "0_pull.bat",
+  id: "pull", g: "↓", name: "Git pull", cat: "Git", file: "git_pull.bat",
   blurb: "Bring the latest commits from GitHub into a folder with one double-click.",
   concepts: ["@echo off", "cd /d \"%~dp0\"", "errorlevel", "for /f", "pause"],
   fields: [{ group: "Where" }].concat(FOLDER("script"), [{ group: "Git" }], GIT_FIELDS, [
@@ -369,12 +396,12 @@ T.push({
       [L("echo."), L("echo PULL FAILED - read the message above.")]).slice(0, -1), [L(") else ("), L("  echo Up to date."), L(")")]);
     return a.concat(endLines(o));
   },
-  warn: function () { return ["Test git scripts in a throwaway repo first — run inside Commonplace, it pulls the Commonplace repo."]; }
+  warn: function () { return ["Test git scripts in a throwaway repo first."]; }
 });
 
 /* 2 · git sync */
 T.push({
-  id: "sync", g: "⇅", name: "Git sync / upload", from: "1_git_auto_sync · 2_git_upload", file: "git_sync.bat",
+  id: "sync", g: "⇅", name: "Git sync / upload", cat: "Git", file: "git_sync.bat",
   blurb: "Stage everything, ask for a commit message, commit and push — optionally setting up the repo first.",
   concepts: ["set /p", "EnableDelayedExpansion", "!var!", "git diff --cached --quiet", "errorlevel"],
   fields: [{ group: "Where" }].concat(FOLDER("drag"), [{ group: "Git" }], GIT_FIELDS, [
@@ -453,7 +480,7 @@ T.push({
 
 /* 3 · terminal here */
 T.push({
-  id: "term", g: ">_", name: "Open a terminal here", from: "Launch_app.bat", file: "Launch_app.bat",
+  id: "term", g: ">_", name: "Open a terminal here", cat: "Shell", file: "terminal_here.bat",
   blurb: "Open cmd, PowerShell or Windows Terminal already sitting in the right folder, optionally running a first command.",
   concepts: ["start \"\"", "cmd /k", "powershell -NoExit"],
   fields: [{ group: "Where" }].concat(FOLDER("script"), [{ group: "Terminal" },
@@ -490,7 +517,7 @@ T.push({
 
 /* 4 · local web server */
 T.push({
-  id: "server", g: "◎", name: "Local web server", from: "run-akatsuki-local · run-commonplace", file: "run-local.bat",
+  id: "server", g: "◎", name: "Local web server", cat: "Web", file: "run-local.bat",
   blurb: "Serve a folder at http://localhost so web apps (and offline PWAs) work — finds Python, falls back to Node, opens the browser.",
   concepts: ["for %%P in (…)", "%%~P", "if defined", ":subroutine", "http.server"],
   fields: [{ group: "What to serve" },
@@ -498,9 +525,9 @@ T.push({
       ["script", "The folder this .bat sits in"], ["up", "Some folders above the .bat"],
       ["near", "Nearest folder above that contains a marker file"], ["high", "Highest folder above that contains a marker file"], ["fixed", "A fixed path I type"]] },
     { k: "upLevels", label: "How many folders up?", type: "number", def: 2, min: 1, max: 8, show: function (o) { return o.root === "up"; } },
-    { k: "fixedPath", label: "Folder path", type: "text", def: "D:\\Coding\\Commonplace", show: function (o) { return o.root === "fixed"; } },
+    { k: "fixedPath", label: "Folder path", type: "text", def: "D:\\Sites\\MyApp", show: function (o) { return o.root === "fixed"; } },
     { k: "marker", label: "Marker file / folder", type: "text", def: "index.html",
-      help: "For the climbing options: the script walks up from its own folder until it finds this. Use <code>_lib</code> to find the Commonplace root.", show: function (o) { return o.root === "near" || o.root === "high"; } },
+      help: "For the climbing options: the script walks up from its own folder until it finds this. e.g. <code>.git</code> finds the top of a repository.", show: function (o) { return o.root === "near" || o.root === "high"; } },
     { k: "check", label: "Stop if there is no index.html in the served folder", type: "check", def: true },
     { group: "Server" },
     { k: "port", label: "Port", type: "number", def: 8000, min: 1024, max: 65535, help: "Each app on its own port keeps its own localStorage — same port, shared storage." },
@@ -586,7 +613,7 @@ T.push({
 
 /* 5 · run python */
 T.push({
-  id: "py", g: "Py", name: "Run a Python script", from: "refresh.bat", file: "run.bat",
+  id: "py", g: "Py", name: "Run a Python script", cat: "Python", file: "run.bat",
   blurb: "Double-click to run a .py file with the right Python — a project venv, a conda env, or whatever is installed.",
   concepts: ["if exist", "%*", "errorlevel", "set \"RC=…\""],
   fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "up", "fixed"]), [{ group: "Script" },
@@ -636,7 +663,7 @@ T.push({
 
 /* 6 · backup */
 T.push({
-  id: "backup", g: "⧉", name: "Backup a folder", from: "COPY · XCOPY · ROBOCOPY", file: "backup.bat",
+  id: "backup", g: "⧉", name: "Backup a folder", cat: "Files", file: "backup.bat",
   blurb: "Copy a folder somewhere safe — into a dated sub-folder, a zip, or an exact mirror.",
   concepts: ["robocopy", "exit codes ≥ 8", "for /f + powershell", "md"],
   fields: [{ group: "From → to" },
@@ -705,7 +732,7 @@ T.push({
 
 /* 7 · clean up */
 T.push({
-  id: "clean", g: "⌫", name: "Clean up files", from: "DEL · FORFILES · CHOICE", file: "cleanup.bat",
+  id: "clean", g: "⌫", name: "Clean up files", cat: "Files", file: "cleanup.bat",
   blurb: "Find files by pattern (optionally older than N days), list them, ask once, then delete.",
   concepts: ["dir /b", "find /c /v \"\"", "choice", "forfiles /d", "del /q /s"],
   fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "drag", "fixed"]), [{ group: "Which files" },
@@ -763,7 +790,7 @@ T.push({
 
 /* 8 · file loop */
 T.push({
-  id: "loop", g: "∀", name: "Do something to many files", from: "FOR · REN · %%~nxf", file: "batch_rename.bat",
+  id: "loop", g: "∀", name: "Do something to many files", cat: "Files", file: "batch_rename.bat",
   blurb: "Rename, copy, move or run a command on every file that matches a pattern — with a dry-run mode.",
   concepts: ["for /f + dir /b", "%%~nf %%~xf %%~nxf", "%~f0", "set /a"],
   fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "drag", "fixed"]), [{ group: "Which files" },
@@ -812,7 +839,7 @@ T.push({
 
 /* 9 · menu */
 T.push({
-  id: "menu", g: "☰", name: "Menu of commands", from: "CHOICE · GOTO · labels", file: "menu.bat",
+  id: "menu", g: "☰", name: "Menu of commands", cat: "Interactive", file: "menu.bat",
   blurb: "A numbered menu: press a key, the matching command runs, back to the menu.",
   concepts: [":labels", "goto", "choice /c /n", "if errorlevel (highest first)", "call"],
   fields: [{ group: "Where" }].concat(FOLDER("script"), [{ group: "Menu" },
@@ -862,7 +889,7 @@ T.push({
 
 /* 10 · launch */
 T.push({
-  id: "launch", g: "▶", name: "Launch apps & sites", from: "START · TIMEOUT", file: "start_work.bat",
+  id: "launch", g: "▶", name: "Launch apps & sites", cat: "Startup", file: "start_work.bat",
   blurb: "One double-click opens your whole set-up: programs, folders, websites, documents.",
   concepts: ["start \"\" \"…\"", "timeout /nobreak"],
   fields: [{ group: "What to open" },
@@ -886,7 +913,7 @@ T.push({
 
 /* 11 · restart program */
 T.push({
-  id: "restart", g: "↻", name: "Restart a program", from: "TASKLIST · TASKKILL", file: "restart_app.bat",
+  id: "restart", g: "↻", name: "Restart a program", cat: "System", file: "restart_app.bat",
   blurb: "Close a stuck program (if it is running), wait a moment, start it again.",
   concepts: ["tasklist /fi", "find", "taskkill /im", "if not errorlevel 1"],
   fields: [{ group: "Program" },
@@ -909,7 +936,7 @@ T.push({
 });
 
 /* ───────────────────────── state ───────────────────────── */
-var KEY = "bat_generator_v1";
+var KEY = "batsmith_v1";
 var S = (function () { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })();
 S.vals = S.vals || {}; S.fname = S.fname || {};
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -948,36 +975,47 @@ function hl(line) {
   return paint(line, RX_FULL);
 }
 
-/* ───────────────────────── render ───────────────────────── */
+/* ───────────────────────── UI ───────────────────────── */
+S.lib = S.lib || [];
 var $ = function (id) { return document.getElementById(id); };
-var lines = [];
+var lines = [], query = "";
+function valsFrom(t, v) { var o = {}; v = v || {}; t.fields.forEach(function (f) { if (f.k) o[f.k] = f.k in v ? v[f.k] : f.def; }); return o; }
+function byId(id) { return T.filter(function (t) { return t.id === id; })[0]; }
+function attr(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
 function renderList() {
-  $("tlist").innerHTML = T.map(function (t) {
-    return '<button type="button" class="tbtn' + (t.id === tpl().id ? " on" : "") + '" data-id="' + t.id + '"><span class="g">' + t.g +
-      "</span><span><b>" + t.name + "</b><small>" + esc(t.from) + "</small></span></button>";
-  }).join("");
+  var cats = [], cur = tpl().id, h = "";
+  T.forEach(function (t) { if (cats.indexOf(t.cat) < 0) cats.push(t.cat); });
+  cats.forEach(function (c) {
+    var ts = T.filter(function (t) { return t.cat === c && (!query || (t.name + " " + t.blurb + " " + t.cat + " " + t.concepts.join(" ")).toLowerCase().indexOf(query) >= 0); });
+    if (!ts.length) return;
+    h += '<div class="cat">' + c + "</div>" + ts.map(function (t) {
+      return '<button type="button" class="tbtn' + (t.id === cur ? " on" : "") + '" data-id="' + t.id + '"><span class="g">' + t.g + "</span><b>" + t.name + "</b></button>";
+    }).join("");
+  });
+  $("tlist").innerHTML = h || '<p class="none">No type matches “' + esc(query) + '”.</p>';
 }
 function renderForm() {
   var t = tpl(), o = vals(t);
-  $("intro").innerHTML = "<h2>" + t.name + "</h2><p>" + t.blurb + '</p><div class="chips"><span class="from">from: ' + esc(t.from) + "</span>" +
+  $("intro").innerHTML = "<h1>" + t.name + "</h1><p>" + t.blurb + '</p><div class="chips"><span class="c">' + t.cat + "</span>" +
     t.concepts.map(function (c) { return "<span>" + esc(c) + "</span>"; }).join("") + "</div>";
   var h = "";
-  t.fields.forEach(function (f, i) {
+  t.fields.forEach(function (f) {
     if (f.group) { h += '<div class="grp">' + f.group + "</div>"; return; }
-    var id = "f_" + f.k, st = f.show && !f.show(o) ? ' hidden' : "", help = f.help ? '<div class="h">' + f.help + "</div>" : "";
-    h += '<div class="f" data-k="' + f.k + '"' + st + ">";
+    var id = "f_" + f.k, help = f.help ? '<div class="h">' + f.help + "</div>" : "";
+    h += '<div class="f" data-k="' + f.k + '"' + (f.show && !f.show(o) ? " hidden" : "") + ">";
     if (f.type === "check") h += '<label class="ck"><input type="checkbox" id="' + id + '"' + (o[f.k] ? " checked" : "") + "> " + f.label + "</label>" + help;
     else {
       h += '<label class="t" for="' + id + '">' + f.label + "</label>";
       if (f.type === "select") h += '<select id="' + id + '">' + f.opts.map(function (p) { return '<option value="' + p[0] + '"' + (o[f.k] === p[0] ? " selected" : "") + ">" + esc(p[1]) + "</option>"; }).join("") + "</select>";
       else if (f.type === "area") h += '<textarea id="' + id + '" spellcheck="false">' + esc(String(o[f.k])) + "</textarea>";
-      else h += '<input type="' + (f.type === "number" ? "number" : "text") + '" id="' + id + '" spellcheck="false"' + (f.min != null ? ' min="' + f.min + '"' : "") + (f.max != null ? ' max="' + f.max + '"' : "") + ">";
+      else h += '<input type="' + (f.type === "number" ? "number" : "text") + '" id="' + id + '" spellcheck="false" value="' + attr(o[f.k]) + '"' +
+        (f.min != null ? ' min="' + f.min + '"' : "") + (f.max != null ? ' max="' + f.max + '"' : "") + ">";
       h += help;
     }
     h += "</div>";
   });
   $("form").innerHTML = h;
-  t.fields.forEach(function (f) { if (f.k && f.type !== "check" && f.type !== "select" && f.type !== "area") $("f_" + f.k).value = o[f.k]; });
   $("fname").value = S.fname[t.id] || t.file;
 }
 function syncShow() {
@@ -988,23 +1026,76 @@ function renderOut() {
   var t = tpl(), o = vals(t);
   lines = t.build(o);
   $("code").innerHTML = lines.map(function (l, i) {
-    return '<div class="ln' + (l.w ? " has" : "") + '" data-i="' + i + '"' + (l.w ? ' title="Click for the explanation"' : "") + '><span class="no">' + (i + 1) + "</span><code>" + (hl(l.c) || " ") + "</code></div>" +
+    return '<div class="ln' + (l.w ? " has" : "") + '"' + (l.w ? ' title="Click for the explanation"' : "") + '><span class="no">' + (i + 1) + '</span><span class="tx">' + (hl(l.c) || " ") + "</span></div>" +
       (l.w ? '<div class="why">' + l.w + "</div>" : "");
   }).join("");
-  var expl = lines.filter(function (l) { return l.w; }).length;
-  $("meta").textContent = lines.length + " lines · " + expl + " explained";
+  $("meta").textContent = lines.length + " lines · " + lines.filter(function (l) { return l.w; }).length + " explained";
   var w = (t.warn ? t.warn(o) : []).map(function (x) { return typeof x === "string" ? { t: x } : x; });
   if (/[^\x00-\x7f]/.test(lines.map(function (l) { return l.c; }).join(""))) w.push({ t: "Non-ASCII characters (accents, symbols) can show up garbled in cmd. Plain ASCII is safest." });
   $("warn").hidden = !w.length;
-  $("warn").innerHTML = w.map(function (x) { return "<div" + (x.bad ? ' class="bad"' : "") + "><span>" + x.t + "</span></div>"; }).join("");
+  $("warn").innerHTML = w.map(function (x) { return "<div" + (x.bad ? ' class="bad"' : "") + "><b>" + (x.bad ? "Careful: " : "Note: ") + "</b>" + x.t + "</div>"; }).join("");
 }
 function all() { renderList(); renderForm(); renderOut(); }
 
-/* ───────────────────────── events ───────────────────────── */
+/* file output */
+function toText(ls) { return ls.map(function (l) { return l.c; }).join("\r\n") + "\r\n"; }
+function cleanName(n, t) {
+  n = String(n || t.file).trim().replace(/[\\\/:*?"<>|]+/g, "_") || t.file;
+  return /\.(bat|cmd)$/i.test(n) ? n : n + ".bat";
+}
+function download(name, text) {
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "application/octet-stream" }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  toast("Downloaded " + name);
+}
+
+/* library */
+function renderLib() {
+  $("libN").textContent = S.lib.length;
+  if (!S.lib.length) { $("lib").innerHTML = '<div class="empty">Nothing saved yet. Set up a script and press <b>Save</b> to keep its options here.</div>'; return; }
+  $("lib").innerHTML = S.lib.map(function (e, i) {
+    var t = byId(e.tpl), d = new Date(e.at);
+    return '<div class="li"><div class="nm"><b>' + esc(e.name) + "</b><small>" + (t ? t.name : e.tpl) + " · " + d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + "</small></div>" +
+      '<button class="btn sm" data-a="open" data-i="' + i + '">Open</button><button class="btn sm" data-a="dl" data-i="' + i + '">Download</button><button class="btn sm" data-a="del" data-i="' + i + '">Delete</button></div>';
+  }).join("");
+}
+$("saveBtn").addEventListener("click", function () {
+  var t = tpl(), name = cleanName($("fname").value, t);
+  var i = -1; S.lib.forEach(function (e, j) { if (e.name.toLowerCase() === name.toLowerCase()) i = j; });
+  var entry = { name: name, tpl: t.id, vals: JSON.parse(JSON.stringify(S.vals[t.id] || {})), at: Date.now() };
+  if (i >= 0) S.lib[i] = entry; else S.lib.unshift(entry);
+  save(); renderLib(); toast((i >= 0 ? "Updated " : "Saved ") + name);
+});
+$("lib").addEventListener("click", function (e) {
+  var b = e.target.closest("button[data-a]"); if (!b) return;
+  var i = +b.getAttribute("data-i"), en = S.lib[i], t = en && byId(en.tpl); if (!en) return;
+  var a = b.getAttribute("data-a");
+  if (a === "del") { if (confirm("Delete “" + en.name + "” from saved scripts?")) { S.lib.splice(i, 1); save(); renderLib(); } return; }
+  if (!t) return;
+  if (a === "dl") { download(en.name, toText(t.build(valsFrom(t, en.vals)))); return; }
+  S.tpl = t.id; S.vals[t.id] = JSON.parse(JSON.stringify(en.vals)); S.fname[t.id] = en.name; save(); all();
+  $("libDlg").close(); toast("Opened " + en.name);
+});
+$("libBtn").addEventListener("click", function () { renderLib(); $("libDlg").showModal(); });
+$("libClose").addEventListener("click", function () { $("libDlg").close(); });
+
+/* theme */
+var THEMES = ["auto", "light", "dark"];
+function applyTheme() {
+  var th = S.theme || "auto";
+  if (th === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", th);
+  $("themeTxt").textContent = th.charAt(0).toUpperCase() + th.slice(1);
+}
+$("themeBtn").addEventListener("click", function () { S.theme = THEMES[(THEMES.indexOf(S.theme || "auto") + 1) % 3]; save(); applyTheme(); });
+
+/* events */
+$("q").addEventListener("input", function () { query = this.value.trim().toLowerCase(); renderList(); });
 $("tlist").addEventListener("click", function (e) {
   var b = e.target.closest(".tbtn"); if (!b) return;
   S.tpl = b.getAttribute("data-id"); save(); all();
-  if (window.innerWidth < 720) $("intro").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (window.innerWidth < 760) $("intro").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 function onField(e) {
   var el = e.target, t = tpl(); if (!el.id || el.id.indexOf("f_") !== 0) return;
@@ -1018,34 +1109,25 @@ $("fname").addEventListener("input", function () { S.fname[tpl().id] = this.valu
 $("code").addEventListener("click", function (e) { var ln = e.target.closest(".ln.has"); if (ln) ln.classList.toggle("open"); });
 $("explain").addEventListener("change", function () { $("code").classList.toggle("all", this.checked); S.explain = this.checked; save(); });
 $("reset").addEventListener("click", function () { var t = tpl(); delete S.vals[t.id]; delete S.fname[t.id]; save(); all(); toast("Options reset"); });
-function text() { return lines.map(function (l) { return l.c; }).join("\r\n") + "\r\n"; }
-function fileName() {
-  var n = ($("fname").value || tpl().file).trim().replace(/[\\\/:*?"<>|]+/g, "_");
-  if (!/\.(bat|cmd)$/i.test(n)) n += ".bat";
-  return n;
-}
-$("dl").addEventListener("click", function () {
-  var blob = new Blob([text()], { type: "application/octet-stream" });
-  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fileName();
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
-  toast("Saved " + fileName());
-});
+$("dl").addEventListener("click", function () { var t = tpl(); download(cleanName($("fname").value, t), toText(lines)); });
 $("copy").addEventListener("click", function () {
-  var s = text();
+  var s = toText(lines);
   function fallback() { var ta = document.createElement("textarea"); ta.value = s; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); }
   if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(s).catch(fallback); else fallback();
   toast("Copied to clipboard");
 });
 var tt;
-function toast(m) { var el = $("toast"); el.textContent = m; el.classList.add("show"); clearTimeout(tt); tt = setTimeout(function () { el.classList.remove("show"); }, 1600); }
+function toast(m) { var el = $("toast"); el.textContent = m; el.classList.add("show"); clearTimeout(tt); tt = setTimeout(function () { el.classList.remove("show"); }, 1700); }
 
 $("explain").checked = !!S.explain; $("code").classList.toggle("all", !!S.explain);
-all();
-window.__batgen = { T: T, vals: vals, build: function (id, over) { var t = T.filter(function (x) { return x.id === id; })[0]; var o = vals(t); for (var k in over || {}) o[k] = over[k]; return t.build(o).map(function (l) { return l.c; }).join("\n"); } };
+applyTheme(); renderLib(); all();
+window.__batgen = { T: T, build: function (id, over) { var t = byId(id), o = vals(t); for (var k in over || {}) o[k] = over[k]; return t.build(o).map(function (l) { return l.c; }).join("\n"); } };
+
+/* installable + offline when served over http(s); a double-clicked file:// copy works offline anyway */
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+}
 })();
 </script>
-<script src="../../_lib/progress-backup.js"></script>
-<script src="../../extras.js" defer></script>
 </body>
 </html>
