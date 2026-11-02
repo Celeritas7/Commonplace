@@ -16,7 +16,7 @@
  * Cache names start with "aistudy-" and only those are ever deleted here.
  * Bump VERSION whenever CORE or this file's logic changes.
  */
-var VERSION = "aistudy-v2";
+var VERSION = "aistudy-v3";
 var CORE = [
   "index.html",
   "book/reader.html",
