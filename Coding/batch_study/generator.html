@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BAT Generator · Commonplace</title>
+<meta name="theme-color" content="#0d1017" />
+<link rel="icon" href="pwa/icon-192.png" />
+<link href="../../_lib/fonts/gf-135340b0.css" rel="stylesheet" />
+<style>
+  :root{
+    --void:#0d1017; --panel:#141922; --panel-2:#1b2230; --panel-3:#222a3a;
+    --edge:#28313f; --edge-soft:#1e2531;
+    --txt:#d7dee9; --txt-soft:#9aa7b8; --txt-mute:#8592a6;
+    --amber:#e8b64c; --amber-2:#f5cd77;
+    --green:#6ee29a; --cyan:#56b6c2; --blue:#79b8ff; --pink:#e06c9f; --red:#e5674b;
+    --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+    --serif:"EB Garamond",Georgia,serif;
+    --display:"Cormorant Garamond",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--void);color:var(--txt);font-family:var(--serif);font-size:17px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(circle at 14% 6%, rgba(232,182,76,0.055) 0%, rgba(232,182,76,0) 42%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.014) 0px, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 3px)}
+  .wrap{max-width:1360px;margin:0 auto;padding:22px 24px 80px}
+  a{color:var(--amber)}
+  code{font-family:var(--mono);font-size:.86em;color:var(--cyan)}
+  .crumb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--txt-mute);margin-bottom:22px}
+  .crumb a{color:var(--txt-mute);text-decoration:none}.crumb a:hover{color:var(--amber)}
+  .crumb .sep{color:var(--edge)}.crumb .here{color:var(--txt)}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+  header.top h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,5vw,48px);line-height:1;margin:0;color:#f2f6fb}
+  header.top h1 span{color:var(--amber)}
+  header.top p{margin:8px 0 0;color:var(--txt-soft);font-style:italic;max-width:62ch}
+  .offline{font-family:var(--mono);font-size:10.5px;letter-spacing:1.2px;color:var(--green);border:1px solid rgba(110,226,154,.4);
+    background:rgba(110,226,154,.08);padding:5px 10px;border-radius:3px;white-space:nowrap}
+
+  .layout{display:grid;grid-template-columns:230px minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
+  @media(max-width:1180px){.layout{grid-template-columns:210px minmax(0,1fr)}.out{grid-column:1 / -1}}
+  @media(max-width:720px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+  .box{background:var(--panel);border:1px solid var(--edge);border-radius:8px;overflow:hidden}
+  .box .hd{padding:10px 14px;background:var(--panel-2);border-bottom:1px solid var(--edge);font-family:var(--mono);font-size:10.5px;
+    letter-spacing:1.6px;text-transform:uppercase;color:var(--txt-mute);display:flex;align-items:center;gap:10px}
+
+  /* template list */
+  .tlist{display:flex;flex-direction:column}
+  @media(max-width:720px){.tlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+  .tbtn{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center;
+    padding:10px 12px;border-bottom:1px solid var(--edge-soft);min-height:48px}
+  .tbtn:hover{background:var(--panel-2)}
+  .tbtn .g{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--amber);border:1px solid var(--edge);border-radius:4px;
+    width:30px;height:30px;display:grid;place-items:center}
+  .tbtn b{display:block;font-family:var(--mono);font-size:12.5px;font-weight:600;color:#eaf0f7;line-height:1.25}
+  .tbtn small{display:block;font-family:var(--mono);font-size:9.5px;color:var(--txt-mute);letter-spacing:.3px;margin-top:2px}
+  .tbtn.on{background:rgba(232,182,76,.1);box-shadow:inset 3px 0 0 var(--amber)}
+  .tbtn:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+
+  /* form */
+  .intro{padding:14px 16px 4px}
+  .intro h2{font-family:var(--display);font-weight:600;font-size:27px;line-height:1.1;margin:0;color:#eef3f9}
+  .intro p{margin:6px 0 0;color:var(--txt-soft);font-size:16px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+  .chips span{font-family:var(--mono);font-size:10.5px;background:var(--panel-3);color:var(--cyan);padding:3px 7px;border-radius:3px}
+  .chips .from{color:var(--amber);background:rgba(232,182,76,.1)}
+  form{padding:6px 16px 16px}
+  .grp{font-family:var(--mono);font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:var(--amber);margin:18px 0 6px;
+    padding-top:12px;border-top:1px solid var(--edge-soft)}
+  .f{margin:12px 0}
+  .f label.t{display:block;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt);margin-bottom:5px}
+  .f .h{font-size:14px;color:var(--txt-mute);margin-top:4px;line-height:1.4}
+  input[type=text],input[type=number],select,textarea{width:100%;font-family:var(--mono);font-size:13px;color:var(--txt);
+    background:var(--void);border:1px solid var(--edge);border-radius:5px;padding:9px 10px;min-height:40px}
+  textarea{min-height:96px;resize:vertical;line-height:1.5}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 2px rgba(232,182,76,.18)}
+  .ck{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-family:var(--mono);font-size:12.5px;color:var(--txt);min-height:28px}
+  .ck input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--amber);flex:none}
+  .ck + .h{margin-left:27px}
+
+  /* output */
+  .out{position:sticky;top:12px}
+  @media(max-width:1180px){.out{position:static}}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--edge);background:var(--panel-2)}
+  .dots{display:flex;gap:6px;margin-right:4px}.dots i{width:10px;height:10px;border-radius:50%;display:block}
+  .bar input{flex:1;min-width:140px;min-height:36px;padding:6px 9px}
+  .btn{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.8px;border-radius:5px;padding:8px 13px;cursor:pointer;
+    border:1px solid var(--edge);background:var(--panel-3);color:var(--txt);min-height:36px}
+  .btn:hover{border-color:#3b465a}
+  .btn.pri{background:var(--amber);border-color:var(--amber);color:#0d1017}
+  .btn.pri:hover{background:var(--amber-2)}
+  .btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .sub{display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--edge-soft);
+    font-family:var(--mono);font-size:11px;color:var(--txt-mute)}
+  .sub .ck{font-size:11px;color:var(--txt-soft);min-height:0}
+  .code{font-family:var(--mono);font-size:12.5px;line-height:1.6;max-height:calc(100vh - 220px);overflow:auto;padding:10px 0;background:#0b0e14}
+  @media(max-width:1180px){.code{max-height:none}}
+  .ln{display:grid;grid-template-columns:42px minmax(0,1fr);gap:0;white-space:pre-wrap;word-break:break-word}
+  .ln .no{color:#4a5568;text-align:right;padding-right:12px;user-select:none}
+  .ln code{color:var(--txt);font-size:inherit;padding-right:14px}
+  .ln.has{cursor:pointer}
+  .ln.has .no{color:var(--amber);opacity:.65}
+  .ln.has:hover{background:rgba(255,255,255,.025)}
+  .why{display:none;margin:2px 14px 8px 42px;padding:7px 11px;border-left:2px solid var(--amber);background:rgba(232,182,76,.06);
+    font-family:var(--serif);font-size:15px;line-height:1.45;color:var(--txt-soft);white-space:normal}
+  .why code{font-size:12px}
+  .ln.open + .why, .code.all .why{display:block}
+  .tk-c{color:#6b7a90;font-style:italic}.tk-l{color:var(--pink);font-weight:700}.tk-k{color:var(--amber)}
+  .tk-s{color:var(--green)}.tk-v{color:var(--cyan)}.tk-o{color:var(--blue)}
+  .warn{padding:10px 14px;border-top:1px solid var(--edge);font-size:15px}
+  .warn div{display:flex;gap:9px;margin:4px 0;color:var(--txt-soft)}
+  .warn div::before{content:"!";font-family:var(--mono);font-weight:700;color:#0d1017;background:var(--amber);border-radius:3px;
+    width:17px;height:17px;flex:none;display:grid;place-items:center;font-size:11px;margin-top:3px}
+  .warn div.bad::before{background:var(--red)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.2s;background:var(--green);
+    color:#0d1017;font-family:var(--mono);font-size:12px;font-weight:700;padding:9px 16px;border-radius:5px;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+
+  .help{margin-top:30px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+  .help .box{padding:14px 16px}
+  .help h3{font-family:var(--mono);font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--amber);margin:0 0 8px}
+  .help p,.help li{font-size:15.5px;color:var(--txt-soft);margin:0 0 6px}
+  .help ul{margin:0;padding-left:18px}
+  .colophon{margin-top:40px;padding-top:16px;border-top:1px solid var(--edge);font-family:var(--mono);font-size:11px;color:var(--txt-mute);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .colophon a{color:var(--txt-mute);text-decoration:none}.colophon a:hover{color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="crumb">
+    <a href="../../index.html">Commonplace</a><span class="sep">/</span>
+    <a href="../index.html">Coding</a><span class="sep">/</span>
+    <a href="index.html">Batch Scripts</a><span class="sep">/</span>
+    <span class="here">Generator</span>
+  </div>
+
+  <header class="top">
+    <div>
+      <h1>BAT <span>Generator</span></h1>
+      <p>Pick a kind of script, set the options, download a ready-to-run <code>.bat</code>. Click any numbered line to see why it is there.</p>
+    </div>
+    <span class="offline">● WORKS OFFLINE</span>
+  </header>
+
+  <div class="layout">
+    <nav class="box" aria-label="Script types">
+      <div class="hd">Script type</div>
+      <div class="tlist" id="tlist"></div>
+    </nav>
+
+    <section class="box">
+      <div class="intro" id="intro"></div>
+      <form id="form" autocomplete="off" onsubmit="return false"></form>
+    </section>
+
+    <section class="box out" aria-label="Generated script">
+      <div class="bar">
+        <span class="dots"><i style="background:#e5674b"></i><i style="background:#e8b64c"></i><i style="background:#6ee29a"></i></span>
+        <input type="text" id="fname" aria-label="File name" spellcheck="false" />
+        <button class="btn" id="copy" type="button">COPY</button>
+        <button class="btn pri" id="dl" type="button">DOWNLOAD .BAT</button>
+      </div>
+      <div class="sub">
+        <label class="ck"><input type="checkbox" id="explain" /> Explain every line</label>
+        <span id="meta"></span>
+        <button class="btn" id="reset" type="button" style="min-height:28px;padding:4px 10px;font-size:10.5px">RESET OPTIONS</button>
+      </div>
+      <div class="code" id="code" aria-live="polite"></div>
+      <div class="warn" id="warn" hidden></div>
+    </section>
+  </div>
+
+  <div class="help">
+    <div class="box">
+      <h3>Running the file</h3>
+      <ul>
+        <li>Put the <code>.bat</code> where the template expects (most use the folder the file sits in, <code>%~dp0</code>).</li>
+        <li>Double-click to run. While testing, open <code>cmd</code> in that folder and type the name instead — the window stays open and errors stay visible.</li>
+        <li>If Windows says the file came from the internet: right-click → Properties → <b>Unblock</b>.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>What the generator takes care of</h3>
+      <ul>
+        <li>Windows line endings (CRLF) — <code>GOTO</code> and labels can fail with Unix ones.</li>
+        <li>Escaping text you type: <code>%</code> → <code>%%</code>, and <code>^ &amp; | &lt; &gt; ( )</code> get a <code>^</code> in <code>echo</code> lines.</li>
+        <li>Quoting paths so spaces are safe, and avoiding the <code>"C:\folder\"</code> trailing-backslash trap.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>Before you trust it</h3>
+      <ul>
+        <li>Read the explained lines once — the point is that you could write it yourself next time.</li>
+        <li>Test delete / move / mirror scripts on a copy of the folder first.</li>
+        <li>Git scripts: test in a throwaway repo, not inside Commonplace.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="colophon">
+    <span>Options are remembered on this device.</span>
+    <span><a href="index.html">← Batch Scripts</a></span>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+"use strict";
+
+/* ───────────────────────── helpers ───────────────────────── */
+var L = function (c, w) { return { c: c, w: w || "" }; };
+var B = function () { return { c: "", w: "" }; };
+function rem(o, t) { return o.comments ? [L("REM " + t)] : []; }
+/* text shown by ECHO / TITLE: escape the characters cmd would otherwise act on */
+function et(s, delayed) {
+  s = String(s == null ? "" : s).replace(/\^/g, "^^").replace(/%/g, "%%").replace(/[&|<>()]/g, function (m) { return "^" + m; });
+  if (delayed) s = s.replace(/!/g, "^^!");
+  return s;
+}
+function echo(s, delayed) { s = String(s || ""); return s.trim() === "" ? "echo." : "echo " + et(s, delayed); }
+function nq(s) { return String(s == null ? "" : s).replace(/"/g, "").trim(); }
+function cleanPath(p) { p = nq(p); if (/^[A-Za-z]:\\?$/.test(p)) return p.slice(0, 2) + "\\"; return p.replace(/[\\\/]+$/, ""); }
+function words(s) { return String(s || "").split(/[\s,;]+/).map(nq).filter(Boolean); }
+function block(head, body, tail) { /* indent a block body */
+  var out = [head];
+  body.forEach(function (l) { out.push(l.c === "" ? l : L("  " + l.c, l.w)); });
+  out.push(L(tail || ")"));
+  return out;
+}
+function fail(msg, o, extra) { /* lines inside an error block */
+  var a = [L(echo(msg, o && o._delayed))];
+  (extra || []).forEach(function (m) { a.push(L("echo " + m)); }); /* extra lines are raw: they may use %CD% etc. */
+  a.push(L("pause"), L("exit /b 1"));
+  return a;
+}
+
+/* ───────────────────────── shared fields ───────────────────────── */
+function FOLDER(def, opts) {
+  var all = {
+    script: "The folder this .bat sits in",
+    drag: "A folder dragged onto the .bat (else its own)",
+    up: "Some folders above the .bat",
+    fixed: "A fixed path I type"
+  };
+  return [
+    { k: "folder", label: "Work in which folder?", type: "select", def: def || "script",
+      opts: (opts || ["script", "drag", "up", "fixed"]).map(function (k) { return [k, all[k]]; }) },
+    { k: "upLevels", label: "How many folders up?", type: "number", def: 2, min: 1, max: 8, show: function (o) { return o.folder === "up"; },
+      help: "2 = the folder two levels above, like START_HERE.bat does with <code>%~dp0..\\..</code>" },
+    { k: "fixedPath", label: "Folder path", type: "text", def: "D:\\Coding\\MyProject", show: function (o) { return o.folder === "fixed"; },
+      help: "Environment variables work here, e.g. <code>%USERPROFILE%\\Documents</code>." }
+  ];
+}
+function COMMON(title, endDef) {
+  return [
+    { group: "Finishing touches" },
+    { k: "title", label: "Window title", type: "text", def: title, help: "Shown in the cmd window's title bar. Leave empty for none." },
+    { k: "end", label: "When it finishes", type: "select", def: endDef || "pause",
+      opts: [["pause", "Wait for a key (pause)"], ["timeout", "Close after 5 seconds"], ["none", "Close straight away"]] },
+    { k: "comments", label: "Add REM comments to the file", type: "check", def: true }
+  ];
+}
+function head(o, delayed) {
+  var a = [L("@echo off", "Stops cmd from printing every command before it runs it. The <code>@</code> hides this line itself too. Without it the window fills with the script's own source.")];
+  if (o.title) a.push(L("title " + et(o.title), "Sets the text in the window's title bar — handy when several cmd windows are open."));
+  a.push(delayed
+    ? L("setlocal EnableDelayedExpansion", "<code>setlocal</code> keeps every variable this script sets private — they vanish when it ends. <code>EnableDelayedExpansion</code> lets <code>!VAR!</code> read a variable's <em>current</em> value inside a <code>( … )</code> block, where <code>%VAR%</code> would still show the value from before the block started.")
+    : L("setlocal", "Keeps every variable this script sets private to it; they vanish when it ends instead of leaking into the cmd window you ran it from."));
+  return a;
+}
+function folderLines(o) {
+  var a = [];
+  if (o.folder === "drag") {
+    a.push(L('if not "%~1"=="" (', "<code>%~1</code> is the first argument with its quotes removed. Dragging a folder onto a .bat passes its path as argument 1. The surrounding quotes make the test safe when it is empty or has spaces."));
+    a.push(L('  if not exist "%~1\\" (', 'A trailing <code>\\</code> makes <code>exist</code> true only for <em>folders</em>, not files.'));
+    a.push(L('    echo Not a folder: "%~1"'), L("    pause"), L("    exit /b 1"), L("  )"));
+    a.push(L('  cd /d "%~1"'));
+    a.push(L(") else ("), L('  cd /d "%~dp0"', "Nothing dropped: use the .bat's own folder."), L(")"));
+  } else if (o.folder === "fixed") {
+    var p = cleanPath(o.fixedPath) || "C:\\";
+    a.push(L('cd /d "' + p + '" 2>nul || (', "<code>/d</code> also switches drive. <code>||</code> runs the block only if <code>cd</code> failed — i.e. the folder does not exist. <code>2&gt;nul</code> hides cmd's own error so ours is the only one shown."));
+    a.push(L("  " + echo("Folder not found: " + p)), L("  pause"), L("  exit /b 1"), L(")"));
+  } else if (o.folder === "up") {
+    var n = Math.max(1, Math.min(8, parseInt(o.upLevels, 10) || 1)), ups = [];
+    for (var i = 0; i < n; i++) ups.push("..");
+    a.push(L('cd /d "%~dp0' + ups.join("\\") + '"', "<code>%~dp0</code> is the folder of this .bat (always ending in <code>\\</code>); each <code>..</code> climbs one folder up."));
+  } else {
+    a.push(L('cd /d "%~dp0"', "<code>%~dp0</code> = <b>d</b>rive + <b>p</b>ath of argument <b>0</b>, the .bat itself. Moving there first means relative names work no matter where the script was started from. <code>/d</code> lets <code>cd</code> change drive too (C: → D:)."));
+  }
+  return a;
+}
+function endLines(o) {
+  if (o.end === "pause") return [B(), L("pause", "Waits for a key so the window stays open and you can read what happened. A double-clicked .bat closes the moment it finishes — errors included.")];
+  if (o.end === "timeout") return [B(), L("timeout /t 5 >nul", "Waits 5 seconds (any key skips) and then the window closes. <code>&gt;nul</code> hides the countdown text.")];
+  return [];
+}
+function gitCheck() {
+  return [L("git --version >nul 2>&1", "Runs a harmless git command just to see if git exists. <code>&gt;nul 2&gt;&amp;1</code> throws away both normal output and errors.")]
+    .concat(block(L("if errorlevel 1 (", "<code>errorlevel 1</code> means “exit code 1 <em>or higher</em>” — i.e. the last command failed."),
+      fail("ERROR: Git is not installed or not on PATH.")));
+}
+function repoCheck() {
+  return [L("git rev-parse --is-inside-work-tree >nul 2>&1", "Asks git whether this folder is inside a repository. Better than <code>if exist \".git\"</code> because it also works from a sub-folder.")]
+    .concat(block(L("if errorlevel 1 ("), fail("ERROR: this folder is not inside a git repository.")));
+}
+function branchLines(o) {
+  if (o.branchMode === "fixed") return [];
+  return [
+    L('set "BRANCH="', 'Empty it first so an old value can never leak in. The quotes around <code>"name=value"</code> stop trailing spaces sneaking into the value.'),
+    L("for /f \"delims=\" %%b in ('git branch --show-current 2^>nul') do set \"BRANCH=%%b\"",
+      "<code>for /f</code> runs the command in single quotes and hands each output line to <code>%%b</code> — the standard way to capture a command's output into a variable. <code>delims=</code> keeps the whole line. Inside the quotes, <code>&gt;</code> must be written <code>^&gt;</code>. In a .bat the loop variable needs two percent signs."),
+    L('if not defined BRANCH set "BRANCH=main"', "Fallback if git printed nothing (e.g. a brand-new repo with no commits).")
+  ];
+}
+function br(o) { return o.branchMode === "fixed" ? (nq(o.branch) || "main") : "%BRANCH%"; }
+var GIT_FIELDS = [
+  { k: "remote", label: "Remote name", type: "text", def: "origin" },
+  { k: "branchMode", label: "Branch", type: "select", def: "current", opts: [["current", "Whatever branch is checked out"], ["fixed", "Always the branch I type"]] },
+  { k: "branch", label: "Branch name", type: "text", def: "main", show: function (o) { return o.branchMode === "fixed"; } }
+];
+var PY_CANDIDATES = [
+  '"%USERPROFILE%\\anaconda3\\python.exe"',
+  '"%USERPROFILE%\\miniconda3\\python.exe"',
+  '"%LOCALAPPDATA%\\anaconda3\\python.exe"',
+  '"%LOCALAPPDATA%\\miniconda3\\python.exe"',
+  '"%LOCALAPPDATA%\\Programs\\Python\\Python313\\python.exe"',
+  '"%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe"',
+  '"C:\\ProgramData\\anaconda3\\python.exe"',
+  '"C:\\ProgramData\\miniconda3\\python.exe"'
+];
+function findPython(o) {
+  var list = ['"python.exe"', '"py.exe"'].concat(o.conda ? PY_CANDIDATES : []);
+  var a = [L('set "PY="', "Will hold the path of the first Python that actually works.")];
+  a.push(L("for %%P in (", "Tries each candidate in turn. Double-clicking a .bat runs plain cmd, where Anaconda's PATH is usually <em>not</em> active — so the common install folders are listed explicitly."));
+  list.forEach(function (c) { a.push(L("  " + c)); });
+  a.push(L(") do ("));
+  a.push(L("  if not defined PY (", "Stop testing once one has been found."));
+  a.push(L('    "%%~P" -c "import sys" >nul 2>nul && set "PY=%%~P"',
+    "<code>%%~P</code> is the candidate without its quotes. Running real Python code (not just <code>--version</code>) also rejects the fake <code>python.exe</code> that opens the Microsoft Store. <code>&amp;&amp;</code> sets <code>PY</code> only if that worked."));
+  a.push(L("  )"), L(")"));
+  return a;
+}
+
+/* ───────────────────────── templates ───────────────────────── */
+var T = [];
+
+/* 1 · git pull */
+T.push({
+  id: "pull", g: "↓", name: "Git pull", from: "0_pull.bat", file: "0_pull.bat",
+  blurb: "Bring the latest commits from GitHub into a folder with one double-click.",
+  concepts: ["@echo off", "cd /d \"%~dp0\"", "errorlevel", "for /f", "pause"],
+  fields: [{ group: "Where" }].concat(FOLDER("script"), [{ group: "Git" }], GIT_FIELDS, [
+    { k: "checks", label: "Check git is installed and this is a repo", type: "check", def: true },
+    { k: "rebase", label: "Rebase instead of merge (git pull --rebase)", type: "check", def: false,
+      help: "Keeps history straight when you also have local commits." }
+  ], COMMON("Git pull")),
+  build: function (o) {
+    var a = head(o);
+    a.push(B()); a = a.concat(rem(o, "--- go to the project folder ---"), folderLines(o));
+    a.push(L("echo Folder: %CD%", "<code>%CD%</code> is the current folder — printed so you can see where the pull is happening."));
+    if (o.checks) { a.push(B()); a = a.concat(rem(o, "--- safety checks ---"), gitCheck(), repoCheck()); }
+    a.push(B()); a = a.concat(branchLines(o));
+    a.push(L("git pull " + (o.rebase ? "--rebase " : "") + (nq(o.remote) || "origin") + " " + br(o),
+      "Downloads new commits from the remote and merges them into your branch" + (o.rebase ? " — with <code>--rebase</code>, your own unpushed commits are replayed on top instead of making a merge commit." : ".")));
+    a = a.concat(block(L("if errorlevel 1 (", "git returns a non-zero exit code when the pull fails (conflicts, no network, uncommitted changes in the way)."),
+      [L("echo."), L("echo PULL FAILED - read the message above.")]).slice(0, -1), [L(") else ("), L("  echo Up to date."), L(")")]);
+    return a.concat(endLines(o));
+  },
+  warn: function () { return ["Test git scripts in a throwaway repo first — run inside Commonplace, it pulls the Commonplace repo."]; }
+});
+
+/* 2 · git sync */
+T.push({
+  id: "sync", g: "⇅", name: "Git sync / upload", from: "1_git_auto_sync · 2_git_upload", file: "git_sync.bat",
+  blurb: "Stage everything, ask for a commit message, commit and push — optionally setting up the repo first.",
+  concepts: ["set /p", "EnableDelayedExpansion", "!var!", "git diff --cached --quiet", "errorlevel"],
+  fields: [{ group: "Where" }].concat(FOLDER("drag"), [{ group: "Git" }], GIT_FIELDS, [
+    { k: "init", label: "If there is no repo, create one and ask for the GitHub URL", type: "check", def: true },
+    { k: "pullFirst", label: "Pull (rebase) before pushing", type: "check", def: false, help: "Avoids the classic “push rejected” when GitHub has commits you don't." },
+    { k: "status", label: "Show the list of changed files first", type: "check", def: true },
+    { group: "Commit message" },
+    { k: "ask", label: "Ask me for a message", type: "check", def: true },
+    { k: "defMsg", label: "Default message", type: "text", def: "Update %DATE% %TIME%", help: "Used when you press Enter. <code>%DATE%</code> and <code>%TIME%</code> are filled in when the script runs." },
+    { k: "notes", label: "Also ask for extra notes (commit body)", type: "check", def: false, show: function (o) { return o.ask; } }
+  ], COMMON("Git sync")),
+  build: function (o) {
+    o._delayed = true;
+    var remote = nq(o.remote) || "origin", defMsg = nq(o.defMsg).replace(/!/g, "") || "Update";
+    var a = head(o, true);
+    a.push(B()); a = a.concat(rem(o, "--- go to the project folder ---"), folderLines(o));
+    a.push(L("echo =========================================="), L("echo   GIT SYNC"), L("echo   Folder: %CD%"), L("echo =========================================="), L("echo."));
+    a.push(B()); a = a.concat(rem(o, "--- safety checks ---"), gitCheck());
+    if (o.init) {
+      a.push(L("git rev-parse --is-inside-work-tree >nul 2>&1", "Is this folder already a git repository?"));
+      a = a.concat(block(L("if errorlevel 1 (", "No repo here — set one up. Everything inside this block is read <em>once</em> before it runs, which is why the URL is read back as <code>!URL!</code> and not <code>%URL%</code>."), [
+        L("echo No git repository here - a new one will be created."),
+        L('set "URL="'),
+        L('set /p "URL=Paste GitHub repo URL (Enter to cancel): "', "<code>set /p</code> shows the prompt and stores what you type. Pressing just Enter leaves the variable unchanged — that is why it was emptied on the line above."),
+      ].concat(block(L('if "!URL!"=="" ('), fail("Cancelled.", o)), [
+        L("git init"),
+        L("git branch -M main", "Names the first branch <code>main</code> (older git defaults to <code>master</code>)."),
+        L('git remote add ' + remote + ' "!URL!"', "Links the new repo to GitHub.")
+      ])));
+    } else {
+      a = a.concat(repoCheck());
+    }
+    a.push(L("for /f \"delims=\" %%t in ('git rev-parse --show-toplevel') do cd /d \"%%t\"",
+      "Jump to the top of the repository, so <code>git add -A</code> covers the whole project even if the .bat was started from a sub-folder."));
+    a.push(B()); a = a.concat(branchLines(o));
+    if (o.pullFirst) {
+      a.push(L("git pull --rebase " + remote + " " + br(o), "Fetch GitHub's commits first and replay yours on top, so the push below is not rejected."));
+      a = a.concat(block(L("if errorlevel 1 ("), fail("Pull failed - fix the problem above, then run again.", o)));
+    }
+    if (o.status) {
+      a.push(B(), L("echo ---------- Changes ----------"), L("git status --short", "One line per changed file: <code>M</code> modified, <code>??</code> new, <code>D</code> deleted."), L("echo -----------------------------"), L("echo."));
+    }
+    a.push(B()); a = a.concat(rem(o, "--- commit ---"));
+    a.push(L("git add -A", "Stages every change: new, modified and deleted files."));
+    a.push(L("git diff --cached --quiet", "Prints nothing — it only sets the exit code: 0 = nothing staged, 1 = there are changes. A cheap “is there anything to commit?” test."));
+    var body = [];
+    if (o.ask) {
+      body.push(L('set "MSG="'));
+      body.push(L('set /p "MSG=Commit message (Enter for default): "', "Asks for the message. Avoid typing double quotes in it — they would break the commit line."));
+      body.push(L('if "!MSG!"=="" set "MSG=' + defMsg + '"', "Nothing typed → use the default. <code>!MSG!</code> because we are inside a block."));
+      if (o.notes) {
+        body.push(L('set "NOTE="'), L('set /p "NOTE=Extra notes (optional, Enter to skip): "'));
+        body.push(L('if "!NOTE!"=="" (git commit -m "!MSG!") else (git commit -m "!MSG!" -m "!NOTE!")', "A second <code>-m</code> becomes the commit's body paragraph."));
+      } else body.push(L('git commit -m "!MSG!"'));
+    } else {
+      body.push(L('git commit -m "' + defMsg + '"'));
+    }
+    body = body.concat(block(L("if errorlevel 1 ("), fail("ERROR: commit failed.", o)));
+    a = a.concat(block(L("if errorlevel 1 (", "Exit code 1 from the diff → there is something to commit."), body).slice(0, -1),
+      [L(") else ("), L("  echo No new changes to commit - checking for unpushed commits..."), L(")")]);
+    a.push(B()); a = a.concat(rem(o, "--- push ---"));
+    a.push(L("echo Pushing to " + remote + "/" + br(o) + " ..."));
+    a.push(L("git push -u " + remote + ' "' + br(o) + '"', "<code>-u</code> remembers this remote/branch pair, so a plain <code>git push</code> works later too."));
+    a = a.concat(block(L("if errorlevel 1 ("), [L("echo."), L("echo PUSH FAILED - GitHub probably has commits you do not have yet."), L("echo Pull first, then run this again.")]).slice(0, -1),
+      [L(") else ("), L("  echo."), L("  echo DONE - changes are on GitHub."), L(")")]);
+    a = a.concat(endLines(o));
+    a.push(L("endlocal"));
+    return a;
+  },
+  warn: function (o) {
+    var w = ["Test in a throwaway repo first: <code>git add -A</code> + push commits <em>everything</em> in the repo."];
+    if (/!/.test(o.defMsg || "")) w.push("<code>!</code> was removed from the default message — with delayed expansion on it would vanish anyway.");
+    return w;
+  }
+});
+
+/* 3 · terminal here */
+T.push({
+  id: "term", g: ">_", name: "Open a terminal here", from: "Launch_app.bat", file: "Launch_app.bat",
+  blurb: "Open cmd, PowerShell or Windows Terminal already sitting in the right folder, optionally running a first command.",
+  concepts: ["start \"\"", "cmd /k", "powershell -NoExit"],
+  fields: [{ group: "Where" }].concat(FOLDER("script"), [{ group: "Terminal" },
+    { k: "shell", label: "Which terminal?", type: "select", def: "hosted", opts: [
+      ["hosted", "cmd window running PowerShell (like Launch_app.bat)"], ["ps", "Windows PowerShell"], ["pwsh", "PowerShell 7 (pwsh)"],
+      ["cmd", "Command Prompt (cmd)"], ["wt", "Windows Terminal"]] },
+    { k: "cmd", label: "First command to run (optional)", type: "text", def: "", help: "e.g. <code>git status</code> or <code>python app.py</code>. The window stays open afterwards." }
+  ], COMMON("", "none")),
+  build: function (o) {
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o)); a.push(B());
+    var c = String(o.cmd || "").trim(), ps = c.replace(/"/g, "'").replace(/%/g, "%%");
+    var sw = "<code>start</code> opens a <em>new</em> window. Its first quoted argument is the window <b>title</b> — that is why there is an empty <code>\"\"</code>: without it, a quoted program path would be mistaken for the title.";
+    if (o.shell === "cmd") {
+      a.push(L('start "" cmd /k' + (c ? " " + c.replace(/[&|<>^]/g, function (m) { return "^" + m; }) : ""), sw + " <code>/k</code> = run the command, then <b>k</b>eep the window open (<code>/c</code> would close it)."));
+    } else if (o.shell === "wt") {
+      a.push(L('start "" wt -d "%CD%"' + (c ? " cmd /k " + c.replace(/[&|<>^]/g, function (m) { return "^" + m; }) : ""), sw + " <code>-d</code> sets Windows Terminal's starting folder. <code>%CD%</code> is used rather than <code>%~dp0</code> because a path ending in <code>\\\"</code> confuses argument parsing."));
+    } else if (o.shell === "hosted") {
+      a.push(L('start "" cmd /k powershell -NoExit -Command "Set-Location -LiteralPath \'%CD%\'' + (c ? "; " + ps : "") + '"',
+        sw + " A cmd window is opened that immediately runs PowerShell inside it. <code>-NoExit</code> keeps PowerShell running after <code>-Command</code>; <code>Set-Location</code> is PowerShell's <code>cd</code>. Single quotes keep spaces in the path safe."));
+    } else {
+      var exe = o.shell === "pwsh" ? "pwsh" : "powershell";
+      a.push(L('start "" ' + exe + " -NoExit" + (c ? ' -Command "' + ps + '"' : ""), sw + " PowerShell starts in the current folder (set by <code>cd</code> above). <code>-NoExit</code> keeps it open after the command."));
+    }
+    return a.concat(endLines(o));
+  },
+  warn: function (o) {
+    var w = [];
+    if (/"/.test(o.cmd || "") && o.shell !== "cmd" && o.shell !== "wt") w.push("Double quotes in the command were changed to single quotes so they survive inside <code>-Command \"…\"</code>.");
+    if (o.shell === "wt") w.push("Windows Terminal (<code>wt</code>) must be installed — it ships with Windows 11.");
+    return w;
+  }
+});
+
+/* 4 · local web server */
+T.push({
+  id: "server", g: "◎", name: "Local web server", from: "run-akatsuki-local · run-commonplace", file: "run-local.bat",
+  blurb: "Serve a folder at http://localhost so web apps (and offline PWAs) work — finds Python, falls back to Node, opens the browser.",
+  concepts: ["for %%P in (…)", "%%~P", "if defined", ":subroutine", "http.server"],
+  fields: [{ group: "What to serve" },
+    { k: "root", label: "Serve which folder?", type: "select", def: "script", opts: [
+      ["script", "The folder this .bat sits in"], ["up", "Some folders above the .bat"],
+      ["near", "Nearest folder above that contains a marker file"], ["high", "Highest folder above that contains a marker file"], ["fixed", "A fixed path I type"]] },
+    { k: "upLevels", label: "How many folders up?", type: "number", def: 2, min: 1, max: 8, show: function (o) { return o.root === "up"; } },
+    { k: "fixedPath", label: "Folder path", type: "text", def: "D:\\Coding\\Commonplace", show: function (o) { return o.root === "fixed"; } },
+    { k: "marker", label: "Marker file / folder", type: "text", def: "index.html",
+      help: "For the climbing options: the script walks up from its own folder until it finds this. Use <code>_lib</code> to find the Commonplace root.", show: function (o) { return o.root === "near" || o.root === "high"; } },
+    { k: "check", label: "Stop if there is no index.html in the served folder", type: "check", def: true },
+    { group: "Server" },
+    { k: "port", label: "Port", type: "number", def: 8000, min: 1024, max: 65535, help: "Each app on its own port keeps its own localStorage — same port, shared storage." },
+    { k: "page", label: "Page to open (path after the port)", type: "text", def: "", help: "e.g. <code>Coding/AI_study/index.html</code>. Empty = the root." },
+    { k: "runtime", label: "Use", type: "select", def: "both", opts: [["both", "Python, else Node (npx serve)"], ["py", "Python only"], ["node", "Node only (npx serve)"]] },
+    { k: "conda", label: "Also look in Anaconda / Miniconda / python.org folders", type: "check", def: true, show: function (o) { return o.runtime !== "node"; } },
+    { k: "bind", label: "Only this PC (no firewall pop-up)", type: "check", def: true, show: function (o) { return o.runtime !== "node"; },
+      help: "Adds <code>--bind 127.0.0.1</code> so phones on your Wi-Fi cannot connect. Untick to test from your phone." },
+    { k: "browser", label: "Open the browser automatically", type: "check", def: true }
+  ].concat(COMMON("Local server")),
+  build: function (o) {
+    var port = parseInt(o.port, 10) || 8000, page = nq(o.page).replace(/\\/g, "/").replace(/^\/+/, ""), marker = nq(o.marker) || "index.html";
+    var climb = o.root === "near" || o.root === "high";
+    var a = head(o); a.push(B());
+    a = a.concat(rem(o, "Double-click to run. Leave this window open while you use the app."), rem(o, "--- find the folder to serve ---"));
+    if (climb) {
+      a.push(L("call :findroot", "<code>call :label</code> runs the subroutine at the bottom of the file and comes back here when it reaches <code>goto :eof</code>."));
+      a = a.concat(block(L("if not defined ROOT ("), fail("Could not find a folder containing " + marker + " above this .bat.")));
+      a.push(L('cd /d "%ROOT%"'));
+    } else {
+      a = a.concat(folderLines({ folder: o.root, upLevels: o.upLevels, fixedPath: o.fixedPath }));
+    }
+    if (o.check) a = a.concat(block(L('if not exist "index.html" (', "A web server without an index.html just shows a file listing — usually a sign the .bat is in the wrong folder."),
+      fail("Could not find index.html in this folder.", null, ["Current folder: %CD%"])));
+    a.push(B());
+    a.push(L('set "PORT=' + port + '"'), L('set "URL=http://localhost:%PORT%/' + page + '"', "Kept in variables so the port is written in one place only."));
+    function serving(label, run) {
+      var b = [L("echo."), L(echo("  " + label)), L("echo   Serving: %CD%"), L("echo   Open:    %URL%"), L("echo   ^(Close this window to stop.^)"), L("echo.")];
+      if (o.browser) b.push(L('start "" "%URL%"', "Opens the default browser. Runs before the server starts, but the server is ready long before the browser asks."));
+      b.push(run, L("echo."), L("echo Server stopped."), L("pause"), L("goto :eof", "Done — skip the rest of the file."));
+      return b;
+    }
+    if (o.runtime !== "node") {
+      a.push(B()); a = a.concat(rem(o, "--- try Python ---"), findPython(o));
+      a = a.concat(block(L("if defined PY ("), serving("Local server (Python)",
+        L('"%PY%" -m http.server %PORT%' + (o.bind ? " --bind 127.0.0.1" : ""), "Python's built-in web server, serving the current folder. It keeps running — and the window stays busy — until you close it or press Ctrl+C."))));
+    }
+    if (o.runtime !== "py") {
+      a.push(B()); a = a.concat(rem(o, "--- try Node ---"));
+      a.push(L('set "NPX="'), L("for %%P in (", "Looks for <code>npx</code> on PATH, then in the default Node install folders."),
+        L('  "npx.cmd"'), L('  "%ProgramFiles%\\nodejs\\npx.cmd"'), L('  "%LOCALAPPDATA%\\Programs\\nodejs\\npx.cmd"'), L(") do ("),
+        L("  if not defined NPX ("), L('    call "%%~P" --version >nul 2>nul && set "NPX=%%~P"', "<code>npx</code> is itself a .bat-style <code>.cmd</code> file, so it needs <code>call</code> — otherwise control would never come back to this script."), L("  )"), L(")"));
+      a = a.concat(block(L("if defined NPX ("), serving("Local server (Node)",
+        L('call "%NPX%" --yes serve -l %PORT% .', "<code>serve</code> is downloaded on first use (needs internet once), then cached. <code>-l</code> sets the port, <code>.</code> is the folder."))));
+    }
+    a.push(B());
+    var need = o.runtime === "py" ? "Python" : o.runtime === "node" ? "Node.js" : "Python or Node.js";
+    a.push(L(echo("Could not find " + need + "."), "Only reached if nothing above worked."));
+    if (o.runtime !== "node") a.push(L("echo   Python: https://www.python.org  ^(tick \"Add to PATH\"^)"));
+    if (o.runtime !== "py") a.push(L("echo   Node:   https://nodejs.org"));
+    a.push(L("echo Or open a terminal in this folder and run:"));
+    if (o.runtime !== "node") a.push(L("echo     python -m http.server %PORT%"));
+    if (o.runtime !== "py") a.push(L("echo     npx serve -l %PORT% ."));
+    a.push(L("pause"), L("goto :eof"));
+    if (climb) {
+      a.push(B());
+      a = a.concat(rem(o, "---------------------------------------------------------------"),
+        rem(o, o.root === "near" ? "Climb from this .bat towards the drive root; stop at the FIRST folder" : "Climb all the way to the drive root, remembering the HIGHEST folder"),
+        rem(o, "that contains " + marker + ". Result goes in ROOT."), rem(o, "---------------------------------------------------------------"));
+      a.push(L(":findroot", "A label. <code>call :findroot</code> jumps here; <code>goto :eof</code> returns."));
+      a.push(L('set "ROOT="'));
+      a.push(L('pushd "%~dp0"', "<code>pushd</code> = <code>cd</code> that remembers where it came from; <code>popd</code> goes back."));
+      a.push(L(":findroot_loop"));
+      if (o.root === "near") {
+        a = a.concat(block(L('if exist "' + marker + '" (', "Found it — store the folder and stop climbing."), [L('set "ROOT=%CD%"'), L("popd"), L("goto :eof")]));
+      } else {
+        a.push(L('if exist "' + marker + '" set "ROOT=%CD%"', "Found one — remember it, but keep climbing in case there is a higher one."));
+      }
+      a.push(L('set "PREV=%CD%"'));
+      a.push(L("cd .."));
+      a.push(L('if /i not "%CD%"=="%PREV%" goto findroot_loop', "<code>cd ..</code> at the drive root does nothing — when the folder did not change we have reached the top. <code>/i</code> = ignore upper/lower case."));
+      a.push(L("popd"), L("goto :eof"));
+    }
+    return a;
+  },
+  warn: function (o) {
+    var w = [];
+    if (o.runtime !== "py") w.push("<code>npx serve</code> downloads <code>serve</code> the first time, so the Node route needs internet once.");
+    if (!o.bind && o.runtime !== "node") w.push("Without <code>--bind 127.0.0.1</code> Windows Firewall may ask for permission the first time.");
+    return w;
+  }
+});
+
+/* 5 · run python */
+T.push({
+  id: "py", g: "Py", name: "Run a Python script", from: "refresh.bat", file: "run.bat",
+  blurb: "Double-click to run a .py file with the right Python — a project venv, a conda env, or whatever is installed.",
+  concepts: ["if exist", "%*", "errorlevel", "set \"RC=…\""],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "up", "fixed"]), [{ group: "Script" },
+    { k: "script", label: "Python file", type: "text", def: "main.py" },
+    { k: "args", label: "Arguments (optional)", type: "text", def: "" },
+    { k: "fwd", label: "Pass on whatever is given to the .bat (%*)", type: "check", def: true, help: "Drag files onto the .bat and the script receives their paths." },
+    { group: "Which Python" },
+    { k: "venv", label: "Prefer a .venv / venv folder next to the script", type: "check", def: true },
+    { k: "env", label: "Conda environment name (optional)", type: "text", def: "", help: "Uses that env's own <code>python.exe</code> directly, no activation needed." },
+    { k: "conda", label: "Also look in Anaconda / Miniconda / python.org folders", type: "check", def: true },
+    { k: "pip", label: "Install requirements.txt first", type: "check", def: false }
+  ], COMMON("")),
+  build: function (o) {
+    var s = nq(o.script) || "main.py", env = nq(o.env);
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o));
+    a = a.concat(block(L('if not exist "' + s + '" ('), fail("Could not find " + s + " in this folder.", null, ["Current folder: %CD%"])));
+    a.push(B()); a = a.concat(rem(o, "--- pick a Python ---"));
+    if (o.venv || env) a.push(L('set "PY="'));
+    if (o.venv) {
+      a.push(L('if exist ".venv\\Scripts\\python.exe" set "PY=%CD%\\.venv\\Scripts\\python.exe"', "A virtual environment holds the exact packages this project needs, so it wins over a system Python."));
+      a.push(L('if not defined PY if exist "venv\\Scripts\\python.exe" set "PY=%CD%\\venv\\Scripts\\python.exe"', "Two <code>if</code>s on one line = both must be true."));
+    }
+    if (env) {
+      a.push(L('for %%C in ("%USERPROFILE%\\anaconda3" "%USERPROFILE%\\miniconda3" "%LOCALAPPDATA%\\anaconda3" "C:\\ProgramData\\anaconda3") do (',
+        "Looks for the conda env <code>" + env + "</code> inside the usual Anaconda/Miniconda install folders."));
+      a.push(L('  if not defined PY if exist "%%~C\\envs\\' + env + '\\python.exe" set "PY=%%~C\\envs\\' + env + '\\python.exe"'), L(")"));
+    }
+    if (o.venv || env) {
+      var fp = findPython(o); fp.shift();
+      a = a.concat(block(L("if not defined PY (", "Nothing project-specific found — fall back to any working Python."), fp));
+    } else a = a.concat(findPython(o));
+    a = a.concat(block(L("if not defined PY ("), fail("Could not find Python.", null, ["Install it from https://www.python.org and tick \"Add to PATH\"."])));
+    a.push(L("echo Using: %PY%"));
+    if (o.pip) {
+      a.push(B());
+      a = a.concat(block(L('if exist "requirements.txt" ('), [L('"%PY%" -m pip install -r requirements.txt', "Installs the packages listed in requirements.txt into this Python. <code>-m pip</code> makes sure it is <em>this</em> Python's pip.")]));
+    }
+    a.push(B()); a = a.concat(rem(o, "--- run ---"));
+    var args = String(o.args || "").trim();
+    a.push(L('"%PY%" "' + s + '"' + (args ? " " + args : "") + (o.fwd ? " %*" : ""), "Runs the script." + (o.fwd ? " <code>%*</code> = every argument the .bat received, passed straight on." : "")));
+    a.push(L('set "RC=%errorlevel%"', "Saves Python's exit code at once, on its own line. Writing <code>%errorlevel%</code> on the same line as an <code>if</code> would read the value from <em>before</em> the line ran."));
+    a = a.concat(block(L('if not "%RC%"=="0" ('), [L("echo."), L("echo The script stopped with an error - exit code %RC%.")]));
+    return a.concat(endLines(o), [L('exit /b %RC%', "Hands Python's exit code on to whoever ran this .bat.")]);
+  }
+});
+
+/* 6 · backup */
+T.push({
+  id: "backup", g: "⧉", name: "Backup a folder", from: "COPY · XCOPY · ROBOCOPY", file: "backup.bat",
+  blurb: "Copy a folder somewhere safe — into a dated sub-folder, a zip, or an exact mirror.",
+  concepts: ["robocopy", "exit codes ≥ 8", "for /f + powershell", "md"],
+  fields: [{ group: "From → to" },
+    { k: "srcMode", label: "Back up which folder?", type: "select", def: "script", opts: [["script", "The folder this .bat sits in"], ["fixed", "A fixed path I type"]] },
+    { k: "src", label: "Source folder", type: "text", def: "D:\\Coding\\MyProject", show: function (o) { return o.srcMode === "fixed"; } },
+    { k: "dest", label: "Backup destination", type: "text", def: "E:\\Backups\\MyProject" },
+    { group: "How" },
+    { k: "tool", label: "Method", type: "select", def: "robocopy", opts: [["robocopy", "robocopy — fast, skips unchanged files"], ["xcopy", "xcopy — simple copy"], ["zip", "Zip file (PowerShell Compress-Archive)"]] },
+    { k: "stamp", label: "Put each backup in a dated folder / file", type: "check", def: true, help: "e.g. <code>2026-11-02_1430</code>. Built with PowerShell so it is the same on every Windows language." },
+    { k: "mirror", label: "Mirror (delete files in the backup that no longer exist in the source)", type: "check", def: false, show: function (o) { return o.tool === "robocopy" && !o.stamp; } },
+    { k: "newer", label: "Only copy files that are newer", type: "check", def: true, show: function (o) { return o.tool === "xcopy"; } },
+    { k: "xd", label: "Skip folders named", type: "text", def: ".git node_modules __pycache__ .venv", show: function (o) { return o.tool === "robocopy"; } },
+    { k: "xf", label: "Skip files matching", type: "text", def: "*.tmp *.log", show: function (o) { return o.tool === "robocopy"; } },
+    { k: "log", label: "Write a log file next to the .bat", type: "check", def: false, show: function (o) { return o.tool === "robocopy"; } }
+  ].concat(COMMON("Backup")),
+  build: function (o) {
+    var a = head(o); a.push(B());
+    var dest = cleanPath(o.dest) || "E:\\Backups";
+    a.push(L(o.srcMode === "fixed" ? 'set "SRC=' + (cleanPath(o.src) || "C:\\") + '"' : 'set "SRC=%~dp0."',
+      o.srcMode === "fixed" ? "The folder to back up." : "The .bat's own folder. The trailing <code>.</code> avoids ending the path in <code>\\</code> — <code>\"C:\\x\\\"</code> would make the closing quote look escaped to robocopy/xcopy."));
+    a.push(L('set "DEST=' + dest + '"'));
+    a = a.concat(block(L('if not exist "%SRC%\\" (', "The trailing <code>\\</code> makes the test true only for a folder."), [L("echo Source folder not found: %SRC%"), L("pause"), L("exit /b 1")]));
+    if (o.stamp) {
+      a.push(B());
+      a.push(L("for /f %%i in ('powershell -NoProfile -Command \"Get-Date -Format yyyy-MM-dd_HHmm\"') do set \"STAMP=%%i\"",
+        "Captures PowerShell's output into <code>STAMP</code>. <code>%DATE%</code> looks different on every PC (dd/mm vs mm/dd, slashes not allowed in folder names), this format never does."));
+      if (o.tool !== "zip") a.push(L('set "DEST=%DEST%\\%STAMP%"', "Each run lands in its own dated sub-folder."));
+    }
+    a.push(B());
+    a.push(L("echo Backing up  %SRC%"), L("echo         to  %DEST%"), L("echo."));
+    if (o.tool === "robocopy") {
+      var xd = words(o.xd), xf = words(o.xf);
+      var cmd = 'robocopy "%SRC%" "%DEST%" ' + (o.mirror && !o.stamp ? "/MIR" : "/E") + " /R:1 /W:1 /NP" +
+        (xd.length ? " /XD " + xd.map(function (x) { return '"' + x + '"'; }).join(" ") : "") +
+        (xf.length ? " /XF " + xf.map(function (x) { return '"' + x + '"'; }).join(" ") : "") +
+        (o.log ? ' /LOG+:"%~dp0backup.log" /TEE' : "");
+      a.push(L(cmd, "<code>/E</code> copies sub-folders, empty ones too" + (o.mirror && !o.stamp ? " — <code>/MIR</code> does that <b>and deletes</b> anything in the backup that is gone from the source" : "") +
+        ". <code>/R:1 /W:1</code>: retry a locked file once after 1 s (the default is a million retries, 30 s apart). <code>/NP</code> hides per-file percentages." +
+        (xd.length ? " <code>/XD</code> skips folders, " : "") + (xf.length ? " <code>/XF</code> skips files. " : "") + (o.log ? " <code>/LOG+</code> appends to a log; <code>/TEE</code> still shows it on screen." : "") +
+        " The destination is created automatically."));
+      a = a.concat(block(L("if errorlevel 8 (", "robocopy's exit codes are unusual: 0–7 all mean success (1 = files copied, 2 = extra files, …). Only <b>8 or higher</b> means something failed."),
+        [L("echo BACKUP FAILED - see the messages above.")]).slice(0, -1), [L(") else ("), L("  echo Backup complete."), L(")")]);
+    } else if (o.tool === "xcopy") {
+      a.push(L('xcopy "%SRC%\\*" "%DEST%\\" /E /I /H /Y' + (o.newer ? " /D" : ""),
+        "<code>/E</code> sub-folders (empty too), <code>/I</code> treat the destination as a folder (no “file or directory?” question), <code>/H</code> hidden files too, <code>/Y</code> overwrite without asking" + (o.newer ? ", <code>/D</code> only files newer than the copy already there" : "") + "."));
+      a = a.concat(block(L("if errorlevel 2 (", "xcopy: 0 = OK, 1 = nothing to copy, 2+ = stopped or failed."), [L("echo BACKUP FAILED - see the messages above.")]).slice(0, -1),
+        [L(") else ("), L("  echo Backup complete."), L(")")]);
+    } else {
+      a.push(L('if not exist "%DEST%\\" md "%DEST%"', "<code>md</code> creates the folder (and any missing parents)."));
+      a.push(L('set "ZIP=%DEST%\\backup' + (o.stamp ? "_%STAMP%" : "") + '.zip"'));
+      a.push(L("powershell -NoProfile -Command \"Compress-Archive -Path '%SRC%\\*' -DestinationPath '%ZIP%' -Force\"",
+        "cmd has no zip command, so PowerShell does it. <code>-Force</code> overwrites an existing zip of the same name. Single quotes inside keep spaces in paths safe."));
+      a = a.concat(block(L("if errorlevel 1 ("), [L("echo ZIP FAILED - see the messages above.")]).slice(0, -1), [L(") else ("), L("  echo Created %ZIP%"), L(")")]);
+    }
+    return a.concat(endLines(o));
+  },
+  warn: function (o) {
+    var w = [];
+    if (o.tool === "robocopy" && o.mirror && !o.stamp) w.push({ bad: 1, t: "<b>/MIR deletes</b> files in the destination. Double-check the destination path — mirroring an empty folder onto the wrong place wipes it." });
+    if (o.tool === "zip") w.push("Compress-Archive struggles with files over 2 GB and with files that are open in another program.");
+    var d = cleanPath(o.dest).toLowerCase(), s = o.srcMode === "fixed" ? cleanPath(o.src).toLowerCase() : "";
+    if (s && d.indexOf(s + "\\") === 0) w.push({ bad: 1, t: "The destination is inside the source — every backup would copy the previous backups too." });
+    return w;
+  }
+});
+
+/* 7 · clean up */
+T.push({
+  id: "clean", g: "⌫", name: "Clean up files", from: "DEL · FORFILES · CHOICE", file: "cleanup.bat",
+  blurb: "Find files by pattern (optionally older than N days), list them, ask once, then delete.",
+  concepts: ["dir /b", "find /c /v \"\"", "choice", "forfiles /d", "del /q /s"],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "drag", "fixed"]), [{ group: "Which files" },
+    { k: "pat", label: "File patterns", type: "text", def: "*.tmp *.log *.bak", help: "Separate with spaces. Wildcards: <code>*</code> any characters, <code>?</code> one character." },
+    { k: "sub", label: "Include sub-folders", type: "check", def: true },
+    { k: "days", label: "Only files older than (days, 0 = any age)", type: "number", def: 0, min: 0, max: 3650 },
+    { group: "Safety" },
+    { k: "preview", label: "List the files first", type: "check", def: true },
+    { k: "confirm", label: "Ask Y/N before deleting", type: "check", def: true },
+    { k: "force", label: "Also delete read-only files (/f)", type: "check", def: false, show: function (o) { return !(parseInt(o.days, 10) > 0); } }
+  ], COMMON("Clean up")),
+  build: function (o) {
+    var pats = words(o.pat); if (!pats.length) pats = ["*.tmp"];
+    var q = pats.map(function (p) { return '"' + p + '"'; }).join(" "), S = o.sub ? " /s" : "", days = parseInt(o.days, 10) || 0;
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o));
+    a.push(L(echo("Looking for " + pats.join(" ") + (days ? " older than " + days + " days" : "") + " in:")), L("echo   %CD%" + (o.sub ? " and sub-folders" : "")), L("echo."));
+    if (days) {
+      var ff = function (cmd) { return pats.map(function (p) { return 'forfiles' + (o.sub ? " /s" : "") + ' /m "' + p + '" /d -' + days + ' /c "cmd /c ' + cmd + '" 2>nul'; }); };
+      if (o.preview) ff("echo @path").forEach(function (c, i) {
+        a.push(L(c, i ? "" : "<code>forfiles</code> runs a command for every matching file. <code>/m</code> the pattern, <code>/d -" + days + "</code> = last modified " + days + "+ days ago, <code>@path</code> = the file's full quoted path." + (o.sub ? " <code>/s</code> = sub-folders too." : "") + " <code>2&gt;nul</code> hides its “No files found” error."));
+      });
+      if (o.confirm) {
+        a.push(B(), L('choice /c YN /m "Delete these files"', "<code>choice</code> waits for one of the listed keys and sets <code>errorlevel</code> to its position: Y → 1, N → 2."));
+        a = a.concat(block(L("if errorlevel 2 (", "Checks “2 or higher” — so this catches N."), [L("echo Cancelled."), L("goto :done")]));
+      }
+      a.push(B());
+      ff("del /q @path").forEach(function (c, i) { a.push(L(c, i ? "" : "Same search again, this time deleting. <code>/q</code> = quiet, no “Are you sure?”.")); });
+    } else {
+      a.push(L('set "COUNT=0"'));
+      a.push(L("for /f %%c in ('dir /b /a-d" + S + " " + q + " 2^>nul ^| find /c /v \"\"') do set \"COUNT=%%c\"",
+        "Counts the matching files: <code>dir /b /a-d</code> lists bare file names (no folders), <code>find /c /v \"\"</code> counts the lines. Inside <code>'…'</code> the pipe and redirect must be escaped as <code>^|</code> and <code>^&gt;</code>."));
+      a = a.concat(block(L('if "%COUNT%"=="0" ('), [L("echo Nothing to delete."), L("goto :done", "Jump past the deleting part to the label at the end.")]));
+      if (o.preview) a.push(L("dir /b /a-d" + S + " " + q, "Show exactly what will go."));
+      a.push(L("echo."), L("echo %COUNT% file^(s^) will be deleted."));
+      if (o.confirm) {
+        a.push(L('choice /c YN /m "Delete them"', "<code>choice</code> waits for one of the listed keys and sets <code>errorlevel</code> to its position: Y → 1, N → 2."));
+        a = a.concat(block(L("if errorlevel 2 (", "Checks “2 or higher” — so this catches N."), [L("echo Cancelled."), L("goto :done")]));
+      }
+      a.push(B());
+      a.push(L("del /q" + (o.force ? " /f" : "") + S + " " + q, "<code>/q</code> quiet (no “Are you sure?”)" + (o.sub ? ", <code>/s</code> every sub-folder" : "") + (o.force ? ", <code>/f</code> read-only files too" : "") + ". Deleted files skip the Recycle Bin."));
+    }
+    a.push(L("echo Done."));
+    a.push(L(":done", "Target of the <code>goto :done</code> lines above."));
+    return a.concat(endLines(o));
+  },
+  warn: function (o) {
+    var w = [], pats = words(o.pat);
+    if (pats.some(function (p) { return /^\*(\.\*)?$/.test(p); })) w.push({ bad: 1, t: "A pattern of <code>*</code> or <code>*.*</code> deletes <b>every</b> file" + (o.sub ? " in every sub-folder" : "") + "." });
+    if (pats.some(function (p) { return /\.(bat|cmd|\*)$/i.test(p); })) w.push({ bad: 1, t: "This pattern also matches the .bat itself." });
+    if (!o.confirm) w.push("No confirmation — files are deleted as soon as you double-click.");
+    return w;
+  }
+});
+
+/* 8 · file loop */
+T.push({
+  id: "loop", g: "∀", name: "Do something to many files", from: "FOR · REN · %%~nxf", file: "batch_rename.bat",
+  blurb: "Rename, copy, move or run a command on every file that matches a pattern — with a dry-run mode.",
+  concepts: ["for /f + dir /b", "%%~nf %%~xf %%~nxf", "%~f0", "set /a"],
+  fields: [{ group: "Where" }].concat(FOLDER("script", ["script", "drag", "fixed"]), [{ group: "Which files" },
+    { k: "pat", label: "Pattern", type: "text", def: "*.jpg" },
+    { k: "sub", label: "Include sub-folders", type: "check", def: false },
+    { group: "Action" },
+    { k: "act", label: "For each file…", type: "select", def: "prefix", opts: [
+      ["prefix", "Add text before the name"], ["suffix", "Add text after the name (before the extension)"], ["ext", "Change the extension"],
+      ["copy", "Copy into a folder"], ["move", "Move into a folder"], ["custom", "Run my own command"]] },
+    { k: "val", label: "Text / extension / folder", type: "text", def: "2026_", show: function (o) { return o.act !== "custom"; },
+      help: "Prefix/suffix text, a new extension like <code>txt</code>, or a folder such as <code>sorted</code>." },
+    { k: "custom", label: "Command", type: "text", def: 'echo {name} has extension {ext}', show: function (o) { return o.act === "custom"; },
+      help: "Placeholders: <code>{file}</code> full quoted path · <code>{nameext}</code> name.ext · <code>{name}</code> · <code>{ext}</code> · <code>{dir}</code> folder." },
+    { k: "dry", label: "Dry run — only print what would happen", type: "check", def: true, help: "Untick once the printed commands look right." }
+  ], COMMON("")),
+  build: function (o) {
+    var pat = nq(o.pat) || "*.*", v = nq(o.val), act;
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o));
+    if ((o.act === "copy" || o.act === "move") && !o.dry) a.push(L('if not exist "' + (v || "out") + '\\" md "' + (v || "out") + '"'));
+    a.push(L('set "COUNT=0"'));
+    switch (o.act) {
+      case "suffix": act = ['ren "%%~ff" "%%~nf' + v + '%%~xf"', "<code>ren</code> takes the full old path but only a <em>name</em> for the new one. <code>%%~nf</code> = name without extension, <code>%%~xf</code> = extension with its dot."]; break;
+      case "ext": act = ['ren "%%~ff" "%%~nf.' + v.replace(/^\./, "") + '"', "<code>%%~nf</code> = file name without its extension, then the new extension."]; break;
+      case "copy": act = ['copy /y "%%~ff" "' + (v || "out") + '\\" >nul', "<code>/y</code> overwrites without asking. The trailing <code>\\</code> makes sure the target is treated as a folder." + (o.sub ? " Files from sub-folders all land in the same folder." : "")]; break;
+      case "move": act = ['move /y "%%~ff" "' + (v || "out") + '\\" >nul', "<code>/y</code> overwrites without asking."]; break;
+      case "custom": act = [String(o.custom || "echo {file}").replace(/\{file\}/g, '"%%~ff"').replace(/\{nameext\}/g, "%%~nxf").replace(/\{name\}/g, "%%~nf").replace(/\{ext\}/g, "%%~xf").replace(/\{dir\}/g, "%%~dpf"), "Your command, with the placeholders swapped for <code>%%~</code> modifiers of the loop variable."]; break;
+      default: act = ['ren "%%~ff" "' + v + '%%~nxf"', "<code>%%~ff</code> = the file's full path, <code>%%~nxf</code> = its name + extension. <code>ren</code> wants only a name (no folder) for the new name."];
+    }
+    a.push(L("for /f \"delims=\" %%f in ('dir /b /a-d" + (o.sub ? " /s" : "") + ' "' + pat + "\" 2^>nul') do (",
+      "Why not just <code>for %%f in (" + pat + ")</code>? That loop reads the folder <em>while</em> renaming, and can pick up already-renamed files again. <code>dir /b</code> takes a snapshot of the list first. <code>delims=</code> keeps names with spaces whole." + (o.sub ? " <code>/s</code> gives full paths from every sub-folder." : "")));
+    a.push(L('  if /i not "%%~ff"=="%~f0" (', "<code>%~f0</code> is this .bat's own full path — skip it so the script never renames or moves itself."));
+    a.push(L("    " + (o.dry ? "echo " : "") + act[0], o.dry ? "<b>Dry run:</b> <code>echo</code> in front prints the command instead of running it. Remove the <code>echo</code> (or untick dry run) to do it for real. " + act[1] : act[1]));
+    a.push(L("    set /a COUNT+=1", "<code>set /a</code> does arithmetic. It reads <code>COUNT</code> when it runs, so it works inside the loop without delayed expansion — which is kept off on purpose: it would eat <code>!</code> characters in file names."));
+    a.push(L("  )"), L(")"));
+    a.push(L("echo."), L("echo %COUNT% file^(s^) " + (o.dry ? "would be processed ^(dry run^)." : "processed.")));
+    return a.concat(endLines(o));
+  },
+  warn: function (o) {
+    var w = [];
+    if (!o.dry && (o.act === "move" || o.act === "prefix" || o.act === "suffix" || o.act === "ext")) w.push("Real run: renames/moves can't be undone. Run once with dry run on and read the list first.");
+    if (o.act === "prefix" && o.sub) w.push("Prefix + sub-folders is fine, but running the script twice adds the prefix twice.");
+    return w;
+  }
+});
+
+/* 9 · menu */
+T.push({
+  id: "menu", g: "☰", name: "Menu of commands", from: "CHOICE · GOTO · labels", file: "menu.bat",
+  blurb: "A numbered menu: press a key, the matching command runs, back to the menu.",
+  concepts: [":labels", "goto", "choice /c /n", "if errorlevel (highest first)", "call"],
+  fields: [{ group: "Where" }].concat(FOLDER("script"), [{ group: "Menu" },
+    { k: "head", label: "Menu heading", type: "text", def: "MY TOOLS" },
+    { k: "items", label: "Items — one per line:  Label | command", type: "area", def: "Pull latest | git pull\nShow status | git status --short\nOpen this folder | start \"\" explorer .\nRun tests | call run_tests.bat",
+      help: "Up to 9 items. Use <code>call other.bat</code> to run another batch file and come back." },
+    { k: "back", label: "Return to the menu after each command", type: "check", def: true },
+    { k: "cls", label: "Clear the screen before showing the menu", type: "check", def: true }
+  ], COMMON("Menu", "none")),
+  build: function (o) {
+    var items = String(o.items || "").split(/\r?\n/).map(function (l) { var p = l.split("|"); return { lab: p[0].trim(), cmd: p.slice(1).join("|").trim() }; })
+      .filter(function (x) { return x.lab; }).slice(0, 9);
+    if (!items.length) items = [{ lab: "Say hello", cmd: "echo Hello" }];
+    var keys = items.map(function (_, i) { return String(i + 1); }).join("") + "0";
+    var a = head(o); a.push(B());
+    a = a.concat(folderLines(o)); a.push(B());
+    a.push(L(":menu", "A label — a named spot in the file that <code>goto :menu</code> can jump back to."));
+    if (o.cls) a.push(L("cls", "Clears the window so the menu always starts at the top."));
+    a.push(L("echo =============================="), L(echo("  " + (o.head || "MENU"))), L("echo =============================="));
+    items.forEach(function (it, i) { a.push(L(echo("  " + (i + 1) + ". " + it.lab))); });
+    a.push(L("echo   0. Exit"), L("echo."));
+    a.push(L('choice /c ' + keys + ' /n /m "Choose an option: "', "<code>/c " + keys + "</code> lists the allowed keys; <code>/n</code> hides the automatic <code>[" + keys.split("").join(",") + "]?</code>. The key's <em>position</em> becomes the errorlevel: “1” → 1 … “0” → " + keys.length + "."));
+    var checks = [];
+    for (var i = keys.length; i >= 1; i--) checks.push(L("if errorlevel " + i + " goto :" + (i === keys.length ? "quit" : "opt" + i),
+      i === keys.length ? "<code>if errorlevel N</code> means “N <b>or higher</b>”, so the tests must run from the <b>highest down</b> — otherwise <code>if errorlevel 1</code> would match every key." : ""));
+    a = a.concat(checks);
+    a.push(L("goto :menu"));
+    items.forEach(function (it, i) {
+      a.push(B(), L(":opt" + (i + 1)));
+      a.push(L(it.cmd || "echo No command set."));
+      if (o.back) a.push(L("echo."), L("pause"), L("goto :menu"));
+      else a.push(L("goto :quit"));
+    });
+    a.push(B(), L(":quit"), L("endlocal"), L("exit /b", "<code>exit /b</code> ends this script but not the cmd window it was typed in (plain <code>exit</code> would close that window too)."));
+    return a;
+  },
+  warn: function (o) {
+    var w = [], lines = String(o.items || "").split(/\r?\n/).filter(function (l) { return l.trim(); });
+    if (lines.length > 9) w.push("Only the first 9 items are used — <code>choice</code> keys 1–9 plus 0 for Exit.");
+    lines.forEach(function (l) {
+      var c = l.split("|").slice(1).join("|").trim();
+      if (/\.(bat|cmd)\b/i.test(c) && !/^(call|start)\b/i.test(c)) w.push({ bad: 1, t: "<code>" + c.replace(/</g, "&lt;") + "</code> runs another batch file without <code>call</code> — control never comes back to the menu. Write <code>call " + c.replace(/</g, "&lt;") + "</code>." });
+    });
+    return w;
+  }
+});
+
+/* 10 · launch */
+T.push({
+  id: "launch", g: "▶", name: "Launch apps & sites", from: "START · TIMEOUT", file: "start_work.bat",
+  blurb: "One double-click opens your whole set-up: programs, folders, websites, documents.",
+  concepts: ["start \"\" \"…\"", "timeout /nobreak"],
+  fields: [{ group: "What to open" },
+    { k: "items", label: "One per line — a program, folder, file or URL.  Add  | arguments  if needed", type: "area",
+      def: "https://github.com\n%USERPROFILE%\\Documents\ncode | D:\\Coding\\MyProject\nnotepad.exe | %USERPROFILE%\\Desktop\\todo.txt" },
+    { k: "delay", label: "Seconds to wait between each (0 = none)", type: "number", def: 1, min: 0, max: 120 }
+  ].concat(COMMON("", "none")),
+  build: function (o) {
+    var items = String(o.items || "").split(/\r?\n/).map(function (l) { var p = l.split("|"); return { t: nq(p[0]), args: p.slice(1).join("|").trim() }; }).filter(function (x) { return x.t; });
+    var d = parseInt(o.delay, 10) || 0;
+    var a = head(o); a.push(B());
+    items.forEach(function (it, i) {
+      /* a single path/file argument gets quoted (spaces in %USERPROFILE% etc.); switches like --x or /x are left alone */
+      var args = it.args ? " " + (!/"/.test(it.args) && !/^[-\/]/.test(it.args) ? '"' + it.args + '"' : it.args) : "";
+      a.push(L('start "" "' + it.t + '"' + args, i ? "" : "<code>start</code> hands the item to Windows, which opens it with the right program — a URL in the browser, a folder in Explorer — and the script carries on without waiting. The empty <code>\"\"</code> is the window title; without it the quoted path would be taken as the title."));
+      if (d && i < items.length - 1) a.push(L("timeout /t " + d + " /nobreak >nul", i ? "" : "Pause between launches so heavy programs don't all start at once. <code>/nobreak</code> ignores key presses."));
+    });
+    return a.concat(endLines(o));
+  }
+});
+
+/* 11 · restart program */
+T.push({
+  id: "restart", g: "↻", name: "Restart a program", from: "TASKLIST · TASKKILL", file: "restart_app.bat",
+  blurb: "Close a stuck program (if it is running), wait a moment, start it again.",
+  concepts: ["tasklist /fi", "find", "taskkill /im", "if not errorlevel 1"],
+  fields: [{ group: "Program" },
+    { k: "exe", label: "Process name", type: "text", def: "notepad.exe", help: "As shown in Task Manager → Details." },
+    { k: "path", label: "How to start it again", type: "text", def: "notepad.exe", help: "Full path or anything <code>start</code> understands. Empty = don't restart, just close." },
+    { k: "force", label: "Force close (/f) — unsaved work is lost", type: "check", def: false },
+    { k: "wait", label: "Seconds to wait before starting again", type: "number", def: 2, min: 0, max: 60 }
+  ].concat(COMMON("", "none")),
+  build: function (o) {
+    var exe = nq(o.exe) || "notepad.exe", p = nq(o.path), w = parseInt(o.wait, 10) || 0;
+    var a = head(o); a.push(B());
+    a.push(L('tasklist /fi "imagename eq ' + exe + '" | find /i "' + exe + '" >nul', "<code>tasklist /fi</code> lists only that process; <code>find</code> sets errorlevel 0 if the name appears, 1 if not — a reliable “is it running?” test."));
+    var body = [L(echo("Closing " + exe + " ...")),
+      L('taskkill /im "' + exe + '"' + (o.force ? " /f" : "") + " >nul", "<code>/im</code> = by image (exe) name. " + (o.force ? "<code>/f</code> kills it immediately." : "Without <code>/f</code> the program is asked politely and may prompt to save."))];
+    if (w) body.push(L("timeout /t " + w + " /nobreak >nul", "Give it time to close completely."));
+    a = a.concat(block(L("if not errorlevel 1 (", "<code>not errorlevel 1</code> = exit code is 0, i.e. <code>find</code> found it."), body));
+    if (p) a.push(L('start "" "' + p + '"', "Start it again; the empty <code>\"\"</code> is the window title."));
+    return a.concat(endLines(o));
+  }
+});
+
+/* ───────────────────────── state ───────────────────────── */
+var KEY = "bat_generator_v1";
+var S = (function () { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })();
+S.vals = S.vals || {}; S.fname = S.fname || {};
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function tpl() { return T.filter(function (t) { return t.id === S.tpl; })[0] || T[0]; }
+function vals(t) {
+  var v = S.vals[t.id] || (S.vals[t.id] = {}), o = {};
+  t.fields.forEach(function (f) { if (f.k) o[f.k] = f.k in v ? v[f.k] : f.def; });
+  return o;
+}
+
+/* ───────────────────────── highlighter ───────────────────────── */
+var KW = "echo|set|if|else|for|do|in|goto|call|exit|pause|cd|start|setlocal|endlocal|not|exist|defined|errorlevel|choice|timeout|title|ren|del|copy|move|md|pushd|popd|robocopy|xcopy|dir|find|tasklist|taskkill|forfiles|cls|git|equ|neq|gtr|geq|lss|leq";
+var VAR = "%%~?[A-Za-z]+|%~[a-z]*[0-9]|%[0-9*]|%[A-Za-z_][\\w()]*(?::[^%]*)?%|![A-Za-z_]\\w*!";
+var OP = "&&|\\|\\||\\d?>>?(?:&\\d)?|[|&<]|\\^.";
+var RX_FULL = new RegExp('("[^"]*"?)|(' + VAR + ")|\\b(" + KW + ")\\b|(" + OP + ")", "gi");
+var RX_TEXT = new RegExp("(" + VAR + ")|(" + OP + ")", "g");
+var RX_STR = new RegExp("(" + VAR + ")", "g");
+function esc(s) { return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+function sp(c, s) { return '<span class="tk-' + c + '">' + s + "</span>"; }
+function paint(s, rx) {
+  rx.lastIndex = 0; var out = "", i = 0, m;
+  while ((m = rx.exec(s))) {
+    out += esc(s.slice(i, m.index));
+    if (rx === RX_FULL) out += m[1] ? sp("s", paint(m[1], RX_STR)) : m[2] ? sp("v", esc(m[2])) : m[3] ? sp("k", esc(m[3])) : sp("o", esc(m[4]));
+    else if (rx === RX_TEXT) out += m[1] ? sp("v", esc(m[1])) : sp("o", esc(m[2]));
+    else out += sp("v", esc(m[1]));
+    i = rx.lastIndex; if (!m[0].length) rx.lastIndex++;
+  }
+  return out + esc(s.slice(i));
+}
+function hl(line) {
+  var m;
+  if (/^\s*(rem(\s|$)|::)/i.test(line)) return sp("c", esc(line));
+  if (/^\s*:[A-Za-z_]/.test(line)) return sp("l", esc(line));
+  if ((m = /^(\s*@?)(echo|title)([.\s].*|$)/i.exec(line))) return esc(m[1]) + sp("k", m[2]) + paint(m[3], RX_TEXT);
+  return paint(line, RX_FULL);
+}
+
+/* ───────────────────────── render ───────────────────────── */
+var $ = function (id) { return document.getElementById(id); };
+var lines = [];
+function renderList() {
+  $("tlist").innerHTML = T.map(function (t) {
+    return '<button type="button" class="tbtn' + (t.id === tpl().id ? " on" : "") + '" data-id="' + t.id + '"><span class="g">' + t.g +
+      "</span><span><b>" + t.name + "</b><small>" + esc(t.from) + "</small></span></button>";
+  }).join("");
+}
+function renderForm() {
+  var t = tpl(), o = vals(t);
+  $("intro").innerHTML = "<h2>" + t.name + "</h2><p>" + t.blurb + '</p><div class="chips"><span class="from">from: ' + esc(t.from) + "</span>" +
+    t.concepts.map(function (c) { return "<span>" + esc(c) + "</span>"; }).join("") + "</div>";
+  var h = "";
+  t.fields.forEach(function (f, i) {
+    if (f.group) { h += '<div class="grp">' + f.group + "</div>"; return; }
+    var id = "f_" + f.k, st = f.show && !f.show(o) ? ' hidden' : "", help = f.help ? '<div class="h">' + f.help + "</div>" : "";
+    h += '<div class="f" data-k="' + f.k + '"' + st + ">";
+    if (f.type === "check") h += '<label class="ck"><input type="checkbox" id="' + id + '"' + (o[f.k] ? " checked" : "") + "> " + f.label + "</label>" + help;
+    else {
+      h += '<label class="t" for="' + id + '">' + f.label + "</label>";
+      if (f.type === "select") h += '<select id="' + id + '">' + f.opts.map(function (p) { return '<option value="' + p[0] + '"' + (o[f.k] === p[0] ? " selected" : "") + ">" + esc(p[1]) + "</option>"; }).join("") + "</select>";
+      else if (f.type === "area") h += '<textarea id="' + id + '" spellcheck="false">' + esc(String(o[f.k])) + "</textarea>";
+      else h += '<input type="' + (f.type === "number" ? "number" : "text") + '" id="' + id + '" spellcheck="false"' + (f.min != null ? ' min="' + f.min + '"' : "") + (f.max != null ? ' max="' + f.max + '"' : "") + ">";
+      h += help;
+    }
+    h += "</div>";
+  });
+  $("form").innerHTML = h;
+  t.fields.forEach(function (f) { if (f.k && f.type !== "check" && f.type !== "select" && f.type !== "area") $("f_" + f.k).value = o[f.k]; });
+  $("fname").value = S.fname[t.id] || t.file;
+}
+function syncShow() {
+  var t = tpl(), o = vals(t);
+  t.fields.forEach(function (f) { if (f.k && f.show) { var el = $("form").querySelector('[data-k="' + f.k + '"]'); if (el) el.hidden = !f.show(o); } });
+}
+function renderOut() {
+  var t = tpl(), o = vals(t);
+  lines = t.build(o);
+  $("code").innerHTML = lines.map(function (l, i) {
+    return '<div class="ln' + (l.w ? " has" : "") + '" data-i="' + i + '"' + (l.w ? ' title="Click for the explanation"' : "") + '><span class="no">' + (i + 1) + "</span><code>" + (hl(l.c) || " ") + "</code></div>" +
+      (l.w ? '<div class="why">' + l.w + "</div>" : "");
+  }).join("");
+  var expl = lines.filter(function (l) { return l.w; }).length;
+  $("meta").textContent = lines.length + " lines · " + expl + " explained";
+  var w = (t.warn ? t.warn(o) : []).map(function (x) { return typeof x === "string" ? { t: x } : x; });
+  if (/[^\x00-\x7f]/.test(lines.map(function (l) { return l.c; }).join(""))) w.push({ t: "Non-ASCII characters (accents, symbols) can show up garbled in cmd. Plain ASCII is safest." });
+  $("warn").hidden = !w.length;
+  $("warn").innerHTML = w.map(function (x) { return "<div" + (x.bad ? ' class="bad"' : "") + "><span>" + x.t + "</span></div>"; }).join("");
+}
+function all() { renderList(); renderForm(); renderOut(); }
+
+/* ───────────────────────── events ───────────────────────── */
+$("tlist").addEventListener("click", function (e) {
+  var b = e.target.closest(".tbtn"); if (!b) return;
+  S.tpl = b.getAttribute("data-id"); save(); all();
+  if (window.innerWidth < 720) $("intro").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+function onField(e) {
+  var el = e.target, t = tpl(); if (!el.id || el.id.indexOf("f_") !== 0) return;
+  var k = el.id.slice(2), f = t.fields.filter(function (x) { return x.k === k; })[0]; if (!f) return;
+  S.vals[t.id][k] = f.type === "check" ? el.checked : el.value;
+  save(); syncShow(); renderOut();
+}
+$("form").addEventListener("input", onField);
+$("form").addEventListener("change", onField);
+$("fname").addEventListener("input", function () { S.fname[tpl().id] = this.value; save(); });
+$("code").addEventListener("click", function (e) { var ln = e.target.closest(".ln.has"); if (ln) ln.classList.toggle("open"); });
+$("explain").addEventListener("change", function () { $("code").classList.toggle("all", this.checked); S.explain = this.checked; save(); });
+$("reset").addEventListener("click", function () { var t = tpl(); delete S.vals[t.id]; delete S.fname[t.id]; save(); all(); toast("Options reset"); });
+function text() { return lines.map(function (l) { return l.c; }).join("\r\n") + "\r\n"; }
+function fileName() {
+  var n = ($("fname").value || tpl().file).trim().replace(/[\\\/:*?"<>|]+/g, "_");
+  if (!/\.(bat|cmd)$/i.test(n)) n += ".bat";
+  return n;
+}
+$("dl").addEventListener("click", function () {
+  var blob = new Blob([text()], { type: "application/octet-stream" });
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fileName();
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  toast("Saved " + fileName());
+});
+$("copy").addEventListener("click", function () {
+  var s = text();
+  function fallback() { var ta = document.createElement("textarea"); ta.value = s; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); }
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(s).catch(fallback); else fallback();
+  toast("Copied to clipboard");
+});
+var tt;
+function toast(m) { var el = $("toast"); el.textContent = m; el.classList.add("show"); clearTimeout(tt); tt = setTimeout(function () { el.classList.remove("show"); }, 1600); }
+
+$("explain").checked = !!S.explain; $("code").classList.toggle("all", !!S.explain);
+all();
+window.__batgen = { T: T, vals: vals, build: function (id, over) { var t = T.filter(function (x) { return x.id === id; })[0]; var o = vals(t); for (var k in over || {}) o[k] = over[k]; return t.build(o).map(function (l) { return l.c; }).join("\n"); } };
+})();
+</script>
+<script src="../../_lib/progress-backup.js"></script>
+<script src="../../extras.js" defer></script>
+</body>
+</html>
