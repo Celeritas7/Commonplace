@@ -213,7 +213,7 @@
     document.getElementById("prog").innerHTML = "<b>" + pct() + "%</b> of chapter";
     const sum = document.getElementById("chsum");
     if (sum) sum.innerHTML = ranCount() + "/" + cells.filter((c) => c.type === "code").length + " cells ran<br>" +
-      Object.keys(SSTUDY).filter((k) => recallOk(+k)).length + "/" + Object.keys(SSTUDY).filter((k) => SSTUDY[k].recall).length + " recalled";
+      recallCounts().ok + "/" + recallCounts().total + " recalled";
 
     const list = prefs.view === "focus" ? [sec] : sections.map((_, i) => i);
     app.innerHTML = list.map(sectionHTML).join("");
@@ -224,7 +224,10 @@
   function sectionHTML(i) {
     const st = SSTUDY[i] || {};
     const body = secOf[i].map((j) => cellHTML(j, i)).join("");
-    const recallHTML = st.recall ? recallBlock(i, st.recall) : "";
+    const qs = rqs(i);
+    const recallHTML = qs.length > 1
+      ? '<div class="rcheck"><div class="rchead">Check yourself · ' + qs.length + " questions</div>" + qs.map((r, k) => recallBlock(i, r, k)).join("") + "</div>"
+      : qs.length ? recallBlock(i, qs[0], 0) : "";
     const navHTML = prefs.view === "focus" ? focusNav(i) : "";
     return '<section class="section" data-s="' + i + '">' +
       '<div class="secmain">' +
@@ -262,14 +265,15 @@
       '<div class="out" id="out-' + j + '"></div></div>';
   }
 
-  function recallBlock(i, r) {
-    const picked = recall[i], done = picked != null, ok = picked === r.answer;
+  function recallBlock(i, r, k) {
+    const key = rkey(i, k), picked = recall[key], done = picked != null, ok = picked === r.answer;
     return '<div class="recall' + (done ? (ok ? " is-ok" : " is-no") : "") + '">' +
       '<div class="rlab">' + (done ? (ok ? "✓ recalled" : "↻ not yet — revisit") : "recall · before you move on") + "</div>" +
       "<div class=\"rq\">" + esc(r.q) + "</div><div class=\"ropts\">" +
-      r.options.map((o, k) => '<button class="ropt' + (done && k === r.answer ? " is-ans" : done && k === picked ? " is-pick" : "") + '"' +
-        (done ? " disabled" : "") + ' data-recall="' + i + '" data-opt="' + k + '"><i>' + "ABCD"[k] + "</i>" + esc(o) + "</button>").join("") +
-      "</div>" + (done ? '<div class="rwhy">' + esc(r.why || "") + "</div>" : "") + "</div>";
+      r.options.map((o, n) => '<button class="ropt' + (done && n === r.answer ? " is-ans" : done && n === picked ? " is-pick" : "") + '"' +
+        (done ? " disabled" : "") + ' data-recall="' + key + '" data-opt="' + n + '"><i>' + "ABCD"[n] + "</i>" + esc(o) + "</button>").join("") +
+      "</div>" + (done ? '<div class="rwhy">' + esc(r.why || "") + "</div>" : "") +
+      (done && !ok ? '<button class="rretry" data-retry="' + key + '">↻ Try again</button>' : "") + "</div>";
   }
 
   function focusNav(i) {
@@ -304,7 +308,14 @@
     }));
     document.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(+b.dataset.go)));
     document.querySelectorAll("[data-recall]").forEach((b) => (b.onclick = () => {
-      recall[+b.dataset.recall] = +b.dataset.opt; saved.recall = recall; store.save(saved); render();
+      const y = window.scrollY;
+      recall[b.dataset.recall] = +b.dataset.opt; saved.recall = recall; store.save(saved); render();
+      window.scrollTo(0, y);
+    }));
+    document.querySelectorAll("[data-retry]").forEach((b) => (b.onclick = () => {
+      const y = window.scrollY;
+      delete recall[b.dataset.retry]; saved.recall = recall; store.save(saved); render();
+      window.scrollTo(0, y);
     }));
     document.querySelectorAll("[data-note]").forEach((t) => {
       const k = "aistudy.note." + ch.id + "." + t.dataset.note;
@@ -338,13 +349,22 @@
   }
 
   /* ---------------------------------------------------------------- progress */
-  function recallOk(i) { const r = (SSTUDY[i] || {}).recall; return r && recall[i] === r.answer; }
+  /* a section's recall may be one question or a list (a chapter check). Question k
+     of section i is saved under "i" for k = 0 and "i.k" after that, so answers
+     saved before lists existed still count. */
+  function rqs(i) { const r = (SSTUDY[i] || {}).recall; return !r ? [] : Array.isArray(r) ? r : [r]; }
+  function rkey(i, k) { return k ? i + "." + k : String(i); }
+  function recallOk(i) { const q = rqs(i); return q.length > 0 && q.every((r, k) => recall[rkey(i, k)] === r.answer); }
+  function recallCounts() {
+    let total = 0, ok = 0;
+    Object.keys(SSTUDY).forEach((i) => rqs(i).forEach((r, k) => { total++; if (recall[rkey(i, k)] === r.answer) ok++; }));
+    return { total, ok };
+  }
   function ranCount() { return cells.filter((c) => c.ran).length; }
   function pct() {
     const codeTotal = cells.filter((c) => c.type === "code").length || 1;
-    const rTotal = Object.keys(SSTUDY).filter((k) => SSTUDY[k].recall).length;
-    const rOk = Object.keys(SSTUDY).filter((k) => recallOk(+k)).length;
-    return Math.round(((ranCount() + rOk) / (codeTotal + rTotal)) * 100);
+    const rc = recallCounts();
+    return Math.round(((ranCount() + rc.ok) / (codeTotal + rc.total)) * 100);
   }
 
   /* ------------------------------------------------------------------ output */
