@@ -143,6 +143,8 @@ document.querySelectorAll('.run').forEach(btn=>btn.onclick=async()=>{{
   }}catch(e){{out.textContent+="\n"+(e.message||e);st.textContent='error';}}
 }});
 </script>
+<script src="../../../../_lib/progress-backup.js"></script>
+<script src="../../book/js/sw-register.js"></script>
 </body>
 </html>'''
 
