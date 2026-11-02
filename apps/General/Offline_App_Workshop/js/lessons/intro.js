@@ -1,6 +1,6 @@
 /* Home page text. */
 window.COURSE_INTRO = `
-<div class="kicker">Commonplace &middot; Coding</div>
+<div class="kicker">A course in building offline browser apps</div>
 <h1>Offline App Workshop</h1>
 <p class="lead">Learn to build apps like the ones in your <code>apps/</code> folder: Route Studio, Weekly Focus,
 the Flowchart editor and the Part Matrix Finder. They are small programs that run in a web browser,
@@ -17,7 +17,7 @@ browser. Use <b>Export backup</b> (bottom left) before you clear browser data or
 <div class="note"><b>This page is itself an offline app</b>
 It is built from exactly the parts this course teaches: one <code>index.html</code>, one stylesheet,
 plain <code>&lt;script&gt;</code> files, <code>localStorage</code> for progress, and an export/import backup.
-Open <code>Coding/offline_apps_study/</code> in a text editor whenever you want to see a working example.</div>
+Open this app's folder (<code>Offline_App_Workshop/</code>) in a text editor whenever you want to see a working example.</div>
 
 <h2>The modules</h2>
 `;

@@ -4,7 +4,7 @@ A course that teaches how to build offline browser apps like the ones in `apps/`
 
 ## Run
 
-Double-click `index.html`. It needs no internet and no server. It's also linked from the Coding hub (`Coding/index.html`).
+Double-click `index.html`. It needs no internet, no server and no other folder. It uses system fonts only, so the folder can be copied anywhere.
 
 ## How it is built
 

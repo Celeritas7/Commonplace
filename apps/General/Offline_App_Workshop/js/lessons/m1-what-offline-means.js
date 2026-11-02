@@ -194,9 +194,7 @@ Wherever you copy the folder, the path still works. That's why Route Studio's RE
 
 <div class="inapps"><b>In your apps</b>
 Route Studio's README has the note <i>"three.js is in js/vendor/three.min.js (r128) and the IBM Plex fonts are in fonts/"</i>.
-Someone downloaded those files once and put them in the folder.<br><br>
-Your Commonplace hub does the same thing automatically: <code>make_offline.py</code> finds every CDN address in your pages,
-downloads the file into <code>_lib/</code> and rewrites the page to use the local copy.</div>
+Someone downloaded those files once and put them in the folder. The page then points to the local copies.</div>
 
 <h2>Things that are allowed to need the internet</h2>
 <p>Weekly Focus still has weather and train-delay cards. When I tested it with no connection, those two downloads failed. By design
@@ -208,8 +206,7 @@ ${code('html', `
 <script src="file:///D:/Users/me/Apps/lib/three.min.js"></script>   <!-- only works on one PC -->
 <script src="/js/app.js"></script>                                  <!-- leading / breaks on file:// -->
 <script src="js/app.js"></script>                                   <!-- good: relative -->`, 'paths')}
-<p>The Commonplace README warns about the first one: a hub link with a full <code>file:///D:/...</code> path
-skips the study layer. A leading <code>/</code> means "the root of the site", which on <code>file://</code> is the root of your drive.</p>
+<p>A full <code>file:///D:/...</code> path breaks as soon as the folder is copied to another place or PC. A leading <code>/</code> means "the root of the site", which on <code>file://</code> is the root of your drive.</p>
 
 <div data-ex="0"></div>
 <div data-quiz></div>

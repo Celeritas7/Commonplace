@@ -194,7 +194,7 @@ Weekly Focus's green <b>On this device</b> pill has: Export backup (.json), Impo
 the same name, other boards are kept), <b>Keep my data</b> (asks the browser not to clear storage on its own, using
 <code>navigator.storage.persist()</code>), and a <b>backup reminder</b> after 7 days without a backup.<br><br>
 This course does the same: look at <code>exportProgress()</code> and <code>importProgress()</code> in
-<code>Coding/offline_apps_study/js/course.js</code>.</div>
+<code>Offline_App_Workshop/js/course.js</code>.</div>
 
 <div data-ex="0"></div>
 <div data-quiz></div>

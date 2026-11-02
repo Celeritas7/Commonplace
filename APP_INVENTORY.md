@@ -23,6 +23,7 @@ Last checked: 2026-11-02
 | Part Matrix Finder | Mechanical/#Part_matrix | Part matrix lookup tool (`part_matrix_finder_v2.html`) over `input/Part_matrix_Data.csv`. | Open the HTML file | `Temp/` holds two older versions. The `#` in the folder name breaks some `file://` links (a browser reads `#` as the start of a page anchor), so consider renaming it. |
 | Weekly Focus (offline) | General/Weekly_focus_offline | Planner (Today, Calendar, Routines, Week, Chats, boards) — the v97 online app with Supabase/login removed. Data in browser localStorage. | Open `index.html`, or `run-weekly-focus-offline.bat` (localhost:5071); installable PWA | The online original isn't in Drive or this repo. Offline changes are marked `OFFLINE` in `js/weekly-focus-app.js`. |
 | Offline Flowchart | General/Flowchart_app | Flowchart editor (Mermaid / draw.io); saves projects as files in a chosen folder, with version history. | Open `index.html` in Edge/Chrome | Older duplicate `General/Flowchart` removed from the repo (still in git history and still in Drive). Drive's `.git` folder was not imported. |
+| Offline App Workshop | General/Offline_App_Workshop | Course that teaches how to build apps like these, using their code as examples. Lessons, exercises with automatic checks, quizzes. Not related to Commonplace. | Open `index.html` | Modules 1–5 written, 6–12 planned. System fonts only; needs no other folder. |
 | DocSearch | General/Doc_search_tool | Searches for a word inside every document in a folder (PDF, Word, Excel, PowerPoint, STEP, text). Local web page. | `python docsearch_web.py` (localhost:8765) | Python app, not plain HTML. `__pycache__` and the generated `samples/BRK-100_Tooling` were not imported (rebuild with `python samples/make_samples.py`). **Same port 8765 as Route Studio**, but it picks the next free port if busy. |
 | — | Coding/ | Empty. | | |
 
@@ -32,7 +33,7 @@ Entry point: `index.html` → subject hubs. Libraries are made offline by `make_
 
 | Hub | Apps / sections |
 |---|---|
-| Coding | AI_study (JupyterLite), Python (practice), batch_study, c_and_cpp_study, sql, design_handoff_practice_mistake_bank, **offline_apps_study** (Offline App Workshop: the course on building these apps; modules 1–5 written, 6–12 planned) |
+| Coding | AI_study (JupyterLite), Python (practice), batch_study, c_and_cpp_study, sql, design_handoff_practice_mistake_bank |
 | Mechanical | Automobile, Brown_507_Movements, CMTI, Calc_Console, GD&T, Harness, Hose_routing, Machine_Design, Manufacturing, Motion_lab, Sheet_metal |
 | Maths | Algebra_Trigonometry, Calculus, Linear_Algebra, Statistics |
 | Language study, Office_work (VBA_macros), Exercises | single hubs |
