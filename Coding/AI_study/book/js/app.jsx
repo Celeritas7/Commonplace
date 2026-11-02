@@ -320,6 +320,16 @@ function Cover({ ch, idx, status, setMark, onOpen, onHome }) {
               First load fetches the Python runtime (~20–30s). Edit any cell and press Shift+Enter to re-run.
             </p>
           </div>
+          {(window.AI_NOTES_FOR || {})[ch.id] && (
+            <div className="panel notes-panel">
+              <h4>Read alongside</h4>
+              {window.AI_NOTES_FOR[ch.id].map(([href, label, why]) => (
+                <a key={href} className="note-link" href={href}>
+                  <b>{label}</b><span>{why}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

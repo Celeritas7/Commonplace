@@ -261,3 +261,28 @@ window.AI_ACCENTS = {
   "15":  "#f06a92", // Imbalanced Classes — rare rose
   "16":  "#62c97e"  // Ensembles — forest green
 };
+
+/* Notebook chapter -> the study notes that cover the same ground.
+   Paths are relative to the AI_study folder. [path, label, why]
+   Chapters with no matching note (01, 01b, 07) are simply absent.
+   The notes link back to the notebooks from their "Connections" list. */
+window.AI_NOTES_FOR = {
+  "02":  [["notes/classical-ml/geron-ch02-end-to-end-project.html", "Géron ch 2 — End-to-End Project", "the same pandas moves on a real housing dataset (§ 4)"]],
+  "03":  [["notes/classical-ml/geron-ch02-end-to-end-project.html", "Géron ch 2 — End-to-End Project", "discover and visualise the data (§ 4)"]],
+  "04":  [["notes/classical-ml/geron-ch04-training-models.html", "Géron ch 4 — Training Models", "normal equation, gradient descent, regularisation"],
+          ["notes/classical-ml/gradient-descent.html", "Gradient descent demo", "step the descent and vary η"]],
+  "05":  [["notes/classical-ml/geron-ch02-end-to-end-project.html", "Géron ch 2 — End-to-End Project", "prepare the data: imputing, encoding, scaling (§ 5)"]],
+  "06":  [["notes/classical-ml/geron-ch06-decision-trees.html", "Géron ch 6 — Decision Trees", "CART, gini vs entropy, regularisation"]],
+  "08":  [["notes/classical-ml/geron-ch02-end-to-end-project.html", "Géron ch 2 — End-to-End Project", "transformation pipelines (§ 5)"]],
+  "09":  [["notes/classical-ml/geron-ch02-end-to-end-project.html", "Géron ch 2 — End-to-End Project", "cross-validation and grid search (§ 6–7)"],
+          ["notes/classical-ml/geron-ch03-classification.html", "Géron ch 3 — Classification", "precision, recall, ROC (§ 3)"]],
+  "10":  [["notes/classical-ml/geron-ch08-dimensionality-reduction.html", "Géron ch 8 — Dimensionality Reduction", "the other way to cut features: project them"]],
+  "11":  [["notes/classical-ml/geron-ch01-ml-landscape.html", "Géron ch 1 — ML Landscape", "instance-based learning and k-NN (§ 4)"]],
+  "12":  [["notes/classical-ml/geron-ch09-unsupervised.html", "Géron ch 9 — Unsupervised Learning", "K-Means and DBSCAN (§ 1)"]],
+  "13":  [["notes/classical-ml/geron-ch09-unsupervised.html", "Géron ch 9 — Unsupervised Learning", "anomaly detection with Gaussian mixtures (§ 2)"]],
+  "14":  [["notes/classical-ml/geron-ch05-svm.html", "Géron ch 5 — Support Vector Machines", "margins, C, kernels"]],
+  "14b": [["notes/classical-ml/geron-ch05-svm.html", "Géron ch 5 — Support Vector Machines", "kernels and C"],
+          ["notes/classical-ml/geron-ch08-dimensionality-reduction.html", "Géron ch 8 — Dimensionality Reduction", "PCA (§ 3)"]],
+  "15":  [["notes/classical-ml/geron-ch03-classification.html", "Géron ch 3 — Classification", "why accuracy misleads on skewed classes (§ 3)"]],
+  "16":  [["notes/classical-ml/geron-ch07-ensembles.html", "Géron ch 7 — Ensembles & Random Forests", "voting, bagging, boosting, stacking"]]
+};

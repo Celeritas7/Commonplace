@@ -223,7 +223,7 @@ function imp(){var inp=document.createElement("input");inp.type="file";inp.accep
  inp.click();}
 function boot(){
  var st=document.createElement("style");
- st.textContent=".cpb-pill{position:fixed;left:10px;bottom:10px;z-index:9998;display:flex;gap:6px;align-items:center;font-family:system-ui,-apple-system,sans-serif}.cpb-main{width:30px;height:30px;border-radius:50%;border:1px solid #d8cbb8;background:#fffdf7;color:#8a5a2b;opacity:.4;cursor:pointer;font-size:14px;line-height:1}.cpb-main:hover{opacity:1}.cpb-menu button{font-size:12px;margin-right:6px;padding:5px 10px;border-radius:999px;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}";
+ st.textContent=".cpb-pill{position:fixed;left:10px;bottom:10px;z-index:9998;display:flex;gap:6px;align-items:center;font-family:system-ui,-apple-system,sans-serif}.cpb-main{width:30px;height:30px;border-radius:50%;border:1px solid #d8cbb8;background:#fffdf7;color:#8a5a2b;opacity:.4;cursor:pointer;font-size:14px;line-height:1}.cpb-main:hover{opacity:1}.cpb-menu button{font-size:12px;margin-right:6px;padding:5px 10px;border-radius:999px;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}@media (pointer:coarse){.cpb-main{width:44px;height:44px;font-size:18px;opacity:.6}.cpb-menu button{min-height:44px;padding:0 14px;font-size:14px}}";
  document.head.appendChild(st);
  var box=document.createElement("div");box.className="cpb-pill";
  box.innerHTML='<button class="cpb-main" title="Backup / restore study progress">&#8645;</button><span class="cpb-menu" hidden><button data-a="ex">Export progress</button><button data-a="im">Import progress</button></span>';

@@ -244,6 +244,7 @@
     '#cpa-pill:hover,#cpa-pill.on{opacity:1;border-color:#8a5a2b}' +
     '#cpa-hbtn{position:fixed;left:230px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:9998;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.72;display:flex;align-items:center;justify-content:center}' +
     '#cpa-hbtn:hover{opacity:1;border-color:#8a5a2b}' +
+    '@media (pointer:coarse){#cpa-pill{left:62px;height:44px;padding:0 14px 0 12px;font-size:14px}#cpa-hbtn{width:44px;height:44px}#cpa-strip button{min-width:44px;height:44px}#cpa-strip{bottom:calc(62px + env(safe-area-inset-bottom))}}' +   /* finger-sized on touch screens */
     '@media (max-width:419px){.lr-ui.cpa-crowd{gap:0;padding-left:2px;padding-right:2px}.lr-ui.cpa-crowd button .lr-l{font-size:10px;letter-spacing:-.2px}}' +   /* eight buttons on a narrow phone */
     '#cpa-strip{position:fixed;left:50%;bottom:calc(52px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:99999;display:none;align-items:center;gap:2px;padding:4px;border-radius:999px;border:1px solid #d8cbb8;background:#fffdf7;color:#5a4632;box-shadow:0 4px 16px rgba(0,0,0,.14);' + FONT + 'font-size:12.5px;font-weight:600;-webkit-user-select:none;user-select:none;max-width:calc(100vw - 16px);box-sizing:border-box}' +
     '#cpa-strip.show{display:flex}' +
