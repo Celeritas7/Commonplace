@@ -42,6 +42,24 @@
   });
   applyPrefs();
 
+  /* phones: view settings live behind the gear, and the bar slides away while you
+     scroll down (back as soon as you scroll up), so code cells get the screen */
+  const top = document.querySelector(".top"), gear = document.getElementById("gearBtn");
+  const phone = window.matchMedia("(max-width:640px)");
+  if (gear) gear.addEventListener("click", () => {
+    const open = top.classList.toggle("is-open");
+    gear.setAttribute("aria-expanded", open ? "true" : "false");
+    top.classList.remove("is-hidden");
+  });
+  let lastY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY, dy = y - lastY;
+    if (Math.abs(dy) < 8) return;
+    lastY = y;
+    if (!phone.matches || top.classList.contains("is-open") || y < 120) { top.classList.remove("is-hidden"); return; }
+    top.classList.toggle("is-hidden", dy > 0);
+  }, { passive: true });
+
   /* ------------------------------------------------------------ chapter state */
   const app = document.getElementById("app");
   const store = {
@@ -146,6 +164,8 @@
           (ch.lead ? '<p class="blurb">' + ch.lead + "</p>" : "") +
           '<div class="meta"><span>~' + (ch.time || "—") + " min</span><span><b>" + cells.filter((c) => c.type === "code").length +
             "</b> runnable cells</span><span><b>" + sections.length + "</b> sections</span><span>" + file + "</span></div>" +
+          '<div class="runall"><button class="btn btn-run" id="runAll" title="Run every code cell in the chapter, top to bottom">▶ Run all</button>' +
+            '<span id="runAllMsg" class="runmsg" aria-live="polite"></span></div>' +
         "</div>" +
         '<figure class="fig"><div class="figplate"><canvas id="motif"></canvas>' +
           '<span class="figlab">fig. 1 · 4D, projected</span>' +
@@ -160,6 +180,8 @@
         }).join("") + "</div></div>" +
         '<div class="jsum"><div class="eyebrow">this chapter</div><div id="chsum"></div></div></div>';
     mountMotif();
+    const ra = document.getElementById("runAll");
+    if (ra) ra.onclick = runAll;
   }
   function progress() {
     let map = {};
@@ -254,8 +276,8 @@
       (c.ran ? '<span class="ran">● ran</span>' : "") + '<span class="grow"></span>' +
       (isStatic
         ? '<button class="btn" data-focus="' + i + '">▸ focus to run</button>'
-        : '<button class="btn" data-above="' + j + '" title="Run every code cell before this one">⇤ run above</button>' +
-          '<button class="btn" data-reset="' + j + '">Reset</button>' +
+        : '<button class="btn" data-above="' + j + '" title="Run every code cell before this one" aria-label="Run above"><span class="ic">⇤</span><span class="lb"> run above</span></button>' +
+          '<button class="btn" data-reset="' + j + '" title="Restore the original code" aria-label="Reset"><span class="ic">↺</span><span class="lb"> Reset</span></button>' +
           '<button class="btn btn-run" data-run="' + j + '">▶ Run</button>') +
       "</div>" +
       (isStatic ? '<pre class="static" data-focus="' + i + '" title="Open this cell in focus view to run it">' + pyhl(c.src) + "</pre>" : '<div class="ed" data-ed="' + j + '"></div>') +
@@ -522,6 +544,28 @@
     document.getElementById("prog").innerHTML = "<b>" + pct() + "%</b> of chapter";
     const bar = document.querySelector('.plate-code[data-i="' + j + '"] .codebar');
     if (bar && !bar.querySelector(".ran")) bar.insertAdjacentHTML("afterbegin", '<span class="ran">● ran</span>');
+  }
+
+  /* Run every notebook cell top to bottom (exercises are left for you), stopping at
+     the first error like Jupyter does, and jump to the section where it stopped. */
+  async function runAll() {
+    const list = cells.map((c, k) => k).filter((k) => cells[k].type === "code" && !cells[k].exercise);
+    const msg = document.getElementById("runAllMsg");
+    const say = (t) => { if (msg) msg.textContent = t; };
+    document.querySelectorAll(".btn").forEach((b) => (b.disabled = true));
+    let stop = -1;
+    for (let n = 0; n < list.length; n++) {
+      say("running " + (n + 1) + " of " + list.length + "…");
+      const live = await exec(cells[list[n]]);
+      if (live && live.err) { stop = list[n]; break; }
+    }
+    document.querySelectorAll(".btn").forEach((b) => (b.disabled = false));
+    if (stop < 0) { say("all " + list.length + " cells ran"); render(); return; }
+    const c = cells[stop];
+    say("stopped at cell_" + c.n + " (§ " + ROMAN[c.sec] + ") with an error");
+    if (prefs.view === "focus" && c.sec !== sec) go(c.sec); else render();
+    const el = document.querySelector('.plate-code[data-i="' + stop + '"]');
+    if (el) el.scrollIntoView({ block: "center" });
   }
 
   async function runAbove(j) {

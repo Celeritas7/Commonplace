@@ -14,7 +14,7 @@
 --mono:"JetBrains Mono",monospace;--disp:"Cormorant Garamond",Georgia,serif;--body:"EB Garamond",Georgia,serif}
 html[data-skin="dark"]{--acc:var(--acc-dark);--code:var(--ink-2);--figbg:var(--panel-2);--tdone:rgba(95,208,160,.12);--tno:rgba(224,122,90,.12)}
 html[data-skin="paper"]{--bg:#e8eaee;--bg-2:#e1e4e9;--panel:#f5f6f8;--panel-2:#eef0f3;--panel-hi:#fff;
---ink-bright:#0e1320;--ink:#1c2130;--ink-2:#2a3142;--ink-soft:#4b5367;--ink-mute:#6f788e;--ink-faint:#98a0b2;
+--ink-bright:#0e1320;--ink:#1c2130;--ink-2:#2a3142;--ink-soft:#4b5367;--ink-mute:#535c72;--ink-faint:#5e6678;
 --rule:#c6cad4;--rule-soft:#d6d9e0;--acc:#3b56c4;--code:#1c2130;--figbg:#f5f6f8;--green:#1f8a5b;--coral:#c4533a;--solar:#a5741b;
 --tdone:rgba(31,138,91,.10);--tno:rgba(196,83,58,.10);
 --syn-kw:#6b3fb8;--syn-fn:#2b4bb8;--syn-str:#0f6b47;--syn-num:#8a5a00;--syn-com:#5f6878;--syn-op:#a3248f;--syn-prop:#0f5f74;--syn-dec:#6b3fb8;--syn-self:#a3248f}
@@ -256,6 +256,35 @@ background-image:repeating-linear-gradient(transparent 0 26px,var(--rule-soft) 2
   .segs{flex-wrap:nowrap;gap:4px}
   .seg button{padding:5px 7px;letter-spacing:.5px;min-width:40px}
 }
+/* ---------- run all + code-cell toolbar ---------- */
+.runall{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.runmsg{font-family:var(--mono);font-size:12px;letter-spacing:.6px;color:var(--ink-mute)}
+.btn .ic{font-size:19px;line-height:1;font-family:var(--body)}
+@media (max-width:640px){
+  .codebar{flex-wrap:nowrap;gap:8px;padding:6px 8px}
+  .codebar .btn-run{order:-1;flex:0 0 auto;min-width:88px;font-size:13px}   /* Run first and biggest */
+  .codebar .fname{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .codebar .grow{display:none}
+  .codebar .lb{display:none}                                                  /* run above / reset: icon only */
+  .codebar .btn:not(.btn-run){min-width:44px;padding-inline:0}
+}
+/* ---------- view settings: inline on wide screens, behind the gear on phones ---------- */
+.opts{display:contents}
+.gear{display:none}
+.topin .kpill{order:2}
+#jlink{order:3}
+@media (max-width:640px){
+  .crumb{width:auto;order:0;flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .topin .grow{display:none}
+  .topin .kpill{order:1}
+  .gear{display:inline-flex;order:2;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;border:1px solid var(--rule);border-radius:999px;background:none;color:var(--ink-soft);cursor:pointer}
+  .gear[aria-expanded="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+  .opts{display:none;order:3;width:100%;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:2px 0 6px}
+  .top.is-open .opts{display:flex}
+  .snav.is-cur span{display:none!important}           /* numeral only; the title is the page heading */
+  .top{transition:transform .25s ease}
+  .top.is-hidden{transform:translateY(-100%)}          /* slides away while scrolling down */
+}
 /* room under the last line for the site's floating buttons */
 @media (max-width:760px){body{padding-bottom:170px}}
 </style>
@@ -265,14 +294,19 @@ background-image:repeating-linear-gradient(transparent 0 26px,var(--rule-soft) 2
   <div class="topin">
     <div class="crumb"><a href="../index.html" style="color:inherit">AI_Study</a> / <b id="crumbCh">…</b></div>
     <span class="grow"></span>
+    <div class="kpill" id="kpill"><span class="kdot"></span><span id="ktext">python idle</span></div>
+    <button class="gear" id="gearBtn" type="button" aria-expanded="false" aria-controls="opts" title="View settings">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <div class="opts" id="opts">
     <div class="segs">
       <div class="seg" title="View"><button data-pref="view" data-val="focus">focus</button><button data-pref="view" data-val="page">page</button></div>
       <div class="seg" title="Skin"><button data-pref="skin" data-val="paper">paper</button><button data-pref="skin" data-val="dark">dark</button></div>
       <div class="seg" title="Motion"><button data-pref="motion" data-val="alive">alive</button><button data-pref="motion" data-val="still">still</button></div>
     </div>
     <div id="prog"></div>
-    <div class="kpill" id="kpill"><span class="kdot"></span><span id="ktext">python idle</span></div>
     <a id="jlink" href="#" class="mono" style="font-size:12px;letter-spacing:1.4px;text-transform:uppercase" title="Open this notebook in the full Jupyter interface">Jupyter ↗</a>
+    </div>
   </div>
   <div class="toprow2"><div id="secnav"></div></div>
 </div>

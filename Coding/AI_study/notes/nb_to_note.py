@@ -118,8 +118,7 @@ footer{{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);font
     <span class="chip">#{tag}</span>
     <span class="meta">Source: {source}</span>
     <span class="spacer"></span>
-    <button class="btn" id="reviewBtn">Mark reviewed</button>
-    <button class="btn" id="themeBtn">&#9680; theme</button>
+    <span class="tb-actions"><button class="btn" id="reviewBtn">Mark reviewed</button><button class="btn" id="themeBtn" aria-label="Switch light / dark theme"><svg class="ico-theme" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.7a6.3 6.3 0 0 1 0 12.6z" fill="currentColor"/></svg> Theme</button></span>
   </div>
   <h1>{title}</h1>
   {body}
