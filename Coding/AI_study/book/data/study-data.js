@@ -28,5 +28,326 @@ window.AI_STUDY = {
           code: "import numpy as np\nfrom sklearn.linear_model import Ridge, LinearRegression\n\nX = np.array([p[0] for p in lab_points]).reshape(-1, 1)\ny = np.array([p[1] for p in lab_points])\n\nols = LinearRegression().fit(X, y)\nrid = Ridge(alpha=5).fit(X, y)\n\nprint(\"OLS slope  \", round(float(ols.coef_[0]), 4))\nprint(\"Ridge slope\", round(float(rid.coef_[0]), 4))\nassert abs(rid.coef_[0]) < abs(ols.coef_[0]), \"regularisation should shrink the slope\"\nprint(\"ok — the penalty shrank it\")" }
       }
     }
+  },
+  "01": {
+    sections: {
+      0: {
+        aside: "NumPy stores array data contiguously in memory, which is why vector arithmetic on an ndarray beats looping over a Python list.",
+        recall: {"q": "Why does the notebook say NumPy vector arithmetic is faster than doing the same work on Python lists?", "options": ["NumPy compiles each script to C before it runs", "NumPy arrays skip type checking entirely", "Data sits in contiguous memory locations", "NumPy runs every operation on the GPU"], "answer": 2, "why": "The notebook ties the speed to contiguous storage: elements sit side by side in memory, so whole-array operations are fast and use less space."}
+      },
+      1: {
+        aside: "np.arange(start, stop, step) never includes stop, and a negative step counts downward.",
+        recall: {"q": "What does np.arange(0, -10, -2) return?", "options": ["[0 -2 -4 -6 -8 -10]", "[0 -2 -4 -6 -8]", "[-10 -8 -6 -4 -2]", "[] (empty, since stop < start)"], "answer": 1, "why": "arange starts at 0 and steps by -2 until it reaches -10, which is excluded, giving [0 -2 -4 -6 -8]."}
+      },
+      2: {
+        aside: "NumPy is row-major by default: flatten() lays out row 0, then row 1, the same order the matrix sits in memory.",
+        recall: {"q": "npmat = np.array([[1,2,3],[4,5,6]]). What does npmat.flatten() return?", "options": ["[1 4 2 5 3 6]", "[[1 2 3 4 5 6]]", "[6 5 4 3 2 1]", "[1 2 3 4 5 6]"], "answer": 3, "why": "NumPy stores matrices in row-major (C) order, so flatten reads the first row completely, then the second."}
+      },
+      3: {
+        aside: "hsplit cuts columns at the given indices and keeps every row; vsplit cuts rows and keeps every column.",
+        recall: {"q": "mat has shape (3,7). What shapes does np.hsplit(mat, [4,6]) produce?", "options": ["(3,4), (3,2), (3,1)", "(4,7), (2,7), (1,7)", "(3,4), (3,6)", "(3,4), (3,3)"], "answer": 0, "why": "hsplit cuts at column indices 4 and 6, giving columns 0-3, 4-5 and 6, while all 3 rows stay in each piece."}
+      },
+      4: {
+        aside: "A slice is a view of the same memory: mat1 += 10 changes the original, mat1 = mat1 + 10 makes a new array.",
+        recall: {"q": "mat1 = mat[::2, ::2]. Which next line leaves mat unchanged?", "options": ["mat1 += 10", "mat1[0, 0] = 99", "mat1 = mat1 + 10", "mat1[:] = 0"], "answer": 2, "why": "mat1 = mat1 + 10 allocates a new array and rebinds the name, as the notebook's note says; the other lines write through the view into mat."}
+      },
+      5: {
+        aside: "Broadcasting stretches a lower-dimension array across a bigger one: a length-5 vector is added to every row of a (3,5) matrix.",
+        recall: {"q": "mat has shape (3,5) and v = np.array([10,20,30,40,50]). What does mat + v do?", "options": ["Raises an error because the shapes differ", "Adds v to every row of mat, giving shape (3,5)", "Adds v to every column of mat", "Appends v as a fourth row"], "answer": 1, "why": "v's 5 elements line up with mat's 5 columns, so NumPy broadcasts v over each of the 3 rows."}
+      },
+      6: {
+        aside: "np.dot sums element-wise products (inner product); np.outer multiplies every pair, building a full matrix.",
+        recall: {"q": "mat = np.arange(9).reshape(3,3) and vec1 = np.array([1,2,3]). What is np.dot(mat, vec1)?", "options": ["[0 4 16]", "[9 12 15]", "[[0 2 6] [3 8 15] [6 14 24]]", "[8 26 44]"], "answer": 3, "why": "Each entry is a row of mat dotted with vec1: 0+2+6=8, 3+8+15=26, 6+14+24=44."}
+      },
+      7: {
+        aside: "The axis you pass is the one that gets collapsed: axis=0 averages down the rows, leaving one value per column.",
+        recall: {"q": "mat = np.arange(9).reshape(3,3) holds [[0,1,2],[3,4,5],[6,7,8]]. What does np.mean(mat, axis=0) give?", "options": ["[3. 4. 5.]", "[1. 4. 7.]", "4.0", "[0. 3. 6.]"], "answer": 0, "why": "axis=0 collapses the row axis, so each column is averaged: (0+3+6)/3=3, (1+4+7)/3=4, (2+5+8)/3=5."}
+      },
+      8: {
+        aside: "transpose with axes=[...] reorders dimensions: the new shape lists the old dimension sizes in that order.",
+        recall: {"q": "ndmat has shape (2,3,4). What is the shape of np.transpose(ndmat, axes=[0,2,1])?", "options": ["(4,3,2)", "(2,3,4)", "(2,4,3)", "(3,2,4)"], "answer": 2, "why": "New axis i takes old axis axes[i]: sizes 2, then 4, then 3, giving (2,4,3)."}
+      },
+      9: {
+        aside: "The assignment drills the chapter's tools; many items, like a bordered matrix, are a single slice assignment.",
+        recall: {"q": "Assignment item 8: make a 2D array with 1 on the border and 0 inside. Starting from Z = np.ones((5,5)), which line works?", "options": ["Z[1:,1:] = 0", "Z[1:-1,1:-1] = 0", "Z[::2,::2] = 0", "Z[0,:] = 0"], "answer": 1, "why": "1:-1 skips the first and last index on each axis, so only the inner block becomes 0 and the border stays 1."}
+      }
+    }
+  },
+  "01b": {
+    sections: {
+      0: {
+        aside: "Shapes drive everything: hstack/vstack, split indices, reshape(-1, n) and broadcasting all follow from reading an array's shape.",
+        recall: [
+          {"q": "What does np.full((2,2), 'hellottwyyw', dtype='<U7') contain?", "options": ["Four copies of 'hellottwyyw'", "Four copies of 'hellott'", "A ValueError because the string is too long", "Four empty strings"], "answer": 1, "why": "dtype '<U7' holds Unicode strings of at most 7 characters, so the fill value is cut to 'hellott'."},
+          {"q": "data1 and data2 both have shape (5,3). Which call gives the same result as np.hstack([data1, data2])?", "options": ["np.vstack([data1, data2])", "np.concatenate([data1, data2], axis=0)", "np.concatenate([data1, data2], axis=2)", "np.concatenate([data1, data2], axis=1)"], "answer": 3, "why": "hstack joins side by side along the column axis, which is axis=1, giving shape (5,6)."},
+          {"q": "data has shape (10,10). After b1, b2, b3 = np.vsplit(data, [5,7]), what is b2.shape?", "options": ["(2,10)", "(5,10)", "(10,2)", "(3,10)"], "answer": 0, "why": "vsplit cuts rows at indices 5 and 7, so b2 holds rows 5 and 6 with all 10 columns."},
+          {"q": "data has shape (10,10). What is data.reshape(-1, 20).shape?", "options": ["(10,20)", "(20,5)", "(5,20)", "An error: -1 is not a valid size"], "answer": 2, "why": "-1 tells NumPy to infer that dimension: 100 elements / 20 columns = 5 rows."},
+          {"q": "b has shape (5,2) and a has shape (10,2). What is the shape of b.reshape(5,1,2) - a.reshape(1,10,2)?", "options": ["(5,2)", "(5,10,2)", "(10,5,2)", "Error: shapes cannot broadcast"], "answer": 1, "why": "Size-1 axes stretch to match: (5,1,2) and (1,10,2) broadcast to (5,10,2), the difference of every b row with every a row."}
+        ]
+      }
+    }
+  },
+  "02": {
+    sections: {
+      0: {
+        aside: "Pandas methods usually return a new DataFrame; unless you pass inplace=True or reassign, the original stays as it was.",
+        recall: [
+          {"q": "hr_data has 14999 rows. What does pd.read_csv(url, chunksize=5000) give you?", "options": ["An iterator of DataFrames with 5000, 5000 and 4999 rows", "One DataFrame with only the first 5000 rows", "One DataFrame split into 5000 columns", "A DataFrame sampled down to 5000 random rows"], "answer": 0, "why": "chunksize makes read_csv return an iterator; looping over it yields 5000-row DataFrames, with the remainder in the last one."},
+          {"q": "movie_data is indexed by title. Which rows does movie_data.loc['Scarface':'Vertigo'] return?", "options": ["Scarface and The Apartment only (end label excluded)", "Only Scarface", "Every row except Scarface and Vertigo", "Scarface, The Apartment and Vertigo (end label included)"], "answer": 3, "why": "Label slicing with loc includes the end label, unlike position slicing with iloc[1:4], which stops before position 4."},
+          {"q": "You run titanic_data.dropna() and then titanic_data.info() still shows 891 rows. Why?", "options": ["dropna only removes columns by default", "dropna returns a new DataFrame; without inplace=True the original is untouched", "Age has no missing values, so nothing was dropped", "info() caches the row count from read_csv"], "answer": 1, "why": "As the notebook notes, without inplace=True dropna doesn't modify the DataFrame; it returns a filtered copy (712 rows)."},
+          {"q": "Rows (A,B,C): 0:(1,1,3) 1:(1,1,1) 5:(1,1,1). Which rows does df[df.duplicated(subset=['A','B'])] show?", "options": ["Only row 5", "Rows 0, 1 and 5", "Rows 1 and 5", "No rows"], "answer": 2, "why": "With subset=['A','B'] only A and B are compared; rows 1 and 5 repeat row 0's (1,1), and the first occurrence is not flagged."},
+          {"q": "left has keys K0-K5; right has K0-K3, K6, K7. How many rows does left.merge(right, on='key') return?", "options": ["6", "4", "8", "2"], "answer": 1, "why": "merge defaults to an inner join, keeping only keys found in both frames: K0 to K3. how='left' would keep all 6 left rows."}
+        ]
+      }
+    }
+  },
+  "03": {
+    sections: {
+      0: {
+        aside: "df.plot draws one series per column with a legend for free; with plt.plot you add labels and call plt.legend() yourself.",
+        recall: [
+          {"q": "df has columns A and B. What does df.plot.line(title='Info') draw?", "options": ["One line of A plotted against B", "A single line of all values stacked", "Two lines, one per column, against the index, with a legend", "A bar for each column"], "answer": 2, "why": "DataFrame.plot.line draws each column as its own line over the index and adds a legend automatically."},
+          {"q": "You call plt.plot(df.A, label='A') and plt.plot(df.B, label='B'), but no legend shows. What is missing?", "options": ["plt.legend()", "plt.title('Info')", "plt.xlabel('index')", "A colormap argument"], "answer": 0, "why": "label= only names each line; the legend box is drawn when plt.legend() is called."},
+          {"q": "In plt.scatter(x=iris.data[:,0], y=iris.data[:,1], c=iris.target, s=iris.data[:,2]*10), what does s encode?", "options": ["Colour by species", "Sepal width on a second axis", "Transparency of each point", "Marker size, larger for longer petals"], "answer": 3, "why": "s sets each marker's size; column 2 of iris.data is petal length, so longer petals give bigger dots, while c colours by class."},
+          {"q": "df has 10 rows and columns X1, X2, X3. What does df.plot.bar() draw?", "options": ["3 bars, one per column total", "10 groups of 3 bars, one group per row", "30 separate panels", "A stacked bar per column"], "answer": 1, "why": "Each index value becomes a group on the x-axis with one bar per column, so 10 x 3 = 30 bars."},
+          {"q": "Why does the income_data scatter of education-num vs hours-per-week use s=1 and alpha=.1?", "options": ["To speed up reading the CSV", "To hide outliers from the plot", "Thousands of points overlap, so small faint dots reveal where they pile up", "alpha=.1 rounds values to one decimal"], "answer": 2, "why": "With many overlapping points, tiny semi-transparent markers make dense regions darker, showing the distribution instead of a solid blob."}
+        ]
+      }
+    }
+  },
+  "05": {
+    sections: {
+      0: {
+        aside: "Every tool in this chapter is a transformer: fit_transform turns raw data into numbers in a shape a model can learn from.",
+        recall: {"q": "What do StandardScaler, Binarizer, SimpleImputer and HashingVectorizer in this chapter have in common?", "options": ["They are all learning models that make predictions", "They transform data before it is fed to a model", "They only work on image data", "They all output values between 0 and 1"], "answer": 1, "why": "They are preprocessing transformers: each reshapes or rescales data before learning, which is the stage this chapter covers."}
+      },
+      1: {
+        aside: "Models only understand numbers and are sensitive to scale, so text, images and unscaled columns need preprocessing first.",
+        recall: {"q": "Why can't a column like Gender with values 'Male'/'Female' be given to a learning algorithm as is?", "options": ["Learning algorithms understand only numbers", "Strings use too much memory", "Categorical columns are always noise", "scikit-learn deletes string columns"], "answer": 0, "why": "The notebook states learning algorithms understand only numbers, so text must be converted (for example by encoding) first."}
+      },
+      2: {
+        aside: "StandardScaler: subtract each column's mean and divide by its std, so every feature centres on 0 with spread 1.",
+        recall: {"q": "After data_tf = standardscaler.fit_transform(df), why does the notebook wrap it in pd.DataFrame(..., columns=[...])?", "options": ["fit_transform returns a list of rows", "The result is still unscaled until wrapped", "It returns a numpy.ndarray, which has no column names", "DataFrames are required to call fit_transform"], "answer": 2, "why": "type(data_tf) is numpy.ndarray, so the column names are lost; rewrapping restores them for describe() and plot.kde()."}
+      },
+      3: {
+        aside: "MinMaxScaler maps each column's min to 0 and max to 1, so a single extreme outlier squashes everything else.",
+        recall: {"q": "A column holds [2, 4, 10]. What does MinMaxScaler output for it?", "options": ["[0, 0.25, 1]", "[0.2, 0.4, 1]", "[-1, -0.5, 1.5]", "[0, 0.5, 1]"], "answer": 0, "why": "(x - min) / (max - min) with min 2 and max 10 gives 0/8, 2/8 and 8/8."}
+      },
+      4: {
+        aside: "RobustScaler centres on the median and divides by the IQR, so a handful of outliers barely moves the scale.",
+        recall: {"q": "After RobustScaler, df.describe() shows which statistic as exactly 0 in every column?", "options": ["The mean", "The minimum", "The 25% quartile", "The median (50%)"], "answer": 3, "why": "RobustScaler subtracts the median and divides by the interquartile range, so the 50% row becomes 0 while the mean can stay off 0 due to outliers."}
+      },
+      5: {
+        aside: "Normalizer works row by row, dividing each sample by its length, so every point lands on the unit sphere.",
+        recall: {"q": "Normalizer() is applied to a single row [3, 4, 0]. What comes out?", "options": ["[0, 1, 0]", "[0.6, 0.8, 0]", "[0.43, 0.57, 0]", "[-1, 1, 0]"], "answer": 1, "why": "Each row is divided by its magnitude, sqrt(9+16+0) = 5, giving [0.6, 0.8, 0]."}
+      },
+      6: {
+        aside: "Binarizer turns values strictly above the threshold into 1 and everything else, including the threshold itself, into 0.",
+        recall: {"q": "Binarizer(threshold=1.0) is applied to the row [1., -1., 2.]. What is the result?", "options": ["[1, 0, 1]", "[1, 1, 1]", "[0, 0, 1]", "[0, 0, 2]"], "answer": 2, "why": "Only values greater than 1.0 become 1; the 1.0 equals the threshold, so it maps to 0."}
+      },
+      7: {
+        aside: "Ordinal categories need an explicit map to keep their order; LabelEncoder sorts alphabetically and one-hot is for nominal data.",
+        recall: {"q": "Why does the notebook encode Income with map({'Low':1,'Medium':2,'High':3}) instead of LabelEncoder?", "options": ["LabelEncoder codes alphabetically (High=0, Low=1, Medium=2), losing the order", "LabelEncoder can't handle strings", "map produces one-hot vectors", "LabelEncoder drops repeated values"], "answer": 0, "why": "LabelEncoder sorts the classes alphabetically, so High gets 0; the manual map keeps Low < Medium < High."}
+      },
+      8: {
+        aside: "SimpleImputer(strategy='mean') fills each gap with its own column's mean, computed from the values that are present.",
+        recall: {"q": "Column A is [1, 2, 3, 4, NaN, 7]. SimpleImputer(strategy='mean') fills the NaN with what?", "options": ["0", "3.0", "3.5", "3.4"], "answer": 3, "why": "The mean of the 5 known values is (1+2+3+4+7)/5 = 17/5 = 3.4."}
+      },
+      9: {
+        aside: "PolynomialFeatures adds powers and cross-terms, letting a linear model fit curves, but the column count grows fast with degree.",
+        recall: {"q": "A DataFrame has 2 columns, A and B. How many columns does PolynomialFeatures(degree=3, include_bias=True) output?", "options": ["6", "10", "9", "7"], "answer": 1, "why": "It produces every term up to degree 3: 1, A, B, A^2, AB, B^2, A^3, A^2B, AB^2, B^3, which is 10 columns."}
+      },
+      10: {
+        aside: "FunctionTransformer wraps any Python function as a transformer, and that function's side effects come along with it.",
+        recall: {"q": "mapping(x) assigns into x['Age'] and x['Counter']. What happens to df after customtransformer.transform(df)?", "options": ["Nothing; transformers always work on a copy", "It raises an error because fit was not called", "Only the returned frame changes; df keeps its old values", "df itself is modified too, since mapping edits the frame it receives"], "answer": 3, "why": "FunctionTransformer passes df straight to mapping, which writes into it, so the original df also gets Age+2 and Counter*2."}
+      },
+      11: {
+        aside: "HashingVectorizer squeezes any vocabulary into a fixed number of columns, at the cost of never knowing which word made which column.",
+        recall: {"q": "What is the main trade-off of HashingVectorizer(n_features=5) compared with one column per word?", "options": ["It can only process numeric columns", "It needs the full vocabulary in memory first", "You can't map a hashed column back to the word", "It always outputs exactly one column"], "answer": 2, "why": "Words are hashed into a fixed number of columns, which keeps the table small but makes the hash-to-word mapping impossible to recover."}
+      },
+      12: {
+        aside: "An image is just a NumPy array (height, width, channels); rgb2gray drops the channel axis and slicing edits pixels directly.",
+        recall: {"q": "rgb_image = rgb2gray(image), then rgb_image[200:300] = 0. What does imshow(rgb_image) show?", "options": ["A black vertical stripe at columns 200-299", "A black horizontal band across rows 200-299", "The image with brightness reduced by 300", "The whole image turned black"], "answer": 1, "why": "Indexing with one slice selects rows, so rows 200 to 299 across the full width are set to 0, which is black."}
+      }
+    }
+  },
+  "06": {
+    sections: {
+      0: {
+        aside: "A tree asks the question with the highest information gain first; grown without limits it memorises the training data, so prune with max_depth or min_samples_leaf.",
+        recall: [
+          {"q": "Gains on the tennis data: Outlook 0.247, Humidity 0.151, Wind 0.048, Temp 0.029. Which feature becomes the root?", "options": ["Temp, because it has the lowest gain", "Outlook, because splitting on it lowers entropy the most", "Humidity, because it has only two values", "Wind, because it is a boolean feature"], "answer": 1, "why": "The root is the attribute with the highest information gain, i.e. the biggest drop from Entropy(Play)=0.940. Outlook's 0.247 is the largest."},
+          {"q": "On the sunny branch, the gain for humidity (0.971) equals the branch's own entropy. What does that tell you?", "options": ["Humidity is unrelated to play on sunny days", "The branch must be split again on windy", "The sunny branch had zero entropy to begin with", "Both humidity children (high, normal) are pure, so nothing is left to learn"], "answer": 3, "why": "Gain = parent entropy minus the weighted child entropies. If gain equals the parent entropy, every child has entropy 0: high is all no, normal is all yes."},
+          {"q": "DecisionTreeClassifier(criterion='entropy') scored 1.0 on train and about 0.95 on test. What does the notebook suggest to limit this?", "options": ["Pre-prune by setting max_depth or min_samples_leaf", "Scale the features with a StandardScaler first", "Switch the criterion from entropy to gini", "Feed the rows in a different order"], "answer": 0, "why": "A perfect training score is a sign of overfitting, which the notebook lists as the main limitation. Since scikit-learn lacks post-pruning there, it limits growth with max_depth and min_samples_leaf."},
+          {"q": "For DecisionTreeRegressor on the tennis play-time data, what replaces information gain when choosing splits?", "options": ["Gini impurity of the time column", "Entropy of the encoded outlook column", "Mean squared error of the target within each subset", "Accuracy of the leaf predictions"], "answer": 2, "why": "With a continuous target the tree looks for splits that make subsets homogeneous in value, which the notebook measures by minimising mean squared error."}
+        ]
+      },
+      1: {
+        aside: "Entropy peaks for a fair coin and drops to zero when the outcome is certain; a tree is trying to reach those zero-entropy leaves.",
+        recall: {"q": "The exercises ask for the self entropy of a coin with p=0.5, p=0.9 and p=1. How do they rank?", "options": ["All three are 1 bit, since a coin has two sides", "p=1 is highest, because heads always comes up", "p=0.5 (1 bit) > p=0.9 (about 0.47) > p=1 (0)", "p=0.9 > p=0.5 > p=1"], "answer": 2, "why": "Entropy -p log2 p - (1-p) log2(1-p) is largest when both outcomes are equally likely and is 0 when the outcome is certain."}
+      }
+    }
+  },
+  "07": {
+    sections: {
+      0: {
+        aside: "One Bayes rule, three flavours: GaussianNB for continuous values, MultinomialNB for counts, BernoulliNB for yes/no features.",
+        recall: {"q": "The agenda covers Gaussian, Multinomial and Bernoulli Naive Bayes. What mainly separates these variants?", "options": ["How many classes each one can predict", "Whether they use Bayes' theorem at all", "Whether they can be trained with partial_fit", "The distribution assumed for each feature: continuous, counts or binary"], "answer": 3, "why": "All three apply the same Bayes rule with the naive independence assumption; they differ in how P(feature|class) is modelled: Gaussian PDF, word counts, or booleans."}
+      },
+      1: {
+        aside: "The naive part: features are treated as independent given the class, so P(d1, d2|h) becomes P(d1|h) times P(d2|h).",
+        recall: {"q": "Why can Naive Bayes estimate P(d1, d2, d3|h) as P(d1|h).P(d2|h).P(d3|h)?", "options": ["It assumes features are conditionally independent given the target", "It assumes all features follow the same distribution", "It only works when the features are truly uncorrelated", "It replaces the joint probability with the class prior"], "answer": 0, "why": "The notebook says the attribute values are assumed conditionally independent given the target. The assumption is rarely true, yet the classifier still works well."}
+      },
+      2: {
+        aside: "Prediction = the class with the largest P(feature|h).P(h); divide by the sum of the scores to turn them into probabilities.",
+        recall: {"q": "P(sunny|tennis)=0.6, P(tennis)=0.5, P(sunny|chess)=0.2, P(chess)=0.5. After normalizing, what is P(tennis|sunny)?", "options": ["0.30", "0.60", "0.75", "0.50"], "answer": 2, "why": "The scores are 0.6 x 0.5 = 0.30 for tennis and 0.2 x 0.5 = 0.10 for chess. Normalized, tennis is 0.30/0.40 = 0.75."}
+      },
+      3: {
+        aside: "For data too big for RAM, stream chunks into partial_fit, using a stateless HashingVectorizer so every chunk maps words to the same columns.",
+        recall: {"q": "In the out-of-core loop, why is HashingVectorizer used instead of CountVectorizer for each chunk?", "options": ["It removes stop words automatically", "It keeps no fitted vocabulary, so every chunk gets the same columns without fitting", "It produces binary features that MultinomialNB needs", "It gives higher accuracy than word counts"], "answer": 1, "why": "The notebook notes HashingVectorizer doesn't maintain state. Each chunk is transformed into the same 2**12 hashed columns, which partial_fit needs from chunk to chunk."}
+      },
+      4: {
+        aside: "Pick the Naive Bayes variant by feature type: bits use Bernoulli, word counts use Multinomial, continuous measurements use Gaussian.",
+        recall: {"q": "One exercise asks which Naive Bayes fits 'identify spammy/erroneous bit patterns'. Which does the notebook point to?", "options": ["GaussianNB, since bits are numbers", "MultinomialNB, since it handles counts", "Any of them; the choice does not matter", "BernoulliNB, since each feature is binary"], "answer": 3, "why": "The notebook describes BernoulliNB as designed for binary/boolean features, which matches a pattern of bits."}
+      }
+    }
+  },
+  "08": {
+    sections: {
+      0: {
+        aside: "A pipeline learns its preprocessing on the training data only and replays the same steps at predict time, so test data never leaks into fitting.",
+        recall: [
+          {"q": "After pipeline.fit(trainX, trainY), what happens to testX in pipeline.score(testX, testY)?", "options": ["SimpleImputer and RobustScaler are refit on testX, then the model predicts", "Only the final model sees testX; the preprocessing is skipped", "The imputer and scaler transform testX with statistics learned from trainX, then the model predicts", "The whole pipeline is retrained on testX"], "answer": 2, "why": "Intermediate steps are fitted only during fit. At scoring time they only transform, using the means and scales learned from the training data."},
+          {"q": "In GridSearchCV over make_pipeline(SimpleImputer(), RobustScaler(), DecisionTreeClassifier()), how do you name max_depth?", "options": ["decisiontreeclassifier__max_depth", "DecisionTreeClassifier.max_depth", "max_depth", "step3__max_depth"], "answer": 0, "why": "make_pipeline names each step by its lowercased class name, and pipeline parameters are written step name + double underscore + parameter, as in svc__C."},
+          {"q": "Why does make_pipeline(LogisticRegression(), DecisionTreeClassifier()) fail?", "options": ["Two classifiers can never be compared", "DecisionTreeClassifier cannot be the last step", "LogisticRegression needs max_iter set first", "LogisticRegression has no transform, and every intermediate step must implement fit and transform"], "answer": 3, "why": "The notebook says intermediate steps must be transformers. Only the last step may be a plain estimator, so scikit-learn raises a TypeError here."},
+          {"q": "Why give the CountVectorizer-TfidfTransformer-SVC pipeline a memory cache before grid-searching svc__C?", "options": ["It makes SVC train on fewer samples", "The transformer outputs are reused across C values instead of being recomputed", "It stores the best model to disk automatically", "It lets GridSearchCV skip cross-validation"], "answer": 1, "why": "Only svc__C changes between candidates, so the vectorizer and TF-IDF steps would produce the same output each time. Caching them avoids repeating that work."},
+          {"q": "TransformedTargetRegressor(regressor=LinearRegression(), transformer=qt) is fit. What does predict return?", "options": ["Predictions in the QuantileTransformer's normal scale", "Predictions in the original price scale, via the transformer's inverse_transform", "The transformed features instead of predictions", "Quantile ranks between 0 and 1"], "answer": 1, "why": "It transforms y before fitting and remaps predictions with inverse_transform, which is why the transformer must support both transform and inverse_transform."}
+        ]
+      }
+    }
+  },
+  "09": {
+    sections: {
+      0: {
+        aside: "Judge a model only on data it never trained on: cross-validate, tune with GridSearchCV, and pick the metric that matches the cost of mistakes.",
+        recall: [
+          {"q": "An unlimited tree gets train 1.0 and test 0.86; with max_depth=7 it gets train 0.89 and test 0.81. What was the deep tree's problem?", "options": ["High bias, low variance: it was too simple", "High variance, low bias: it fit the training data too closely", "The test set was too small to score", "max_depth=7 made it more complex"], "answer": 1, "why": "A large gap between training and validation accuracy is the notebook's sign of high variance. Lowering complexity shrank that gap."},
+          {"q": "Y has twelve 1s then six 0s. With StratifiedKFold(n_splits=3), what does each test fold contain?", "options": ["6 ones and 0 zeros", "3 ones and 3 zeros", "2 ones and 4 zeros", "4 ones and 2 zeros"], "answer": 3, "why": "Stratification preserves class frequencies in every split: the 2:1 ratio of 12 ones to 6 zeros gives 4 ones and 2 zeros per fold of 6."},
+          {"q": "GridSearchCV with max_depth=range(5,30,5), min_samples_split=[2,3,4,5], cv=5. How many fits does it run?", "options": ["100: 20 combinations x 5 folds", "20: one per combination", "45: 9 values x 5 folds", "25: 5 depths x 5 folds"], "answer": 0, "why": "range(5,30,5) gives 5 depths, times 4 split values is 20 candidates, and each is fit on 5 folds: 100 fits."},
+          {"q": "For tumour prediction, the notebook says it is not ok to miss a cancer patient. Which score should you watch most?", "options": ["Precision: TP/(TP+FP)", "Accuracy", "Recall: the share of real positives that are found", "r2_score"], "answer": 2, "why": "Missing a cancer patient is a false negative. Recall measures the ability to find all positive samples, so it is the metric to keep high."},
+          {"q": "homogeneity_completeness_v_measure([0,0,1,1],[0,1,2,3]) puts each sample in its own cluster. Which result fits?", "options": ["Homogeneity 0.0, completeness 1.0", "Homogeneity 1.0, completeness 0.5", "Both 1.0, since no cluster mixes classes", "Both 0.0, since the cluster count is wrong"], "answer": 1, "why": "Every cluster holds a single class, so homogeneity is 1.0. Each class is split across two clusters, so completeness drops to 0.5 (V-measure 0.67)."}
+        ]
+      }
+    }
+  },
+  "10": {
+    sections: {
+      0: {
+        aside: "Match the selector to the data: chi2 for non-negative counts, f_classif/f_regression for linear links, mutual information for any dependency.",
+        recall: [
+          {"q": "VarianceThreshold(threshold=.2) on columns A, B, C with variances 0.109, 0.5, 0.5. What does fit_transform return?", "options": ["An 8x2 array with columns B and C", "An 8x1 array with column A", "All three columns, since the target is unknown", "An 8x2 array with columns A and B"], "answer": 0, "why": "Columns whose variance is below the threshold are dropped. Only A (0.109) is below 0.2, and the method ignores the target, being unsupervised."},
+          {"q": "Which input would make feature_selection.chi2 raise an error?", "options": ["Label-encoded categorical columns", "Boolean feature columns", "Standardized features that include negative values", "Word-count features with a discrete target"], "answer": 2, "why": "The notebook says chi-square needs non-negative features such as booleans or counts. scikit-learn raises a ValueError when X has negative values."},
+          {"q": "y = X0 + sin(6*pi*X1) + noise. f_regression ranks X0 above X1, but mutual_info_regression ranks X1 higher. Why?", "options": ["Mutual information ignores the noise term", "f_regression only works for classification targets", "X1 has more variance than X0", "The F-test captures only linear dependency, while mutual information also catches the non-linear sine"], "answer": 3, "why": "The notebook states that the F-test captures linear dependency, while mutual information captures any kind of dependency, including the sine relationship of X1."},
+          {"q": "mutual_info_classif(adult_data, adult_data.Salary) gave the last column 0.55, far above the rest. What went wrong?", "options": ["Salary was not label encoded", "The feature matrix still includes Salary, the target itself", "Mutual information is always highest for the last column", "native-country is the strongest predictor of salary"], "answer": 1, "why": "adult_data was passed whole, so the target sits among the features and is trivially dependent on itself. Later cells drop 'Salary' before SelectKBest."},
+          {"q": "RFE(lr, n_features_to_select=7) on 10 features gives ranking_ [1,4,2,1,1,1,1,1,3,1]. Which feature was removed first?", "options": ["Feature 2 (rank 2)", "Feature 8 (rank 3)", "None; rank 1 features are removed first", "Feature 1 (rank 4)"], "answer": 3, "why": "Rank 1 marks the kept features. Higher ranks were pruned earlier, so the largest rank, 4 at index 1, was the first to be eliminated."}
+        ]
+      }
+    }
+  },
+  "11": {
+    sections: {
+      0: {
+        aside: "Nearest neighbors don't learn a formula: they store the training data and answer from the k closest points, or every point within a radius.",
+        recall: [
+          {"q": "Why does the notebook call nearest neighbor models non-generalizing?", "options": ["They can only predict classes seen twice", "They need the target to be continuous", "They simply store the training data and look up the closest points at prediction time", "They ignore the distance between points"], "answer": 2, "why": "Instead of learning parameters, they keep all training data in a structure like a Ball Tree or KD Tree and predict from the nearest stored samples."},
+          {"q": "nn = NearestNeighbors(radius=5, algorithm='ball_tree'); nn.kneighbors([[5,5]]) returned 5 points. Why 5?", "options": ["Because radius=5 was set", "kneighbors uses n_neighbors, which defaults to 5; radius only affects radius_neighbors", "Exactly 5 points lay within distance 5", "make_blobs creates 5 clusters by default"], "answer": 1, "why": "kneighbors returns n_neighbors points (default 5) whatever the radius. The radius applies to radius_neighbors, which returned 14 points in the classifier example."},
+          {"q": "What changes when RadiusNeighborsClassifier is built with weights='distance'?", "options": ["Closer neighbors get more say, with weights proportional to inverse distance", "The radius grows until k points are found", "All neighbors in the radius vote equally", "Distances are measured to class centroids"], "answer": 0, "why": "With weights='distance' each neighbor's vote is weighted by the inverse of its distance, so nearer neighbors have more impact; 'uniform' gives equal votes."},
+          {"q": "Faces: trainX holds the top 2048 pixels and trainY the bottom 2048. What does nn_r.predict(testX[::10]) return?", "options": ["One person id per sample", "A class probability per training face", "A single 4096-value image", "A (10, 2048) array: a distance-weighted mean of the 20 nearest faces' lower halves"], "answer": 3, "why": "KNeighborsRegressor supports multiple outputs. For each of the 10 sampled tops it averages the bottom halves of its 20 nearest training faces, weighted by distance."},
+          {"q": "How does NearestCentroid differ from KMeans, per the notebook?", "options": ["NearestCentroid finds clusters without labels", "NearestCentroid computes a centroid per known class and assigns points to the closest one", "Both find clusters; NearestCentroid is just faster", "KMeans needs class labels while NearestCentroid does not"], "answer": 1, "why": "NearestCentroid is a classifier: it uses labels to compute each class centroid and predicts the nearest. KMeans discovers the clusters themselves."}
+        ]
+      }
+    }
+  },
+  "12": {
+    sections: {
+      0: {
+        aside: "KMeans wants round blobs and a k; DBSCAN finds dense shapes and labels the rest -1. Pick the method that matches the shape of your data.",
+        recall: [
+          {"q": "KMeans(n_clusters=2) is fit on make_moons data. What does the predicted coloring typically look like?", "options": ["Each moon gets its own cluster exactly", "The moons are cut by a roughly straight line, mixing parts of both", "Every point lands in one cluster", "Points near the tips are marked as noise"], "answer": 1, "why": "KMeans assigns points to the nearest centroid, so it assumes convex clusters and splits elongated moon shapes with a straight boundary."},
+          {"q": "Why might two KMeans runs on the same data with the same n_clusters give different clusters?", "options": ["KMeans uses cosine distance by default", "The data is shuffled by make_blobs", "KMeans needs the true labels to converge", "It reaches a local minimum that depends on the initial centroids"], "answer": 3, "why": "The notebook lists this limitation: KMeans finds a local minimum of within-cluster sum of squares, and which one depends on the initialization."},
+          {"q": "AgglomerativeClustering(n_clusters=None, linkage='ward', distance_threshold=15): what decides how many clusters you get?", "options": ["Merging stops at distance 15, like cutting the dendrogram at that height", "Exactly 15 clusters are always produced", "Only points within distance 15 of a centroid are kept", "Ward linkage picks k from the silhouette score"], "answer": 0, "why": "With n_clusters=None, clusters are merged bottom-up until the linkage distance would exceed the threshold, which is like a horizontal cut on the dendrogram."},
+          {"q": "After DBSCAN(eps=0.3, min_samples=10).fit(X), some entries of db.labels_ are -1. What are they?", "options": ["Points in the largest cluster", "Core samples that started each cluster", "Noise points not dense enough to join any cluster", "Points that failed StandardScaler"], "answer": 2, "why": "DBSCAN grows clusters from dense core samples; points not reachable from any core sample are labelled -1 as noise."},
+          {"q": "homogeneity_completeness_v_measure([10,10,11,11],[0,0,0,0]) returns (0.0, 1.0, 0.0). Why is completeness 1.0?", "options": ["Every cluster holds only one class", "Each class sits entirely inside one cluster, even though both share it", "The labels are numerically different", "V-measure is always the mean of the other two"], "answer": 1, "why": "Completeness only asks that members of a class end up in the same cluster; putting everything in one cluster satisfies that but ruins homogeneity."}
+        ]
+      }
+    }
+  },
+  "13": {
+    sections: {
+      0: {
+        aside: "contamination is your guess at the outlier fraction: EllipticEnvelope, IsolationForest and LOF label that share -1 and the rest 1.",
+        recall: [
+          {"q": "The IQR method flags points below Q1 - 1.5*IQR or above Q3 + 1.5*IQR. Why use it instead of |zscore| > 3?", "options": ["It needs no percentiles", "It always flags fewer points", "It works for data that isn't Gaussian, since quartiles aren't pulled by extremes", "It only works on 2D data"], "answer": 2, "why": "The z-score rule assumes a Gaussian and uses mean and std, which outliers like -21 inflate; quartiles stay robust for non-Gaussian data."},
+          {"q": "For GaussianMixture, which covariance_type gives each component its own ellipse, tilted in any direction?", "options": ["full", "spherical", "diag", "tied"], "answer": 0, "why": "full fits a separate covariance matrix per component. tied also allows tilt, but all components share one shape; diag keeps ellipses axis-aligned; spherical makes circles."},
+          {"q": "EllipticEnvelope(contamination=.05) is fit on 1000 points. What does predict(X) return?", "options": ["Cluster ids 0 and 1 for the two blobs", "A Mahalanobis distance per point", "Probabilities that sum to 0.05", "1 for about 95% of points and -1 for the ~5% judged outliers"], "answer": 3, "why": "contamination sets the expected share of outliers; the envelope labels inliers 1 and roughly that fraction of points -1."},
+          {"q": "Why does IsolationForest flag a point as anomalous?", "options": ["It is far from the mean of every feature", "Random splits isolate it in short paths across the forest of trees", "Its k nearest neighbours have low density", "It falls outside a fitted Gaussian ellipse"], "answer": 1, "why": "Random feature splits separate unusual points quickly, so short average path lengths across the trees mark likely anomalies."},
+          {"q": "LocalOutlierFactor gives np.abs(lof.negative_outlier_factor_) values. What does a value well above 1 mean?", "options": ["The point is a core sample of a cluster", "The point has more neighbours than n_neighbors", "Its local density is much lower than its neighbours', so it is likely an outlier", "It belongs to the majority class"], "answer": 2, "why": "LOF compares neighbours' average local density with the point's own; a ratio well above 1 means the point sits in a sparser region than its neighbours."}
+        ]
+      }
+    }
+  },
+  "14": {
+    sections: {
+      0: {
+        aside: "Kernel picks the shape of the boundary; C trades margin width for training accuracy; gamma sets how far each point's influence reaches.",
+        recall: [
+          {"q": "The notebook adds col = x1^2 + x2^2 as a third feature to make_circles. Why does this help?", "options": ["Inner and outer circles get different heights, so a flat plane can separate them", "It removes noise from the circles", "It turns the labels into a regression target", "It doubles the number of samples"], "answer": 0, "why": "Squared radius is small for the inner circle and large for the outer, so in 3D a plane separates them; kernels do this kind of lift for you."},
+          {"q": "After SVC(kernel='linear') on iris petal features, svc.support_vectors_ is plotted in red. Which points are these?", "options": ["Every training point", "Points the model misclassified only", "The training points nearest the boundary or inside the margin that define it", "The class centroids"], "answer": 2, "why": "Only points on or inside the margin shape the hyperplane, which is why the notebook calls SVM memory efficient: it uses a subset of training data."},
+          {"q": "On noisy make_moons, SVC(kernel='rbf', C=0.1) vs C=100000. What happens with the large C?", "options": ["The boundary becomes a straight line", "A smaller margin is accepted to classify more training points correctly, risking overfit", "The margin gets wider and simpler", "Gamma is reset to 1"], "answer": 1, "why": "C penalizes misclassification: large C bends the boundary to fit training points, small C prefers a wide margin and simpler function."},
+          {"q": "With kernel='rbf', what does increasing gamma do?", "options": ["Makes the model linear", "Lowers the penalty for misclassified points", "Changes the kernel to polynomial", "Each point's influence reaches less far, so the boundary curves tightly around points"], "answer": 3, "why": "The notebook says higher gamma increases the importance of each point, giving a more wiggly boundary; kernel, C and gamma are then tuned by grid search."},
+          {"q": "SVC(kernel=my_kernel) uses a function that returns X @ M @ Y.T. Fit on 150 iris rows, what shape is printed?", "options": ["(150, 150)", "(150, 2)", "(2, 2)", "(150,)"], "answer": 0, "why": "A custom kernel returns the Gram matrix of similarities between every pair of rows, so fitting 150 samples gives 150 x 150."}
+        ]
+      }
+    }
+  },
+  "14b": {
+    sections: {
+      0: {
+        aside: "Only the support vectors shape an SVM: add points far from the margin and the boundary doesn't move.",
+        recall: [
+          {"q": "plot_svm goes from N=60 to N=200 training points and the boundary stays the same. Why?", "options": ["C=1E2 freezes the model", "New points far from the margin on the correct side don't affect the fit", "make_blobs repeats the same points", "The linear kernel ignores extra data"], "answer": 1, "why": "Only support vectors contribute to the loss; points beyond the margin on the right side do not change the fitted line."},
+          {"q": "In the faces model, GridSearchCV uses keys like 'svc__C' and 'svc__gamma'. Why the 'svc__' prefix?", "options": ["It tells SVC to use the rbf kernel", "It scales C by the PCA output", "It is required for class_weight='balanced'", "It routes the parameter to the pipeline step named svc"], "answer": 3, "why": "make_pipeline names steps after their classes (pca, svc); step__param tells GridSearchCV which step's parameter to set."},
+          {"q": "For an RBF SVC, what tends to happen when gamma is set very high?", "options": ["The boundary forms tight islands around individual training points", "The boundary becomes a single straight line", "The margin becomes hard regardless of C", "PCA keeps more components"], "answer": 0, "why": "High gamma narrows each point's kernel, so the decision boundary curves sharply and can wrap small regions around single points."}
+        ]
+      }
+    }
+  },
+  "15": {
+    sections: {
+      0: {
+        aside: "With skewed classes, accuracy lies. Read the confusion matrix and macro recall/F1, then resample or set class_weight='balanced'.",
+        recall: [
+          {"q": "The SVC on weights=[0.03, 0.05, 0.92] data gets high accuracy. Why does the notebook still use confusion_matrix and macro recall?", "options": ["accuracy_score cannot handle 3 classes", "Macro scores are always higher", "Confusion matrices are faster to compute", "Predicting the 92% class well dominates accuracy, hiding poor recall on minority classes"], "answer": 3, "why": "Classifiers lean to the heavier class, so high accuracy can coexist with many minority samples misclassified; per-class metrics expose that."},
+          {"q": "How does SMOTE differ from RandomOverSampler?", "options": ["SMOTE removes majority samples", "SMOTE makes new minority points by interpolating between neighbours; RandomOverSampler duplicates existing ones", "SMOTE only works with SVC", "RandomOverSampler creates synthetic points; SMOTE copies rows"], "answer": 1, "why": "RandomOverSampler samples existing minority rows with replacement, while SMOTE generates new points by interpolation rather than duplicating."},
+          {"q": "Classes have 85, 132 and 2283 samples. What counts does RandomUnderSampler(sampling_strategy='majority') give?", "options": ["85, 132, 85", "85, 85, 85", "132, 132, 132", "85, 132, 132"], "answer": 0, "why": "'majority' only resamples the majority class, down to the size of the smallest class, leaving the other classes unchanged."},
+          {"q": "Why does the notebook import make_pipeline from imblearn.pipeline rather than sklearn?", "options": ["imblearn's version runs faster", "sklearn's pipeline cannot hold an SVC", "sklearn's pipeline rejects samplers, since they resample with fit_resample instead of transform", "imblearn's version applies class_weight automatically"], "answer": 2, "why": "A sklearn Pipeline needs intermediate steps with fit and transform; the imblearn pipeline knows how to call a sampler's fit_resample during fit."},
+          {"q": "Switching from SVC(kernel='rbf') to SVC(kernel='rbf', class_weight='balanced') mostly changes what?", "options": ["It resamples the data to equal counts", "Mistakes on rare classes cost more, so minority recall rises while some majority points flip", "Training ignores the majority class", "It changes the kernel to linear"], "answer": 1, "why": "class_weight='balanced' weights classes inversely to their frequency, so the model favours minority classes without resampling; in the notebook class 0 hits rise from 54 to 66."}
+        ]
+      }
+    }
+  },
+  "16": {
+    sections: {
+      0: {
+        aside: "Bagging averages independent trees to cut variance; boosting fits learners in sequence to fix earlier mistakes; voting mixes different models.",
+        recall: [
+          {"q": "A single DecisionTreeClassifier scores far better on train than test, while the RandomForest does well on test. Why?", "options": ["The forest uses deeper trees", "The forest sees the test data in oob_score", "Averaging many trees on random rows and features cuts the single tree's high variance", "max_depth=10 is not allowed in a forest"], "answer": 2, "why": "A single tree overfits; RandomForest averages trees built on samples of rows and random feature subsets, which reduces variance."},
+          {"q": "With oob_score=True, what does rf.oob_score_ measure?", "options": ["Accuracy of each tree on the rows left out of its own sample", "Accuracy on testX", "Training accuracy of the forest", "The mean of feature_importances_"], "answer": 0, "why": "Each tree trains on a sample of rows, so the rows it never saw give a free validation estimate without touching the test set."},
+          {"q": "Between rounds, how does AdaBoost change the training data for the next estimator?", "options": ["It drops the misclassified rows", "It picks a new random subset of features only", "It refits on residuals of the previous model", "It raises the weights of misclassified samples and lowers correctly classified ones"], "answer": 3, "why": "AdaBoost fits learners sequentially on reweighted data so later learners focus on the samples earlier ones got wrong."},
+          {"q": "The GradientBoostingRegressor loop fills test_score = np.zeros(100) from staged_predict. What does the curve show?", "options": ["MSE for 100 different learning rates", "Test MSE after each of the 100 boosting stages, the default n_estimators", "Training loss of 100 separate trees", "Residual sum per feature"], "answer": 1, "why": "staged_predict yields predictions after each added tree; with the default n_estimators=100 that is 100 stages, showing how test loss drops as residuals are fixed."},
+          {"q": "VotingClassifier(voting='soft') includes SVC. Why is it built with probability=True?", "options": ["Soft voting averages predict_proba, which SVC only provides with probability=True", "Hard voting needs it to break ties", "It makes SVC train faster", "It sets the weights automatically"], "answer": 0, "why": "Soft voting combines predicted class probabilities; without probability=True an SVC has no predict_proba and the ensemble fails at predict."}
+        ]
+      }
+    }
   }
 };
