@@ -16,14 +16,22 @@ Pages must be served over HTTP; double-clicking `index.html` will not work. Serv
 
 Everything the pages need is loaded from `Commonplace/_lib/` (React, fonts, CodeMirror,
 marked, MathJax, mermaid, Pyodide), so the landing page, reader, notes, maths and flowcharts
-all work without internet. In the reader, **numpy cells run offline**; cells that need
-pandas, scikit-learn, matplotlib etc. download those packages and need internet. The raw
-JupyterLite apps (`lab/`, `notebooks/` …) still load their own Python kernel from the CDN.
+all work without internet. In the reader and the notes' Python boxes, **numpy, pandas,
+scipy, scikit-learn, matplotlib, seaborn and imbalanced-learn run offline**: their wheels
+are in `_lib/pyodide/` (≈ 120 MB, loaded only when a cell imports them). Anything else
+(nltk, scikit-image …) still downloads from the Pyodide CDN or PyPI and needs internet.
+The raw JupyterLite apps (`lab/`, `notebooks/` …) still load their own Python kernel from the CDN.
+
+To bundle another Pyodide package, copy its wheel (and its dependencies') from the
+Pyodide 0.26.4 release into `_lib/pyodide/` and run `python relink_lock.py` there.
+Pure-Python PyPI wheels go in the same folder and are listed in `LOCAL_WHEELS` in
+`book/js/reader.js`.
 
 After one visit the section also works when the server can't be reached (phone or iPad away
 from home): `study-sw.js`, registered by `book/js/sw-register.js`, keeps an offline copy.
 - **Saved on the first visit:** every page in the book and notes, plus the libraries they need.
-- **Saved when first opened:** each notebook chapter, Pyodide + numpy, and font files.
+- **Saved when first opened:** each notebook chapter, Pyodide and each package wheel, and font files.
+  So run one cell that imports pandas / scikit-learn / matplotlib while online, and those work offline after.
 - A chapter never opened while online says so instead of failing.
 - The worker covers only `index.html`, `book/` and `notes/`, so it never takes over from
   JupyterLite's own `service-worker.js` (`lab/`, `notebooks/` …).
@@ -75,9 +83,10 @@ AI_study/
 
 - The notebooks were written for Jupyter. Before running a cell the reader rewrites
   IPython-only lines: `%matplotlib` is dropped, `%timeit` times one run, `!pip install`
-  goes through micropip, other `!` / `%` lines print a note. Packages Pyodide doesn't
-  bundle (seaborn, imbalanced-learn, nltk) are installed on first import (needs internet).
-- Cells that fetch remote datasets need network access; a few original notebooks load
-  local files that were never in the source folder and will error if re-run.
+  goes through micropip, other `!` / `%` lines print a note. seaborn and imbalanced-learn
+  install from `_lib/pyodide/` on first import; nltk comes from PyPI (needs internet).
+- Cells that read a dataset from a URL (`pd.read_csv('https://…')`, sklearn `fetch_*`)
+  fail in the reader even online — Python in the browser can't open URLs itself. A few
+  original notebooks also load local files that were never in the source folder.
 - Edits live in the browser session only. Use File ▸ Download in JupyterLab to save.
 - `RESTORE_README.md` is the one-time recovery procedure from an earlier reorg — kept for reference.

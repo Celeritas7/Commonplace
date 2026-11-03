@@ -27,16 +27,16 @@ Reviewed 1 Nov 2026, on a phone (390 px wide) and an iPad (820 px wide).
 Items are ordered by how much they hurt studying, worst first.
 
 
-> ## Status — 2 Nov 2026
-> Fixed across pull requests #23–#33, from two Claude sessions. Each item below has its own status line.
+> ## Status — 3 Nov 2026
+> Fixed across pull requests #23–#39, from Claude sessions. Each item below has its own status line.
 >
 > | | Items |
 > |---|---|
 > | ✅ Done | 1, 2, 3, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15 |
-> | ✅ Mostly done | 4 (scikit-learn etc. still need internet; 5 cells need files that aren't available), 16 (Babel still runs in the browser) |
+> | ✅ Mostly done | 4 (packages work offline; 15 cells read data from a URL or a missing file), 16 (Babel still runs in the browser) |
 > | 🟡 Partly done | 11 (shared breadcrumb on notes; dark vs light look is a design choice) |
 >
-> **Still open:** ch 07's `reviews.csv` and ch 02's SQLite cells (files not available), scikit-learn & co. needing internet, in-browser Babel, written quiz banks, cross-device sync, and the dark-vs-light design choice.
+> **Still open:** cells that read data from a URL (10 cells, ch 02/03/06/10) or sklearn `fetch_*` (5 cells, ch 09/10/11/14b/16), ch 07's `reviews.csv` and ch 02's SQLite cells (files not available), in-browser Babel, written quiz banks, cross-device sync, and the dark-vs-light design choice.
 
 ---
 
@@ -91,7 +91,7 @@ Items are ordered by how much they hurt studying, worst first.
 
 ### 4. Nothing in this section works offline, even though local copies exist
 
-> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #25). Every library loads from `_lib/`, and `study-sw.js` keeps an offline copy after one visit. Numpy cells run offline. *3 Nov:* the tennis cells (ch 06, 10) now read `files/data/`, which the reader loads into Python at boot, and the adult-income cell reads the course's GitHub copy (online). *Still open:* scikit-learn, pandas and matplotlib still download from the Pyodide CDN; ch 07's three `reviews.csv` cells and ch 02's two SQLite cells still fail because those files (~300 MB Amazon reviews) aren't available.
+> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #25). Every library loads from `_lib/`, and `study-sw.js` keeps an offline copy after one visit. Numpy cells run offline. *3 Nov:* the tennis cells (ch 06, 10) now read `files/data/`, which the reader loads into Python at boot, and the adult-income cell reads the course's GitHub copy (online). *3 Nov, #39:* pandas, scipy, scikit-learn, matplotlib, seaborn and imbalanced-learn are bundled in `_lib/pyodide/` (≈ 120 MB), so those cells run offline. Tested: ▶ Run all on all 18 chapters with the network blocked; 01, 01b, 12, 13, 14 and 15 run to the end. **Correction:** the adult-income cell does *not* work online. Python in the browser can't open URLs, so the 10 `pd.read_csv('https://…')` cells and 5 sklearn `fetch_*` cells fail with or without internet. *Still open:* those 15 cells; ch 07's three `reviews.csv` cells and ch 02's two SQLite cells still fail because those files (~300 MB Amazon reviews) aren't available.
 
 | Page | Loads from the internet | Local copy already in the repo |
 |---|---|---|
@@ -112,6 +112,20 @@ Also:
 - Two caveats:
   - Packages like scikit-learn (used in 169 cells) still need the internet the first time, unless their wheels are copied into `_lib/pyodide/`.
   - 7 cells read local CSV files that aren't in the repo, so those cells will always fail. Either add the files or note this beside those cells.
+
+**Where ▶ Run all stops (3 Nov, network blocked; the same online unless marked):**
+
+| Ch | Stops at | Why |
+|---|---|---|
+| 02, 03 | first `read_csv('https://…')` | URL data, fails online too |
+| 04 | cell 12 | the notebook uses `Ridge` before importing it |
+| 05 | cell 65 | scikit-image isn't bundled (online it downloads) |
+| 06 | cell 57 | a Google Colab file-upload cell |
+| 07 | cell 9 (§ IV) | `reviews.csv` isn't available |
+| 08 | cell 20 | the notebook uses `CountVectorizer` before importing it |
+| 09 | cell 44 | a "dummy code" cell using an undefined `xVal` |
+| 10, 11, 16 | sklearn `fetch_*` | URL data, fails online too |
+| 14b | cell 11 | `ipywidgets` has no Pyodide build |
 
 ### 5. The landing page is wider than a phone screen
 
