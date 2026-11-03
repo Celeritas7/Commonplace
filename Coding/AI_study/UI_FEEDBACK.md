@@ -28,7 +28,7 @@ Items are ordered by how much they hurt studying, worst first.
 
 
 > ## Status — 3 Nov 2026
-> Fixed across pull requests #23–#38, from Claude sessions. Each item below has its own status line.
+> Fixed across pull requests #23–#39, from Claude sessions. Each item below has its own status line.
 >
 > | | Items |
 > |---|---|
@@ -91,7 +91,7 @@ Items are ordered by how much they hurt studying, worst first.
 
 ### 4. Nothing in this section works offline, even though local copies exist
 
-> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #25). Every library loads from `_lib/`, and `study-sw.js` keeps an offline copy after one visit. Numpy cells run offline. *3 Nov:* the tennis cells (ch 06, 10) now read `files/data/`, which the reader loads into Python at boot, and the adult-income cell reads the course's GitHub copy (online). *3 Nov, #38:* pandas, scipy, scikit-learn, matplotlib, seaborn and imbalanced-learn are bundled in `_lib/pyodide/` (≈ 120 MB), so those cells run offline. Tested: ▶ Run all on all 18 chapters with the network blocked; 01, 01b, 12, 13, 14 and 15 run to the end. **Correction:** the adult-income cell does *not* work online. Python in the browser can't open URLs, so the 10 `pd.read_csv('https://…')` cells and 5 sklearn `fetch_*` cells fail with or without internet. *Still open:* those 15 cells; ch 07's three `reviews.csv` cells and ch 02's two SQLite cells still fail because those files (~300 MB Amazon reviews) aren't available.
+> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #25). Every library loads from `_lib/`, and `study-sw.js` keeps an offline copy after one visit. Numpy cells run offline. *3 Nov:* the tennis cells (ch 06, 10) now read `files/data/`, which the reader loads into Python at boot, and the adult-income cell reads the course's GitHub copy (online). *3 Nov, #39:* pandas, scipy, scikit-learn, matplotlib, seaborn and imbalanced-learn are bundled in `_lib/pyodide/` (≈ 120 MB), so those cells run offline. Tested: ▶ Run all on all 18 chapters with the network blocked; 01, 01b, 12, 13, 14 and 15 run to the end. **Correction:** the adult-income cell does *not* work online. Python in the browser can't open URLs, so the 10 `pd.read_csv('https://…')` cells and 5 sklearn `fetch_*` cells fail with or without internet. *Still open:* those 15 cells; ch 07's three `reviews.csv` cells and ch 02's two SQLite cells still fail because those files (~300 MB Amazon reviews) aren't available.
 
 | Page | Loads from the internet | Local copy already in the repo |
 |---|---|---|
