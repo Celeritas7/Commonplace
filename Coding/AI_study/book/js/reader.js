@@ -438,12 +438,13 @@
   const PY_HELPERS = [
     "import time as _ipy_time",
     "_IPY_SKIP_PIP = {'pysqlite3', 'sklearn.utils', 'sklearn', 'scikit-learn', 'numpy', 'pandas', 'matplotlib', 'scipy', 'joblib'}",
+    "_IPY_LOCAL = {}  # PyPI name -> wheel URL in _lib/pyodide, filled in at boot",
     "async def _ipy_pip(names):",
     "    import micropip",
     "    for n in names:",
     "        if n.startswith('-') or n in _IPY_SKIP_PIP: continue",
     "        try:",
-    "            await micropip.install(n)",
+    "            await micropip.install(_IPY_LOCAL.get(n, n))",
     "            print('installed ' + n)",
     "        except Exception as e:",
     "            print('could not install ' + n + ' in the browser: ' + str(e).splitlines()[0])",
@@ -456,6 +457,12 @@
 
   /* import name -> PyPI name, for packages Pyodide does not load from imports */
   const PIP_FOR = { seaborn: "seaborn", imblearn: "imbalanced-learn", nltk: "nltk" };
+  /* PyPI name -> pure-Python wheel kept in _lib/pyodide, so these install offline.
+     Their dependencies (pandas, matplotlib, scikit-learn …) are bundled there too. */
+  const LOCAL_WHEELS = {
+    "seaborn": "seaborn-0.13.2-py3-none-any.whl",
+    "imbalanced-learn": "imbalanced_learn-0.12.3-py3-none-any.whl"
+  };
 
   function toPython(code) {
     const lines = code.split("\n");
@@ -500,6 +507,9 @@
           pyodide = await loadPyodide({ indexURL: PYO });
           await pyodide.runPythonAsync("import os\nos.environ['MPLBACKEND']='AGG'");
           await pyodide.runPythonAsync(PY_HELPERS);
+          const local = {};
+          for (const k in LOCAL_WHEELS) local[k] = PYO + LOCAL_WHEELS[k];
+          await pyodide.runPythonAsync("_IPY_LOCAL = " + JSON.stringify(local));
           for (const name of (window.AI_DATA_FILES || [])) {
             try {
               const r = await fetch("../files/data/" + name);
@@ -534,16 +544,25 @@
     try {
       const code = toPython(c.src);
       await py.loadPackagesFromImports(code);
+      if (code.includes("_ipy_pip(")) await py.loadPackage("micropip");
       let r;
       try { r = await py.runPythonAsync(code); }
       catch (e) {
-        /* a package Pyodide doesn't bundle (seaborn, imblearn…): install it once, retry */
         const miss = String(e.message || e).match(/No module named '([\w]+)/);
-        const pkg = miss && PIP_FOR[miss[1]];
-        if (!pkg) throw e;
-        kstate("is-busy", "installing " + pkg + "…");
-        await py.loadPackage("micropip");
-        await py.runPythonAsync("import micropip\nawait micropip.install(" + JSON.stringify(pkg) + ")");
+        if (!miss) throw e;
+        const pkg = PIP_FOR[miss[1]];
+        if (pkg) {
+          /* a package Pyodide doesn't bundle (seaborn, imblearn…): install it once, retry */
+          kstate("is-busy", "installing " + pkg + "…");
+          await py.loadPackage("micropip");
+          await py.runPythonAsync("import micropip\nawait micropip.install(" + JSON.stringify(LOCAL_WHEELS[pkg] ? PYO + LOCAL_WHEELS[pkg] : pkg) + ")");
+        } else {
+          /* imported lazily by another package (pandas' .plot.kde() needs scipy), so the
+             import scan above can't see it: load it by name if Pyodide has it, retry once */
+          const before = Object.keys(py.loadedPackages || {}).length;
+          await py.loadPackage(miss[1]);
+          if (Object.keys(py.loadedPackages || {}).length === before) throw e;
+        }
         kstate("is-busy", "running…");
         r = await py.runPythonAsync(code);
       }
@@ -565,7 +584,7 @@
     } catch (e) {
       live.err = String(e.message || e).split("\n").filter((l) => !l.includes('File "/lib/python')).join("\n");
       if (!navigator.onLine || /fetch|NetworkError|Failed to load|load package|included in the Pyodide distribution/i.test(live.err))
-        live.err += "\n\nOffline? numpy, pandas, scipy, scikit-learn and matplotlib are stored locally; other packages (seaborn, imbalanced-learn, nltk…) need an internet connection.";
+        live.err += "\n\nOffline? numpy, pandas, scipy, scikit-learn, matplotlib, seaborn and imbalanced-learn are stored locally; other packages (nltk…) need an internet connection.";
       kstate("is-ready", "python ready");
     }
     live.stdout = stdout.replace(/\n$/, "");
