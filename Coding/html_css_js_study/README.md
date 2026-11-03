@@ -12,6 +12,7 @@ A study-book page for *The Complete 2022 Web Development Bootcamp* (Angela Yu, T
 |---|---|
 | `index.html` | The page: progress, search, filters (to do / done / starred / notes, lesson types), sections with lessons |
 | `data/course-index.js` | The index: one line per lesson, section by section, plus the Drive ids of the study books |
+| `my_apps/` | My own apps rebuilt by hand: a tutorial per app, then notes → rewrite → one feature → a new app (see `my_apps/README.md`). The apps themselves stay private in `Offline_apps` |
 | `pwa/` | Install manifest and icons (like the other books) |
 | `sw.js` | Offline cache when served over http. Bump `CACHE` after changing a file |
 
