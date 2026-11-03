@@ -7,10 +7,11 @@
  *   · CORE (below) is stored on install: every page plus the libraries needed to
  *     draw them (React, fonts, CodeMirror, marked, MathJax, mermaid, pdf.js).
  *   · everything else on this site that a page loads — the notebooks in files/,
- *     Pyodide + numpy from _lib/pyodide, font files, MathJax extensions — is
- *     stored the first time it is used (stale-while-revalidate).
- *   · other sites (the Pyodide CDN for pandas, scikit-learn …) go straight to the
- *     network and are never stored here.
+ *     Pyodide and its local wheels from _lib/pyodide (numpy, pandas, scipy,
+ *     scikit-learn, matplotlib …), font files, MathJax extensions — is stored the
+ *     first time it is used (stale-while-revalidate).
+ *   · other sites (the Pyodide CDN for packages not in _lib/pyodide, PyPI for
+ *     seaborn / imbalanced-learn) go straight to the network and are never stored here.
  *   · a page that was never opened shows a small "not saved yet" card offline.
  *
  * Cache names start with "aistudy-" and only those are ever deleted here.

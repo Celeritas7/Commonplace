@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """relink_lock.py — point pyodide-lock.json at the right place for each package.
 
-Only a few wheels are bundled in this folder (numpy today). Pyodide resolves every
+Only some wheels are bundled in this folder (numpy, pandas, scipy, scikit-learn,
+matplotlib and their dependencies — see the printout). Pyodide resolves every
 package's `file_name` against the folder it was loaded from, so an unbundled
-package such as pandas would 404 here even when the user is online.
+package such as statsmodels would 404 here even when the user is online.
 
 This rewrites the lock so that:
   * a wheel present in this folder keeps its bare file name  → loads locally, works offline

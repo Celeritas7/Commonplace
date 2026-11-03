@@ -481,8 +481,9 @@
   if (typeof window !== "undefined") window.__toPython = toPython;
 
   /* Pyodide lives in the shared Commonplace/_lib/pyodide (same 0.26.4 build). Its lock
-     file serves numpy from that folder, so numpy cells run offline; every other package
-     (pandas, scikit-learn, matplotlib…) still comes from the Pyodide CDN and needs internet. */
+     file serves numpy, pandas, scipy, scikit-learn and matplotlib (+ their dependencies)
+     from that folder, so those cells run offline; any other Pyodide package still comes
+     from the Pyodide CDN and needs internet. */
   const PYO = new URL("../../../_lib/pyodide/", location.href).href;
   let pyodide = null, booting = null;
   const kpill = document.getElementById("kpill"), ktext = document.getElementById("ktext");
@@ -564,7 +565,7 @@
     } catch (e) {
       live.err = String(e.message || e).split("\n").filter((l) => !l.includes('File "/lib/python')).join("\n");
       if (!navigator.onLine || /fetch|NetworkError|Failed to load|load package|included in the Pyodide distribution/i.test(live.err))
-        live.err += "\n\nOffline? Only numpy is stored locally. Other packages (pandas, scikit-learn, matplotlib…) need an internet connection.";
+        live.err += "\n\nOffline? numpy, pandas, scipy, scikit-learn and matplotlib are stored locally; other packages (seaborn, imbalanced-learn, nltk…) need an internet connection.";
       kstate("is-ready", "python ready");
     }
     live.stdout = stdout.replace(/\n$/, "");
