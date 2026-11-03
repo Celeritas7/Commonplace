@@ -286,3 +286,8 @@ window.AI_NOTES_FOR = {
   "15":  [["notes/classical-ml/geron-ch03-classification.html", "Géron ch 3 — Classification", "why accuracy misleads on skewed classes (§ 3)"]],
   "16":  [["notes/classical-ml/geron-ch07-ensembles.html", "Géron ch 7 — Ensembles & Random Forests", "voting, bagging, boosting, stacking"]]
 };
+
+/* Small data files some notebooks read with pd.read_csv('<name>'). The reader
+   fetches them from files/data/ when Python boots and writes them into Python's
+   file system, so the notebook's own path works (offline too). */
+window.AI_DATA_FILES = ["tennis.csv", "tennis-time.csv.txt"];

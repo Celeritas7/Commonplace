@@ -32,11 +32,11 @@ Items are ordered by how much they hurt studying, worst first.
 >
 > | | Items |
 > |---|---|
-> | ✅ Done | 1, 2, 3, 5, 6, 8, 9, 10, 12, 13, 14, 15 |
-> | ✅ Mostly done | 4 (scikit-learn etc. still need internet; 7 cells need missing data files), 7 (iPad header unchanged), 16 (React development builds) |
+> | ✅ Done | 1, 2, 3, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15 |
+> | ✅ Mostly done | 4 (scikit-learn etc. still need internet; 5 cells need files that aren't available), 16 (Babel still runs in the browser) |
 > | 🟡 Partly done | 11 (shared breadcrumb on notes; dark vs light look is a design choice) |
 >
-> **Still open:** the 7 missing data files (ch 06, 07, 10), the iPad reader header, React production builds, written quiz banks, cross-device sync, and the dark-vs-light design choice.
+> **Still open:** ch 07's `reviews.csv` and ch 02's SQLite cells (files not available), scikit-learn & co. needing internet, in-browser Babel, written quiz banks, cross-device sync, and the dark-vs-light design choice.
 
 ---
 
@@ -91,7 +91,7 @@ Items are ordered by how much they hurt studying, worst first.
 
 ### 4. Nothing in this section works offline, even though local copies exist
 
-> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #25). Every library loads from `_lib/`, and `study-sw.js` keeps an offline copy after one visit. Numpy cells run offline. *Still open:* scikit-learn, pandas and matplotlib still download from the Pyodide CDN, and the 7 cells that read local data files (ch 06, 07, 10) still fail because the files aren't in the repo.
+> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #25). Every library loads from `_lib/`, and `study-sw.js` keeps an offline copy after one visit. Numpy cells run offline. *3 Nov:* the tennis cells (ch 06, 10) now read `files/data/`, which the reader loads into Python at boot, and the adult-income cell reads the course's GitHub copy (online). *Still open:* scikit-learn, pandas and matplotlib still download from the Pyodide CDN; ch 07's three `reviews.csv` cells and ch 02's two SQLite cells still fail because those files (~300 MB Amazon reviews) aren't available.
 
 | Page | Loads from the internet | Local copy already in the repo |
 |---|---|---|
@@ -152,7 +152,7 @@ The target is 44 × 44 px.
 
 ### 7. The reader's sticky header takes up a fifth of the phone screen
 
-> **Status, 2 Nov 2026:** ✅ **Done on phones** (#26). Settings sit behind one ⚙ button and the bar hides while you scroll down; the header went from 230 px to 116 px. *Open, optional:* the iPad keeps the full inline bar (182 px).
+> **Status, 2 Nov 2026:** ✅ **Done** (#26; iPad on 3 Nov). Settings sit behind one ⚙ button and the bar hides while you scroll down; the header went from 230 px to 116 px on phones and from 182 px to 118 px on the iPad.
 
 - It's about 165 px on a 844 px phone screen, and 134 px on an iPad.
 - It holds the breadcrumb, three toggle pairs, the progress percentage, the Python status, the Jupyter link, and the section tabs.
@@ -245,7 +245,7 @@ The notes hub says *"Click a note to open it. Built from `_template.html`."*. Re
 
 ### 16. Smaller items
 
-> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #26). The first section tab shows only its numeral on phones, the NOW badges appear once, and the gradient-descent slider has a visible track and thumb. *Open:* the landing page still uses React's development builds and compiles in the browser with Babel. Both are local now, but the first load on a phone is still slow.
+> **Status, 2 Nov 2026:** ✅ **Mostly done** (#24, #26). The first section tab shows only its numeral on phones, the NOW badges appear once, and the gradient-descent slider has a visible track and thumb. *3 Nov:* the landing page now loads React's production builds (1.2 MB → 140 KB). *Open:* it still compiles `app.jsx` in the browser with Babel (3 MB, local).
 
 - **Landing:** the React development builds and in-browser Babel make the first load on a phone noticeably slow. Use the production React builds and a pre-compiled `app.js` (no Babel), or the local copies.
 - **Reader:** the first section tab is shortened to "Linear Models for Reg…". On a phone, show only the Roman numeral and put the full title in the page heading.
