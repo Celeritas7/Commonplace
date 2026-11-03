@@ -366,6 +366,16 @@
         // Module 01 explorer) reuse this session instead of making a second client
         // that never sees the magic-link login.
         if (sb) { try { window.dispatchEvent(new Event("reading-sync-ready")); } catch (e) {} }
+        // Akatsuki hub broadcast overlay: loaded once, started with this signed-in client.
+        if (sb && !window.__akBroadcast) {
+          window.__akBroadcast = true;
+          try {
+            var ab = document.createElement("script");
+            ab.src = "https://celeritas7.github.io/Akatsuki/js/akatsuki-broadcast.js";
+            ab.onload = function () { if (window.AkatsukiBroadcast) window.AkatsukiBroadcast(sb, "commonplace").start(); };
+            document.head.appendChild(ab);
+          } catch (e) {}
+        }
       }
       start();
     });
