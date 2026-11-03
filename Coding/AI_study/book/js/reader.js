@@ -42,10 +42,10 @@
   });
   applyPrefs();
 
-  /* phones: view settings live behind the gear, and the bar slides away while you
+  /* phones and tablets: view settings live behind the gear, and the bar slides away while you
      scroll down (back as soon as you scroll up), so code cells get the screen */
   const top = document.querySelector(".top"), gear = document.getElementById("gearBtn");
-  const phone = window.matchMedia("(max-width:640px)");
+  const phone = window.matchMedia("(max-width:900px)");   /* phones and tablets */
   if (gear) gear.addEventListener("click", () => {
     const open = top.classList.toggle("is-open");
     gear.setAttribute("aria-expanded", open ? "true" : "false");
@@ -499,6 +499,12 @@
           pyodide = await loadPyodide({ indexURL: PYO });
           await pyodide.runPythonAsync("import os\nos.environ['MPLBACKEND']='AGG'");
           await pyodide.runPythonAsync(PY_HELPERS);
+          for (const name of (window.AI_DATA_FILES || [])) {
+            try {
+              const r = await fetch("../files/data/" + name);
+              if (r.ok) pyodide.FS.writeFile("/home/pyodide/" + name, new Uint8Array(await r.arrayBuffer()));
+            } catch (e) { /* the notebook cell will report the missing file */ }
+          }
           if (window.Lab) await pyodide.runPythonAsync("lab_points = " + JSON.stringify(window.Lab.DEFAULT));
           kstate("is-ready", "python ready");
           resolve(pyodide);

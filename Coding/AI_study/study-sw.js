@@ -16,7 +16,7 @@
  * Cache names start with "aistudy-" and only those are ever deleted here.
  * Bump VERSION whenever CORE or this file's logic changes.
  */
-var VERSION = "aistudy-v3";
+var VERSION = "aistudy-v4";
 var CORE = [
   "index.html",
   "book/reader.html",
@@ -34,6 +34,8 @@ var CORE = [
   "notes/geron/reader.html",
   "notes/geron/vendor/pdfjs/pdf.min.js",
   "notes/geron/vendor/pdfjs/pdf.worker.min.js",
+  "files/data/tennis.csv",
+  "files/data/tennis-time.csv.txt",
   "notes/classical-ml/geron-ch01-ml-landscape.html",
   "notes/classical-ml/geron-ch02-end-to-end-project.html",
   "notes/classical-ml/geron-ch03-classification.html",
@@ -46,8 +48,8 @@ var CORE = [
   "notes/classical-ml/gradient-descent.html",
   "notes/foundations/ch1-ml-landscape.html",
   "notes/projects/ch2-end-to-end-project.html",
-  "../../_lib/react/react.development.js",
-  "../../_lib/react/react-dom.development.js",
+  "../../_lib/dc/react.production.min.js",
+  "../../_lib/dc/react-dom.production.min.js",
   "../../_lib/react/babel.min.js",
   "../../_lib/fonts/gf-1e9c8d7d.css",
   "../../_lib/codemirror/codemirror.min.css",
