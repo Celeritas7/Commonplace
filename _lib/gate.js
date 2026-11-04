@@ -35,9 +35,26 @@
   /* signed out in another tab: lock this one too */
   addEventListener('storage', function (e) { if (e.key === SKEY && !e.newValue) location.reload(); });
 
+  /* "Sign out" in the ⇅ menu (progress-backup.js), once the page is unlocked. It forgets the session on
+     this device only and reloads, so the sign-in screen comes back; other tabs lock via the storage event. */
+  function signOut() { set(OK, null); set(NEXT, null); set(SKEY, null); location.reload(); }
+  function addSignOut() {
+    var tries = 0;
+    (function look() {
+      var menu = document.querySelector('.cpb-menu');
+      if (!menu) { if (++tries < 40) setTimeout(look, 250); return; }   // the ⇅ pill appears after DOMContentLoaded
+      if (menu.querySelector('[data-a="signout"]')) return;
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('data-a', 'signout'); b.textContent = 'Sign out';
+      b.title = 'Sign out of Commonplace on this device';
+      b.onclick = function (e) { e.stopPropagation(); signOut(); };   // keep the ⇅ menu's own handler out of it
+      menu.appendChild(b);
+    })();
+  }
+
   /* fast path: a saved session whose email already passed */
   var em = sessionEmail();
-  if (em && get(OK) === em && !returning) return;
+  if (em && get(OK) === em && !returning) { addSignOut(); return; }
 
   /* everything below runs with the page hidden */
   var root = document.documentElement;
@@ -65,6 +82,7 @@
   (document.head || root).appendChild(st);
 
   function unlock() {
+    addSignOut();
     root.classList.remove('cp-locked');
     var g = document.getElementById('cp-gate'); if (g) g.remove();
   }
