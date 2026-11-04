@@ -158,5 +158,9 @@ if __name__ == "__main__":
     title = a.title or os.path.splitext(os.path.basename(a.notebook))[0].replace("_", " ")
     out = a.out or os.path.splitext(a.notebook)[0] + ".html"
     html_doc = convert(a.notebook, a.tag, title, a.source)
+    # login gate first in <head> (see _lib/gate.js); _lib is at the repo root, three folders up
+    lib = os.path.relpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "_lib"),
+                          os.path.dirname(os.path.abspath(out))).replace(os.sep, "/")
+    html_doc = html_doc.replace("<head>", '<head>\n<script src="' + lib + '/gate.js"></script>', 1)
     open(out, "w", encoding="utf-8").write(html_doc)
     print(f"wrote {out}  ({len(html_doc)//1024} KB)")

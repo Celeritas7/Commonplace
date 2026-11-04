@@ -9,6 +9,7 @@
 #     (Pyodide + numpy, CodeMirror, marked, supabase-js, Google Fonts as woff2)
 #   - Rewrites your .html files to load those local copies instead of the CDN
 #   - Adds a small Export/Import progress button to every page (bottom-left)
+#   - Puts the login gate (_lib/gate.js) first in <head> of every page (add_gate.py)
 #
 # Safe to re-run any time (skips files already downloaded, edits are idempotent).
 # Skipped folders: Temp, _archive, _superseded_flat_build, AI_study (JupyterLite
@@ -239,5 +240,7 @@ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",
 if __name__ == "__main__":
     try:
         main()
+        import add_gate   # login gate first in <head> of every page
+        add_gate.main()
     except urllib.error.URLError as e:
         sys.exit("Network error: %s - are you online? Re-run to resume." % e)
