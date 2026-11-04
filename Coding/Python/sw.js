@@ -10,7 +10,7 @@
  *     (lib/py-worker-engine.js). Headers are added to the response only, never cached.
  * Bump VERSION to force every client to refetch.
  */
-var VERSION = "cp-py-v44";
+var VERSION = "cp-py-v45";
 var CORE = [
   "./",
   "index.html",
@@ -131,6 +131,7 @@ var CORE = [
   "lib/my-scripts.js?v=3",
   "lib/sw-register.js?v=1",
   "../../reading-sync.js",
+  "../../_lib/gate.js",
   "../../_lib/progress-backup.js",
   "../../_lib/quiz/quiz.js",
   "../../extras.js",

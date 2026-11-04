@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -393,6 +394,17 @@ INDEX_HTML = """<!DOCTYPE html>
 # Helpers
 # --------------------------------------------------------------------------- #
 
+GATE_LIB = Path(__file__).resolve().parent / "_lib"
+
+
+def with_gate(page: str, out_path: Path) -> str:
+    """Put the login gate (_lib/gate.js) first in <head>."""
+    if "_lib/gate.js" in page:
+        return page
+    rel = Path(os.path.relpath(GATE_LIB, out_path.resolve().parent)).as_posix()
+    return page.replace("<head>", f'<head>\n<script src="{rel}/gate.js"></script>', 1)
+
+
 def display_name(folder_or_file: str) -> str:
     """Map a raw folder/file slug to a readable display name."""
     if folder_or_file in FOLDER_DISPLAY_OVERRIDES:
@@ -615,7 +627,7 @@ def emit_page(mdfile: MdFile, output_root: Path) -> Path:
         up_label=html.escape(up_label),
         home_href=home_href,
     )
-    out_path.write_text(out_html, encoding="utf-8")
+    out_path.write_text(with_gate(out_html, out_path), encoding="utf-8")
     return out_path
 
 
@@ -693,7 +705,7 @@ def emit_folder_index(node: FolderNode, output_root: Path, is_subject_root: bool
         breadcrumbs=breadcrumbs_html,
         home_href=home_href,
     )
-    out_path.write_text(out_html, encoding="utf-8")
+    out_path.write_text(with_gate(out_html, out_path), encoding="utf-8")
     return out_path
 
 
@@ -742,7 +754,7 @@ def emit_hub_index(tree: FolderNode, output_root: Path) -> Path:
         breadcrumbs=breadcrumbs_html,
         home_href=home_href,
     )
-    out_path.write_text(out_html, encoding="utf-8")
+    out_path.write_text(with_gate(out_html, out_path), encoding="utf-8")
     return out_path
 
 
