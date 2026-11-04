@@ -18,6 +18,7 @@
   var SUPABASE_KEY = 'sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv';
   var SKEY = 'sb-wylxvmkcrexwfpjpbhyy-auth-token';   // supabase-js default storage key for this project
   var OK = 'cp:gate:ok';                              // the email that last passed the check
+  var NEXT = 'cp:gate:next';                          // the page you asked to sign in from: {url, t}
   var ME = document.currentScript && document.currentScript.src;
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -163,6 +164,9 @@
       btn.disabled = true; msg.className = 'g-msg'; msg.textContent = 'Sending…';
       client(function (c) {
         if (!c) { btn.disabled = false; msg.className = 'g-msg bad'; msg.textContent = 'Could not reach the sign-in service. Check your connection.'; return; }
+        /* Supabase sends the link back only to addresses on its allow-list and falls back to the home page
+           otherwise, so remember this page and go back to it once the sign-in completes (see goBack) */
+        set(NEXT, JSON.stringify({ url: location.href.split('#')[0], t: Date.now() }));
         c.auth.signInWithOtp({ email: v, options: { emailRedirectTo: location.href.split('#')[0] } }).then(function (r) {
           btn.disabled = false;
           if (r && r.error) { msg.className = 'g-msg bad'; msg.textContent = r.error.message || 'Could not send the link.'; return; }
@@ -172,12 +176,23 @@
     };
   }
 
+  /* after a sign-in, return to the page it was started from (within an hour, same site, not this page) */
+  function goBack() {
+    var n = null; try { n = JSON.parse(get(NEXT) || 'null'); } catch (e) {}
+    set(NEXT, null);
+    if (!returning || !n || !n.url || Date.now() - n.t > 3600e3) return false;
+    var to; try { to = new URL(n.url); } catch (e) { return false; }
+    if (to.origin !== location.origin || to.href === location.href.split('#')[0]) return false;
+    location.replace(to.href);
+    return true;
+  }
+
   /* ---------- decide ---------- */
   function check(email) {
     if (!email) { set(OK, null); return screen('form'); }
     allowed(email).then(function (yes) {
-      if (yes) { set(OK, email); unlock(); }
-      else { set(OK, null); screen('denied', email); }
+      if (yes) { set(OK, email); if (!goBack()) unlock(); }
+      else { set(OK, null); set(NEXT, null); screen('denied', email); }
     }, function () { screen('form'); });
   }
   function run() {
