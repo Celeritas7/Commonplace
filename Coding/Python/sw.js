@@ -3,7 +3,7 @@
  * Only listed static assets are downloaded; remote APIs always use the network.
  */
 importScripts('offline-assets.js', 'lib/offline-worker.js');
-var VERSION = "cp-py-v48";
+var VERSION = "cp-py-v49";
 var CORE = [
   "offline.html",
   "lib/offline-manager.js",

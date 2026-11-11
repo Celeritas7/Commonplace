@@ -31,3 +31,7 @@ node Coding/Python/tests/offline.cjs
 It exercises download failure/resume, clears HTTP cache, goes offline, opens new pages, runs CPython, tests the random-module runner and worker `input()`, then imports NumPy/pandas and creates a plot. Set `CHROMIUM_PATH` if Chromium is elsewhere. No real cloud credentials are used.
 
 Validation for this change: service-worker regression checks passed; actual bundled Pyodide executed arithmetic and loaded NumPy/pandas/matplotlib/Pillow locally. Browser suite could not launch in the authoring environment (Chromium socket creation was denied); physical iPad/Safari verification remains necessary.
+
+## Recovering stale setup code
+
+Open `offline-repair.html?nocache=49` in the affected browser/app. It has no external scripts and deliberately bypasses the old page cache. Its button removes only `cp-py-*` shell caches, re-registers the Python worker with a distinct URL and uncached imports, waits for that exact worker to activate, then verifies the download status through a MessageChannel. It does not unregister other apps, delete the download pack, or modify localStorage/IndexedDB. A failed step is shown on screen.

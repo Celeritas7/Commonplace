@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Repair offline setup · Python</title>
+<style>[hidden]{display:none!important}body{margin:0;background:#eceee4;color:#243c30;font:17px/1.6 system-ui,sans-serif}main{max-width:650px;margin:auto;padding:36px 22px}h1{font:38px Georgia,serif}button,a.action{display:inline-block;min-height:48px;padding:12px 20px;box-sizing:border-box;background:#234f3b;color:white;border:0;border-radius:9px;font:600 17px system-ui;text-decoration:none;cursor:pointer}button:disabled{opacity:.6}#result{white-space:pre-wrap;overflow-wrap:anywhere;padding:18px;border:1px solid #b8c8b7;border-radius:12px;background:#fafbf5}small{display:block;margin-top:24px;color:#526457}a{color:#234f3b}</style></head>
+<body><main><p>COMMONPLACE · PYTHON</p><h1>Repair offline setup</h1>
+<p>This refreshes Python’s app cache. Your saved practice, sign-in and downloaded lesson files are kept.</p>
+<p>Stay connected and keep this page open.</p>
+<button id="repair" type="button">Repair offline setup</button>
+<p id="result" role="status" aria-live="polite">Ready to check this browser.</p>
+<a id="continue" class="action" hidden href="offline.html">Continue to downloads</a>
+<small>Use this in the same Safari browser or Home Screen app where you want to study. Repair version 49.</small>
+<noscript><p>JavaScript is disabled. Enable JavaScript in Safari before using the Python app.</p></noscript>
+</main><script>
+(function () {
+  'use strict';
+  var button = document.getElementById('repair');
+  var result = document.getElementById('result');
+  var next = document.getElementById('continue');
+  var root = new URL('./', location.href).href;
+  function bounded(promise, ms, label) {
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () { reject(new Error(label + ' timed out. Keep this message visible and share it if retrying fails.')); }, ms);
+      promise.then(function (value) { clearTimeout(timer); resolve(value); }, function (e) { clearTimeout(timer); reject(e); });
+    });
+  }
+  function activated(reg, expected) {
+    return new Promise(function (resolve, reject) {
+      var deadline = Date.now() + 40000;
+      function check() {
+        if (reg.active && reg.active.scriptURL === expected && reg.active.state === 'activated') return resolve(reg.active);
+        if (reg.waiting) reg.waiting.postMessage('skip-waiting');
+        if (Date.now() > deadline) return reject(new Error('Step 2: the updated Python worker could not activate. Close other Python tabs and retry here.'));
+        setTimeout(check, 200);
+      }
+      check();
+    });
+  }
+  function status(worker) {
+    return new Promise(function (resolve, reject) {
+      var channel = new MessageChannel();
+      var timer = setTimeout(function () { channel.port1.close(); reject(new Error('Step 3: the updated worker is active but did not respond to the download check.')); }, 15000);
+      channel.port1.onmessage = function (event) {
+        clearTimeout(timer); channel.port1.close();
+        if (event.data.error) reject(new Error('Step 3: ' + event.data.error)); else resolve(event.data);
+      };
+      worker.postMessage({ type: 'offline-status' }, [channel.port2]);
+    });
+  }
+  button.onclick = async function () {
+    button.disabled = true; next.hidden = true;
+    try {
+      if (!window.isSecureContext || !navigator.serviceWorker || !window.caches) throw new Error('This browser does not provide offline storage. Open this page in Safari over HTTPS.');
+      result.textContent = 'Step 1 of 3: checking browser storage…';
+      var names = await bounded(caches.keys(), 10000, 'Step 1: browser storage');
+      // Shell caches only. Never remove the cp-python-downloads-v1 pack or localStorage/IndexedDB.
+      await bounded(Promise.all(names.filter(function (name) { return name.indexOf('cp-py-') === 0; }).map(function (name) { return caches.delete(name); })), 10000, 'Step 1: app cache refresh');
+      result.textContent = 'Step 2 of 3: installing fresh offline support…';
+      var workerURL = root + 'sw.js?repair=49';
+      var reg = await bounded(navigator.serviceWorker.register(workerURL, { scope: root, updateViaCache: 'none' }), 25000, 'Step 2: worker registration');
+      var worker = await activated(reg, workerURL);
+      result.textContent = 'Step 3 of 3: checking your saved downloads…';
+      var state = await status(worker);
+      result.textContent = 'Repair completed. The download system responded.\nEssentials saved: ' + state.basic.done + ' / ' + state.basic.total + ' files.\nTap Continue to downloads.';
+      next.href = root + 'offline.html?nocache=repair49'; next.hidden = false;
+      button.textContent = 'Check again';
+    } catch (error) {
+      result.textContent = 'Repair stopped.\n' + (error.message || String(error)) + '\nYour saved practice has not been cleared.';
+      button.textContent = 'Retry repair';
+    } finally { button.disabled = false; }
+  };
+  window.addEventListener('error', function (event) {
+    result.textContent = 'Setup script error: ' + event.message;
+    button.disabled = false;
+  });
+})();
+</script></body></html>

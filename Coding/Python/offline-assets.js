@@ -58,8 +58,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "index.html",
-      "bytes": 95794,
-      "revision": "6b4eba5141e6728982acb8154b44f95c49f4cbb34104a8debe7d32f8cbeb3d88"
+      "bytes": 95932,
+      "revision": "701b974f0f49cccdc420acf1471c799384234219de9a7f26a9072f22fd1f7198"
     },
     {
       "url": "js/learn-shelf.js",
@@ -808,8 +808,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "offline.html",
-      "bytes": 3875,
-      "revision": "950ae3fa03ae4a329bff8823c1e822d7c4e413b8a3bed4889f8385dec583fc94"
+      "bytes": 3981,
+      "revision": "e18d839f170ed9bfaec38eb08aee3859632d2eccf228a3ef44e903ed1bf5db65"
     },
     {
       "url": "practice/data/index.js",
