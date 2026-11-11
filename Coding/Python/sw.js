@@ -1,17 +1,12 @@
-/* sw.js — Commonplace · Python. Lives at the Python/ root so its scope covers
- * every page. Deliberately conservative:
- *   · same-origin GETs      → stale-while-revalidate (instant, self-healing)
- *   · navigations offline   → last cached copy, else the offline card
- *   · cross-origin (Pyodide CDN, fonts) → straight to network, never cached
- *     (Pyodide is ~10 MB; caching it here would blow the storage budget and
- *      is already handled by the browser's own HTTP cache)
- *   · notebook pages + the Python worker → COOP/COEP added on the way out, so the
- *     page is cross-origin isolated and input() can wait on a SharedArrayBuffer
- *     (lib/py-worker-engine.js). Headers are added to the response only, never cached.
- * Bump VERSION to force every client to refetch.
+/* Python shell cache plus explicit, verified offline packs.
+ * Packs include the bundled Python runtime and survive shell version changes.
+ * Only listed static assets are downloaded; remote APIs always use the network.
  */
-var VERSION = "cp-py-v45";
+importScripts('offline-assets.js', 'lib/offline-worker.js');
+var VERSION = "cp-py-v46";
 var CORE = [
+  "offline.html",
+  "lib/offline-manager.js",
   "./",
   "index.html",
   "shelf.html",
@@ -226,52 +221,39 @@ var OFFLINE_CARD =
   'p{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:#7a8c80}' +
   'h1{font-size:26px;font-weight:600;margin:6px 0 10px}em{color:#41564a}</style>' +
   '<div><p>Commonplace · Python</p><h1>This page is not cached yet</h1>' +
-  '<em>Open it once while online and it will be here next time.</em></div>';
+  '<em>Connect and open Study offline in Python to download your lessons.</em>' +
+  '<p><a href="' + new URL('offline.html', self.location.href).href + '">Study offline</a></p></div>';
 
 self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET") return;
-
-  var url;
-  try { url = new URL(req.url); } catch (err) { return; }
-  if (url.origin !== self.location.origin) return;          /* CDNs: network only */
-  if (url.search.indexOf("nocache") >= 0) return;
-
-  /* my_scripts/ holds files I edit by hand (notes, .py) — network first so a
-     fresh save shows up at once; fall back to the cached copy offline. */
-  if (url.pathname.indexOf("/my_scripts/") !== -1) {
-    e.respondWith(
-      caches.open(VERSION).then(function (cache) {
-        return fetch(req, { cache: "no-store" }).then(function (res) {
-          if (res && res.ok && res.type === "basic") cache.put(req, res.clone());
-          return res;
-        }).catch(function () {
-          return cache.match(req, { ignoreSearch: true }).then(function (hit) { return hit || Response.error(); });
-        });
-      })
-    );
-    return;
-  }
-
-  e.respondWith(
-    caches.open(VERSION).then(function (cache) {
-      return cache.match(req, { ignoreSearch: false }).then(function (hit) {
-        var live = fetch(req).then(function (res) {
-          if (res && res.ok && res.type === "basic") cache.put(req, res.clone());
-          return res;
-        }).catch(function () {
-          return hit || cache.match(req, { ignoreSearch: true }) || null;
-        });
-
-        if (hit) { e.waitUntil(live.catch(function () {})); return isolate(req, hit); }
-
-        return live.then(function (res) {
-          if (res) return isolate(req, res);
-          if (req.mode === "navigate")
-            return new Response(OFFLINE_CARD, { headers: { "Content-Type": "text/html; charset=utf-8" } });
-          return new Response("", { status: 504, statusText: "Offline" });
-        });
-      });
-    })
-  );
+  var url = new URL(req.url);
+  if (url.origin !== self.location.origin || url.search.indexOf("nocache") >= 0) return;
+  e.respondWith((async function () {
+    var saved = await savedPackResponse(req);
+    // Python binaries/packages never need a background network request after download.
+    if (saved && url.pathname.indexOf('/_lib/pyodide/') !== -1) return saved;
+    var cache = await caches.open(VERSION);
+    var hit = await cache.match(req);
+    var live = fetch(req).then(async function (res) {
+      if (res && res.ok && res.type === "basic") await cache.put(req, res.clone());
+      return res;
+    }).catch(function () { return null; });
+    if (url.pathname.indexOf('/my_scripts/') === -1 && (saved || hit)) {
+      e.waitUntil(live);
+      return isolate(req, saved || hit);
+    }
+    var res = await live;
+    if (res && res.ok) return isolate(req, res);
+    var fallback = saved || hit || await cache.match(req, { ignoreSearch: true });
+    // Preserve the previous download during an incomplete app update.
+    if (!fallback) {
+      var asset = requestedAsset(req);
+      if (asset) fallback = await (await caches.open(PACK_CACHE)).match(packURL(asset), { ignoreSearch: true });
+    }
+    if (fallback) return isolate(req, fallback);
+    if (res) return res;
+    if (req.mode === "navigate") return new Response(OFFLINE_CARD, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    return new Response("", { status: 504, statusText: "Offline" });
+  })());
 });

@@ -14,6 +14,7 @@
   if (window.PyRun) return;
 
   var BASES = [
+    new URL("../../../../_lib/pyodide/", document.currentScript.src).href,
     "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
     "https://fastly.jsdelivr.net/pyodide/v0.26.4/full/",
     "https://unpkg.com/pyodide@0.26.4/"
