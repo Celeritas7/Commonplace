@@ -34,6 +34,8 @@
   async function check() { var state = await rpc('offline-status'); render(state); return state; }
   async function download(pack) {
     busy = true;
+    var errorNote = document.getElementById(pack + "-error");
+    if (errorNote) errorNote.textContent = "";
     document.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
     message.textContent = 'Keep this screen open while downloading. Interrupted downloads can be resumed.';
     try {
@@ -43,7 +45,10 @@
         document.getElementById(pack + '-progress').value = p.done / p.total;
       });
       message.textContent = 'Download saved. Turn Wi-Fi off, reopen Python and run a code cell to check this iPad.';
-    } catch (e) { message.textContent = e.message; }
+    } catch (e) {
+      message.textContent = e.message;
+      if (errorNote) errorNote.textContent = e.message;
+    }
     finally {
       busy = false; document.getElementById('check').disabled = false;
       try { await check(); } catch (e) { message.textContent = e.message; }

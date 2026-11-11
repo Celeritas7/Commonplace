@@ -628,8 +628,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "lib/offline-manager.js",
-      "bytes": 3647,
-      "revision": "44028110501fa495adf46df84c244a936879b08c501f733d953825e792208c7a"
+      "bytes": 3822,
+      "revision": "d7f54554894bb01c1dc18103f6d36fe3196fb418d6f79b0089b1bc327655763e"
     },
     {
       "url": "lib/offline-worker.js",
@@ -808,8 +808,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "offline.html",
-      "bytes": 3703,
-      "revision": "4da2f675b15e28f83577a012a2aa395a14b48e3f344e9692092374c06b89db79"
+      "bytes": 3869,
+      "revision": "abecaddb26beb4d55a1606b4a27c77fe845db53a0871ce871a5e1eb501130829"
     },
     {
       "url": "practice/data/index.js",
@@ -1153,8 +1153,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "../../_lib/gate.js",
-      "bytes": 13869,
-      "revision": "27fd0ed031c20f407da5ab1adc2581ab9b7086196f501d24f1e872f7c488dff0"
+      "bytes": 16363,
+      "revision": "b055abbc6293beaacc2b0ddf59fb55870125d960568a766d165c809272227670"
     },
     {
       "url": "../../_lib/marked.min.js",
