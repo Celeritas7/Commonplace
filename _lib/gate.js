@@ -1,6 +1,6 @@
 /* Commonplace - login gate. Loaded first thing in <head> of every page (added by add_gate.py).
    Hides the page until you are signed in with an allowed email, using the same Supabase
-   magic-link sign-in as cloud progress sync (same session, so one sign-in covers both).
+   Google or magic-link sign-in as cloud progress sync (same session, so one sign-in covers both).
 
    - Allowed emails are stored only as SHA-256 hashes (ALLOW), so no address sits in the public repo.
      To allow another address: python3 -c "import hashlib;print(hashlib.sha256(b'name@example.com').hexdigest())"
@@ -30,7 +30,16 @@
       return u && u.email ? String(u.email).toLowerCase() : null;
     } catch (e) { return null; }
   }
-  var returning = /[#&](access_token|error_description)=/.test(location.hash) || /[?&]code=/.test(location.search);
+  var returning = /[#&](access_token|error|error_description)=/.test(location.hash) || /[?&](code|error|error_description)=/.test(location.search);
+  var authParams = new URLSearchParams(location.hash.slice(1));
+  var queryParams = new URLSearchParams(location.search);
+  var authError = authParams.get('error_description') || authParams.get('error') || queryParams.get('error_description') || queryParams.get('error');
+  function returnUrl() {
+    var url = new URL(location.href);
+    url.hash = '';
+    ['code', 'error', 'error_code', 'error_description'].forEach(function (key) { url.searchParams.delete(key); });
+    return url.href;
+  }
 
   /* signed out in another tab: lock this one too */
   addEventListener('storage', function (e) { if (e.key === SKEY && !e.newValue) location.reload(); });
@@ -75,6 +84,10 @@
     '#cp-gate input:focus{outline:2px solid #8a5a2b;outline-offset:1px;border-color:#8a5a2b}' +
     '#cp-gate button{width:100%;height:44px;margin-top:12px;border:0;border-radius:10px;background:#2b241c;color:#fffdf7;font:600 15px/1 inherit;cursor:pointer}' +
     '#cp-gate button.g-ghost{background:transparent;color:#5a4632;border:1px solid #d8cbb8}' +
+    '#cp-gate .g-google{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#2b241c;border:1px solid #d8cbb8;margin-top:0}' +
+    '#cp-gate .g-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#7a6a55;font-size:12px}' +
+    '#cp-gate .g-divider:before,#cp-gate .g-divider:after{content:"";height:1px;flex:1;background:#e3d8c6}' +
+    '#cp-gate button:focus-visible{outline:2px solid #8a5a2b;outline-offset:3px}' +
     '#cp-gate button:disabled{opacity:.6;cursor:default}' +
     '#cp-gate .g-msg{margin:12px 0 0;font-size:13.5px;min-height:1.5em;color:#5a4632}' +
     '#cp-gate .g-msg.bad{color:#b42318}' +
@@ -168,28 +181,49 @@
     }
     ui.innerHTML = '<div class="g-card"><div class="g-mark">C</div><h1>Commonplace</h1>' +
       '<p class="g-sub">Sign in to open your study notes.</p>' +
+      '<button type="button" class="g-google" data-a="google"><span aria-hidden="true" style="font:bold 20px Arial;color:#4285f4">G</span>Continue with Google</button>' +
+      '<div class="g-divider">or use email</div>' +
       '<form novalidate><label for="cp-gate-em">Email</label>' +
       '<input id="cp-gate-em" type="email" autocomplete="email" inputmode="email" required>' +
       '<button type="submit">Email me a sign-in link</button>' +
       '<p class="g-msg" role="status"></p></form></div>';
-    var f = ui.querySelector('form'), inp = ui.querySelector('input'), btn = ui.querySelector('button'), msg = ui.querySelector('.g-msg');
+    var f = ui.querySelector('form'), inp = ui.querySelector('input'), btn = ui.querySelector('button[type="submit"]'), msg = ui.querySelector('.g-msg');
     if (email) inp.value = email;
-    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
+    var google = ui.querySelector('[data-a="google"]');
+    function busy(value) { google.disabled = value; btn.disabled = value; }
+    function failed(message) {
+      busy(false); set(NEXT, null);
+      msg.className = 'g-msg bad'; msg.textContent = message;
+    }
+    google.onclick = function () {
+      if (google.disabled) return;
+      busy(true); msg.className = 'g-msg'; msg.textContent = 'Opening Google…';
+      client(function (c) {
+        if (!c) return failed('Could not reach the sign-in service. Check your connection.');
+        var target = returnUrl();
+        set(NEXT, JSON.stringify({ url: target, t: Date.now() }));
+        c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: target } }).then(function (r) {
+          if (r && r.error) failed(r.error.message || 'Could not start Google sign-in. Try again or use email.');
+        }, function () { failed('Could not start Google sign-in. Try again or use email.'); });
+      });
+    };
+    addEventListener('pageshow', function () { busy(false); });
     f.onsubmit = function (e) {
       e.preventDefault();
       var v = inp.value.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { msg.className = 'g-msg bad'; msg.textContent = 'Enter a valid email address.'; return; }
-      btn.disabled = true; msg.className = 'g-msg'; msg.textContent = 'Sending…';
+      if (btn.disabled) return;
+      busy(true); msg.className = 'g-msg'; msg.textContent = 'Sending…';
       client(function (c) {
-        if (!c) { btn.disabled = false; msg.className = 'g-msg bad'; msg.textContent = 'Could not reach the sign-in service. Check your connection.'; return; }
+        if (!c) { busy(false); msg.className = 'g-msg bad'; msg.textContent = 'Could not reach the sign-in service. Check your connection.'; return; }
         /* Supabase sends the link back only to addresses on its allow-list and falls back to the home page
            otherwise, so remember this page and go back to it once the sign-in completes (see goBack) */
-        set(NEXT, JSON.stringify({ url: location.href.split('#')[0], t: Date.now() }));
-        c.auth.signInWithOtp({ email: v, options: { emailRedirectTo: location.href.split('#')[0] } }).then(function (r) {
-          btn.disabled = false;
+        set(NEXT, JSON.stringify({ url: returnUrl(), t: Date.now() }));
+        c.auth.signInWithOtp({ email: v, options: { emailRedirectTo: returnUrl() } }).then(function (r) {
+          busy(false);
           if (r && r.error) { msg.className = 'g-msg bad'; msg.textContent = r.error.message || 'Could not send the link.'; return; }
           msg.className = 'g-msg good'; msg.textContent = 'Check your inbox and open the link on this device. It brings you back here, signed in.';
-        }, function () { btn.disabled = false; msg.className = 'g-msg bad'; msg.textContent = 'Could not send the link. Try again.'; });
+        }, function () { busy(false); msg.className = 'g-msg bad'; msg.textContent = 'Could not send the link. Try again.'; });
       });
     };
   }
@@ -200,7 +234,7 @@
     set(NEXT, null);
     if (!returning || !n || !n.url || Date.now() - n.t > 3600e3) return false;
     var to; try { to = new URL(n.url); } catch (e) { return false; }
-    if (to.origin !== location.origin || to.href === location.href.split('#')[0]) return false;
+    if (to.origin !== location.origin || to.href === returnUrl()) return false;
     location.replace(to.href);
     return true;
   }
@@ -214,8 +248,17 @@
     }, function () { screen('form'); });
   }
   function run() {
+    if (authError) {
+      set(NEXT, null);
+      history.replaceState(null, '', returnUrl());
+      screen('form');
+      var message = ui.querySelector('.g-msg');
+      message.className = 'g-msg bad';
+      message.textContent = 'Sign-in was not completed. ' + authError + ' Try again or use email.';
+      return;
+    }
     if (returning) {
-      /* back from the email link: let supabase-js finish the sign-in, then check */
+      /* back from Google or the email link: let supabase-js finish the sign-in, then check */
       screen('wait');
       client(function (c) {
         if (!c) return check(sessionEmail());
