@@ -3,11 +3,36 @@
   'use strict';
   var busy = false;
   var message = document.getElementById('message');
-  function rpc(type, pack, progress) {
+  var root = new URL('../', document.currentScript.src).href;
+  var workerPromise;
+  function bounded(promise, milliseconds, text) {
     return new Promise(function (resolve, reject) {
-      var channel = new MessageChannel();
-      var timer;
-      function timeout() { clearTimeout(timer); timer = setTimeout(function () { channel.port1.close(); reject(new Error('Download paused. Keep this screen open and tap download to resume.')); }, 90000); }
+      var timer = setTimeout(function () { reject(new Error(text)); }, milliseconds);
+      promise.then(function (value) { clearTimeout(timer); resolve(value); }, function (error) { clearTimeout(timer); reject(error); });
+    });
+  }
+  function worker() {
+    if (!workerPromise) {
+      // Start immediately: the page load event may be held up by unrelated resources.
+      workerPromise = bounded(navigator.serviceWorker.register(root + 'sw.js', { scope: root, updateViaCache: 'none' })
+        .then(function (reg) { return reg.active ? reg : navigator.serviceWorker.ready; }), 25000,
+          'Offline setup could not start. Check your connection, then tap Retry setup below.')
+        .then(function (reg) { return reg.active; })
+        .catch(function (error) { workerPromise = null; throw error; });
+    }
+    return workerPromise;
+  }
+  async function rpc(type, pack, progress) {
+    var active = await worker();
+    return new Promise(function (resolve, reject) {
+      var channel = new MessageChannel(), timer;
+      function fail(error) { clearTimeout(timer); channel.port1.close(); workerPromise = null; reject(error); }
+      function timeout() {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          fail(new Error(type === 'offline-status' ? 'Offline storage did not respond. Tap Retry setup below.' : 'Download paused. Keep this screen open and tap download to resume.'));
+        }, type === 'offline-status' ? 15000 : 90000);
+      }
       timeout();
       channel.port1.onmessage = function (e) {
         timeout();
@@ -15,10 +40,19 @@
         clearTimeout(timer); channel.port1.close();
         if (e.data.error) reject(new Error(e.data.error)); else resolve(e.data);
       };
-      navigator.serviceWorker.ready.then(function (reg) {
-        reg.active.postMessage({ type: type, pack: pack }, [channel.port2]);
-      }).catch(reject);
+      try { active.postMessage({ type: type, pack: pack }, [channel.port2]); }
+      catch (error) { fail(error); }
     });
+  }
+  function setupError(error) {
+    message.textContent = error.message;
+    ['basic', 'science'].forEach(function (pack) {
+      document.getElementById(pack + '-status').textContent = 'Setup needs attention';
+      var note = document.getElementById(pack + '-error');
+      if (note) note.textContent = error.message;
+    });
+    var retry = document.getElementById('check');
+    retry.textContent = 'Retry setup'; retry.disabled = false;
   }
   function render(state) {
     ['basic', 'science'].forEach(function (pack) {
@@ -31,7 +65,11 @@
       button.disabled = busy || (pack === 'science' && !state.basic.ready);
     });
   }
-  async function check() { var state = await rpc('offline-status'); render(state); return state; }
+  async function check() {
+    var state = await rpc('offline-status'); render(state);
+    document.getElementById('check').textContent = 'Check downloads again';
+    return state;
+  }
   async function download(pack) {
     busy = true;
     var errorNote = document.getElementById(pack + "-error");
@@ -51,15 +89,15 @@
     }
     finally {
       busy = false; document.getElementById('check').disabled = false;
-      try { await check(); } catch (e) { message.textContent = e.message; }
+      try { await check(); } catch (e) { setupError(e); }
     }
   }
   ['basic', 'science'].forEach(function (p) { document.getElementById(p + '-download').onclick = function () { download(p); }; });
-  document.getElementById('check').onclick = function () { check().catch(function (e) { message.textContent = e.message; }); };
+  document.getElementById('check').onclick = function () { check().catch(setupError); };
   if (!('serviceWorker' in navigator) || !window.isSecureContext) {
-    message.textContent = 'Open the hosted Python app in Safari using HTTPS to download for offline use.';
+    setupError(new Error('Open the hosted Python app in Safari using HTTPS to download for offline use.'));
     return;
   }
-  check().catch(function (e) { message.textContent = e.message; });
-  navigator.serviceWorker.addEventListener('controllerchange', function () { if (!busy) check().catch(function () {}); });
+  check().catch(setupError);
+  navigator.serviceWorker.addEventListener('controllerchange', function () { workerPromise = null; if (!busy) check().catch(setupError); });
 })();

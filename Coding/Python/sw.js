@@ -3,7 +3,7 @@
  * Only listed static assets are downloaded; remote APIs always use the network.
  */
 importScripts('offline-assets.js', 'lib/offline-worker.js');
-var VERSION = "cp-py-v47";
+var VERSION = "cp-py-v48";
 var CORE = [
   "offline.html",
   "lib/offline-manager.js",
@@ -175,9 +175,18 @@ var CORE = [
 self.addEventListener("install", function (e) {
   e.waitUntil(
     caches.open(VERSION).then(function (c) {
-      /* addAll rejects the whole batch on one 404 — add individually */
-      return Promise.all(CORE.map(function (u) {
-        return c.add(new Request(u, { cache: "reload" })).catch(function () {});
+      // Install only the small setup shell. Large lesson downloads are explicit,
+      // so Safari does not wait on hundreds of requests before enabling setup.
+      var shell = ['index.html', 'offline.html', 'lib/offline-manager.js?v=48', 'lib/sw-register.js?v=1', 'pwa/manifest.json', '../../_lib/gate.js'];
+      return Promise.all(shell.map(async function (u) {
+        var controller = new AbortController();
+        var timeout = setTimeout(function () { controller.abort(); }, 15000);
+        try {
+          var request = new Request(new URL(u, self.location.href), { cache: 'reload', signal: controller.signal });
+          var response = await fetch(request);
+          if (response.ok) await c.put(request, response);
+        } catch (error) { /* Saved packs remain available when a shell refresh fails. */ }
+        finally { clearTimeout(timeout); }
       }));
     }).then(function () { return self.skipWaiting(); })
   );

@@ -18,11 +18,12 @@ async function savedPackResponse(req) {
 }
 async function packStatus() {
   var cache = await caches.open(PACK_CACHE), result = {};
+  var savedKeys = new Set((await cache.keys()).map(function (request) { return request.url; }));
   for (var name of ['basic', 'science']) {
     var assets = self.CP_OFFLINE_ASSETS[name], done = 0, remaining = 0, bytes = 0;
     for (var asset of assets) {
       bytes += asset.bytes;
-      if (await cache.match(packKey(asset))) done++; else remaining += asset.bytes;
+      if (savedKeys.has(packKey(asset))) done++; else remaining += asset.bytes;
     }
     result[name] = { done: done, total: assets.length, bytes: bytes, remainingBytes: remaining, ready: done === assets.length };
   }

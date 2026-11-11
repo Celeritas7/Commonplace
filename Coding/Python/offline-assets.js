@@ -628,13 +628,13 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "lib/offline-manager.js",
-      "bytes": 3822,
-      "revision": "d7f54554894bb01c1dc18103f6d36fe3196fb418d6f79b0089b1bc327655763e"
+      "bytes": 5543,
+      "revision": "52421a68efadcc833a849710d1b5911bc6e61868ce2699d48d90bfee579e1d27"
     },
     {
       "url": "lib/offline-worker.js",
-      "bytes": 4163,
-      "revision": "91664c8daeec51e47477275acee7eebd5c06d2b4671bd7f277277aaf47703762"
+      "bytes": 4256,
+      "revision": "7f1dd0611b9a16011c831f7c096ff216677d3d1c1191e221a4ace0526034abc3"
     },
     {
       "url": "lib/practice-engine.js",
@@ -808,8 +808,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "offline.html",
-      "bytes": 3869,
-      "revision": "abecaddb26beb4d55a1606b4a27c77fe845db53a0871ce871a5e1eb501130829"
+      "bytes": 3875,
+      "revision": "950ae3fa03ae4a329bff8823c1e822d7c4e413b8a3bed4889f8385dec583fc94"
     },
     {
       "url": "practice/data/index.js",
