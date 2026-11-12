@@ -42,6 +42,8 @@ async function download(port) {
           const data = await r.arrayBuffer();
           if (await hash(data)!==a.revision) throw Error('File version mismatch. The site may be updating. Repair setup while online, then resume.');
           await cache.put(keyOf(a),new Response(data,{headers:r.headers}));
+          // A verified pack update also supersedes older network-fetched shell files.
+          await (await caches.open(SHELL)).put(urlOf(a),new Response(data,{headers:r.headers}));
           remainingBytes -= a.bytes;
           // Keep previous revisions: incomplete updates and repair must not destroy working packs.
         } catch (e) {
@@ -75,8 +77,10 @@ self.addEventListener('fetch',e=>{
       if(live.ok){await shell.put(u.href,live.clone());return live;}
     }catch(_){}finally{clearTimeout(timer);}
     const hit=await shell.match(u.href);
-    if(saved)return saved;
+    // Prefer the most recently fetched page/script, so an online login fix
+    // cannot revert to an older explicit pack on the next offline launch.
     if(hit)return hit;
+    if(saved)return saved;
     const previous=await pack.match(urlOf(a),{ignoreSearch:true});if(previous)return previous;
     return new Response(req.mode==='navigate'?'This SQL page is not downloaded. Reconnect and open Study offline.':'Offline file not saved',{status:503,headers:{'Content-Type':'text/plain'}});
   })());
