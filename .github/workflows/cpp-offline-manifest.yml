@@ -1,0 +1,73 @@
+name: Keep C++ offline downloads current
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Coding/c_and_cpp_study/**'
+      - '_lib/**'
+      - 'reading-sync.js'
+      - 'extras.js'
+      - '.github/workflows/cpp-offline-manifest.yml'
+  pull_request:
+    paths:
+      - 'Coding/c_and_cpp_study/**'
+      - '_lib/**'
+      - 'reading-sync.js'
+      - 'extras.js'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: cpp-offline-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Rebuild and validate pack
+        run: |
+          python3 Coding/c_and_cpp_study/tools/build-offline.py
+          node Coding/c_and_cpp_study/tests/offline-worker.cjs
+          node Coding/c_and_cpp_study/tests/offline-ui.cjs
+      - name: Require current manifest in pull requests
+        if: github.event_name == 'pull_request'
+        run: git diff --exit-code -- Coding/c_and_cpp_study/offline-assets.js
+      - name: Save manifest and request branch Pages rebuild
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          changed=false
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            python3 Coding/c_and_cpp_study/tools/build-offline.py
+            if git diff --quiet -- Coding/c_and_cpp_study/offline-assets.js; then exit 0; fi
+            git add Coding/c_and_cpp_study/offline-assets.js
+            git commit -m 'Refresh C++ offline pack after source changes'
+            if git push origin HEAD:main; then changed=true; break; fi
+          done
+          if [ "$changed" != true ]; then echo 'Could not publish refreshed manifest'; exit 1; fi
+          # GITHUB_TOKEN commits do not trigger branch Pages builds automatically.
+          gh api --method POST "repos/$GH_REPO/pages/builds"
+      - name: Install browser test tools
+        run: |
+          npm install --prefix /tmp/cpp-offline-test --no-save playwright@1.58.2
+          /tmp/cpp-offline-test/node_modules/.bin/playwright install --with-deps chromium
+      - name: Chromium offline acceptance tests
+        env:
+          CODEX_PRIMARY_RUNTIME_NODE_MODULES: /tmp/cpp-offline-test/node_modules
+        run: |
+          export CHROMIUM_PATH=$(node -p "require('/tmp/cpp-offline-test/node_modules/playwright').chromium.executablePath()")
+          node Coding/c_and_cpp_study/tests/offline-browser.cjs

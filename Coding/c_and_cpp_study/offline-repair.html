@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Repair C/C++ offline setup</title><style>body{max-width:680px;margin:40px auto;padding:20px;font:18px/1.6 system-ui;background:#f7f3eb;color:#282339}button{padding:15px;border:0;border-radius:10px;background:#54248d;color:white;font:600 17px system-ui}a{color:#54248d}#status{overflow-wrap:anywhere}</style><h1>Repair C/C++ setup</h1><p>This refreshes only this section’s setup shell and worker. It keeps downloaded packs, localStorage, IndexedDB, and other Commonplace sections.</p><p>Connect first. Open this page in the same Safari browser or Home Screen app where you study.</p><button id="repair">Repair setup / Retry</button><p id="status" role="status" aria-live="polite"></p><a href="offline.html">Back to downloads</a><script>
+const button=document.getElementById('repair'),message=document.getElementById('status');
+function bound(p,ms){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Timed out. Reconnect and retry; saved packs and study data are kept.')),ms);p.then(v=>{clearTimeout(timer);resolve(v);},e=>{clearTimeout(timer);reject(e);});});}
+button.onclick=async()=>{
+ button.disabled=true;message.textContent='Refreshing setup…';
+ try{
+  if(!navigator.serviceWorker||!isSecureContext)throw new Error('Open the HTTPS app in Safari.');
+  const root=new URL('./',location.href);
+  // Unique worker URL bypasses stale HTTP cache; imports always bypass it too.
+  const script=new URL('sw.js?repair='+Date.now(),root);
+  const reg=await bound(navigator.serviceWorker.register(script,{scope:root.href,updateViaCache:'none'}),25000);
+  const worker=reg.installing||reg.waiting||reg.active;
+  if(!worker||worker.scriptURL!==script.href)throw new Error('Repair worker did not start. Retry.');
+  await bound(new Promise((resolve,reject)=>{const check=()=>{if(worker.state==='activated')resolve();if(worker.state==='redundant')reject(new Error('Repair install failed. Retry.'));};worker.addEventListener('statechange',check);check();}),55000);
+  const state=await bound(new Promise((resolve,reject)=>{const channel=new MessageChannel();channel.port1.onmessage=e=>{if(e.data.progress)return;channel.port1.close();e.data.error?reject(new Error(e.data.error)):resolve(e.data);};worker.postMessage({type:'status'},[channel.port2]);}),45000);
+  message.textContent='Setup repaired. '+state.done+'/'+state.total+' current files saved. '+(state.ready?'Ready offline — lessons and editing.':'Open downloads to resume. Existing packs and study data are kept.');
+ }catch(e){message.textContent=e.message;}finally{button.disabled=false;}
+};
+</script></html>

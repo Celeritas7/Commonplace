@@ -1,5 +1,7 @@
 # Interactive C &amp; C++ Books
 
+**Offline study:** use [Study offline](offline.html) to explicitly save lessons and the editor. See [offline capabilities, setup and validation](OFFLINE.md). C/C++ compilation remains online-only.
+
 Two playful, beginner-first books for learning C and C++ from scratch — built as self-contained HTML lessons with animated mascots, XP, and small interactive demos in every chapter.
 
 **[→ Open the launcher](index.html)** to start reading.
@@ -8,7 +10,7 @@ Two playful, beginner-first books for learning C and C++ from scratch — built 
 
 ## What's published
 
-Part 0 (Before You Code) is complete for both books — **10 lessons** total. Each lesson is a single self-contained HTML file that runs in any modern browser, with no internet required after the first load.
+Part 0 (Before You Code) is complete for both books — **10 lessons** total. Each lesson is a single self-contained HTML file that runs in any modern browser, available offline after completing the explicit study download.
 
 ### The C Book — guided by Bit, the friendly CPU chip 🟠
 

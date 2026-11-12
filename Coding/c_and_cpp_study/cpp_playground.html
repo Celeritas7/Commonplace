@@ -19,10 +19,10 @@
 <meta name="apple-mobile-web-app-title" content="C++ Lab">
 <meta name="theme-color" content="#4c1d95">
 <link rel="apple-touch-icon" href="pwa/icon-180.png">
-<link href="../_lib/fonts/gf-1ec34e24.css" rel="stylesheet" onerror="this.href='../../_lib/fonts/gf-1ec34e24.css'">
+<link href="../../_lib/fonts/gf-1ec34e24.css" rel="stylesheet">
 <!-- CodeMirror 5 (editor) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/idea.min.css">
+<link rel="stylesheet" href="../../_lib/codemirror/codemirror.min.css">
+<link rel="stylesheet" href="lib/vendor/idea.min.css">
 <style>
   :root {
     --bg1: #faf5ff; --bg2: #f3e8ff; --bg3: #e9d5ff;
@@ -165,7 +165,6 @@
   }
 </style>
 <style id="v2-skin">
-  @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
   body{background-color:#f5f2fb;background-image:radial-gradient(circle at 14% 6%, rgba(255,255,255,.6) 0%, rgba(255,255,255,0) 38%),radial-gradient(circle at 88% 86%, rgba(109,40,217,.06) 0%, rgba(109,40,217,0) 44%);background-attachment:fixed;}
   .page{max-width:1200px;padding:26px 30px 92px;}
   .top{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:26px;}
@@ -657,8 +656,10 @@
     #editor-panel.v3-fs .cpx-pal .cpx-pill{flex:0 0 auto;max-width:100%;}
   }
 </style>
+<script src="lib/sw-register.js" defer></script>
 </head>
 <body>
+<div class="cpp-offline-bar" style="position:relative;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 18px;background:#f1e8fc;color:#38204f;font:15px/1.4 system-ui"><a href="offline.html" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#54248d;color:white;text-decoration:none;font-weight:700;min-height:44px;box-sizing:border-box">↓ Study offline</a><span>Lessons &amp; editing · compilation needs internet</span></div><div style="padding:10px 18px;background:#fbf7ff;color:#38204f;font:14px/1.5 system-ui"><button id="offline-save-problems" type="button" style="padding:12px;min-height:44px">Save problems offline</button><span id="offline-practice-status" role="status" style="display:block;margin-top:6px"></span></div>
 <div class="page">
 
   <div class="top">
@@ -796,7 +797,7 @@
 
   </div>
 
-  <div class="v2note">Runs compile in the cloud (Judge0 CE), so an internet connection is needed. Sign in once &mdash; every attempt saves to your account.</div>
+  <div class="v2note">Runs compile in the cloud (Judge0 CE) and need internet/sign-in. Offline drafts stay on this device; no automatic draft synchronization is added.</div>
   <footer class="v2foot">
     <span class="motto">&ldquo;Write it once, run it twice, keep every mistake.&rdquo;</span>
     <span><a href="index.html">&larr; Reading Room</a> &middot; g++ via Judge0 CE</span>
@@ -807,11 +808,11 @@
 <div class="toast" id="toast"></div>
 
 <!-- libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../../_lib/codemirror/codemirror.min.js"></script>
+<script src="../../_lib/codemirror/mode/clike/clike.min.js"></script>
+<script src="../../_lib/codemirror/addon/edit/closebrackets.min.js"></script>
+<script src="../../_lib/codemirror/addon/edit/matchbrackets.min.js"></script>
+<script src="../../_lib/supabase.js"></script>
 <script>
 /* ---------- config ---------- */
 var SUPABASE_URL = "https://wylxvmkcrexwfpjpbhyy.supabase.co";
@@ -891,11 +892,17 @@ function sendMagicLink(){
 sb.auth.onAuthStateChange(function(_event, session){
   currentUser = session ? session.user : null;
   renderAuth();
-  if(currentUser){ loadMistakes(); loadExercises(); } else { renderMistakes([]); renderExercises([]); }
+  if(currentUser){ loadMistakes(); loadExercises(); } else { renderMistakes([]); loadExercises(); }
 });
 
 /* ---------- run ---------- */
 function runCode(){
+  if(!navigator.onLine){
+    if(window.__draftFlush) window.__draftFlush();
+    setStatus("chip-idle","offline editing");
+    $("term").textContent="Offline: this app does not include a C++ compiler. Your draft stays on this device. Reconnect and sign in to compile and run; lesson simulations are not real C++ execution.";
+    return;
+  }
   var code = cm.getValue();
   var stdin = $("stdin").value || "";
   setStatus("chip-run", "running…");
@@ -1150,10 +1157,13 @@ function renderMistakes(rows){
 
 /* ---------- exercises: picker ---------- */
 function loadExercises(){
-  if(!currentUser){ renderExercises([]); return; }
+  var saved = window.cppSavedProblems ? cppSavedProblems() : [];
+  if(!navigator.onLine || !currentUser){ exercises=saved; renderExercises(saved); return; }
+  window.cppProblemsFresh=false;
   sb.from("commonplace_exercises").select("*").eq("subject","cpp").order("order_index")
     .then(function(res){
-      if(res.error){ $("exercises").innerHTML = '<div class="ex-empty">Could not load problems: '+esc(res.error.message)+'</div>'; return; }
+      if(res.error){ exercises=saved; renderExercises(saved); return; }
+      window.cppProblemsFresh=true;
       exercises = res.data || [];
       renderExercises(exercises);
     });
@@ -1162,7 +1172,7 @@ function isAuto(ex){ return !!(ex && ex.expected_output != null && String(ex.exp
 function renderExercises(rows){
   var box = $("exercises");
   $("ex-count").textContent = currentUser ? ("· "+rows.length) : "";
-  if(!currentUser){ box.innerHTML = '<div class="ex-empty">Sign in to load your practice problems.</div>'; return; }
+  if(!currentUser && !rows.length){ box.innerHTML = '<div class="ex-empty">Sign in online to load account problems. Offline, use the syntax cards and exercises in the downloaded lessons.</div>'; return; }
   var freeRow =
     '<div class="ex-row" data-id="__free">' +
       '<div class="ex-main">' +
@@ -1321,12 +1331,13 @@ renderAuth();
 sb.auth.getSession().then(function(res){
   currentUser = res.data.session ? res.data.session.user : null;
   renderAuth();
-  if(currentUser){ loadMistakes(); loadExercises(); }
+  if(currentUser){ loadMistakes(); }
+  loadExercises();
 });
 </script>
 <script src="lib/cpp-practice-plus.js"></script>
 <script src="practice/cpp-practice-sections.js"></script>
-<script src="../_lib/progress-backup.js" onerror="var s=document.createElement('script');s.src='../../_lib/progress-backup.js';document.head.appendChild(s)"></script>
+<script src="../../_lib/progress-backup.js"></script>
 <script>
 /* ---------- v2 shell: tabs + panel placement ---------- */
 (function(){
@@ -3628,5 +3639,6 @@ html[data-theme="midnight"] #editor-panel .panel-head .cpx2-asmbtn{background:#1
   setTimeout(function(){ clearInterval(t); }, 15000);
 })();
 </script>
+<script src="lib/offline-practice.js"></script>
 </body>
 </html>
