@@ -1,0 +1,68 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#234f3b"><link rel="manifest" href="site.webmanifest"><title>Repair offline setup · SQL</title>
+<style>body{margin:0;background:#f4efe3;color:#24392f;font:17px/1.6 system-ui}main{max-width:720px;margin:auto;padding:24px 20px 60px}h1{font:40px Georgia}h2{font-size:22px}section{background:#fffdf6;border:1px solid #c9cabb;border-radius:14px;padding:22px;margin:20px 0}button,.action{font:600 16px system-ui;padding:13px 18px;min-height:48px;border-radius:8px;border:0;background:#234f3b;color:white;cursor:pointer;display:inline-block;text-decoration:none;margin:4px 8px 4px 0}button:disabled{opacity:.55}a{color:#234f3b}progress{width:100%;height:22px}#error{color:#972f1c;overflow-wrap:anywhere}#status{font-weight:700}#message{overflow-wrap:anywhere}small{font-size:14px}li{margin:8px 0}</style>
+<main><a href="index.html">← SQL home</a><h1>Study offline</h1><p>Save the SQL book and a real SQLite engine on this device. Prepare downloads in the same Safari browser or Home Screen app you will use to study.</p>
+<section><h2>Complete SQL study pack</h2><p>All 10 modules, quizzes, local exercises, mistake drills, fonts and the SQLite WebAssembly runtime.</p><p id="status" role="status">Checking downloads…</p><p id="size">Calculating download size…</p><progress id="progress" max="1" value="0" aria-label="Download progress"></progress><p><button id="download" disabled>Download SQL pack</button><button id="check">Retry / check downloads</button></p><p id="error" role="alert"></p><p id="message" aria-live="polite">Keep this screen open during downloads.</p></section>
+<section><h2>On your iPad</h2><ol><li>Open SQL in Safari while connected. Sign in on the SQL home page if requested.</li><li>For a Home Screen app: Safari → Share → Add to Home Screen. Open that new app, sign in there if needed, then open <b>Study offline</b>.</li><li>Tap <b>Download SQL pack</b>. Wait for <b>Ready offline</b>. A Safari download may not be shared with the Home Screen app; check inside the one you will use.</li><li>Turn off Wi-Fi and mobile data, close and reopen SQL, then run <code>SELECT 2 + 3 AS answer;</code> in the lab. Expect 5.</li></ol><p>Use a normal browser session, not Private Browsing. iPadOS can reclaim website storage. Recheck before travel; deleting website data or removing an app may remove your work. Use the existing progress backup/export menu for saved study records.</p></section>
+<section><h2>What works offline?</h2><p>Reading, local quizzes, SQLite queries and local exercise grading work without a server. SQLite is real SQL execution, but PostgreSQL-only examples and instructions that ask for pgAdmin/Python need those external tools.</p><p><b>Database changes:</b> sample tables live in memory. INSERT, UPDATE and CREATE affect the current lab session; reload or Reset data restores the sample tables. Database changes are not saved or synchronized. Home and free-lab query drafts are now saved locally; module and exercise answers retain their existing local storage.</p><p><b>Your study records:</b> updates and repair never clear localStorage or IndexedDB, including existing practice, bookmarks, highlights and notes. Downloads contain app files, not a backup of personal records.</p><p><b>Online-only:</b> new sign-ins, cloud access and external SQLZoo links require internet. The local practice page is included. Existing code attempts to synchronize module completion, checks and the Mistake Bank after a signed-in page load. Cloud synchronization was not verified against your account; do not rely on it as a backup. SQLZoo offline solves, draft queries, bookmarks and notes are not promised to sync later.</p></section>
+<section><h2>Setup stuck or an older version?</h2><p>Reconnect and use Repair. It refreshes only SQL’s worker and temporary page cache. Downloaded packs and saved study records are kept; other Commonplace sections are untouched.</p><button id="repair">Repair SQL offline setup</button><p><a href="offline-repair.html?nocache=1">Open standalone repair page</a></p></section>
+</main><script>
+(()=>{
+  'use strict';
+  const root=new URL('./',location.href), $=id=>document.getElementById(id);
+  let busy=false,active=null;
+  const bounded=(promise,ms,label)=>new Promise((resolve,reject)=>{
+    const t=setTimeout(()=>reject(Error(label+' timed out. Retry while connected.')),ms);
+    promise.then(v=>{clearTimeout(t);resolve(v)},e=>{clearTimeout(t);reject(e)});
+  });
+  async function worker(repair=false){
+    if(!isSecureContext||!navigator.serviceWorker||!window.caches)throw Error('Open the hosted SQL app in Safari over HTTPS. Offline storage is unavailable here.');
+    if(active&&!repair)return active;
+    const url=new URL('sw.js'+(repair?'?repair='+Date.now():''),root);
+    const reg=await bounded(navigator.serviceWorker.register(url,{scope:root.href,updateViaCache:'none'}),20000,'Worker registration');
+    await bounded(new Promise((resolve,reject)=>{
+      const deadline=Date.now()+20000;
+      function poll(){
+        if(reg.waiting)reg.waiting.postMessage('skip-waiting');
+        if(!reg.installing&&!reg.waiting&&reg.active?.state==='activated')return resolve();
+        if(Date.now()>deadline)return reject(Error('Worker activation timed out. Close other SQL tabs and retry repair.'));
+        setTimeout(poll,100);
+      }poll();
+    }),22000,'Worker activation');
+    active=reg.active;return active;
+  }
+  async function rpc(type,progress){
+    const w=await worker();
+    return new Promise((resolve,reject)=>{
+      const c=new MessageChannel();let timer;
+      const finish=(err,data)=>{clearTimeout(timer);c.port1.close();err?reject(err):resolve(data)};
+      const reset=()=>{clearTimeout(timer);timer=setTimeout(()=>finish(Error('Download check stopped responding. Tap Retry or Repair. Saved files are kept.')),type==='sql-status'?20000:60000)};
+      reset();c.port1.onmessage=e=>{reset();if(e.data.progress){progress?.(e.data);return;}finish(e.data.error?Error(e.data.error):null,e.data)};
+      try{w.postMessage({type},[c.port2])}catch(e){finish(e)}
+    });
+  }
+  function size(s){$('size').textContent=(s.bytes/1e6).toFixed(2)+' MB total · '+(s.remainingBytes/1e6).toFixed(2)+' MB remaining';$('progress').value=(s.bytes-s.remainingBytes)/s.bytes;}
+  function render(s){size(s);$('status').textContent=s.ready?'Ready offline':s.done?'Download incomplete · '+s.done+' / '+s.total+' files':'Not downloaded';$('download').textContent=s.ready?'Verify saved pack':s.done?'Resume download':'Download SQL pack';}
+  function error(e){$('error').textContent=e.message;$('status').textContent='Setup needs attention';active=null;}
+  function controls(value){busy=value;document.querySelectorAll('button').forEach(b=>b.disabled=value);}
+  async function action(kind){
+    if(busy)return;controls(true);$('error').textContent='';
+    try{
+      if(kind==='repair'){
+        $('status').textContent='Refreshing SQL offline support…';active=null;
+        await worker(true);
+        await bounded((async()=>{for(const k of await caches.keys())if(k.startsWith('cp-sql-shell-')||/^sql-lab-v\d+$/.test(k))await caches.delete(k)})(),10000,'SQL cache repair');
+        $('message').textContent='Repair completed. Saved packs and study data were kept. Resume if files need updating.';
+      }
+      if(kind==='download'){
+        $('message').textContent='Keep this screen open. Interrupted downloads resume from completed files.';
+        if(navigator.storage?.persist)navigator.storage.persist().catch(()=>{});
+        render(await rpc('sql-download',s=>{size(s);$('status').textContent='Saving '+s.done+' / '+s.total+' files…';}));
+        $('message').textContent='Pack verified. Turn off Wi-Fi, reopen SQL and run SELECT 2 + 3 AS answer;';
+      }else render(await rpc('sql-status'));
+    }catch(e){error(e)}finally{controls(false)}
+  }
+  $('download').onclick=()=>action('download');$('check').onclick=()=>action('check');$('repair').onclick=()=>action('repair');
+  action('check');
+})();
+
+</script></html>
