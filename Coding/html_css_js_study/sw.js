@@ -3,12 +3,21 @@
  * ../../_lib and ../../extras.js, so those are precached too. Bump CACHE on any change.
  * The study-book links go to Google Drive and are never cached.
  */
-const CACHE = "html-css-js-study-v1";
+const CACHE = "html-css-js-study-v2";
 
 const PRECACHE = [
   "./",
   "./index.html",
   "./data/course-index.js",
+  "./my_apps/",
+  "./my_apps/index.html",
+  "./my_apps/_bundle.js",
+  "./my_apps/scripts.json",
+  "./my_apps/log.md",
+  "./my_apps/01_part_matrix/tutorial.md",
+  "./my_apps/01_part_matrix/notes.md",
+  "./my_apps/02_batsmith/tutorial.md",
+  "./my_apps/02_batsmith/notes.md",
   "./pwa/manifest.json",
   "./pwa/icon-192.png",
   "./pwa/icon-512.png",
