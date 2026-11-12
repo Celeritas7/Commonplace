@@ -24,7 +24,7 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('message', e => { if (e.data === 'skip-waiting') self.skipWaiting(); });
 self.addEventListener('fetch', e => {
   const req = e.request, u = new URL(req.url);
-  if (req.method !== 'GET' || u.origin !== root.origin || u.searchParams.has('bat-network')) return;
+  if (req.method !== 'GET' || u.origin !== root.origin || (u.searchParams.has('bat-network') && req.mode !== 'navigate')) return;
   e.respondWith((async () => {
     const pack = await caches.open(PACK), shell = await caches.open(SHELL);
     // Network first: even an old saved page can receive fixes. Saved packs are
