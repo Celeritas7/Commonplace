@@ -9,11 +9,12 @@ const gate=fs.readFileSync(path.join(root,'_lib/gate.js'),'utf8').replace(/var A
 const now=Math.floor(Date.now()/1000),b64=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
 const token=b64({alg:'HS256',typ:'JWT'})+'.'+b64({sub:id,email,exp:now+3600,iat:now,aud:'authenticated',role:'authenticated'})+'.fixture';
 const user={id,email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'google'},user_metadata:{},created_at:new Date().toISOString()};
+const watchdog=setTimeout(()=>{console.error('Callback suite exceeded 90 seconds');process.exit(1)},90000);
 (async()=>{
  for(const [name,engine] of Object.entries({chromium,webkit})){
   const browser=await engine.launch();
   try{
-   const context=await browser.newContext();context.setDefaultTimeout(15000);let tokenAtSdkLoad, legacy=true;
+   const context=await browser.newContext();context.setDefaultTimeout(15000);let legacy=true;
    await context.route('**/*',async route=>{
     const u=new URL(route.request().url());
     if(u.pathname==='/auth/v1/user')return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'GET, OPTIONS'},body:JSON.stringify(user)});
@@ -21,7 +22,7 @@ const user={id,email,aud:'authenticated',role:'authenticated',app_metadata:{prov
     const rel=decodeURIComponent(u.pathname).replace(/^\/Commonplace\//,'');
     if(rel==='_lib/gate.js')return route.fulfill({contentType:'text/javascript',body:gate});
     if(rel==='_lib/supabase.js'){
-     tokenAtSdkLoad=await route.request().frame().evaluate(()=>location.hash.includes('access_token='));
+     return route.fulfill({contentType:'text/javascript',body:'window.__callbackAtSdkLoad = location.hash.includes("access_token=");\n'+fs.readFileSync(path.join(root,'_lib/supabase.js'),'utf8')});
     }
     const f=path.resolve(root,rel);
     if(!f.startsWith(root+path.sep)||!fs.existsSync(f)||!fs.statSync(f).isFile())return route.fulfill({status:404,body:''});
@@ -34,13 +35,13 @@ const user={id,email,aud:'authenticated',role:'authenticated',app_metadata:{prov
    const callback=start+'#access_token='+token+'&refresh_token=fixture&expires_in=3600&token_type=bearer';
    await page.goto(callback);
    await page.getByRole('link',{name:'Continue with Google'}).waitFor();
-   assert.equal(tokenAtSdkLoad,false,'Regression reproduces tab code stripping credentials');
+   assert.equal(await page.evaluate(()=>window.__callbackAtSdkLoad),false,'Regression reproduces tab code stripping credentials');
    assert.equal(await page.evaluate(()=>localStorage.getItem('cp:gate:ok')),null);
    console.log('PASS '+name+': reproduced the previous login loop with destructive tab URL update');
    legacy=false;
    await page.goto(callback);
    await page.waitForFunction(()=>localStorage.getItem('cp:gate:ok')==='offline-fixture@example.test');
-   assert.equal(tokenAtSdkLoad,true,'BAT must retain callback until SDK loads');
+   assert.equal(await page.evaluate(()=>window.__callbackAtSdkLoad),true,'BAT must retain callback until SDK loads');
    assert.equal(await page.locator('#cp-gate').count(),0);
    assert.ok(!new URL(page.url()).hash.includes('access_token'),'SDK removes consumed credentials');
    const key='sb-wylxvmkcrexwfpjpbhyy-auth-token';
@@ -51,4 +52,4 @@ const user={id,email,aud:'authenticated',role:'authenticated',app_metadata:{prov
    await context.close();
   }finally{await browser.close();}
  }
-})().catch(e=>{console.error(e);process.exitCode=1;});
+})().then(()=>clearTimeout(watchdog)).catch(e=>{console.error(e);clearTimeout(watchdog);process.exitCode=1;});
