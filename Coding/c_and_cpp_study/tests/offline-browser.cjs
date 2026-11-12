@@ -41,7 +41,7 @@ const server=http.createServer((req,res)=>{
   await page.goto(base+'offline.html');
   await page.evaluate(email=>{
    localStorage.setItem('cp:gate:ok',email);
-   localStorage.setItem('sb-wylxvmkcrexwfpjpbhyy-auth-token',JSON.stringify({access_token:'offline-fixture',refresh_token:'offline-fixture',expires_at:1,user:{id:'fixture',email}}));
+   localStorage.setItem('sb-wylxvmkcrexwfpjpbhyy-auth-token',JSON.stringify({access_token:'offline-fixture',refresh_token:'offline-fixture',expires_at:Math.floor(Date.now()/1000)+3600,user:{id:'fixture',email}}));
   },fixtureEmail);
   await page.goto(base+'index.html');assert.equal(await page.locator('#cp-gate').count(),0);await page.getByRole('link',{name:'↓ Study offline',exact:true}).click();
   await page.waitForFunction(()=>!document.querySelector('#download').disabled);
@@ -80,7 +80,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(await page.locator('#cp-gate').count(),0,'Saved sign-in reopens offline with real gate');
   await page.evaluate(()=>{cm.setValue('cout << 55; // offline draft');__draftFlush();runCode();});
   assert.match(await page.locator('#term').textContent(),/does not include a C\+\+ compiler/);
-  await page.reload();await page.waitForFunction(()=>window.cm&&cm.getValue().includes('offline draft'));
+  await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.cm&&cm.getValue().includes('offline draft'));
   await page.goto(base+'offline.html');await page.waitForFunction(()=>document.querySelector('#state').textContent.startsWith('Ready offline'),{},{timeout:60000});
   assert.deepEqual(errors,[]);console.log('PASS repair isolation, offline reopening, local draft persistence, honest execution notice');
  }finally{await context.close();await browser.close();await new Promise(r=>server.close(r));}
