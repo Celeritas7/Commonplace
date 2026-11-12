@@ -308,11 +308,7 @@
           if (!u || !u.email) return callbackFailed('No saved session was received. If Google returned to Safari, reopen the Home Screen app and start sign-in there.');
           check(String(u.email).toLowerCase());
         }, function () {
-          if (sessionEmail()) return check(sessionEmail());
-          screen('form');
-          var message = ui.querySelector('.g-msg');
-          message.className = 'g-msg bad';
-          message.textContent = 'Sign-in could not finish. Reconnect and try again in this app.';
+          callbackFailed('The sign-in service did not respond in time.');
         });
       });
       return;

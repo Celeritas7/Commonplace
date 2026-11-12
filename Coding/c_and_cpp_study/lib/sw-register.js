@@ -16,6 +16,5 @@
   observer.observe(document.documentElement,{childList:true,subtree:true});
   addEventListener('DOMContentLoaded',loginHelp);
   if (!('serviceWorker' in navigator) || !isSecureContext) return;
-  navigator.serviceWorker.register(new URL('sw.js',root),{scope:root.href,updateViaCache:'none'}).catch(function(){
-  var root=new URL('../',document.currentScript.src);});
+  navigator.serviceWorker.register(new URL('sw.js',root),{scope:root.href,updateViaCache:'none'}).catch(function(){});
 })();

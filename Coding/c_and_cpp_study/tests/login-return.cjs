@@ -20,13 +20,13 @@ const watchdog=setTimeout(()=>process.exit(1),240000);
     const delay=mode==='slow'?500:0;
     const activeGate=mode==='rejected-before'?fs.readFileSync(path.join(__dirname,'fixtures/gate-before-return-errors.js'),'utf8').replace(/var ALLOW = \['[a-f0-9]+'\];/,`var ALLOW = ['${hash}'];`):gate;
     const context=await browser.newContext({viewport:{width:820,height:1180}});context.setDefaultTimeout(20000);
-    const trace=[];let calls=0;
+    const trace=[];let calls=0, rejectCallback=mode.startsWith('rejected');
     await context.addInitScript(()=>{window.__urlChanges=[];const orig=history.replaceState.bind(history);history.replaceState=function(s,t,u){window.__urlChanges.push({hadToken:location.hash.includes('access_token='),keptToken:String(u).includes('access_token='),stack:new Error().stack.split('\n').slice(1,3).map(x=>x.split('?')[0])});return orig(s,t,u);};});
     await context.route('**/*',async route=>{
      const u=new URL(route.request().url());
      if(u.pathname==='/auth/v1/user'){
       calls++;if(delay)await new Promise(r=>setTimeout(r,delay));
-      return route.fulfill({status:mode.startsWith('rejected')?401:200,contentType:'application/json',headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info, x-supabase-api-version','Access-Control-Allow-Methods':'GET, OPTIONS'},body:JSON.stringify(mode.startsWith('rejected')?{message:'Fixture callback verification failed'}:mode==='denied'?{...user,email:'not-allowed@example.test'}:user)});
+      return route.fulfill({status:rejectCallback?401:200,contentType:'application/json',headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info, x-supabase-api-version','Access-Control-Allow-Methods':'GET, OPTIONS'},body:JSON.stringify(rejectCallback?{message:'Fixture callback verification failed'}:mode==='denied'?{...user,email:'not-allowed@example.test'}:user)});
      }
      if(u.pathname.startsWith('/rest/v1/'))return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':origin},body:'[]'});
      if(u.origin!==origin)return route.abort();
@@ -47,6 +47,12 @@ const watchdog=setTimeout(()=>process.exit(1),240000);
     } else if(mode==='rejected') {
       assert.equal(state.approved,false);await page.getByRole('button',{name:'Retry sign-in return'}).waitFor();
       assert.match(await page.locator('.g-msg').textContent(),/Sign-in could not finish/);
+      assert.equal(state.hash,true,'Failed callback retained for retry');
+      rejectCallback=false;
+      await page.getByRole('button',{name:'Retry sign-in return'}).click();
+      await page.waitForFunction(()=>!!localStorage.getItem('cp:gate:ok'));
+      assert.equal(await page.locator('#cp-gate').count(),0);
+      assert.equal(await page.evaluate(()=>location.hash.includes('access_token=')),false);
     } else if(mode==='denied') { assert.equal(state.approved,false);assert.match(state.gate,/Not allowed/); }
     else {
       assert.equal(state.approved,true);assert.equal(state.session,true);assert.equal(state.hash,false);
