@@ -30,11 +30,13 @@ const server=http.createServer((req,res)=>{
 (async()=>{
  const engine=process.env.BROWSER==='webkit'?webkit:chromium;
  // Launch first so unavailable browsers fail with the real browser diagnostic.
- const browser=await engine.launch({headless:true,...(engine===chromium?{executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']}: {})});
+ const browser=engine===webkit?null:await engine.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const origin='http://localhost:'+server.address().port;
  const base=origin+'/Coding/c_and_cpp_study/';
- const context=await browser.newContext({viewport:{width:820,height:1180},isMobile:engine===webkit,hasTouch:true});
+ const profile=engine===webkit?fs.mkdtempSync(path.join(require('node:os').tmpdir(),'cpp-webkit-')):null;
+ const options={viewport:{width:820,height:1180},isMobile:engine===webkit,hasTouch:true};
+ const context=engine===webkit?await engine.launchPersistentContext(profile,{...options,headless:true}):await browser.newContext(options);
  // Do not intercept local worker installation requests (WebKit cannot route them reliably).
  await context.route(engine===webkit?'https://**/*':'**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  const page=await context.newPage();const errors=[];
@@ -91,5 +93,5 @@ page.on('pageerror',e=>errors.push(e.message));
   console.log('RELOAD before',await page.evaluate(()=>({gate:!!document.querySelector('#cp-gate'),session:!!localStorage.getItem('sb-wylxvmkcrexwfpjpbhyy-auth-token')})));await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.cm&&cm.getValue().includes('offline draft'));
   await page.goto(base+'offline.html');await page.waitForFunction(()=>document.querySelector('#state').textContent.startsWith('Ready offline'),{},{timeout:60000});
   assert.deepEqual(errors,[]);console.log('PASS repair isolation, offline reopening, local draft persistence, honest execution notice');
- }finally{await context.close();await browser.close();await new Promise(r=>server.close(r));}
+ }finally{await context.close();if(browser)await browser.close();if(profile)fs.rmSync(profile,{recursive:true,force:true});await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
