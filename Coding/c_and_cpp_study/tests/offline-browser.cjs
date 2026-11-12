@@ -32,7 +32,7 @@ const server=http.createServer((req,res)=>{
  // Launch first so unavailable browsers fail with the real browser diagnostic.
  const browser=await engine.launch({headless:true,...(engine===chromium?{executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']}: {})});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const origin='http://127.0.0.1:'+server.address().port;
+ const origin='http://localhost:'+server.address().port;
  const base=origin+'/Coding/c_and_cpp_study/';
  const context=await browser.newContext({viewport:{width:820,height:1180},isMobile:engine===webkit,hasTouch:true});
  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
@@ -51,7 +51,8 @@ page.on('pageerror',e=>errors.push(e.message));
   },fixtureEmail);
   await page.goto(base+'index.html');assert.equal(await page.locator('#cp-gate').count(),0);await page.getByRole('link',{name:'↓ Study offline',exact:true}).click();
   await page.waitForFunction(()=>!document.querySelector('#download').disabled);
-  await page.click('#download');await page.waitForFunction(()=>document.querySelector('#error').textContent.includes('Completed files'));
+  await page.click('#download');await page.waitForFunction(()=>document.querySelector('#error').textContent,{},{timeout:65000});
+  assert.match(await page.locator('#error').textContent(),/Completed files/);
   const first=counts.get('/Coding/c_and_cpp_study/index.html');interrupted=false;
   await page.click('#download');await page.waitForFunction(()=>document.querySelector('#state').textContent.startsWith('Ready offline'),{},{timeout:90000});
   assert.equal(counts.get('/Coding/c_and_cpp_study/index.html'),first);
