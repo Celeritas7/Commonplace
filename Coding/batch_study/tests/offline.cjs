@@ -50,7 +50,7 @@ const server=http.createServer((req,res)=>{
  for(const name of ['Batch Practice.dc.html','My Scripts.dc.html','Module 01 · Foundations - Folders.dc.html','Batch Command Reference.dc.html']){
   await page.goto(origin+base+'The%20Modules/'+encodeURIComponent(name));await page.waitForFunction(()=>window.React && document.body.innerText.length>1000);assert.ok(!await page.locator('body').innerText().then(t=>t.includes('failed to load')));
  }
- await page.goto(origin+base+'my_scripts/index.html');await page.getByText('01_pull',{exact:false}).first().waitFor();
+ await page.goto(origin+base+'my_scripts/index.html');await page.locator('#rows a.row').first().waitFor();
  assert.match(await page.evaluate(()=>localStorage.getItem('commonplace_myscripts_v1')),/saved note/);
  assert.equal(await page.evaluate(()=>localStorage.getItem('cpx:test')),'highlight');console.log('PASS lessons, practice, scripts, saved data available offline');
  await page.goto(origin+base+'offline.html');await waitReady();
