@@ -19,9 +19,9 @@ pack (that would create circular hashes). Add dynamically constructed dependenci
 here if a future feature cannot be discovered from static references.
 
 `python3 Coding/sql/tools/build-offline.py --check` runs on **every push and PR**,
-including shared login changes outside SQL. A stale manifest fails CI with a
-repair command. Require this check before merging shared changes. Existing
-branch-based Pages deployment is retained; CI does not change hosting settings.
+including shared login changes outside SQL. A stale manifest fails CI with a repair command. Rebuild and commit it with
+shared changes before publishing. The check is read-only: automatic manifest
+commits were not enabled. Existing branch-based Pages hosting is retained.
 
 Caches are scoped by SQL-specific names. Repair replaces only this section's
 worker and shell caches; it keeps all content-addressed pack revisions, local
@@ -39,3 +39,14 @@ manifest. Network reads have deadlines; message calls and activation also time o
   legacy worker upgrade, repair preservation, and viewport checks.
 - CI installs an isolated pinned Playwright version. Set `CHROMIUM_PATH` to use
   an existing Chromium executable locally. No claim of real iPad/Safari testing.
+
+## Verified for this change
+
+GitHub Actions Chromium acceptance run 43204039379 passed on Linux, including
+actual SQLite queries and grading offline, HTTP cache cleared before reopening,
+resumption, changed shared-file manifests, legacy-worker repair, draft persistence
+and storage preservation. Worker tests also executed all 19 exercise reference
+queries against the bundled SQLite WASM. Viewports: 390, 820 and 1440 pixels.
+The local headless launch was blocked by socket restrictions; CI supplied the real
+browser run. Real iPadOS Safari/Home Screen storage and account cloud sync were
+not tested.
