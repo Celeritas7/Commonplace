@@ -1,0 +1,23 @@
+name: Login gate browser regression
+on:
+  push:
+    paths: ['_lib/gate.js', 'tests/gate-login.cjs', '.github/workflows/login-gate.yml']
+  pull_request:
+    paths: ['_lib/gate.js', 'tests/gate-login.cjs', '.github/workflows/login-gate.yml']
+permissions:
+  contents: read
+jobs:
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          npm install --prefix /tmp/login-tests playwright@1.56.1
+          /tmp/login-tests/node_modules/.bin/playwright install --with-deps chromium webkit
+      - run: node tests/gate-login.cjs
+        env:
+          NODE_PATH: /tmp/login-tests/node_modules
