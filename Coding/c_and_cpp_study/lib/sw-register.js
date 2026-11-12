@@ -16,5 +16,8 @@
   observer.observe(document.documentElement,{childList:true,subtree:true});
   addEventListener('DOMContentLoaded',loginHelp);
   if (!('serviceWorker' in navigator) || !isSecureContext) return;
+  // Keep the active worker during offline reopening, including a repair worker.
+  // Starting a replacement install while disconnected can stall navigation.
+  if (navigator.onLine === false) return;
   navigator.serviceWorker.register(new URL('sw.js',root),{scope:root.href,updateViaCache:'none'}).catch(function(){});
 })();

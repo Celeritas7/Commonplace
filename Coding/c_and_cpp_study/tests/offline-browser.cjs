@@ -36,7 +36,7 @@ const server=http.createServer((req,res)=>{
  const base=origin+'/Coding/c_and_cpp_study/';
  const context=await browser.newContext({viewport:{width:820,height:1180},isMobile:engine===webkit,hasTouch:true});
  // Do not intercept local worker installation requests (WebKit cannot route them reliably).
- await context.route('https://**/*',route=>route.abort());
+ await context.route(engine===webkit?'https://**/*':'**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  const page=await context.newPage();const errors=[];
  page.on('dialog',async d=>{console.log('DIALOG '+d.type());await d.accept();});
  page.on('framenavigated',f=>{if(f===page.mainFrame())console.log('NAV '+new URL(f.url()).pathname);});
