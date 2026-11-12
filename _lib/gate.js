@@ -84,7 +84,7 @@
     '#cp-gate input:focus{outline:2px solid #8a5a2b;outline-offset:1px;border-color:#8a5a2b}' +
     '#cp-gate button{width:100%;height:44px;margin-top:12px;border:0;border-radius:10px;background:#2b241c;color:#fffdf7;font:600 15px/1 inherit;cursor:pointer}' +
     '#cp-gate button.g-ghost{background:transparent;color:#5a4632;border:1px solid #d8cbb8}' +
-    '#cp-gate .g-google{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#2b241c;border:1px solid #d8cbb8;margin-top:0}' +
+    '#cp-gate .g-google{min-height:44px;text-decoration:none;border-radius:10px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#2b241c;border:1px solid #d8cbb8;margin-top:0}' +
     '#cp-gate .g-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:#7a6a55;font-size:12px}' +
     '#cp-gate .g-divider:before,#cp-gate .g-divider:after{content:"";height:1px;flex:1;background:#e3d8c6}' +
     '#cp-gate button:focus-visible{outline:2px solid #8a5a2b;outline-offset:3px}' +
@@ -138,22 +138,36 @@
   };
   function allowed(email) { return sha(email).then(function (h) { return ALLOW.indexOf(h) >= 0; }); }
 
-  /* supabase client, only when we need to sign in or finish a sign-in */
+  function bounded(promise, ms) {
+    var timer;
+    return Promise.race([promise, new Promise(function (_, reject) {
+      timer = setTimeout(function () { reject(new Error('Sign-in service did not respond. Check your connection and try again.')); }, ms);
+    })]).then(function (value) { clearTimeout(timer); return value; }, function (error) { clearTimeout(timer); throw error; });
+  }
+
+  /* supabase client, only when we need to send email or finish a sign-in */
   var sb = null;
+  var clientLoading = null;
   function client(cb) {
     if (sb) return cb(sb);
-    function make() {
-      try {
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY,
-          { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-      } catch (e) { sb = null; }
-      cb(sb);
+    if (!clientLoading) {
+      clientLoading = bounded(new Promise(function (resolve) {
+        function make() {
+          try {
+            resolve(window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY,
+              { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }));
+          } catch (_) { resolve(null); }
+        }
+        if (window.supabase && window.supabase.createClient) return make();
+        var script = document.createElement('script');
+        script.src = ME ? ME.replace(/gate\.js(\?.*)?$/, 'supabase.js') : 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        script.onload = make; script.onerror = function () { resolve(null); };
+        document.head.appendChild(script);
+      }), 12000).catch(function () { return null; }).then(function (c) {
+        sb = c; if (!c) clientLoading = null; return c;
+      });
     }
-    if (window.supabase && window.supabase.createClient) return make();
-    var s = document.createElement('script');
-    s.src = ME ? ME.replace(/gate\.js(\?.*)?$/, 'supabase.js') : 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    s.onload = make; s.onerror = function () { cb(null); };
-    document.head.appendChild(s);
+    clientLoading.then(cb);
   }
 
   /* ---------- the sign-in screen ---------- */
@@ -181,7 +195,7 @@
     }
     ui.innerHTML = '<div class="g-card"><div class="g-mark">C</div><h1>Commonplace</h1>' +
       '<p class="g-sub">Sign in to open your study notes.</p>' +
-      '<button type="button" class="g-google" data-a="google"><span aria-hidden="true" style="font:bold 20px Arial;color:#4285f4">G</span>Continue with Google</button>' +
+      '<a class="g-google" data-a="google" target="_self"><span aria-hidden="true" style="font:bold 20px Arial;color:#4285f4">G</span>Continue with Google</a>' +
       '<div class="g-divider">or use email</div>' +
       '<form novalidate><label for="cp-gate-em">Email</label>' +
       '<input id="cp-gate-em" type="email" autocomplete="email" inputmode="email" required>' +
@@ -195,21 +209,33 @@
       busy(false); set(NEXT, null);
       msg.className = 'g-msg bad'; msg.textContent = message;
     }
-    google.onclick = function () {
-      if (google.disabled) return;
+    // Native, same-window navigation retains the iPad tap gesture. Do not wait
+    // for SDK loading, session refresh or auth locks before opening the provider.
+    // This uses the same implicit OAuth flow as the existing client defaults.
+    var oauthURL = new URL(SUPABASE_URL + '/auth/v1/authorize');
+    oauthURL.searchParams.set('provider', 'google');
+    oauthURL.searchParams.set('redirect_to', returnUrl());
+    google.href = oauthURL.href;
+    var navigationTimer;
+    google.onclick = function (event) {
+      if (google.disabled) { event.preventDefault(); return; }
+      if (navigator.onLine === false) {
+        event.preventDefault();
+        failed('You are offline. Connect to Wi-Fi to sign in in this app, then prepare Study offline here.');
+        return;
+      }
+      set(NEXT, JSON.stringify({ url: returnUrl(), t: Date.now() }));
       busy(true); msg.className = 'g-msg'; msg.textContent = 'Opening Google…';
-      client(function (c) {
-        if (!c) return failed('Could not reach the sign-in service. Check your connection.');
-        var target = returnUrl();
-        set(NEXT, JSON.stringify({ url: target, t: Date.now() }));
-        c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: target } }).then(function (r) {
-          if (r && r.error) failed(r.error.message || 'Could not start Google sign-in. Try again or use email.');
-        }, function () { failed('Could not start Google sign-in. Try again or use email.'); });
-      });
+      clearTimeout(navigationTimer);
+      navigationTimer = setTimeout(function () {
+        failed('Google did not open. Check your connection, then tap Continue with Google again or use email.');
+      }, 12000);
+      // Let the browser follow the real link; no popup and no asynchronous redirect.
     };
-    addEventListener('pageshow', function () { busy(false); });
+    addEventListener('pageshow', function () { clearTimeout(navigationTimer); busy(false); });
     f.onsubmit = function (e) {
       e.preventDefault();
+      if (navigator.onLine === false) { failed('You are offline. Reconnect to send a sign-in email.'); return; }
       var v = inp.value.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { msg.className = 'g-msg bad'; msg.textContent = 'Enter a valid email address.'; return; }
       if (btn.disabled) return;
@@ -219,7 +245,7 @@
         /* Supabase sends the link back only to addresses on its allow-list and falls back to the home page
            otherwise, so remember this page and go back to it once the sign-in completes (see goBack) */
         set(NEXT, JSON.stringify({ url: returnUrl(), t: Date.now() }));
-        c.auth.signInWithOtp({ email: v, options: { emailRedirectTo: returnUrl() } }).then(function (r) {
+        bounded(c.auth.signInWithOtp({ email: v, options: { emailRedirectTo: returnUrl() } }), 15000).then(function (r) {
           busy(false);
           if (r && r.error) { msg.className = 'g-msg bad'; msg.textContent = r.error.message || 'Could not send the link.'; return; }
           msg.className = 'g-msg good'; msg.textContent = 'Check your inbox and open the link on this device. It brings you back here, signed in.';
@@ -262,10 +288,16 @@
       screen('wait');
       client(function (c) {
         if (!c) return check(sessionEmail());
-        c.auth.getSession().then(function (r) {
+        bounded(c.auth.getSession(), 15000).then(function (r) {
           var u = r && r.data && r.data.session && r.data.session.user;
           check(u && u.email ? String(u.email).toLowerCase() : sessionEmail());
-        }, function () { check(sessionEmail()); });
+        }, function () {
+          if (sessionEmail()) return check(sessionEmail());
+          screen('form');
+          var message = ui.querySelector('.g-msg');
+          message.className = 'g-msg bad';
+          message.textContent = 'Sign-in could not finish. Reconnect and try again in this app.';
+        });
       });
       return;
     }
