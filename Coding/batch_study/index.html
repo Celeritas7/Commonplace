@@ -470,6 +470,13 @@ if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
   function ls(k, d) { try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? d : v; } catch (e) { return d; } }
   function set(id, t) { var el = document.getElementById(id); if (el) el.textContent = t; }
 
+  /* The shared gate consumes OAuth credentials after DOMContentLoaded.
+     Keep that callback URL intact while rendering the initial tab. */
+  var callbackHash = new URLSearchParams(location.hash.slice(1));
+  var callbackQuery = new URLSearchParams(location.search);
+  var authReturn = ['access_token', 'refresh_token', 'error', 'error_description'].some(function (key) { return callbackHash.has(key); }) ||
+    ['code', 'error', 'error_description'].some(function (key) { return callbackQuery.has(key); });
+
   /* tabs */
   var modes = document.querySelectorAll(".mode"), panes = document.querySelectorAll(".pane");
   function show(m) {
@@ -477,10 +484,10 @@ if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
     Array.prototype.forEach.call(modes, function (b) { var on = b.getAttribute("data-mode") === m; b.classList.toggle("on", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
     Array.prototype.forEach.call(panes, function (p) { p.hidden = p.getAttribute("data-pane") !== m; });
     try { localStorage.setItem("bat_home_tab", m); } catch (e) {}
-    if (history.replaceState) history.replaceState(null, "", m === "learn" ? location.pathname + location.search : "#" + m);
+    if (!authReturn && history.replaceState) history.replaceState(null, "", m === "learn" ? location.pathname + location.search : "#" + m);
   }
   Array.prototype.forEach.call(modes, function (b) { b.addEventListener("click", function () { show(b.getAttribute("data-mode")); }); });
-  show((location.hash || "").slice(1) || ls("bat_home_tab", "learn"));
+  show(authReturn ? ls("bat_home_tab", "learn") : (location.hash || "").slice(1) || ls("bat_home_tab", "learn"));
 
   /* module 01 progress + bookmark */
   var prog = ls("commonplace_bat_m01", {}), mark = ls("commonplace_bat_m01_mark", null);
