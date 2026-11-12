@@ -13,10 +13,10 @@ const user={id,email,aud:'authenticated',role:'authenticated',app_metadata:{prov
  for(const [name,engine] of Object.entries({chromium,webkit})){
   const browser=await engine.launch();
   try{
-   const context=await browser.newContext();let tokenAtSdkLoad, legacy=true;
+   const context=await browser.newContext();context.setDefaultTimeout(15000);let tokenAtSdkLoad, legacy=true;
    await context.route('**/*',async route=>{
     const u=new URL(route.request().url());
-    if(u.pathname==='/auth/v1/user')return route.fulfill({contentType:'application/json',body:JSON.stringify(user)});
+    if(u.pathname==='/auth/v1/user')return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'GET, OPTIONS'},body:JSON.stringify(user)});
     if(u.origin!==origin)return route.abort();
     const rel=decodeURIComponent(u.pathname).replace(/^\/Commonplace\//,'');
     if(rel==='_lib/gate.js')return route.fulfill({contentType:'text/javascript',body:gate});
@@ -29,7 +29,7 @@ const user={id,email,aud:'authenticated',role:'authenticated',app_metadata:{prov
     const type={'.js':'text/javascript','.html':'text/html','.css':'text/css','.json':'application/json','.woff2':'font/woff2'}[path.extname(f)]||'application/octet-stream';
     return route.fulfill({contentType:type,body:fs.readFileSync(f)});
    });
-   const page=await context.newPage();
+   const page=await context.newPage();page.on('pageerror',e=>console.log('Page error: '+e.message));
    const start=origin+'/Commonplace/Coding/batch_study/index.html';
    const callback=start+'#access_token='+token+'&refresh_token=fixture&expires_in=3600&token_type=bearer';
    await page.goto(callback);
