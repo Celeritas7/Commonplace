@@ -322,13 +322,13 @@ self.SQL_OFFLINE_ASSETS = [
   },
   {
     "url": "offline-repair.html",
-    "bytes": 8158,
-    "revision": "53317fdc6d165d9be9d163cf68210e5111b7e9ad7be4e7fa2fcabe47933a239f"
+    "bytes": 8763,
+    "revision": "2cc40f3c21b1c4be215c2674c9b14c6f2eb7dac2353d619a9ebb7370e04a8e88"
   },
   {
     "url": "offline.html",
-    "bytes": 4252,
-    "revision": "0c0fca1393fae27f7a4763b0ce3d5ac6e9a734840b8621de594eec91adec1abd"
+    "bytes": 4857,
+    "revision": "90fb699a6c2c6a7aaf0414362167f3ffb6f7997e4a0b232052bd6a1b47e634e3"
   },
   {
     "url": "site.webmanifest",
@@ -507,8 +507,8 @@ self.SQL_OFFLINE_ASSETS = [
   },
   {
     "url": "../../_lib/gate.js",
-    "bytes": 18906,
-    "revision": "1e34665f2a10687c5f656623758d0e5f7102a7c7a4e6995ef6cc4912802df09d"
+    "bytes": 20466,
+    "revision": "ee8c58a6bdde591bff4a8a1a740261f2eb9496a6d953797133f5875433e13f88"
   },
   {
     "url": "../../_lib/progress-backup.js",

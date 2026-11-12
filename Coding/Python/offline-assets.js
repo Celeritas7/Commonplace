@@ -1153,8 +1153,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "../../_lib/gate.js",
-      "bytes": 18906,
-      "revision": "1e34665f2a10687c5f656623758d0e5f7102a7c7a4e6995ef6cc4912802df09d"
+      "bytes": 20466,
+      "revision": "ee8c58a6bdde591bff4a8a1a740261f2eb9496a6d953797133f5875433e13f88"
     },
     {
       "url": "../../_lib/marked.min.js",
