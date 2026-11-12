@@ -154,8 +154,8 @@
       clientLoading = bounded(new Promise(function (resolve) {
         function make() {
           try {
-            resolve(window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY,
-              { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }));
+            resolve(window.__cpSupabase || (window.__cpSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY,
+              { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })));
           } catch (_) { resolve(null); }
         }
         if (window.supabase && window.supabase.createClient) return make();
@@ -265,6 +265,20 @@
     return true;
   }
 
+  // A failed callback must not look like a fresh signed-out visit. Keep the
+  // callback URL intact so retry can let the SDK consume it after reconnecting.
+  function callbackFailed(message) {
+    screen('form');
+    var msg = ui.querySelector('.g-msg');
+    msg.className = 'g-msg bad';
+    msg.textContent = 'Sign-in could not finish. ' + message + ' Reconnect and retry in this app.';
+    var retry = document.createElement('button');
+    retry.type = 'button'; retry.className = 'g-ghost';
+    retry.textContent = 'Retry sign-in return';
+    retry.onclick = function () { location.reload(); };
+    msg.after(retry);
+  }
+
   /* ---------- decide ---------- */
   function check(email) {
     if (!email) { set(OK, null); return screen('form'); }
@@ -287,10 +301,12 @@
       /* back from Google or the email link: let supabase-js finish the sign-in, then check */
       screen('wait');
       client(function (c) {
-        if (!c) return check(sessionEmail());
+        if (!c) return callbackFailed('The sign-in library could not load.');
         bounded(c.auth.getSession(), 15000).then(function (r) {
+          if (r && r.error) return callbackFailed(r.error.message || 'The sign-in service rejected the return.');
           var u = r && r.data && r.data.session && r.data.session.user;
-          check(u && u.email ? String(u.email).toLowerCase() : sessionEmail());
+          if (!u || !u.email) return callbackFailed('No saved session was received. If Google returned to Safari, reopen the Home Screen app and start sign-in there.');
+          check(String(u.email).toLowerCase());
         }, function () {
           if (sessionEmail()) return check(sessionEmail());
           screen('form');

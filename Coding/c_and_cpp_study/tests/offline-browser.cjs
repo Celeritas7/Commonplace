@@ -2,8 +2,20 @@
    Uses a local static server, never real cloud credentials or records. */
 const {chromium,webkit}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES ? process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright' : 'playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const crypto=require('node:crypto');
+const fixtureEmail='cpp-login-fixture@example.test';
+const fixtureHash=crypto.createHash('sha256').update(fixtureEmail).digest('hex');
 const root=path.resolve(__dirname,'..'),repo=path.resolve(root,'../..');
 let interrupted=true;const counts=new Map(), overrides=new Map();
+const fixtureGate=fs.readFileSync(path.join(repo,'_lib/gate.js'),'utf8')
+ .replace(/  if \(location.protocol === 'file:'[^\n]+\n/, '')
+ .replace(/var ALLOW = \['[a-f0-9]+'\];/, `var ALLOW = ['${fixtureHash}'];`);
+overrides.set(path.join(repo,'_lib/gate.js'),Buffer.from(fixtureGate));
+const fixturePack={self:{}};require('node:vm').runInNewContext(fs.readFileSync(path.join(root,'offline-assets.js'),'utf8'),fixturePack);
+const gateAsset=fixturePack.self.CPP_PACK.assets.find(a=>a.url==='../../_lib/gate.js');
+gateAsset.bytes=Buffer.byteLength(fixtureGate);gateAsset.revision=crypto.createHash('sha256').update(fixtureGate).digest('hex');
+overrides.set(path.join(root,'offline-assets.js'),Buffer.from('self.CPP_PACK='+JSON.stringify(fixturePack.self.CPP_PACK)+';'));
+
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');const file=path.join(repo,decodeURIComponent(url.pathname));
  counts.set(url.pathname,(counts.get(url.pathname)||0)+1);
@@ -26,7 +38,12 @@ const server=http.createServer((req,res)=>{
  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  try{
-  await page.goto(base+'index.html');await page.getByRole('link',{name:'↓ Study offline',exact:true}).click();
+  await page.goto(base+'offline.html');
+  await page.evaluate(email=>{
+   localStorage.setItem('cp:gate:ok',email);
+   localStorage.setItem('sb-wylxvmkcrexwfpjpbhyy-auth-token',JSON.stringify({access_token:'offline-fixture',refresh_token:'offline-fixture',expires_at:1,user:{id:'fixture',email}}));
+  },fixtureEmail);
+  await page.goto(base+'index.html');assert.equal(await page.locator('#cp-gate').count(),0);await page.getByRole('link',{name:'↓ Study offline',exact:true}).click();
   await page.waitForFunction(()=>!document.querySelector('#download').disabled);
   await page.click('#download');await page.waitForFunction(()=>document.querySelector('#error').textContent.includes('Completed files'));
   const first=counts.get('/Coding/c_and_cpp_study/index.html');interrupted=false;
@@ -37,7 +54,7 @@ const server=http.createServer((req,res)=>{
   const vm=require('node:vm'),crypto=require('node:crypto'),sandbox={self:{}};
   vm.runInNewContext(fs.readFileSync(path.join(root,'offline-assets.js'),'utf8'),sandbox);
   const pack=sandbox.self.CPP_PACK,gatePath=path.join(repo,'_lib/gate.js');
-  const gate=Buffer.concat([fs.readFileSync(gatePath),Buffer.from('\n// browser update test\n')]);
+  const gate=Buffer.concat([Buffer.from(fixtureGate),Buffer.from('\n// browser update test\n')]);
   const a=pack.assets.find(a=>a.url==='../../_lib/gate.js');a.bytes=gate.length;a.revision=crypto.createHash('sha256').update(gate).digest('hex');pack.version='browser-update';
   overrides.set(gatePath,gate);overrides.set(path.join(root,'offline-assets.js'),Buffer.from('self.CPP_PACK='+JSON.stringify(pack)+';'));
   await page.click('#check');await page.waitForFunction(()=>document.querySelector('#version').textContent.includes('browser-update')&&!document.querySelector('#check').disabled,{},{timeout:90000});
@@ -60,6 +77,7 @@ const server=http.createServer((req,res)=>{
   await context.setOffline(true);
   await page.goto(base+'lessons/Cpp_Book_Lesson_0_1_v3.html');await page.waitForFunction(()=>window.__cpx&&window.__cpBackup);
   await page.goto(base+'cpp_playground.html');await page.waitForFunction(()=>window.cm&&window.__draftFlush);
+  assert.equal(await page.locator('#cp-gate').count(),0,'Saved sign-in reopens offline with real gate');
   await page.evaluate(()=>{cm.setValue('cout << 55; // offline draft');__draftFlush();runCode();});
   assert.match(await page.locator('#term').textContent(),/does not include a C\+\+ compiler/);
   await page.reload();await page.waitForFunction(()=>window.cm&&cm.getValue().includes('offline draft'));
