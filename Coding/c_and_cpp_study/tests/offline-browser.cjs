@@ -47,8 +47,8 @@ const server=http.createServer((req,res)=>{
   assert.equal(counts.get('/_lib/gate.js'),gateRequests+1);
   console.log('PASS newer shared dependency over older saved release');
   const marker=await page.evaluate(async()=>{
-   localStorage.setItem('cpx.bookmarks','{"test":"bookmark"}');
-   localStorage.setItem('cpx.marks','{"test":"highlight and note"}');
+   localStorage.setItem('cpx.bookmarks',JSON.stringify([{path:'/Coding/c_and_cpp_study/index.html',title:'Saved C++',ts:1}]));
+   localStorage.setItem('cpx.marks',JSON.stringify({'/Coding/c_and_cpp_study/index.html':[{id:'test',type:'hl',text:'Two books.',note:'Keep this note',occ:0}]}));
    const c=await caches.open('cp-python-downloads-v1');await c.put('/sentinel',new Response('keep'));
    return {bookmarks:localStorage.getItem('cpx.bookmarks'),marks:localStorage.getItem('cpx.marks')};
   });
