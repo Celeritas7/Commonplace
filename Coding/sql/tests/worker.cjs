@@ -25,6 +25,19 @@ const manifest=fs.readFileSync(path.join(root,'Coding/sql/offline-assets.js'),'u
  offline=false;hang=true;await assert.rejects(vm.runInContext('download({postMessage(){}})',w.ctx),/timed out/);hang=false;
  assert.equal((await pack.keys()).length,assets.length);
  console.log('PASS new manifest detects changed file, retains previous pack during incomplete update, connection times out visibly');
+ // A newer login script fetched online must survive a cold offline reopen.
+ const gateAsset=assets.find(a=>a.url==='../../_lib/gate.js');
+ const oldRevision=require('node:crypto').createHash('sha256').update('old login code').digest('hex');
+ const oldAssets=assets.map(a=>a===gateAsset?{...a,revision:oldRevision,bytes:14}:a);
+ const gateKey=new URL(gateAsset.url,scope);gateKey.searchParams.set('__sql_revision',oldRevision);
+ await pack.put(gateKey.href,new Response('old login code'));
+ offline=false;w=boot(oldAssets);let onlineGate;
+ w.listeners.fetch({request:new Request(new URL(gateAsset.url,scope)),respondWith:p=>onlineGate=p});
+ const currentGate=await (await onlineGate).text();
+ offline=true;let offlineGate;
+ w.listeners.fetch({request:new Request(new URL(gateAsset.url,scope)),respondWith:p=>offlineGate=p});
+ assert.equal(await (await offlineGate).text(),currentGate,'online login fix must not revert to old downloaded code offline');
+ console.log('PASS refreshed login code survives offline reopening without deleting packs');
  const init=require(path.join(root,'_lib/sqljs/sql-wasm.js'));const SQL=await init({wasmBinary:fs.readFileSync(path.join(root,'_lib/sqljs/sql-wasm.wasm'))});const db=new SQL.Database();db.run('CREATE TABLE t(x); INSERT INTO t VALUES(3),(7);');assert.equal(db.exec('SELECT SUM(x) FROM t')[0].values[0][0],10);
  const seed=vm.createContext({window:{}});vm.runInContext(fs.readFileSync(path.join(root,'Coding/sql/Practice/sqlzoo-seed.js'),'utf8'),seed);db.run(seed.window.SQLZOO_SEED);assert(db.exec('SELECT COUNT(*) FROM world')[0].values[0][0]>0);
  const ex=vm.createContext({window:{}});vm.runInContext(fs.readFileSync(path.join(root,'Coding/sql/Practice/sqlzoo-exercises.js'),'utf8'),ex);let n=0;for(const e of ex.window.SQLZOO_EXERCISES){if(e.sol){const d=new SQL.Database();d.run(seed.window.SQLZOO_SEED);d.exec(e.sol);d.close();n++;}}

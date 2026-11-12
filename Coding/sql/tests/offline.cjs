@@ -23,7 +23,7 @@ const server=http.createServer((req,res)=>{
 });
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const origin=`http://127.0.0.1:${server.address().port}`,base=origin+'/Coding/sql/';
+ const origin=`http://sql.localhost:${server.address().port}`,base=origin+'/Coding/sql/';
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH || chromium.executablePath(),args:['--no-sandbox']});
  const context=await browser.newContext({viewport:{width:820,height:1180}});
  await context.route(/https:\/\/.*/,r=>r.abort());
@@ -35,13 +35,16 @@ const server=http.createServer((req,res)=>{
   // Fresh setup: no pack fetched during worker installation.
   await page.goto(base+'offline.html');await idle();assert.equal(await page.locator('#status').innerText(),'Not downloaded');assert.equal(counts.get('/_lib/sqljs/sql-wasm.wasm'),undefined);
   await page.evaluate(async()=>{localStorage.setItem('cp_sql_bank',JSON.stringify([{id:'fixture',state:'due',note:'keep'}]));localStorage.setItem('fixture_bookmark','bookmark');localStorage.setItem('fixture_highlight','highlight');localStorage.setItem('fixture_note','note');await(await caches.open('cp-python-downloads-v1')).put('/python-sentinel',new Response('keep'));});
+  // Exercise the real gate on a trusted non-bypassed hostname. Session fixture
+  // represents a previously approved sign-in; actual OAuth is in login-return.cjs.
+  await page.evaluate(()=>{localStorage.setItem('sb-wylxvmkcrexwfpjpbhyy-auth-token',JSON.stringify({access_token:'fixture',refresh_token:'fixture',expires_at:Math.floor(Date.now()/1000)+3600,user:{id:'fixture',email:'offline-fixture@example.test'}}));localStorage.setItem('cp:gate:ok','offline-fixture@example.test');});
   fail=true;await page.click('#download');await page.waitForFunction(()=>document.querySelector('#error').textContent.includes('Paused at'),{},{timeout:60000});await idle();
   assert.notEqual(await page.locator('#status').innerText(),'Ready offline');
   const before=counts.get('/Coding/sql/lib/sql-lab.js');fail=false;await page.click('#download');await ready();await idle();assert.equal(counts.get('/Coding/sql/lib/sql-lab.js'),before);
   console.log('PASS fresh setup is small; interrupted body rejected; resume skips completed unchanged files');
   await page.screenshot({path:'/tmp/sql-offline-ipad.png',fullPage:true});
   await offline();await page.goto(base+'index.html');await page.waitForFunction(()=>window.SQLBook&&document.querySelector('#results').textContent.trim().length>0);
-  assert(await page.locator('#sql-study-offline').isVisible());
+  assert(await page.locator('#sql-study-offline').isVisible());assert.equal(await page.locator('#cp-gate').count(),0,'saved session unlocks actual gate offline');
   await page.locator('#editor').fill('SELECT 2 + 3 AS answer;');await page.locator('#run-btn').click();await page.waitForFunction(()=>document.querySelector('#results').textContent.includes('5'));
   await page.reload();assert.equal(await page.locator('#editor').inputValue(),'SELECT 2 + 3 AS answer;');
   await page.goto(base+'Practice/sqlzoo.html');await page.waitForFunction(()=>document.querySelector('#led-text').textContent.includes('engine ready'));
@@ -72,7 +75,7 @@ const server=http.createServer((req,res)=>{
   const legacy=await browser.newContext();page=await legacy.newPage();await page.goto(base+'index.html');await page.evaluate(()=>navigator.serviceWorker.ready);await page.reload();await page.evaluate(()=>localStorage.setItem('cp_sql_check','{"1":{"pass":true}}'));
   oldWorker=false;await page.goto(base+'offline-repair.html?nocache=1');await idle();await page.click('#repair');await idle();assert.equal(await page.locator('#error').innerText(),'');await page.click('#download');await ready();assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('cp_sql_check'))['1'].pass),true);
   console.log('PASS upgrade from legacy cached worker using standalone repair preserves study data');
-  await page.setViewportSize({width:390,height:844});await page.goto(base+'index.html');assert(await page.locator('#sql-study-offline').isVisible());await page.setViewportSize({width:1440,height:900});assert(await page.locator('#sql-study-offline').isVisible());
+  await page.setViewportSize({width:390,height:844});await page.goto(base+'index.html');assert(await page.locator('#sql-study-offline').isVisible());assert.equal(await page.locator('#cp-gate').count(),0,'saved session unlocks actual gate offline');await page.setViewportSize({width:1440,height:900});assert(await page.locator('#sql-study-offline').isVisible());assert.equal(await page.locator('#cp-gate').count(),0,'saved session unlocks actual gate offline');
   console.log('PASS Study offline link visible at phone, iPad-sized and desktop widths');
   await legacy.close();
  }finally{await browser.close();server.close();}

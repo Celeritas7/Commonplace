@@ -202,6 +202,18 @@
       '<button type="submit">Email me a sign-in link</button>' +
       '<p class="g-msg" role="status"></p></form></div>';
     var f = ui.querySelector('form'), inp = ui.querySelector('input'), btn = ui.querySelector('button[type="submit"]'), msg = ui.querySelector('.g-msg');
+    // Keep repair reachable even while SQL's study pages are locked. This
+    // repairs app files only; it does not unlock lessons or clear personal data.
+    var sqlPath = location.pathname.indexOf('/Coding/sql/');
+    if (sqlPath >= 0) {
+      var help = document.createElement('p');
+      help.className = 'g-msg';
+      help.textContent = 'Sign in inside the app you use to study. Safari may have a separate saved session. ';
+      var repair = document.createElement('a');
+      repair.href = location.pathname.slice(0, sqlPath) + '/Coding/sql/offline-repair.html';
+      repair.textContent = 'Update / repair SQL';
+      help.appendChild(repair); ui.querySelector('.g-card').appendChild(help);
+    }
     if (email) inp.value = email;
     var google = ui.querySelector('[data-a="google"]');
     function busy(value) { google.disabled = value; btn.disabled = value; }
@@ -303,6 +315,20 @@
     }
     if (em) { screen('wait'); check(em); } else screen('form');
   }
+  // Returning from an external sign-in window can restore this document instead
+  // of loading it again. Re-check the saved session; never assume Safari and an
+  // installed app share storage, and never unlock without the email allow-list.
+  function resumeSignIn() {
+    if (!root.classList.contains('cp-locked')) return;
+    if (/[#&](access_token|error|error_description)=/.test(location.hash) ||
+        /[?&](code|error|error_description)=/.test(location.search)) return;
+    var savedEmail = sessionEmail();
+    if (savedEmail) check(savedEmail);
+  }
+  addEventListener('pageshow', resumeSignIn);
+  addEventListener('focus', resumeSignIn);
+  addEventListener('storage', function (e) { if (e.key === SKEY && e.newValue) resumeSignIn(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) resumeSignIn(); });
   if (document.body) run(); else document.addEventListener('DOMContentLoaded', run);
 
 })();
