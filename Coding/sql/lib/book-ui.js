@@ -325,3 +325,6 @@
   window.SQLBook = { theme: theme, textSize: textSize, sheet: sheet, toast: toast, pg: pg, table: table, challenge: challenge, check: check, today: today, modules: modules, bank: bank, auth: auth, fades: fades, init: init };
   if (D.readyState === "loading") D.addEventListener("DOMContentLoaded", init); else init();
 })();
+
+/* Load the SQL offline entry on every book page without changing generated lessons. */
+(()=>{const me=document.currentScript; if(!me)return; const s=document.createElement("script");s.src=new URL("offline-entry.js",me.src);document.body.appendChild(s);})();

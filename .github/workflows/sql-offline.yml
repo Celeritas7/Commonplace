@@ -1,0 +1,27 @@
+name: SQL offline pack integrity
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Check SQL pages and transitive shared assets match the pack
+        run: python3 Coding/sql/tools/build-offline.py --check
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Worker and bundled SQLite tests
+        run: node Coding/sql/tests/worker.cjs
+      - name: Install isolated browser test dependencies
+        run: |
+          npm install --prefix /tmp/sql-browser-tests playwright@1.56.1
+          /tmp/sql-browser-tests/node_modules/.bin/playwright install --with-deps chromium
+      - name: Cold offline, resume, upgrade and persistence browser tests
+        env:
+          NODE_PATH: /tmp/sql-browser-tests/node_modules
+        run: node Coding/sql/tests/offline.cjs
