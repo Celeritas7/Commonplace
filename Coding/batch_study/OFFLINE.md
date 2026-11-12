@@ -47,11 +47,14 @@ reopen with network disabled and HTTP cache cleared, and BAT simulation output:
 
 `node Coding/batch_study/tests/offline.cjs`
 
-That browser suite could not run in the authoring environment: Chromium's process
-singleton socket was denied; the separate cloud browser could not reach the local
-server. No successful Chromium, Safari or physical iPad test is claimed. The full
-suite needs to run in an environment with Chromium available before treating
-browser/device validation as complete.
+The browser suite passed in GitHub Actions using Chromium on Linux with an
+820 × 1180 viewport. It verified fresh setup, interrupted/corrupt downloads,
+unchanged-file reuse, shared-file updates, data-preserving repair, offline cold
+reopen with HTTP cache cleared, sandbox simulation output, lesson availability,
+missing-file detection and upgrade from the legacy batch-study-v15 worker.
+Local Chromium launch was blocked in the authoring environment, so the suite was
+run in CI instead. Safari and a physical iPad were not tested; cloud sync was not
+tested against a live account.
 
 ## iPad acceptance check
 
