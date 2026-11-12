@@ -83,11 +83,17 @@ another section's cache. UI VM tests pass for bounded registration failure and
 retry, account snapshot isolation, actual existing draft save/restore code and
 background draft flushing. Inline JavaScript syntax is checked.
 
-These are not device tests. Local Chromium launch was attempted and blocked by
-`socket() failed: Operation not permitted`. WebKit is not installed locally.
+Those Node tests are not device tests. Local Chromium launch was blocked by
+`socket() failed: Operation not permitted`, so the acceptance suite was also run
+successfully in **Chromium 145 on Ubuntu 24.04 via GitHub Actions**, using an
+820 × 1180 touch viewport. It passed fresh setup, interruption/resume, updating
+an older saved release, section-isolated repair, offline page reopening after
+clearing ordinary HTTP cache, editor draft persistence and the offline execution
+notice, with no page JavaScript errors. [Successful test run](https://github.com/Celeritas7/Commonplace/actions/runs/43190564326).
+
 Physical iPad/Safari, actual Home Screen installation, cloud compilation and
-live account synchronization have not been tested. The browser acceptance suite
-is included for a host that can run Chromium; the iPad check below is necessary.
+live account synchronization have not been tested. Desktop Chromium with a
+touch viewport is not an iPad simulator. The iPad check below remains necessary.
 
 ## Short iPad test
 
