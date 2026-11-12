@@ -17,7 +17,7 @@ const watchdog=setTimeout(()=>{console.error('Callback suite exceeded 90 seconds
    const context=await browser.newContext();context.setDefaultTimeout(15000);let legacy=true;
    await context.route('**/*',async route=>{
     const u=new URL(route.request().url());
-    if(u.pathname==='/auth/v1/user')return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'GET, OPTIONS'},body:JSON.stringify(user)});
+    if(u.pathname==='/auth/v1/user')return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info, x-supabase-api-version','Access-Control-Allow-Methods':'GET, OPTIONS'},body:JSON.stringify(user)});
     if(u.origin!==origin)return route.abort();
     const rel=decodeURIComponent(u.pathname).replace(/^\/Commonplace\//,'');
     if(rel==='_lib/gate.js')return route.fulfill({contentType:'text/javascript',body:gate});
@@ -39,6 +39,7 @@ const watchdog=setTimeout(()=>{console.error('Callback suite exceeded 90 seconds
    assert.equal(await page.evaluate(()=>localStorage.getItem('cp:gate:ok')),null);
    console.log('PASS '+name+': reproduced the previous login loop with destructive tab URL update');
    legacy=false;
+   await page.goto('about:blank'); // force a fresh document, not a fragment-only navigation
    await page.goto(callback);
    await page.waitForFunction(()=>localStorage.getItem('cp:gate:ok')==='offline-fixture@example.test');
    assert.equal(await page.evaluate(()=>window.__callbackAtSdkLoad),true,'BAT must retain callback until SDK loads');
