@@ -507,8 +507,8 @@ self.SQL_OFFLINE_ASSETS = [
   },
   {
     "url": "../../_lib/gate.js",
-    "bytes": 19006,
-    "revision": "fa10afb8b0918d616ca7e1c2cf48124a2d8a28ef5261be4ee0b9ee68b0286eda"
+    "bytes": 19714,
+    "revision": "ab33fdf9058913180e2b3a88dac333494d93aa82a2661f397bd62a93b17eccfc"
   },
   {
     "url": "../../_lib/progress-backup.js",
