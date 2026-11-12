@@ -2,6 +2,7 @@ name: Refresh BAT offline download list
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: write
@@ -15,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.head_ref || 'main' }}
       - name: Generate hashes from the current repository
         run: python3 Coding/batch_study/tools/build-offline.py
       - uses: actions/setup-node@v4
@@ -28,6 +29,7 @@ jobs:
           node Coding/batch_study/tests/storage.cjs
           node Coding/batch_study/tests/offline.cjs
       - name: Commit only the generated BAT list
+        if: github.event_name != 'pull_request'
         run: |
           if ! git diff --quiet -- Coding/batch_study/offline-assets.json; then
             git config user.name 'github-actions[bot]'
@@ -41,6 +43,7 @@ jobs:
             git push origin HEAD:main
           fi
       - name: Request Pages rebuild for generated commit
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api --method POST "repos/${{ github.repository }}/pages/builds"
