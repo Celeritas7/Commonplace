@@ -1146,7 +1146,11 @@
   var REACT_DOM_SRI = "sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1";
   var BABEL_URL = "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js";
   var BABEL_SRI = "sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y";
+  // Keep every BAT module self-contained, including pages without __resources.
+  var BAT_RUNTIME_BASE = new URL('../../../_lib/', document.currentScript.src);
   function cdnScriptFor(url, sri) {
+    var local = url === REACT_URL ? 'dc/react.production.min.js' : url === REACT_DOM_URL ? 'dc/react-dom.production.min.js' : url === BABEL_URL ? 'react/babel.min.js' : null;
+    if (local) return {src: new URL(local, BAT_RUNTIME_BASE).href};
     const res = window.__resources;
     const v = res ? res[url] : void 0;
     return typeof v === "string" && v ? { src: v } : { src: url, integrity: sri };
