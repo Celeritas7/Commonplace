@@ -1,0 +1,49 @@
+name: Refresh BAT offline download list
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: bat-offline-manifest
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || 'main' }}
+      - name: Generate hashes from the current repository
+        run: python3 Coding/batch_study/tools/build-offline.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify downloads and browser lifecycle
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+          node Coding/batch_study/tests/storage.cjs
+          node Coding/batch_study/tests/offline.cjs
+      - name: Commit only the generated BAT list
+        if: github.event_name != 'pull_request'
+        run: |
+          if ! git diff --quiet -- Coding/batch_study/offline-assets.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add Coding/batch_study/offline-assets.json
+            git commit -m 'Refresh BAT offline asset hashes'
+            git pull --rebase origin main
+            python3 Coding/batch_study/tools/build-offline.py
+            git add Coding/batch_study/offline-assets.json
+            git diff --cached --quiet || git commit -m 'Refresh BAT hashes after concurrent updates'
+            git push origin HEAD:main
+          fi
+      - name: Request Pages rebuild for generated commit
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${{ github.repository }}/pages/builds"
