@@ -169,6 +169,8 @@
     function add(term, def, src, el) {
       if (el && chrome(el)) return;
       term = norm(term).replace(/^[^\w(\[<'"*.#]+/, '').replace(/[\s:.\-–—]+$/, '').replace(/\s*[^\w)\]'"`?+*\s]+$/, '').trim();
+      // Labels and learning instructions are not concepts, regardless of markup.
+      if (GENERIC_HEAD.test(term) || /^(from (your|my|the) notes|before you go|check yourself|try it in the notebook|mark it read)$/i.test(term)) return;
       if (!/[A-Za-z]{2}/.test(term) || /·|→|←/.test(term) || (src === 'card' && /\d/.test(term))) return;
       if (/^(easy|medium|hard|stretch|bonus|new|newly written|updated|optional|required|next|previous|prev|done|todo|jump to|final notes|key takeaways?|takeaways?|tl;?dr)$/i.test(term)) return;
       def = norm(def).replace(/^[\s:.\-–—|·→=]+/, '');
@@ -471,6 +473,9 @@
 
   function open(skipSetup) {
     if (root) return;
+    // All entry points use the page's authored check when one is registered.
+    // check() calls open(true), so it must bypass this delegation.
+    if (skipSetup !== true && window.CPLessonCheck) return window.CPLessonCheck.open();
     root = document.createElement('div'); root.id = 'cpq-root';
     root.innerHTML = '<div id="cpq-card" role="dialog" aria-modal="true" aria-label="Quiz"></div>';
     document.body.appendChild(root); card = root.firstChild;
@@ -845,3 +850,4 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
+

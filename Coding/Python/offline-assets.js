@@ -603,8 +603,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "lib/lesson-reader.js",
-      "bytes": 25057,
-      "revision": "cd3cfd7de5a222470c8e6933fb31f7350ece89af028e9bc3f9a39c04c00a446c"
+      "bytes": 25662,
+      "revision": "2105c7107f687aab01cdfa62f7434a1a8e3c1ae1381b4b164bec305998de3c66"
     },
     {
       "url": "lib/my-scripts-data.js",
@@ -973,8 +973,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "../../_lib/autoscroll.js",
-      "bytes": 31940,
-      "revision": "77a2eaf7eedc304f075784dbbed5fc9f0d76eafc0dff84301a4548c4b426a53f"
+      "bytes": 32058,
+      "revision": "74c90778fc834dacf9d58b67e6330cb132e4570506e995e8ece42e71508aa1b5"
     },
     {
       "url": "../../_lib/codemirror/codemirror.min.css",
@@ -1198,8 +1198,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "../../_lib/quiz/quiz.js",
-      "bytes": 62043,
-      "revision": "0b04ff9c7d601ceb6da3cb7b6f606cf124c489be5b015051cd2b565e800edeb0"
+      "bytes": 62514,
+      "revision": "11442ddeb6637ec7d514f6feac9efc42bc7a342e4814a5b2c81a45486806149c"
     },
     {
       "url": "../../_lib/supabase.js",

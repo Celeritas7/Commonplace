@@ -345,7 +345,7 @@
       '<div class="cpa-why">' + esc(reason(r)) + (change ? ' Next time: about ' + wpmOf(r.next) + ' wpm.' : '') + '</div>' +
       '<div class="cpa-nums"><span><b>' + r.wpm + '</b>wpm</span><span><b>' + r.focus + '</b>focus</span><span><b>' + mins(r.act) + '</b>reading</span><span><b>' + (r.quiz != null ? r.quiz + '%' : '—') + '</b>quiz</span></div>' +
       '<div class="cpa-acts">' +
-        (r.quiz == null && window.CPQuiz ? '<button type="button" data-a="q">🧠 Quiz me now</button>' : '') +
+        (r.quiz == null && window.CPQuiz && !(window.CPLessonCheck && window.CPLessonCheck.passed()) ? '<button type="button" data-a="q">🧠 ' + (window.CPLessonCheck ? 'Check this lesson' : 'Quiz me now') + '</button>' : '') +
         '<button type="button" data-a="h">History</button>' +
         (change ? '<button type="button" class="pri" data-a="s">Use ' + (r.step > 0 ? 'faster' : 'slower') + ' speed</button>' : '') +
       '</div>');
@@ -459,3 +459,4 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
+

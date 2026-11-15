@@ -372,6 +372,19 @@
 
   /* ===== Phase 1 — append the lesson's drills, if a drill file exists ===== */
   var LID = (FILE.match(/Py_Lesson_(\d+_\d+)\.html/i) || [])[1];
+  // Reuse the lesson's check, including its existing progress and review callbacks.
+  // The quiz pill and reading-session prompt must not create a second assessment.
+  if (LID && document.getElementById('eol-check')) {
+    window.CPLessonCheck = {
+      open: function () { document.getElementById('eol-check').click(); },
+      passed: function () {
+        try {
+          var checks = JSON.parse(localStorage.getItem('cp_py_check') || '{}');
+          return !!(checks && checks[LID.replace('_', '.')] && checks[LID.replace('_', '.')].pass);
+        } catch (e) { return false; }
+      }
+    };
+  }
   function load(src, cb) {
     var s = document.createElement('script');
     s.src = src; s.onload = function () { cb(true); }; s.onerror = function () { cb(false); };
@@ -395,3 +408,4 @@
 
   setSize(size); if (pref.reader) toggleReader(true); paint(); bootDrills();
 })();
+
