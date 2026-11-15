@@ -34,7 +34,7 @@ const repo=path.resolve(__dirname,'../../..');
     assert.equal(await page.locator('.notebook-overlay a').getAttribute('href'),'https://study.test/Coding/Python/fundamentals/02_for_loops.html#np-u12');
     await page.getByRole('button',{name:'Back to lesson',exact:true}).tap();
     assert.equal(await page.locator('dialog[open]').count(),0);
-    assert(Math.abs(await page.evaluate(()=>scrollY)-before)<5,'lesson position restored');
+    await page.waitForFunction(y=>Math.abs(scrollY-y)<5,before,{timeout:3000});
     await page.locator('#s4 [data-notebook-overlay]').tap();
     await frame.locator('#np-u12').waitFor();
     await frame.locator('#np-u12').click();

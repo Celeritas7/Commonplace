@@ -628,8 +628,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "lib/notebook-overlay.js",
-      "bytes": 2626,
-      "revision": "e189d3bbf317a363fad49f4b04dd4a3fe027b5c9f9536e9c4218950ff6b94c88"
+      "bytes": 2932,
+      "revision": "4a98e74ee8e0b3956bd8155943f926f9ec84937a1f2cd5b16ce0a20025ae580d"
     },
     {
       "url": "lib/notebook-player.css",

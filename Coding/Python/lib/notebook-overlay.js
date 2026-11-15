@@ -1,7 +1,7 @@
 /* Keep the lesson in place while its linked, same-origin notebook is open. */
 (function () {
   'use strict';
-  var dialog, opener, frame, previousOverflow;
+  var dialog, opener, frame, previousOverflow, lessonX = 0, lessonY = 0;
   function close() { if (dialog && dialog.open) dialog.close(); }
   function create() {
     dialog = document.createElement('dialog');
@@ -15,6 +15,9 @@
       document.documentElement.style.overflow = previousOverflow;
       frame.removeAttribute('src');
       if (opener) opener.focus({ preventScroll: true });
+      // WebKit may scroll when native dialog focus returns, despite preventScroll.
+      window.scrollTo(lessonX, lessonY);
+      requestAnimationFrame(function () { if (!dialog.open) window.scrollTo(lessonX, lessonY); });
     });
     // Escape inside the iframe and its lesson-return link should close the overlay.
     frame.addEventListener('load', function () {
@@ -39,6 +42,7 @@
     e.preventDefault();
     if (!dialog) create();
     if (dialog.open) return;
+    lessonX = window.scrollX; lessonY = window.scrollY;
     opener = a; previousOverflow = document.documentElement.style.overflow;
     dialog.querySelector('a').href = target.href;
     frame.src = target.href;
