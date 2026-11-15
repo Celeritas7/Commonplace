@@ -337,8 +337,8 @@ self.SQL_OFFLINE_ASSETS = [
   },
   {
     "url": "../../_lib/autoscroll.js",
-    "bytes": 31940,
-    "revision": "77a2eaf7eedc304f075784dbbed5fc9f0d76eafc0dff84301a4548c4b426a53f"
+    "bytes": 32058,
+    "revision": "74c90778fc834dacf9d58b67e6330cb132e4570506e995e8ece42e71508aa1b5"
   },
   {
     "url": "../../_lib/fonts/f/0de96079d9.woff2",
@@ -517,8 +517,8 @@ self.SQL_OFFLINE_ASSETS = [
   },
   {
     "url": "../../_lib/quiz/quiz.js",
-    "bytes": 62043,
-    "revision": "0b04ff9c7d601ceb6da3cb7b6f606cf124c489be5b015051cd2b565e800edeb0"
+    "bytes": 62514,
+    "revision": "11442ddeb6637ec7d514f6feac9efc42bc7a342e4814a5b2c81a45486806149c"
   },
   {
     "url": "../../_lib/sqljs/sql-wasm.js",
