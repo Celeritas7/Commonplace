@@ -44,7 +44,12 @@ window.LESSON_DRILLS = (function () {
         '<span class="lsd-pos">' + (at + 1) + " / " + data.length + "</span></div>";
     }
 
-    function draw() {
+    function draw(preserveAnswers) {
+      // FD renders the selected answer and explanation before calling onDone.
+      // Keep those live hosts when refreshing progress/unlocks; remounting them
+      // resets picked/fills and makes a successful tap look as if it did nothing.
+      var h1 = preserveAnswers && sec.querySelector('#lsd-h1');
+      var h2 = preserveAnswers && sec.querySelector('#lsd-h2');
       var f = data[at], d = done[at] || {};
       var h = head() +
         '<span class="lsd-name">' + esc(f.name) + "</span>" +
@@ -60,13 +65,21 @@ window.LESSON_DRILLS = (function () {
         '<button type="button" class="fd-btn" data-a="prev"' + (at ? "" : " disabled") + ">&larr; Prev</button>" +
         '<span class="sp"></span>' +
         (allOpen ? "" : '<button type="button" class="fd-btn" data-a="skip">Skip ahead</button>') +
-        '<button type="button" class="fd-btn pri" data-a="next"' + (at < data.length - 1 && open(at + 1) ? "" : " disabled") + ">Next &rarr;</button></div>";
+        (at < data.length - 1 ? '<button type="button" class="fd-btn pri" data-a="next"' + (open(at + 1) ? "" : " disabled") + ">Next &rarr;</button>" : '<span class="lsd-pos">Last drill pair</span>') + '</div>';
 
-      if (at === data.length - 1 && resolved(at)) h += '<div class="lsd-done">All ' + data.length + " drills cleared</div>";
+      if (at === data.length - 1) {
+        var reviewed = 0;
+        for (var i = 0; i < data.length; i++) if (resolved(i)) reviewed++;
+        h += '<div class="lsd-done" role="status">' + (reviewed === data.length ? 'All ' + data.length + ' drill pairs reviewed.' : 'End of drills · ' + reviewed + ' of ' + data.length + ' pairs reviewed. Use Prev to revisit unfinished pairs.') + ' Use the lesson navigation to continue to the next lesson.</div>';
+      }
 
       sec.innerHTML = h;
-      FD.cloze(sec.querySelector("#lsd-h1"), spec(f.d1, "d1", f));
-      if (canD2) FD.mcq(sec.querySelector("#lsd-h2"), spec(f.d2, "d2", f));
+      if (h1) sec.querySelector('#lsd-h1').replaceWith(h1);
+      else FD.cloze(sec.querySelector("#lsd-h1"), spec(f.d1, "d1", f));
+      if (canD2) {
+        if (h2) sec.querySelector('#lsd-h2').replaceWith(h2);
+        else FD.mcq(sec.querySelector("#lsd-h2"), spec(f.d2, "d2", f));
+      }
     }
 
     function spec(d, slot, f) {
@@ -80,7 +93,7 @@ window.LESSON_DRILLS = (function () {
         if (window.LESSON_XP) window.LESSON_XP(ok ? 15 : 5, ok ? "Drill cleared" : "Noted");
         else xpFallback(ok ? 15 : 5, ok ? "Drill cleared" : "Noted");
         var y = window.scrollY;
-        draw();
+        draw(true);
         window.scrollTo(0, y);
       };
       o.onBank = function (s) {

@@ -18,8 +18,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "fundamentals/02_for_loops.html",
-      "bytes": 5434,
-      "revision": "43ec300f25aded0aafa076c423d8d508e77fba9206a71dd1a6dd680f1b42d10d"
+      "bytes": 6844,
+      "revision": "8a5ebffd376b2662ddbb2df7c5ced208d5b84c8294186ba054b7d2005ddab436"
     },
     {
       "url": "fundamentals/03_while_loops.html",
@@ -113,8 +113,8 @@ self.CP_OFFLINE_ASSETS = {
     },
     {
       "url": "lessons/Py_Lesson_0_3.html",
-      "bytes": 37709,
-      "revision": "6604dda2d56311d6e36b1743a77ea7170fc82e9905c85b79ca18b84fda6fdfc3"
+      "bytes": 37816,
+      "revision": "9ab7586a4bfd0b2e28dadf11242dc39be053543f289312e4eead829f09223ca3"
     },
     {
       "url": "lessons/Py_Lesson_0_4.html",
@@ -592,14 +592,19 @@ self.CP_OFFLINE_ASSETS = {
       "revision": "79e328a462ff4ede17a481627a8e3f612ba87e5e05cd9c9b6cccc6242f5a97f8"
     },
     {
+      "url": "lib/for-loops-study.css",
+      "bytes": 1794,
+      "revision": "9d955422e6c9b2bc0aa5671f1746a49afe88296de3232c578e085950b561f55e"
+    },
+    {
       "url": "lib/lesson-drills.css",
       "bytes": 7171,
       "revision": "ef149d59adc2b7a1abeda1f11dee2b003e84c7a7a3a95cf0d4d727b2e0e39d0e"
     },
     {
       "url": "lib/lesson-drills.js",
-      "bytes": 6188,
-      "revision": "2420ed5dd8f5c33347cc2e41d177248ab240a43895f19b622f831660b0d35979"
+      "bytes": 7119,
+      "revision": "3975f161caf47242f92f2c56aecd81a05bdc4e35331bcdf0cd28929fd969513b"
     },
     {
       "url": "lib/lesson-reader.js",
@@ -615,6 +620,16 @@ self.CP_OFFLINE_ASSETS = {
       "url": "lib/my-scripts.js",
       "bytes": 52149,
       "revision": "e7380a6706c377b8cbae67810b7ed3664d0274b991eeb9b661e046ce4499e46b"
+    },
+    {
+      "url": "lib/notebook-overlay.css",
+      "bytes": 1280,
+      "revision": "4f7d93cda7597a770f95b65acb6c4c8ea4307717655bca4e80af5519efef8788"
+    },
+    {
+      "url": "lib/notebook-overlay.js",
+      "bytes": 2626,
+      "revision": "e189d3bbf317a363fad49f4b04dd4a3fe027b5c9f9536e9c4218950ff6b94c88"
     },
     {
       "url": "lib/notebook-player.css",

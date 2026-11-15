@@ -1,0 +1,24 @@
+name: Python notebook handoff
+on:
+  pull_request:
+    paths: ['Coding/Python/**', '.github/workflows/python-notebook-handoff.yml']
+  push:
+    paths: ['Coding/Python/**', '.github/workflows/python-notebook-handoff.yml']
+permissions:
+  contents: read
+jobs:
+  handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node Coding/Python/tests/lesson-notebook.cjs
+      - run: |
+          npm install --prefix /tmp/notebook-tests playwright@1.56.1
+          /tmp/notebook-tests/node_modules/.bin/playwright install --with-deps chromium webkit
+      - run: node Coding/Python/tests/lesson-notebook-browser.cjs
+        env:
+          NODE_PATH: /tmp/notebook-tests/node_modules
