@@ -1,0 +1,15 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+const html=fs.readFileSync(path.join(root,'fundamentals/02_for_loops.html'),'utf8');
+const data=JSON.parse(html.match(/id="nbdata">([\s\S]*?)<\/script>/)[1]);
+const context={window:{},document:{},console};vm.createContext(context);
+vm.runInContext(fs.readFileSync(path.join(root,'lib/notebook-player.js'),'utf8'),context);
+const analysis=context.window.NotebookPlayer.analyse(data,{});
+assert.match(analysis.units[11].label,/Lesson 0.3/);
+assert.deepEqual(Array.from(analysis.units[11].codes),[10,11]);
+assert.equal(data.filter(c=>c.t==='code').length,12);
+assert(!/[📘🧠💻📤🔁✅]/u.test(data.filter(c=>c.t==='md').map(c=>c.s).join('')));
+const lesson=fs.readFileSync(path.join(root,'lessons/Py_Lesson_0_3.html'),'utf8');
+assert.equal((lesson.match(/data-notebook-overlay href="..\/fundamentals\/02_for_loops.html#np-u12"/g)||[]).length,2);
+assert(lesson.includes('notebook-overlay.js'));
+console.log('PASS exact exercise anchor, both lesson links, 12 code cells and plain notebook labels');
