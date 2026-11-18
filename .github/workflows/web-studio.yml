@@ -1,0 +1,52 @@
+name: Web Studio learning and data preservation
+on:
+  pull_request:
+    paths: ['Coding/html_css_js_study/**', '_lib/gate.js', '_lib/progress-backup.js', 'extras.js', '.github/workflows/web-studio.yml']
+  push:
+    paths: ['Coding/html_css_js_study/**', '_lib/gate.js', '_lib/progress-backup.js', 'extras.js', '.github/workflows/web-studio.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Storage, legacy tracker, preview and worker contracts
+        run: |
+          node Coding/html_css_js_study/tests/storage.cjs
+          node Coding/html_css_js_study/tests/legacy.cjs
+          node Coding/html_css_js_study/tests/preview.cjs
+          node Coding/html_css_js_study/tests/worker.cjs
+  browsers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned browser test runtime
+        run: |
+          npm install --prefix /tmp/web-studio-tests --no-save playwright@1.56.1
+          /tmp/web-studio-tests/node_modules/.bin/playwright install --with-deps ${{ matrix.browser }}
+      - name: Real browser learning and persistence checks
+        run: node Coding/html_css_js_study/tests/browser.cjs
+        env:
+          NODE_PATH: /tmp/web-studio-tests/node_modules
+          BROWSER: ${{ matrix.browser }}
+      - name: Failure screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-studio-${{ matrix.browser }}-failure
+          path: test-results/
+          if-no-files-found: ignore

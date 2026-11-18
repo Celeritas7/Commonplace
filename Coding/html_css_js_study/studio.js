@@ -1,0 +1,87 @@
+
+(()=>{
+ 'use strict';
+ const root=document.getElementById('web-book');
+ const $=s=>root.querySelector(s),all=s=>root.querySelectorAll(s);
+ const {names,fileNames,chapters,initialProject}=window.WebStudioLessons;
+ const escape=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ const loaded=window.WebStudioStore.load(),saved=loaded.data||{};
+ const lessonIds={html:'html-elements',css:'css-spacing',js:'js-events'};
+ const project={...initialProject,...saved.project};
+ const state=Object.fromEntries(Object.entries(chapters).map(([key])=>{
+  const old=(saved.lessons||{})[lessonIds[key]]||{};
+  return [key,{part:0,file:key,note:'',answers:Array(5).fill(null),question:0,submitted:false,practised:false,read:false,prediction:null,...old,file:key,source:project,bookmarks:new Set(old.bookmarks||[]),visited:new Set([old.part||0])}];
+ }));
+ let language=saved.language||'html',view='book',textSize=saved.textSize||18,practiceOrigin=0,returnScroll=0,hasPreview=false,returnButton=null;
+ const legacy=document.getElementById('legacy-course');
+ const backToStudio=document.getElementById('return-studio');
+ function snapshot(){
+  const lessons={...(saved.lessons||{})};
+  for(const [key,s]of Object.entries(state))lessons[lessonIds[key]]={...(lessons[lessonIds[key]]||{}),part:s.part,note:s.note,bookmarks:[...s.bookmarks],answers:s.answers.slice(),question:s.question,submitted:s.submitted,practised:s.practised,read:s.read,prediction:s.prediction};
+  return {...saved,version:1,language,view,textSize,project:{...project},lessons};
+ }
+ function saveStatus(error){const el=$('#wb-save-status');el.textContent=error||'Saved on this device · no cloud sync';el.dataset.error=String(!!error);el.setAttribute('role',error?'alert':'status');}
+ function persist(){const result=window.WebStudioStore.save(snapshot());saveStatus(result.ok?null:result.error);return result.ok;}
+ function exportStudy(){
+  const backup=window.WebStudioStore.exportData();backup.currentDraft=snapshot();backup.currentLegacyDraft=window.WebStudioLegacy?.snapshot?.()||null;
+  const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download='commonplace-web-studio-'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }
+ const current=()=>state[language];
+ function setText(id,value){$(id).textContent=value;}
+ function updateReadingState(){const s=current();setText('#wb-side-state',s.read?'✓ Lesson marked read':'Lesson not marked read');setText('#wb-read-state',s.read?'Marked read':'Foundation lesson');setText('#wb-bookmark-label',s.bookmarks.has(s.part)?'Bookmarked':'Bookmark');$('#wb-bookmark').setAttribute('aria-pressed',String(s.bookmarks.has(s.part)));setText('#wb-mark-read',s.read?'✓ Marked read':'Mark lesson read');$('#wb-mark-read').setAttribute('aria-pressed',String(s.read));setText('#wb-mark-note',s.read?'Lesson marked read. Check the save status above.':'You may mark it read before passing the check.');setText('#wb-practice-state',s.practised?'✓ You marked the practice as tested.':'Make a change and inspect the browser result.');$('#wb-practice-confirm').checked=s.practised;}
+ function renderReading(){const s=current(),c=chapters[language];root.dataset.language=language;setText('#wb-chapter-label',c.label);setText('#wb-title',c.title);setText('#wb-objective',c.objective);all('[data-language]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.language===language)));all('[data-part]').forEach(b=>{const p=Number(b.dataset.part);if(p===s.part)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');b.classList.toggle('wb-visited',s.visited.has(p));});$('#wb-reading-part').hidden=s.part===8;$('#wb-finish').hidden=s.part!==8;if(s.part<8){setText('#wb-part-label',String(s.part+1).padStart(2,'0')+' / 08');setText('#wb-part-title',names[s.part]);$('#wb-prose').innerHTML=c.parts[s.part]+(s.part===4?'<div class="wb-predict-options" aria-label="Your prediction">'+c.prediction.options.map((o,i)=>'<button class="cursor-interaction" data-prediction="'+i+'" aria-pressed="'+(s.prediction===i)+'">'+escape(o)+'</button>').join('')+'</div><p class="wb-feedback" id="wb-prediction-feedback" aria-live="polite"></p>':'');if(s.part===4&&s.prediction!==null)renderPrediction();}else renderQuiz();$('#wb-prev').disabled=s.part===0;$('#wb-next').hidden=s.part===8;setText('#wb-next',s.part===7?'Before you go →':names[s.part+1]+' →');setText('#wb-page-count',s.part===8?'Before you go':'Part '+(s.part+1)+' of 8');setText('#wb-next-chapter',language==='html'?'Next: CSS →':language==='css'?'Next: JavaScript →':'Chapter library →');updateReadingState();}
+ function setView(next){
+  if(next==='course'){showCourse();return;}
+  view=next;legacy.hidden=true;backToStudio.hidden=true;root.hidden=false;
+  document.body.dataset.webView='book';document.getElementById('legacy-export').hidden=true;
+  all('[data-screen]').forEach(e=>e.hidden=e.dataset.screen!==next);all('.wb-app-tabs [data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
+  if(next==='notes')renderNotes();if(next==='library')renderLibrary();
+ }
+ function showCourse(){view='course';stopPreview();root.hidden=true;legacy.hidden=false;backToStudio.hidden=false;document.body.dataset.webView='course';document.getElementById('legacy-export').hidden=false;window.WebStudioLegacy?.activate?.();const id=location.hash.slice(1);if(/^[lxq]\d+$/.test(id))window.WebStudioLegacy?.reveal(id);window.dispatchEvent(new Event('resize'));}
+ function setPart(part){current().part=Math.max(0,Math.min(8,part));current().visited.add(current().part);renderReading();setView('book');if(root.getBoundingClientRect().width<830)$('#wb-contents').open=false;}
+ function selectLanguage(key){if(!chapters[key])return;stopPreview();language=key;renderReading();setView('book');}
+ function renderPrediction(){const s=current(),p=chapters[language].prediction;if(s.prediction===null)return;setText('#wb-prediction-feedback',s.prediction===p.answer?p.correct:p.wrong);all('[data-prediction]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.prediction)===s.prediction)));}
+ function renderQuiz(){const s=current(),c=chapters[language];$('#wb-quiz-question').hidden=s.submitted;$('#wb-quiz-result').hidden=!s.submitted;const score=s.answers.reduce((n,a,i)=>n+(a===c.quiz[i].correct?1:0),0);setText('#wb-check-state',s.submitted?(score>=4?'✓ Check passed · '+score+' / 5':'Keep practising · '+score+' / 5 · aim for 4 / 5'):'Aim for 4 / 5. You can retry after reviewing.');if(s.submitted){setText('#wb-quiz-score',score+' / 5');setText('#wb-quiz-summary',score>=4?'Check passed. Review any missed answer, then finish your practice.':'Review the explanations and try again. Your lesson reading mark is independent.');$('#wb-answer-review').innerHTML=c.quiz.map((q,i)=>'<div class="wb-answer-review"><strong>'+((s.answers[i]===q.correct)?'✓ ':'↺ ')+escape(q.q)+'</strong><p>Answer: '+escape(q.a[q.correct])+'. '+escape(q.why)+'</p></div>').join('');return;}const q=c.quiz[s.question];setText('#wb-quiz-count','Question '+(s.question+1)+' of 5');setText('#wb-quiz-title',q.q);$('#wb-quiz-options').innerHTML=q.a.map((a,i)=>'<label class="wb-quiz-option cursor-interaction"><input type="radio" name="wb-answer" value="'+i+'"'+(s.answers[s.question]===i?' checked':'')+'><span>'+escape(a)+'</span></label>').join('');$('#wb-quiz-dots').innerHTML=s.answers.map(a=>'<span class="wb-question-dot'+(a!==null?' answered':'')+'" aria-hidden="true"></span>').join('');$('#wb-quiz-dots').setAttribute('aria-label',s.answers.filter(a=>a!==null).length+' of 5 questions answered');$('#wb-quiz-prev').disabled=s.question===0;setText('#wb-quiz-next',s.question===4?'Check answers':'Next question →');setText('#wb-quiz-feedback','');}
+ function quizNext(){const s=current();if(s.answers[s.question]===null){setText('#wb-quiz-feedback','Choose an answer before continuing.');return;}if(s.question<4)s.question++;else{const missing=s.answers.indexOf(null);if(missing!==-1)s.question=missing;else s.submitted=true;}renderQuiz();}
+ function renderNotes(){const c=chapters[language];setText('#wb-note-context',c.name+' · '+c.title);$('#wb-note-editor').value=current().note;const saved=[];for(const [key,s]of Object.entries(state))for(const p of [...s.bookmarks].sort((a,b)=>a-b))saved.push('<button class="cursor-interaction" data-bookmark-language="'+key+'" data-bookmark-part="'+p+'"><span>'+escape(chapters[key].name+' · '+names[p])+'</span><span aria-hidden="true">→</span></button>');$('#wb-bookmarks-list').innerHTML=saved.length?saved.join(''):'<p class="wb-small" style="margin-top:12px">Bookmark a reading part to return directly to it.</p>';}
+ function renderLibrary(){$('#wb-library-list').innerHTML=Object.entries(chapters).map(([key,c])=>'<div class="wb-library-entry"><div><span class="wb-eyebrow">'+escape(c.name)+'</span><h3 style="font-size:17px">'+escape(c.title)+'</h3><p>'+((state[key].read)?'✓ Marked read':'Eight reading parts · five-question check')+'</p></div><button class="cursor-interaction" data-language="'+key+'">Open chapter →</button></div>').join('');}
+ function renderEditor(){const s=current();$('#wb-editor').value=project[s.file];for(const file of Object.keys(fileNames))$('#wb-editor-'+file).value=project[file];setText('#wb-editor-label','Edit '+fileNames[s.file]);all('[data-file]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.file===s.file)));setText('#wb-editor-state','One shared project · '+fileNames[s.file]);}
+ function openPractice(kind){practiceOrigin=current().part;returnScroll=window.scrollY;returnButton=document.activeElement;const c=chapters[language],challenge=kind==='challenge'||practiceOrigin===6;setText('#wb-return-label','Return to '+names[practiceOrigin]);setText('#wb-practice-title','My first webpage');setText('#wb-task-title',challenge?c.challengeTitle:c.taskTitle);setText('#wb-task-detail',challenge?c.challengeText:c.taskText);current().file=language;renderEditor();$('#wb-practice-confirm').checked=current().practised;setView('practice');setPane('code');const term=language==='html'?'<h1>':language==='css'?'padding':'count += ';const index=$('#wb-editor').value.indexOf(term);if(index>=0)$('#wb-editor').setSelectionRange(index,index+term.length);$('#wb-editor').focus({preventScroll:true});}
+ function returnToBook(){current().part=practiceOrigin;renderReading();setView('book');window.scrollTo({top:returnScroll,behavior:'auto'});if(returnButton?.isConnected)returnButton.focus({preventScroll:true});else $('#wb-next').focus({preventScroll:true});}
+ function setPane(pane){$('#wb-work-grid').dataset.pane=pane;all('button[data-pane]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pane===pane)));}
+ function runStatus(text,error=false){setText('#wb-run-status',text);$('#wb-run-status').dataset.error=String(error);}
+ const preview=window.WebStudioPreview.create({container:$('#wb-preview-host'),onStatus:runStatus,onLog(message){const output=$('#wb-console');output.textContent=(output.textContent+'\n'+message).trim().slice(-6000);}});
+ function stopPreview(){preview.stop();hasPreview=false;$('#wb-preview-empty').hidden=false;setPane('code');}
+ function runPreview(){persist();$('#wb-console').textContent='';$('#wb-preview-empty').hidden=true;hasPreview=true;preview.run({...project});setPane('result');}
+ root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!root.contains(b)||b.disabled)return;if(b.dataset.language){selectLanguage(b.dataset.language);return;}if(b.dataset.part!==undefined){setPart(Number(b.dataset.part));return;}if(b.dataset.view){if(b.dataset.view==='practice')openPractice('try');else if(b.dataset.view==='book'&&view==='practice')returnToBook();else setView(b.dataset.view);return;}if(b.dataset.openPractice){openPractice(b.dataset.openPractice);return;}if(b.dataset.prediction!==undefined){current().prediction=Number(b.dataset.prediction);renderPrediction();return;}if(b.dataset.file){current().file=b.dataset.file;renderEditor();return;}if(b.dataset.pane){setPane(b.dataset.pane);return;}if(b.dataset.bookmarkLanguage){selectLanguage(b.dataset.bookmarkLanguage);setPart(Number(b.dataset.bookmarkPart));}});
+ $('#wb-prev').onclick=()=>setPart(current().part-1);$('#wb-next').onclick=()=>setPart(current().part+1);
+ $('#wb-bookmark').onclick=()=>{const s=current();if(s.bookmarks.has(s.part))s.bookmarks.delete(s.part);else s.bookmarks.add(s.part);updateReadingState();};
+ function resizeText(delta){textSize=Math.min(22,Math.max(16,textSize+delta));root.style.setProperty('--wb-reader',textSize+'px');$('#wb-font-smaller').disabled=textSize===16;$('#wb-font-larger').disabled=textSize===22;}
+ $('#wb-font-smaller').onclick=()=>resizeText(-2);$('#wb-font-larger').onclick=()=>resizeText(2);
+ $('#wb-quiz-options').onchange=e=>{if(e.target.name==='wb-answer'){current().answers[current().question]=Number(e.target.value);setText('#wb-quiz-feedback','Answer selected.');}};
+ $('#wb-quiz-next').onclick=quizNext;$('#wb-quiz-prev').onclick=()=>{current().question=Math.max(0,current().question-1);renderQuiz();};$('#wb-quiz-retry').onclick=()=>{current().answers=Array(5).fill(null);current().question=0;current().submitted=false;renderQuiz();};
+ $('#wb-mark-read').onclick=()=>{current().read=!current().read;updateReadingState();};$('#wb-next-chapter').onclick=()=>{if(language==='html')selectLanguage('css');else if(language==='css')selectLanguage('js');else setView('library');};
+ $('#wb-editor').oninput=e=>{current().source[current().file]=e.target.value;$('#wb-editor-'+current().file).value=e.target.value;setText('#wb-editor-state','Edited in this session');if(hasPreview)runStatus('Code changed. Run preview to see the latest edit.');};
+ $('#wb-run').onclick=runPreview;$('#wb-reset').onclick=()=>{if(!confirm('Restore all three starter files? Your notes, bookmarks and reading progress will stay.'))return;Object.assign(project,initialProject);renderEditor();stopPreview();};$('#wb-return').onclick=returnToBook;$('#wb-return-bottom').onclick=returnToBook;
+ $('#wb-practice-confirm').onchange=e=>{current().practised=e.target.checked;updateReadingState();};
+ $('#wb-note-editor').oninput=e=>{current().note=e.target.value;setText('#wb-note-state','Note updated. Check the save status above.');};
+ const offline=show=>{$('#wb-offline').hidden=!show;$('#wb-offline-toggle').setAttribute('aria-expanded',String(show));};$('#wb-offline-toggle').onclick=()=>offline($('#wb-offline').hidden);$('#wb-offline-close').onclick=()=>offline(false);
+ if(root.getBoundingClientRect().width<830)$('#wb-contents').open=false;
+ $('#wb-stop').onclick=stopPreview;
+ $('#wb-export').onclick=exportStudy;document.getElementById('legacy-export').onclick=exportStudy;
+ $('#wb-show-course').onclick=showCourse;
+ $('#wb-split').onclick=()=>{renderEditor();const split=$('#wb-work-grid').dataset.layout!=='split';$('#wb-work-grid').dataset.layout=split?'split':'tabs';$('#wb-split').setAttribute('aria-pressed',String(split));};
+ for(const file of Object.keys(fileNames))$('#wb-editor-'+file).oninput=e=>{project[file]=e.target.value;if(current().file===file)$('#wb-editor').value=e.target.value;if(hasPreview)runStatus('Code changed. Run preview to see the latest edit.');};
+ backToStudio.onclick=()=>{setView('book');persist();};
+ root.addEventListener('click',persist);root.addEventListener('input',persist);root.addEventListener('change',persist);
+ window.addEventListener('pagehide',()=>{persist();preview.stop();});
+ window.addEventListener('hashchange',()=>{if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash))showCourse();});
+ $('#wb-update').onclick=async()=>{const button=$('#wb-update');button.disabled=true;setText('#wb-update-status','Checking for updates…');try{if(!('serviceWorker' in navigator))throw new Error('App updates are not supported in this browser.');const registration=await Promise.race([navigator.serviceWorker.getRegistration('./'),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);if(!registration)throw new Error('App update registration is not ready. Reload while connected and try again.');await Promise.race([registration.update(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);setText('#wb-update-status','Update check finished. If new files are ready, use Reload app.');$('#wb-reload').hidden=false;}catch(error){setText('#wb-update-status',error.message);}finally{button.disabled=false;}};
+ $('#wb-reload').onclick=()=>{if(persist())location.reload();};
+ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{setText('#wb-update-status','Updated app files are available. Reload when you are ready.');$('#wb-reload').hidden=false;});
+ renderReading();renderEditor();resizeText(0);
+ if(saved.view==='practice')openPractice('try');else if(['notes','library'].includes(saved.view))setView(saved.view);else setView('book');
+ if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash)||saved.view==='course')showCourse();
+ saveStatus(loaded.error);
+})();
