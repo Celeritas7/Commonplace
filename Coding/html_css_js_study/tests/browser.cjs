@@ -41,10 +41,17 @@ function startServer() {
 }
 
 async function context(seed = untouched) {
-  const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1024, height: 1000 }, acceptDownloads: true });
+  const ctx = await browser.newContext({ viewport: { width: 1024, height: 1000 }, acceptDownloads: true });
   await ctx.route('**/_lib/gate.js', route => route.fulfill({ status: 200, contentType: 'text/javascript', body: '/* Authentication fixture: browser acceptance only. */' }));
   await ctx.addInitScript(({ seed, origin }) => {
-    if (window !== window.top || location.origin !== origin || sessionStorage.getItem('web-studio-fixture')) return;
+    if (window !== window.top || location.origin !== origin) return;
+    // Playwright's serviceWorkers: 'block' reads navigator.serviceWorker in
+    // every frame, which itself throws in our deliberately opaque preview.
+    // Disable registration only in the app, on every navigation/reload.
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register = async () => {
+      throw new Error('Service Worker registration disabled by browser acceptance fixture.');
+    };
+    if (sessionStorage.getItem('web-studio-fixture')) return;
     for (const [key, value] of Object.entries(seed)) localStorage.setItem(key, value);
     sessionStorage.setItem('web-studio-fixture', '1');
   }, { seed, origin });
