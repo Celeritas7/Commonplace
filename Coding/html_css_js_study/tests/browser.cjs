@@ -229,6 +229,25 @@ async function preserved() {
   await bad.locator('#web-site-nav').getByRole('link',{name:'Coding',exact:true}).click();
   assert.equal(bad.url(),beforeLeave,'cancel leaving must retain unsaved draft');
   await badContext.close();
+  // The breadcrumb must stay compact even if an old stylesheet is returned.
+  const staleContext=await context();
+  const staleCss=fs.readFileSync(path.join(ROOT,'Coding/html_css_js_study/studio.css'),'utf8').split('/* A shared way home')[0];
+  await staleContext.route('**/studio.css*',route=>route.fulfill({status:200,contentType:'text/css',body:staleCss}));
+  const compact=await staleContext.newPage(); await compact.goto(origin+SECTION);
+  for(const width of [320,390,810]) {
+    await compact.setViewportSize({width,height:900});
+    const layout=await compact.locator('#web-site-nav').evaluate(nav=>{
+      const links=[...nav.querySelectorAll('.web-crumbs a,.web-crumbs [aria-current]')];
+      return {height:nav.getBoundingClientRect().height,centres:links.map(a=>{const r=a.getBoundingClientRect();return r.top+r.height/2;}),numbered:nav.querySelectorAll('ol,li').length,overflow:document.documentElement.scrollWidth>innerWidth+1};
+    });
+    assert(layout.height<=46,'breadcrumb should be one compact row at '+width);
+    assert(Math.max(...layout.centres)-Math.min(...layout.centres)<2,'breadcrumb items must stay on one line');
+    assert.equal(layout.numbered,0); assert.equal(layout.overflow,false);
+    assert.equal(await compact.locator('.wb-preview-label,.wb-brand small').count(),0,'no duplicate header rows');
+  }
+  await staleContext.close();
+  console.log('PASS '+engine+': compact single-line breadcrumb survives a stale stylesheet');
+
   // An older cached document may receive current unversioned scripts first.
   const oldContext=await context();
   const oldMarkup=fs.readFileSync(path.join(ROOT,SECTION),'utf8')
