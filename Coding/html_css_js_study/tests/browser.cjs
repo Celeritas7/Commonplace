@@ -29,7 +29,7 @@ function startServer() {
   server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost'); serverRequests.push(url.pathname);
     let file;
-    try { file = path.resolve(ROOT, '.' + decodeURIComponent(url.pathname)); }
+    try { file = path.resolve(ROOT, '.' + decodeURIComponent(url.pathname.replace(/^\/Commonplace(?=\/)/, ''))); }
     catch (_) { res.writeHead(400).end(); return; }
     if (!file.startsWith(ROOT + path.sep) && file !== ROOT) { res.writeHead(403).end(); return; }
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
@@ -150,7 +150,7 @@ async function preserved() {
   await edit('js', js); await run();
   console.log('PASS ' + engine + ': opaque preview cannot access parent storage or network; endless loop stops and retry works');
 
-  for (const width of [390, 810, 1024, 1440]) {
+  for (const width of [320, 360, 390, 810, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1100 });
     await page.waitForFunction(() => document.fonts.status === 'loaded');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'horizontal overflow at ' + width);
@@ -171,6 +171,45 @@ async function preserved() {
   await preserved();
   console.log('PASS ' + engine + ': phone/iPad/desktop widths, optional split editors and scoped export without authentication data');
 
+  // Mobile learning flow and real folder navigation, including GitHub Pages' prefix.
+  await page.setViewportSize({width:390,height:844});
+  await view('book'); await part(0);
+  await page.locator('#wb-next').click();
+  assert.equal(await page.locator('#wb-part-title').textContent(), 'The mental model');
+  await page.waitForFunction(() => { const r=document.querySelector('#wb-part-title').getBoundingClientRect(); return r.top>=52 && r.top<250; });
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-part-title');
+  await textHas('#wb-contents-current', /2 \/ 8.*mental model/);
+  await view('practice');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-practice-title', 'opening mobile practice must not focus the keyboard');
+  assert.equal(await page.locator('#wb-contents').isVisible(), false);
+  await view('course');
+  await page.waitForFunction(() => document.querySelector('#web-return-book').getBoundingClientRect().top<160);
+  await page.locator('#web-return-book').click();
+  await page.locator('#wb-title').waitFor({state:'visible'});
+  await preserved();
+  for (const prefix of ['', '/Commonplace']) {
+    const destination=origin+prefix+SECTION;
+    await page.goto(destination);
+    await view('notes');
+    assert.equal(await page.locator('#wb-note-editor').inputValue(), ''); // JavaScript note starts empty.
+    const note='Mobile folder navigation '+prefix;
+    await page.locator('#wb-note-editor').fill(note);
+    const nav=page.locator('#web-site-nav');
+    assert.equal(await nav.getByRole('link',{name:'Commonplace',exact:true}).getAttribute('href'),'../../index.html');
+    assert.equal(await nav.getByRole('link',{name:'Coding',exact:true}).getAttribute('href'),'../index.html');
+    for(const [name, folder] of [['Coding','/Coding/index.html'],['Commonplace','/index.html']]) {
+      const parent=origin+prefix+folder;
+      await ctx.route(parent, route => route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><title>Parent folder</title><h1>'+name+'</h1>'}));
+      await nav.getByRole('link',{name,exact:true}).click();
+      await page.waitForURL(parent);
+      await page.goBack(); await page.locator('#wb-note-editor').waitFor({state:'visible'});
+      assert.equal(await page.locator('#wb-note-editor').inputValue(),note);
+      assert.deepEqual(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).project,KEY),{html,css,js});
+    }
+    await page.locator('#wb-note-editor').fill('');
+  }
+  console.log('PASS '+engine+': mobile reading focus, no forced keyboard, top course return and parent-folder navigation preserve study data');
+
   await page.goto(origin + SECTION + '#l123');
   await page.locator('#legacy-course').waitFor({ state: 'visible' }); await page.locator('#l123').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#l123 input[type=checkbox]').isChecked(), true);
@@ -185,7 +224,26 @@ async function preserved() {
   await bad.locator('#wb-next').click(); await bad.locator('.wb-app-tabs [data-view=notes]').click(); await bad.locator('#wb-note-editor').fill('Unsaved draft must not replace damaged data.');
   assert.equal(await bad.evaluate(key => localStorage.getItem(key), KEY), corrupt);
   await bad.reload(); assert.equal(await bad.evaluate(key => localStorage.getItem(key), KEY), corrupt);
+  const beforeLeave=bad.url();
+  bad.once('dialog', async dialog => { assert.match(dialog.message(),/could not be saved/); await dialog.dismiss(); });
+  await bad.locator('#web-site-nav').getByRole('link',{name:'Coding',exact:true}).click();
+  assert.equal(bad.url(),beforeLeave,'cancel leaving must retain unsaved draft');
   await badContext.close();
+  // An older cached document may receive current unversioned scripts first.
+  const oldContext=await context();
+  const oldMarkup=fs.readFileSync(path.join(ROOT,SECTION),'utf8')
+    .replace(/<nav id="web-site-nav"[\s\S]*?<\/nav>/,'')
+    .replace(/<span id="wb-contents-current">[\s\S]*?<\/span>/,'');
+  await oldContext.route(origin+SECTION, route => route.fulfill({status:200,contentType:'text/html',body:oldMarkup}));
+  const old=await oldContext.newPage(), oldErrors=[]; old.on('pageerror',e=>oldErrors.push(e.message));
+  await old.goto(origin+SECTION);
+  await old.locator('#wb-next').click();
+  assert.equal(await old.locator('#wb-part-title').textContent(),'The mental model');
+  await old.locator('.wb-app-tabs [data-view=course]').click();
+  assert(await old.locator('#legacy-course > .crumb').isVisible(),'cached documents retain their original folder links');
+  assert.deepEqual(oldErrors,[],'new scripts tolerate cached markup');
+  await oldContext.close();
+  console.log('PASS '+engine+': cached older navigation markup remains usable with new scripts');
   assert.deepEqual(errors, [], 'uncaught page errors');
   console.log('PASS ' + engine + ': original lesson deep links, saved tracker data and malformed-record preservation');
 })().catch(async error => {

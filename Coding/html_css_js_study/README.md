@@ -20,7 +20,9 @@ The integrated curriculum currently has **three original foundation chapters**: 
 - There is no automatic backup import/merge UI in this release; retain the JSON for recovery. Shared annotations retain their own Commonplace controls in Course index.
 - Restoring starter code asks first and affects only the three project files. Lesson notes and study progress remain.
 
-Portrait layouts use Code/Browser result switching. Landscape iPad and desktop place the editor beside the result. Wide desktop adds **All three editors**.
+The folder bar links directly to **Commonplace** and **Coding**, including when this section is opened from an installed app without browser history. **Course** has a top **Back to Web Studio** button. Parent links save the current study state before leaving; a failed save lets you cancel departure.
+
+On phones, chapter/view tabs use equal touch targets, the contents summary shows the current part, and Next/Previous bring the new heading into view. Opening Practice does not automatically open the on-screen keyboard. Portrait layouts use Code/Browser result switching. Landscape iPad and desktop place the editor beside the result. Wide desktop adds **All three editors**.
 
 ## Execution limits
 
