@@ -39,17 +39,17 @@
   const link=document.createElement('a');link.href=url;link.download='commonplace-web-studio-'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
  const current=()=>state[language];
- function setText(id,value){$(id).textContent=value;}
+ function setText(id,value){const el=$(id);if(el)el.textContent=value;}
  function updateReadingState(){const s=current();setText('#wb-side-state',s.read?'✓ Lesson marked read':'Lesson not marked read');setText('#wb-read-state',s.read?'Marked read':'Foundation lesson');setText('#wb-bookmark-label',s.bookmarks.has(s.part)?'Bookmarked':'Bookmark');$('#wb-bookmark').setAttribute('aria-pressed',String(s.bookmarks.has(s.part)));setText('#wb-mark-read',s.read?'✓ Marked read':'Mark lesson read');$('#wb-mark-read').setAttribute('aria-pressed',String(s.read));setText('#wb-mark-note',s.read?'Lesson marked read. Check the save status above.':'You may mark it read before passing the check.');setText('#wb-practice-state',s.practised?'✓ You marked the practice as tested.':'Make a change and inspect the browser result.');$('#wb-practice-confirm').checked=s.practised;}
  function renderReading(){const s=current(),c=chapters[language];root.dataset.language=language;setText('#wb-contents-current',s.part===8?'Final check':(s.part+1)+' / 8 · '+names[s.part]);setText('#wb-chapter-label',c.label);setText('#wb-title',c.title);setText('#wb-objective',c.objective);all('[data-language]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.language===language)));all('[data-part]').forEach(b=>{const p=Number(b.dataset.part);if(p===s.part)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');b.classList.toggle('wb-visited',s.visited.has(p));});$('#wb-reading-part').hidden=s.part===8;$('#wb-finish').hidden=s.part!==8;if(s.part<8){setText('#wb-part-label',String(s.part+1).padStart(2,'0')+' / 08');setText('#wb-part-title',names[s.part]);$('#wb-prose').innerHTML=c.parts[s.part]+(s.part===4?'<div class="wb-predict-options" aria-label="Your prediction">'+c.prediction.options.map((o,i)=>'<button class="cursor-interaction" data-prediction="'+i+'" aria-pressed="'+(s.prediction===i)+'">'+escape(o)+'</button>').join('')+'</div><p class="wb-feedback" id="wb-prediction-feedback" aria-live="polite"></p>':'');if(s.part===4&&s.prediction!==null)renderPrediction();}else renderQuiz();$('#wb-prev').disabled=s.part===0;$('#wb-next').hidden=s.part===8;setText('#wb-next',s.part===7?'Before you go →':names[s.part+1]+' →');setText('#wb-page-count',s.part===8?'Before you go':'Part '+(s.part+1)+' of 8');setText('#wb-next-chapter',language==='html'?'Next: CSS →':language==='css'?'Next: JavaScript →':'Chapter library →');updateReadingState();}
  function setView(next){
   if(next==='course'){showCourse(true);return;}
-  view=next;legacy.hidden=true;backToStudio.hidden=true;topBack.hidden=true;root.hidden=false;$('#wb-contents').hidden=next!=='book';root.dataset.view=next;
+  view=next;legacy.hidden=true;backToStudio.hidden=true;if(topBack)topBack.hidden=true;root.hidden=false;$('#wb-contents').hidden=next!=='book';root.dataset.view=next;
   document.body.dataset.webView='book';document.getElementById('legacy-export').hidden=true;
   all('[data-screen]').forEach(e=>e.hidden=e.dataset.screen!==next);all('.wb-app-tabs [data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));
   if(next==='notes')renderNotes();if(next==='library')renderLibrary();
  }
- function showCourse(manual=false){view='course';stopPreview();root.hidden=true;legacy.hidden=false;backToStudio.hidden=false;topBack.hidden=false;document.body.dataset.webView='course';document.getElementById('legacy-export').hidden=false;window.WebStudioLegacy?.activate?.();const id=location.hash.slice(1);if(!manual&&/^[lxq]\d+$/.test(id))window.WebStudioLegacy?.reveal(id);if(manual){window.scrollTo({top:0,behavior:'auto'});topBack.focus({preventScroll:true});}window.dispatchEvent(new Event('resize'));}
+ function showCourse(manual=false){view='course';stopPreview();root.hidden=true;legacy.hidden=false;backToStudio.hidden=false;if(topBack)topBack.hidden=false;document.body.dataset.webView='course';document.getElementById('legacy-export').hidden=false;window.WebStudioLegacy?.activate?.();const id=location.hash.slice(1);if(!manual&&/^[lxq]\d+$/.test(id))window.WebStudioLegacy?.reveal(id);if(manual){window.scrollTo({top:0,behavior:'auto'});topBack?.focus({preventScroll:true});}window.dispatchEvent(new Event('resize'));}
  function setPart(part){current().part=Math.max(0,Math.min(8,part));current().visited.add(current().part);renderReading();setView('book');if(root.getBoundingClientRect().width<830)$('#wb-contents').open=false;focusPart();}
  function selectLanguage(key){if(!chapters[key])return;stopPreview();language=key;renderReading();setView('book');focusView();}
  function renderPrediction(){const s=current(),p=chapters[language].prediction;if(s.prediction===null)return;setText('#wb-prediction-feedback',s.prediction===p.answer?p.correct:p.wrong);all('[data-prediction]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.prediction)===s.prediction)));}
@@ -84,10 +84,11 @@
  $('#wb-show-course').onclick=()=>showCourse(true);
  $('#wb-split').onclick=()=>{renderEditor();const split=$('#wb-work-grid').dataset.layout!=='split';$('#wb-work-grid').dataset.layout=split?'split':'tabs';$('#wb-split').setAttribute('aria-pressed',String(split));};
  for(const file of Object.keys(fileNames))$('#wb-editor-'+file).oninput=e=>{project[file]=e.target.value;if(current().file===file)$('#wb-editor').value=e.target.value;if(hasPreview)runStatus('Code changed. Run preview to see the latest edit.');};
- backToStudio.onclick=topBack.onclick=()=>{setView('book');persist();focusView();};
+ backToStudio.onclick=()=>{setView('book');persist();focusView();};
+ if(topBack)topBack.onclick=backToStudio.onclick;
  // Parent links work under /Commonplace/ and on a root-hosted copy. Save first
  // so leaving via a folder link has the same persistence as editing in place.
- siteNav.addEventListener('click',event=>{
+ siteNav?.addEventListener('click',event=>{
   if(!event.target.closest('a'))return;
   const savedNow=persist();
   const legacyError=document.getElementById('legacy-save-status').textContent.trim();

@@ -229,6 +229,21 @@ async function preserved() {
   await bad.locator('#web-site-nav').getByRole('link',{name:'Coding',exact:true}).click();
   assert.equal(bad.url(),beforeLeave,'cancel leaving must retain unsaved draft');
   await badContext.close();
+  // An older cached document may receive current unversioned scripts first.
+  const oldContext=await context();
+  const oldMarkup=fs.readFileSync(path.join(ROOT,SECTION),'utf8')
+    .replace(/<nav id="web-site-nav"[\s\S]*?<\/nav>/,'')
+    .replace(/<span id="wb-contents-current">[\s\S]*?<\/span>/,'');
+  await oldContext.route(origin+SECTION, route => route.fulfill({status:200,contentType:'text/html',body:oldMarkup}));
+  const old=await oldContext.newPage(), oldErrors=[]; old.on('pageerror',e=>oldErrors.push(e.message));
+  await old.goto(origin+SECTION);
+  await old.locator('#wb-next').click();
+  assert.equal(await old.locator('#wb-part-title').textContent(),'The mental model');
+  await old.locator('.wb-app-tabs [data-view=course]').click();
+  assert(await old.locator('#legacy-course > .crumb').isVisible(),'cached documents retain their original folder links');
+  assert.deepEqual(oldErrors,[],'new scripts tolerate cached markup');
+  await oldContext.close();
+  console.log('PASS '+engine+': cached older navigation markup remains usable with new scripts');
   assert.deepEqual(errors, [], 'uncaught page errors');
   console.log('PASS ' + engine + ': original lesson deep links, saved tracker data and malformed-record preservation');
 })().catch(async error => {
