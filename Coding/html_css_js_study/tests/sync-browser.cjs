@@ -20,7 +20,9 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
     compatibleFutureField: 'Keep opaque compatible data' };
 
   async function makeContext(seed, user = USER) {
-    const ctx = await context(seed); contexts.push(ctx);
+    // A new page has fresh sessionStorage. Seed this isolated browser profile
+    // only once in localStorage so reopening cannot overwrite queued edits.
+    const ctx = await context({}); contexts.push(ctx);
     await ctx.route(origin + '/__web_studio_cloud', async route => {
       const req = route.request().postDataJSON(); requests.push(clone(req));
       if (unavailable) {
@@ -40,8 +42,15 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
       } else throw new Error('Unexpected cloud fixture operation ' + req.kind);
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, error: null }) });
     });
-    await ctx.addInitScript(({ origin, user }) => {
+    await ctx.addInitScript(({ origin, user, seed }) => {
       if (window !== window.top || location.origin !== origin) return;
+      const SEEDED = 'web-studio-cloud-fixture-seeded';
+      if (localStorage.getItem(SEEDED) !== '1') {
+        for (const [key, value] of Object.entries(seed)) localStorage.setItem(key, value);
+        localStorage.setItem(SEEDED, '1');
+      }
+      // Record the pre-application value on every navigation for reopening tests.
+      window.__webStudioBeforeAppRecord = localStorage.getItem('commonplace_web_studio_v1');
       const ACCOUNT = 'web-studio-test-account';
       if (sessionStorage.getItem(ACCOUNT) === null) sessionStorage.setItem(ACCOUNT, JSON.stringify(user));
       const currentUser = () => JSON.parse(sessionStorage.getItem(ACCOUNT));
@@ -80,7 +89,7 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
         },
         rpc(name, params) { return query({ kind: 'write', name, params, user: currentUser() }); }
       };
-    }, { origin, user });
+    }, { origin, user, seed });
     return ctx;
   }
   async function open(ctx) {
@@ -198,8 +207,10 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
     // transient in-memory queue, is the source of unsynchronized work.
     await aContext.setOffline(true);
     await setNote(a, 'Offline note retained after closing this page.');
+    assert.equal((await saved(a)).lessons['html-elements'].note, 'Offline note retained after closing this page.');
     const beforeClose = clone(rows.get(USER));
     await a.close(); await aContext.setOffline(false); a = await open(aContext);
+    assert.equal(await a.evaluate(() => JSON.parse(window.__webStudioBeforeAppRecord).lessons['html-elements'].note), 'Offline note retained after closing this page.', 'the queued note must already exist before the reopened app or cloud code runs');
     await remoteHas(row => row?.snapshot.study?.lessons?.['html-elements']?.note?.includes('retained after closing'), 'Saved offline changes should upload after a later reopening');
     assert.notDeepEqual(rows.get(USER).snapshot, beforeClose.snapshot);
     await state(a, 'synced');
