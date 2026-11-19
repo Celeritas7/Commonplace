@@ -221,10 +221,33 @@ async function preserved() {
   await page.waitForFunction(() => { const r=document.querySelector('#wb-part-title').getBoundingClientRect(); return r.top>=52 && r.top<250; });
   assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-part-title');
   await textHas('#wb-contents-current', /2 \/ 8.*mental model/);
+  const showOffline = async () => {
+    await page.locator('#wb-offline-toggle').click();
+    assert(await page.locator('#wb-offline').isVisible());
+  };
+  const closedOffline = async () => {
+    assert.equal(await page.locator('#wb-offline').isVisible(), false, 'navigation must dismiss the download panel');
+    assert.equal(await page.locator('#wb-offline-toggle').getAttribute('aria-expanded'), 'false');
+  };
+  await showOffline(); await page.locator('#wb-offline-close').click(); await closedOffline();
+  assert.equal(await page.locator('#wb-part-title').textContent(), 'The mental model', 'returning from offline setup must preserve the selected reading part');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-part-title');
+  await page.waitForFunction(() => { const r=document.querySelector('#wb-part-title').getBoundingClientRect(); return r.top>=0 && r.bottom<innerHeight; });
+  await showOffline(); await view('book'); await closedOffline();
+  assert.equal(await page.locator('#wb-part-title').textContent(), 'The mental model');
+  await showOffline(); await view('notes'); await closedOffline();
+  assert.equal(await page.evaluate(() => document.activeElement.closest('[data-screen]')?.dataset.screen), 'notes');
+  await showOffline(); await chapter('html'); await closedOffline();
+  assert.equal(await page.locator('#wb-title').textContent(), 'Give your page meaning.');
+  await chapter('js'); await part(1);
+  await showOffline();
   await view('practice');
+  await closedOffline();
   assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-practice-title', 'opening mobile practice must not focus the keyboard');
   assert.equal(await page.locator('#wb-contents').isVisible(), false);
+  await showOffline();
   await view('course');
+  await closedOffline();
   await page.waitForFunction(() => document.querySelector('#web-return-book').getBoundingClientRect().top<160);
   await page.locator('#web-return-book').click();
   await page.locator('#wb-title').waitFor({state:'visible'});
@@ -250,7 +273,7 @@ async function preserved() {
     }
     await page.locator('#wb-note-editor').fill('');
   }
-  console.log('PASS '+engine+': mobile reading focus, no forced keyboard, top course return and parent-folder navigation preserve study data');
+  console.log('PASS '+engine+': mobile reading focus, offline-panel dismissal by every main navigation choice, no forced keyboard, top course return and parent-folder navigation preserve study data');
 
   await page.goto(origin + SECTION + '#l123');
   await page.locator('#legacy-course').waitFor({ state: 'visible' }); await page.locator('#l123').waitFor({ state: 'visible' });
@@ -294,17 +317,23 @@ async function preserved() {
   const oldContext=await context();
   const oldMarkup=fs.readFileSync(path.join(ROOT,SECTION),'utf8')
     .replace(/<nav id="web-site-nav"[\s\S]*?<\/nav>/,'')
-    .replace(/<span id="wb-contents-current">[\s\S]*?<\/span>/,'');
+    .replace(/<span id="wb-contents-current">[\s\S]*?<\/span>/,'')
+    .replace(/<button[^>]*id="wb-offline-study"[^>]*>[\s\S]*?<\/button>/,'');
   await oldContext.route(origin+SECTION, route => route.fulfill({status:200,contentType:'text/html',body:oldMarkup}));
   const old=await oldContext.newPage(), oldErrors=[]; old.on('pageerror',e=>oldErrors.push(e.message));
   await old.goto(origin+SECTION);
   await old.locator('#wb-next').click();
   assert.equal(await old.locator('#wb-part-title').textContent(),'The mental model');
+  await old.locator('#wb-offline-toggle').click();
+  assert(await old.locator('#wb-offline').isVisible());
+  await old.locator('#wb-offline-close').click();
+  assert.equal(await old.locator('#wb-offline').isVisible(),false);
+  assert.equal(await old.evaluate(() => document.activeElement.id),'wb-part-title','cached markup without Start studying must keep its existing return control usable');
   await old.locator('.wb-app-tabs [data-view=course]').click();
   assert(await old.locator('#legacy-course > .crumb').isVisible(),'cached documents retain their original folder links');
   assert.deepEqual(oldErrors,[],'new scripts tolerate cached markup');
   await oldContext.close();
-  console.log('PASS '+engine+': cached older navigation markup remains usable with new scripts');
+  console.log('PASS '+engine+': cached older navigation and offline markup remain usable with new scripts');
 
   // Phase 3 HTML may be cached while the main controller/runtime update first.
   // Missing exercise modules and controls must not erase already saved attempts.

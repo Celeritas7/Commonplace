@@ -4,7 +4,7 @@
  'use strict';
  const boot=window.WebStudioOfflineBoot;if(boot)boot.started=true;
  const $=id=>document.getElementById(id),root=new URL('./',document.currentScript.src).href;
- const button=$('wb-offline-download'),check=$('wb-offline-check'),pause=$('wb-offline-pause'),status=$('wb-offline-status'),size=$('wb-offline-size'),bar=$('wb-offline-progress'),error=$('wb-offline-error'),help=$('wb-offline-help'),toggle=$('wb-offline-toggle');
+ const button=$('wb-offline-download'),study=$('wb-offline-study'),check=$('wb-offline-check'),pause=$('wb-offline-pause'),status=$('wb-offline-status'),size=$('wb-offline-size'),bar=$('wb-offline-progress'),error=$('wb-offline-error'),help=$('wb-offline-help'),toggle=$('wb-offline-toggle');
  let busy=false,downloading=false,workerPromise=null,last=null,checkedAt=0;
  function bounded(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
  function activated(reg){return new Promise((resolve,reject)=>{const deadline=Date.now()+20000;function poll(){if(reg.active?.state==='activated'&&!reg.installing&&!reg.waiting)return resolve(reg.active);if(Date.now()>=deadline)return reject(new Error('Offline support could not activate. Retry while connected, or use Repair Web Studio offline setup below.'));setTimeout(poll,100);}poll();});}
@@ -40,28 +40,29 @@
  }
  function bytes(n){return n>=1000000?(n/1000000).toFixed(2)+' MB':Math.ceil(n/1000)+' kB';}
  function controls(){button.disabled=busy;check.disabled=busy;pause.hidden=!downloading;pause.disabled=false;}
+ function readyAction(ready){if(study)study.hidden=!ready;button.classList.toggle('wb-primary',!ready||!study);}
  function render(s){
-  if(!Number.isFinite(s.bytes)||!Number.isFinite(s.remainingBytes)){if(s.paused){status.textContent='Download paused · completed files kept';button.textContent='Resume download';toggle.dataset.ready='false';}return;}
+  if(!Number.isFinite(s.bytes)||!Number.isFinite(s.remainingBytes)){if(s.paused){readyAction(false);status.textContent='Download paused · completed files kept';button.textContent='Resume download';toggle.dataset.ready='false';}return;}
   last=s;size.textContent=bytes(s.bytes)+' total · '+bytes(Math.max(0,s.remainingBytes))+' remaining · '+s.done+' / '+s.total+' files';
   bar.value=s.bytes?Math.max(0,Math.min(1,(s.bytes-s.remainingBytes)/s.bytes)):0;
-  const ready=s.ready===true&&!downloading;toggle.dataset.ready=String(ready);toggle.title=ready?'Required files verified in this browser':'Prepare and check offline downloads';
+  const ready=s.ready===true&&!downloading&&!s.checking;readyAction(ready);toggle.dataset.ready=String(ready);toggle.title=ready?'Required files verified in this browser':'Prepare and check offline downloads';
   status.textContent=s.checking?'Verifying saved files… '+s.done+' / '+s.total:downloading?'Saving '+s.done+' / '+s.total+' files…':ready?'Ready offline':s.paused?'Download paused · completed files kept':s.done?'Download incomplete · resume to finish':'Not downloaded';
   button.textContent=ready?'Check saved pack':s.done?'Resume download':'Download study pack';
+  if(ready)help.textContent='Your study files are saved. Return to your lesson or workspace, then test a preview with Wi-Fi off before your next study session.';
  }
- function fail(e){status.textContent='Downloads need attention';toggle.dataset.ready='false';error.textContent=e.message||'Offline setup failed. Retry while connected.';check.textContent='Retry check';button.textContent=last?.done?'Resume download':'Retry download';}
+ function fail(e){readyAction(false);status.textContent='Downloads need attention';toggle.dataset.ready='false';error.textContent=e.message||'Offline setup failed. Retry while connected.';check.textContent='Retry check';button.textContent=last?.done?'Resume download':'Retry download';}
  async function inspect(){
-  if(busy)return;busy=true;controls();error.textContent='';status.textContent='Checking downloads…';
+  if(busy)return;busy=true;controls();readyAction(false);error.textContent='';status.textContent='Checking downloads…';
   try{render(await rpc('offline-status',render));check.textContent='Check downloads';checkedAt=Date.now();}
   catch(e){fail(e);}finally{busy=false;controls();}
  }
  async function download(){
-  if(busy)return;if(last?.ready)return inspect();busy=true;downloading=true;controls();error.textContent='';status.textContent='Preparing download…';toggle.dataset.ready='false';
-  help.textContent='Keep this screen open. You can pause and resume without downloading completed, unchanged files again.';
+  if(busy)return;if(last?.ready)return inspect();busy=true;downloading=true;controls();readyAction(false);error.textContent='';status.textContent='Preparing download…';toggle.dataset.ready='false';
+  help.textContent='Keep this app open. You can study while it saves, or pause and resume without downloading completed, unchanged files again.';
   try{
    if(navigator.storage?.persist)await bounded(navigator.storage.persist(),2000,'Storage preference unavailable').catch(()=>false);
    const s=await rpc('offline-download',render);downloading=false;render(s);checkedAt=Date.now();
-   if(s.ready)help.textContent='All required files were read back and verified. Turn Wi-Fi off, reopen this app and run a preview before your next study session.';
-   else if(s.paused)help.textContent='Download paused. Reconnect and choose Resume download when ready.';
+   if(s.paused)help.textContent='Download paused. Reconnect and choose Resume download when ready.';
   }catch(e){downloading=false;fail(e);}finally{busy=false;downloading=false;controls();}
  }
  button.onclick=download;check.onclick=inspect;

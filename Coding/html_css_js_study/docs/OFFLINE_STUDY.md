@@ -8,8 +8,8 @@ HTML, CSS and JavaScript previews execute locally in the browser's sandbox. The 
 
 1. Connect to the internet and open Web Studio in a regular Safari tab. If you want a Home Screen app, use Safari's Share menu → Add to Home Screen, then open that installed app.
 2. Sign into Commonplace in the browser or installed app where you will study. Safari and a Home Screen app may have separate storage. Each needs its own sign-in and its own download.
-3. Select **Study offline**, then download the study pack. Keep this screen open while downloading. Size, remaining bytes, progress and any file error appear beside the controls.
-4. Wait for **Ready offline**. This means the required files have been checked in this browser's storage. It is not a promise that the device will retain them forever or that an expired/missing login can be renewed without internet.
+3. Select **Study offline**, then download the study pack. Keep this app open while downloading. Size, remaining bytes, progress and any file error appear beside the controls. **Back to study** at the top returns to your current lesson or workspace; it does not cancel the download. The learning tabs also close the panel.
+4. Wait for **Ready offline**, then select **Start studying** to reveal your lesson or workspace. Ready means the required files have been checked in this browser's storage. It is not a promise that the device will retain them forever or that an expired/missing login can be renewed without internet.
 5. Turn off the connection, close and reopen Web Studio, edit a sample and run its preview. Add a note and bookmark, reopen again and check them. Test Safari and Home Screen separately if you use both.
 
 An interrupted download retains completed files. Reconnect and resume: completed files whose content has not changed are verified and reused. A missing, damaged or changed file is downloaded again. Keep a separate study backup under **Projects & backup**; do not clear website data to install an update or repair downloads.
