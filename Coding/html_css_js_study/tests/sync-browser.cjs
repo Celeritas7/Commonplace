@@ -337,6 +337,32 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
     assert.deepEqual(await saved(delayed), committed);
     console.log('PASS ' + engine + ': committed cloud work blocks editing through a delayed acknowledgement and reloads without losing a late draft');
 
+    // The shared gate can be waiting for an approved Commonplace login while
+    // a different General_apps account already exists in the browser session.
+    // That hidden account must not claim or upload this device’s legacy work.
+    const GATE_USER = '31e6f8b0-9a0f-4ebc-9306-5e31eb253676';
+    const gatedContext = await makeContext({ ...untouched, [KEY]: JSON.stringify(record) }, GATE_USER);
+    await gatedContext.route('**/_lib/gate.js', route => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'document.documentElement.classList.add("cp-locked");' }));
+    const gated = await open(gatedContext);
+    await state(gated, 'signed-out');
+    assert.match(await gated.locator('#wb-sync-status').textContent(), /waits for Commonplace to approve sign-in/);
+    assert(await gated.evaluate(() => document.documentElement.classList.contains('cp-locked')));
+    assert.equal(await gated.evaluate(key => localStorage.getItem(key), OWNER), null, 'a locked Commonplace gate must not bind existing local work to the current Supabase session');
+    assert.equal(requests.some(request => request.user === GATE_USER), false, 'no cloud read or upload is allowed before the shared login gate unlocks');
+    assert.deepEqual(await saved(gated), record);
+    await accountPanel(gated); await gated.locator('#wb-sync-now').click();
+    assert.equal(await gated.evaluate(key => localStorage.getItem(key), OWNER), null, 'manual retry cannot bypass the shared gate');
+    assert.equal(requests.some(request => request.user === GATE_USER), false);
+    await gated.evaluate(() => document.documentElement.classList.remove('cp-locked'));
+    await state(gated, 'synced');
+    assert.equal(await gated.evaluate(key => localStorage.getItem(key), OWNER), GATE_USER);
+    assert.equal(rows.get(GATE_USER).snapshot.study.project.html, files.html);
+    assert.equal(rows.get(GATE_USER).snapshot.study.lessons['html-elements'].note, 'Original account note.');
+    assert.deepEqual(rows.get(GATE_USER).snapshot.study.exercises, record.exercises);
+    await sharedUnchanged(gated);
+    console.log('PASS ' + engine + ': the shared login gate blocks account binding and cloud access until Commonplace finishes sign-in');
+
+
   } finally {
     for (const ctx of contexts) await ctx.close();
   }
