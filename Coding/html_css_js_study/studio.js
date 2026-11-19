@@ -12,7 +12,7 @@
   const old=(saved.lessons||{})[lessonIds[key]]||{};
   return [key,{part:0,file:key,note:'',answers:Array(5).fill(null),question:0,submitted:false,practised:false,read:false,prediction:null,...old,file:key,source:project,bookmarks:new Set(old.bookmarks||[]),visited:new Set([old.part||0])}];
  }));
- let practice=null,projectUI=null,importLocked=false;
+ let practice=null,projectUI=null,importLocked=false,cloud=null,saveError=loaded.error;
  const projectManager=window.WebStudioProjects?.create(saved,initialProject);
  if(projectManager)Object.assign(project,projectManager.active().files);
  let language=saved.language||'html',view='book',textSize=saved.textSize||18,practiceOrigin=0,returnScroll=0,hasPreview=false,returnButton=null;
@@ -34,8 +34,8 @@
   for(const [key,s]of Object.entries(state))lessons[lessonIds[key]]={...(lessons[lessonIds[key]]||{}),part:s.part,note:s.note,bookmarks:[...s.bookmarks],answers:s.answers.slice(),question:s.question,submitted:s.submitted,practised:s.practised,read:s.read,prediction:s.prediction};
   return {...saved,version:1,language,view,textSize,project:{...project},lessons,...(practice?{exercises:practice.snapshot()}:{} ),...(projectManager?{projects:projectManager.snapshot(project)}:{})};
  }
- function saveStatus(error){const el=$('#wb-save-status');el.textContent=error||'Saved on this device · no cloud sync';el.dataset.error=String(!!error);el.setAttribute('role',error?'alert':'status');}
- function persist(){if(importLocked)return false;try{const result=window.WebStudioStore.save(snapshot());saveStatus(result.ok?null:result.error);return result.ok;}catch(error){saveStatus(error.message||'Saving failed. Export your study backup before closing.');return false;}}
+ function saveStatus(error){saveError=error;const el=$('#wb-save-status');el.textContent=error||'Saved on this device';el.dataset.error=String(!!error);el.setAttribute('role',error?'alert':'status');}
+ function persist(){if(importLocked)return false;try{const result=window.WebStudioStore.save(snapshot());saveStatus(result.ok?null:result.error);if(result.ok)window.dispatchEvent(new Event('web-studio-saved'));return result.ok;}catch(error){saveStatus(error.message||'Saving failed. Export your study backup before closing.');return false;}}
  function exportStudy(){
   const backup=window.WebStudioStore.exportData();backup.currentDraft=snapshot();backup.currentLegacyDraft=window.WebStudioLegacy?.snapshot?.()||null;
   const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
@@ -88,7 +88,7 @@
  projectUI=window.WebStudioProjectUI?.mount({root,manager:projectManager,store:window.WebStudioStore,
   getProject:()=>({...project}),getSnapshot:snapshot,getLegacySnapshot:()=>window.WebStudioLegacy?.snapshot?.()||null,save:persist,exportStudy,
   replaceProject(files){stopPreview();for(const key of Object.keys(project))delete project[key];Object.assign(project,files);renderEditor();practice?.projectChanged();},
-  openPractice(){openPractice('try');persist();},setImportLock(value){importLocked=value;},reload(){location.reload();}
+  openPractice(){openPractice('try');persist();},setImportLock(value){importLocked=value;window.WebStudioCloudLocked=value;},reload(){location.reload();}
  });
  function stopPreview(){practice?.cancel();preview.stop();hasPreview=false;$('#wb-preview-empty').hidden=false;setPane('code');}
  function runPreview(){practice?.cancel();persist();$('#wb-console').textContent='';$('#wb-preview-empty').hidden=true;hasPreview=true;preview.run({...project});setPane('result');}
@@ -122,7 +122,7 @@
   const legacyError=document.getElementById('legacy-save-status').textContent.trim();
   if((!savedNow||legacyError)&&!confirm('Some study changes could not be saved. Leave anyway? Choose Cancel to stay and export a study backup.'))event.preventDefault();
  });
- root.addEventListener('click',persist);root.addEventListener('input',persist);root.addEventListener('change',persist);
+ for(const eventName of ['click','input','change'])root.addEventListener(eventName,event=>{if(!event.target.closest('.wb-sync-details'))persist();});
  window.addEventListener('pagehide',()=>{persist();preview.stop();});
  window.addEventListener('hashchange',()=>{if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash))showCourse();});
  $('#wb-update').onclick=async()=>{const button=$('#wb-update');button.disabled=true;setText('#wb-update-status','Checking for updates…');try{if(!('serviceWorker' in navigator))throw new Error('App updates are not supported in this browser.');const registration=await Promise.race([navigator.serviceWorker.getRegistration('./'),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);if(!registration)throw new Error('App update registration is not ready. Reload while connected and try again.');await Promise.race([registration.update(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);setText('#wb-update-status','Update check finished. If new files are ready, use Reload app.');$('#wb-reload').hidden=false;}catch(error){setText('#wb-update-status',error.message);}finally{button.disabled=false;}};
@@ -133,4 +133,29 @@
  if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash)||saved.view==='course')showCourse();
  if(projectUI?.recoveryPending()){setView('projects');all('.wb-language-tabs button,.wb-app-tabs button,[data-screen=projects] [data-view]').forEach(button=>button.disabled=true);}
  saveStatus(loaded.error);
+ function cloudSnapshot(){
+  if(importLocked||saveError)throw new Error(saveError||'Finish the backup review or recovery before syncing.');
+  const recovery=window.WebStudioStore.getImportRecovery();if(recovery.pending||recovery.error)throw new Error(recovery.error||'Recover the interrupted import before syncing.');
+  const legacyStatus=document.getElementById('legacy-save-status');if(legacyStatus.dataset.error==='true')throw new Error(legacyStatus.textContent);
+  const exported=window.WebStudioStore.exportData();if(exported.error)throw new Error(exported.error);
+  return {version:1,study:JSON.parse(exported.records.commonplace_web_studio_v1||'null'),legacy:JSON.parse(exported.records.commonplace_wdb_v1||'null')};
+ }
+ cloud=window.WebStudioCloud?.mount({root,readLocal:cloudSnapshot,isLocked:()=>importLocked,
+  flush(){try{cloudSnapshot();return true;}catch(error){saveStatus(error.message);return false;}},
+  applyLocal(incoming,captured){
+   if(!window.WebStudioSyncMerge.equal(cloudSnapshot(),captured))throw new Error('Study data changed while syncing. Nothing was replaced. Retry sync.');
+   const inspected=window.WebStudioStore.inspectBackup(JSON.stringify({format:'commonplace-web-studio-backup',version:1,exportedAt:new Date().toISOString(),records:{commonplace_web_studio_v1:incoming.study===null?null:JSON.stringify(incoming.study),commonplace_wdb_v1:incoming.legacy===null?null:JSON.stringify(incoming.legacy)}}));
+   if((incoming.study===null&&captured.study!==null)||(incoming.legacy===null&&captured.legacy!==null))throw new Error('The account snapshot is missing a saved study record. Your existing work was kept. Export a backup before reviewing this change.');
+   const plan=window.WebStudioStore.planImport(inspected,captured.study,captured.legacy,'replace');
+   if(!plan.ok)throw new Error(plan.error);
+   importLocked=true;window.WebStudioCloudLocked=true;stopPreview();
+   const result=window.WebStudioStore.applyImport(plan);
+   if(!result.ok){importLocked=!!result.recoveryPending;window.WebStudioCloudLocked=importLocked;throw new Error(result.error);}
+   root.inert=true;legacy.inert=true;if(siteNav)siteNav.inert=true;backToStudio.disabled=true;if(topBack)topBack.disabled=true;
+   return cloudSnapshotAfterApply();
+  },reload(){location.reload();}
+ });
+ if(!cloud){const status=$('#wb-sync-status'),button=$('#wb-sync-now');if(status){status.dataset.state='error';status.textContent='Account sync files could not load. Local saving is available. Reconnect and reload to retry.';}if(button){button.textContent='Reload sync files';button.onclick=()=>{if(!saveError)location.reload();};}}
+ function cloudSnapshotAfterApply(){const record=window.WebStudioStore.exportData().records;return {version:1,study:JSON.parse(record.commonplace_web_studio_v1||'null'),legacy:JSON.parse(record.commonplace_wdb_v1||'null')};}
+
 })();

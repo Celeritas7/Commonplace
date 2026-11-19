@@ -44,6 +44,7 @@
   S.show = S.show || 'all';
   S.hide = S.hide || {};
   function save() {
+    if (window.WebStudioCloudLocked || window.WebStudioStore?.getImportRecovery?.().pending) { status('Saving is paused while study data is being restored.', true); return false; }
     if (protectedError) { status(protectedError, true); return false; }
     try {
       if (localStorage.getItem(KEY) !== baselineRaw) {
@@ -54,6 +55,7 @@
       localStorage.setItem(KEY, next);
       baselineRaw = next;
       status('Course progress saved on this device.', false);
+      try { window.dispatchEvent(new Event('web-studio-saved')); } catch (_) {}
       return true;
     } catch (e) {
       status('Course changes could not be saved. Storage may be full or blocked. Keep this page open and export your current work before closing it.', true);
@@ -260,6 +262,7 @@
   }
 
   window.WebStudioLegacy = {
+    flush: save,
     reveal: reveal,
     activate: function () { chips(); render(); },
     snapshot: function () { return JSON.parse(JSON.stringify(S)); }
