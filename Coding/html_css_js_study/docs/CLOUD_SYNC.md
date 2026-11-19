@@ -17,7 +17,7 @@ Open **Account sync** beside the local-save status. Saved work uploads after edi
 
 On the other device, sign into the same Commonplace account. Incoming work is combined and staged; **Load synced work** saves the reviewed result and reloads the editors. It never replaces the open editor while you are typing. If you edit during a request, the new edit stays pending and is not falsely labelled synced.
 
-The first signed-in use binds this browser’s existing Web Studio work to that account. Changing to another account pauses sync; it never uploads the previous account’s queue into the new one. Sign back into the original account to continue. Local data is not erased on sign-out. Account sync and export/import are separate: JSON backups remain useful independent copies, not a replacement for sync.
+Sync waits for the shared Commonplace login gate to approve sign-in; a session behind a locked gate cannot claim or upload existing local work. The first approved signed-in use binds this browser’s existing Web Studio work to that account. Changing to another account pauses sync; it never uploads the previous account’s queue into the new one. Sign back into the original account to continue. Local data is not erased on sign-out. Account sync and export/import are separate: JSON backups remain useful independent copies, not a replacement for sync.
 
 ## Conflicts and recovery
 

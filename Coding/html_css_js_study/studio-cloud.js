@@ -73,7 +73,9 @@
       if (owner && owner !== id) throw new Error('This browser’s study work belongs to a different account. Sign back in to that account. Nothing has been uploaded or replaced.');
       if (!owner) { localStorage.setItem(OWNER, id); if (localStorage.getItem(OWNER) !== id) throw new Error('Account ownership could not be saved. Sync is paused.'); }
     }
+    function gateLocked() { return document.documentElement.classList.contains('cp-locked'); }
     function guard(id) {
+      if(gateLocked())throw new Error('Complete Commonplace sign-in before account sync.');
       if (!id || id !== userId || localStorage.getItem(OWNER) !== id) throw new Error('The signed-in account changed. Sync paused to protect your work.');
     }
     function readLocal() {
@@ -83,6 +85,7 @@
       return options.readLocal();
     }
     async function sessionChanged(session) {
+      if(gateLocked()){sessionGeneration++;userId=null;engine?.setUser(null);account.textContent='Complete Commonplace sign-in';paint({state:'signed-out',message:'Account sync waits for Commonplace to approve sign-in. Existing local work has not been uploaded.'});return;}
       if(session?.user?.id && session.user.id === userId) { sync(); return; }
       var generation = ++sessionGeneration;
       userId = null; engine?.setUser(null);
@@ -164,9 +167,12 @@
       if (event.key === OWNER) { sessionGeneration++; userId = null; engine?.setUser(null); fail(new Error('Study account ownership changed in another tab. Reload before syncing.')); }
     });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) sync(); });
+    var wasLocked=gateLocked();
+    var gateObserver=new MutationObserver(function(){var locked=gateLocked();if(locked&&!wasLocked){sessionGeneration++;userId=null;engine?.setUser(null);}if(wasLocked&&!locked)setTimeout(start,0);wasLocked=locked;});
+    gateObserver.observe(document.documentElement,{attributes:true,attributeFilter:['class']});
     var interval = setInterval(function () { if (!document.hidden && navigator.onLine) sync(); }, 60000);
     start();
-    return { changed: changed, sync: sync, stop: function () { stopped = true; clearTimeout(timer); clearInterval(interval); engine?.stop(); } };
+    return { changed: changed, sync: sync, stop: function () { stopped = true; gateObserver.disconnect(); clearTimeout(timer); clearInterval(interval); engine?.stop(); } };
   }
   root.WebStudioCloud = { mount: mount };
 })(window);
