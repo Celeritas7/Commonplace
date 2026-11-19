@@ -339,6 +339,7 @@ async function preserved() {
   assert.deepEqual(errors, [], 'uncaught page errors');
   console.log('PASS ' + engine + ': original lesson deep links, saved tracker data and malformed-record preservation');
   await require('./exercises-browser.cjs')({ context, origin, SECTION, KEY, untouched, engine, setPage: value => { page = value; } });
+  await require('./projects-browser.cjs')({ context, origin, SECTION, KEY, untouched, engine, setPage: value => { page = value; } });
 })().catch(async error => {
   console.error(error);
   if (page) { try { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-' + engine + '.png', fullPage: true }); } catch (_) {} }

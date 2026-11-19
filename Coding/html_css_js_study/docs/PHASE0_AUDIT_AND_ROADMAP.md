@@ -140,12 +140,13 @@ Acceptance: review the three samples in sequence, edit/run/check, then reopen to
 - [ ] Physical iPad Safari/Home Screen acceptance (tracked in Phase 7).
 Acceptance: known correct/incorrect solutions behave predictably and feedback explains failures. Node coverage and the Chromium/WebKit acceptance suite cover the sample rubrics, errors, cancellation, local history and data preservation; device acceptance remains separate. See [exercises and feedback](EXERCISES.md).
 
-### Phase 5 — projects and export
+### Phase 5 — projects and backup
 
-- [ ] Project storage, templates, duplication and local assets.
-- [ ] Scoped backup, import validation and explicit merge/replace choices.
-- [ ] Export a runnable static website; exclude auth/session and unrelated records.
-Acceptance: export/import round trip preserves code/assets, handles invalid imports and does not overwrite unrelated work.
+- [x] Named local projects, three templates, duplication/rename and embedded small raster images.
+- [x] Scoped backup, import validation, reviewed merge/replace choices and recoverable writes.
+- [x] Export a runnable standalone HTML website; exclude study/auth/session and unrelated records.
+- [ ] Physical iPad file download/open/import acceptance (tracked in Phase 7).
+Acceptance: export/import round trip preserves code/assets, handles invalid imports and does not overwrite unrelated work. See [projects, backups and recovery](PROJECTS_AND_BACKUP.md).
 
 ### Phase 6 — reliable offline preparation
 
