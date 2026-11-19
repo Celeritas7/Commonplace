@@ -119,12 +119,17 @@ Acceptance: existing tracker fixtures survive unchanged; all controls accurately
 - [ ] Clearly identify remote assets/services and block or label unsupported offline cases.
 Acceptance: a button changes preview content through real JavaScript; drafts survive reopen; preview cannot read parent study/session data.
 
-### Phase 3 — integrated lessons
+### Phase 3 — sample learning book and learning flow
 
-- [ ] Initial complete HTML → CSS → JavaScript sequence with original or approved material.
-- [ ] Private PDF import strategy; no public upload of private books.
-- [ ] Stable lesson IDs and editable examples.
-Acceptance: finish a small learning sequence inside the app; content coverage is explicit.
+Scope revised by the user: prepare only enough sample material to review the app; full course review and curriculum conversion are deferred.
+
+- [x] Three samples: HTML reading card, CSS spacing and JavaScript click counter.
+- [x] Selected Drive HTML/CSS topics reviewed; JavaScript mapped to the course outline with API references. Original explanations and exercises; source scope is visible.
+- [x] Stable lesson IDs, editable shared project and saved-place resume.
+- [x] Reading, prediction, practice, five-question check, notes/bookmarks and separate progress indicators.
+- [ ] Physical iPad review of the sample learning flow.
+- Deferred: full curriculum and any private PDF import strategy. No private book files are published.
+Acceptance: review the three samples in sequence, edit/run/check, then reopen to confirm saved study records. See [sample sources and scope](SAMPLE_LESSONS.md).
 
 ### Phase 4 — exercises and feedback
 

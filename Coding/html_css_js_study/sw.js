@@ -8,7 +8,7 @@ const CACHE = 'html-css-js-study-shell-v2';
 const LEGACY_CACHE = 'html-css-js-study-v1';
 const BASE = new URL('./', self.location.href);
 const CORE = [
-  'index.html', 'studio.css', 'studio.css?v=1.2', 'studio.js', 'studio-lessons.js',
+  'index.html', 'studio.css', 'studio.css?v=1.2', 'studio.css?v=1.3', 'studio.js', 'studio-lessons.js',
   'studio-store.js', 'studio-preview.js', 'legacy-tracker.js',
   'vendor/acorn.js', 'data/course-index.js', '../../_lib/gate.js'
 ];

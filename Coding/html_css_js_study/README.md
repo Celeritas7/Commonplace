@@ -5,11 +5,13 @@ Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practic
 ## Start learning
 
 1. Read the HTML chapter's eight parts, including prediction, common mistakes and a practice challenge.
-2. Select **Open example**. The relevant file opens with its key expression selected. All three files belong to one project; your edits carry across chapters.
+2. Select **Open practice**. The relevant file opens with its key expression selected. All three files belong to one project; your edits carry across chapters.
 3. Select **Run preview**, then **Return to lesson** to continue reading.
 4. Finish the single five-question check (4/5 to pass), test your practice change and mark the lesson read. The reading mark is independent of quiz/practice results.
 
-The integrated curriculum currently has **three original foundation chapters**: HTML elements, CSS spacing and JavaScript events. It does not reproduce the full paid course. **Course index** retains all 35 sections and 453 original entries, their existing Drive/Udemy links, notes and stars. IDs are frozen in `tests/legacy-id-map.json`.
+Select **3 sample lessons** in the book header to see the review sequence, saved place and separate reading/check/practice status. Source notes are collapsed inside each chapter.
+
+The integrated curriculum currently has **three source-aligned sample chapters with original explanations and exercises**: HTML elements, CSS spacing and JavaScript events. Selected HTML/CSS material has been reviewed against the Drive study books; the JavaScript bridge follows the course outline with browser APIs checked against MDN. See [sample sources and scope](docs/SAMPLE_LESSONS.md). The full learning book is deferred. It does not reproduce the full paid course. **Course index** retains all 35 sections and 453 original entries, their existing Drive/Udemy links, notes and stars. IDs are frozen in `tests/legacy-id-map.json`.
 
 ## Saving and backups
 

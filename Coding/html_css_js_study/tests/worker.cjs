@@ -9,7 +9,7 @@ const ORIGIN = 'https://study.test';
 const BASE = ORIGIN + '/Commonplace/Coding/html_css_js_study/';
 const CACHE = 'html-css-js-study-shell-v2';
 const OLD = 'html-css-js-study-v1';
-const CORE = ['index.html', 'studio.css', 'studio.css?v=1.2', 'studio.js', 'studio-lessons.js', 'studio-store.js', 'studio-preview.js', 'legacy-tracker.js', 'vendor/acorn.js', 'data/course-index.js', '../../_lib/gate.js'];
+const CORE = ['index.html', 'studio.css', 'studio.css?v=1.2', 'studio.css?v=1.3', 'studio.js', 'studio-lessons.js', 'studio-store.js', 'studio-preview.js', 'legacy-tracker.js', 'vendor/acorn.js', 'data/course-index.js', '../../_lib/gate.js'];
 const contentType = url => /\.js(?:\?|$)/.test(url) ? 'application/javascript' : /\.css(?:\?|$)/.test(url) ? 'text/css' : 'text/html';
 const response = (body, url, status = 200) => new Response(body, { status, headers: { 'Content-Type': contentType(url) } });
 

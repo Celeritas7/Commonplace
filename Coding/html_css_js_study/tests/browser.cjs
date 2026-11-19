@@ -92,6 +92,16 @@ async function preserved() {
   assert.equal(await page.locator('.wb-toc [data-part]').count(), 9);
   await preserved();
 
+  // The supplied sample must work before the learner edits any file.
+  await view('practice'); await run();
+  const starterPreview = page.frameLocator('#wb-preview-host iframe');
+  assert.equal(await starterPreview.locator('h1').textContent(), 'My study desk');
+  assert.equal(await starterPreview.locator('.card').evaluate(el => getComputedStyle(el).padding), '24px');
+  await starterPreview.locator('#counter').click();
+  assert.equal(await starterPreview.locator('#counter').textContent(), 'Clicks: 1');
+  await page.locator('#wb-return').click();
+  console.log('PASS ' + engine + ': fresh sample starter renders its card and runs the click counter');
+
   await part(2); await page.locator('#wb-bookmark').click();
   await view('notes'); await page.locator('#wb-note-editor').fill('A note to keep through updates.');
   await view('book'); await part(8);
@@ -136,6 +146,38 @@ async function preserved() {
   await page.locator('#wb-return').click(); await textHas('#wb-part-title', /Why this matters/);
   await preserved();
   console.log('PASS ' + engine + ': shared three-file project survives chapter changes/reload and executes real HTML/CSS/JavaScript');
+
+  const beforeSamples = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), KEY);
+  await page.locator('.wb-samples-link').click();
+  assert.equal(await page.locator('#wb-library-list .wb-library-entry').count(), 3);
+  const htmlSample = page.locator('#wb-library-list .wb-library-entry').filter({ has: page.locator('[data-language="html"]') });
+  assert.match(await htmlSample.textContent(), /Reading marked done.*Check passed · 4 \/ 5.*Practice not marked tested/s);
+  assert.match(await htmlSample.textContent(), /Saved place: Walk-through/);
+  for (const width of [320, 390, 810]) {
+    await page.setViewportSize({ width, height: 1000 });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'sample library overflow at ' + width);
+  }
+  await page.setViewportSize({ width: 1024, height: 1000 });
+  for (const language of ['html', 'css', 'js']) {
+    await page.locator('#wb-library-list [data-language="' + language + '"]').click();
+    const lessonId = { html: 'html-elements', css: 'css-spacing', js: 'js-events' }[language];
+    const expectedPart = beforeSamples.lessons[lessonId].part;
+    assert.equal(await page.locator('.wb-toc [aria-current="step"]').getAttribute('data-part'), String(expectedPart));
+    await page.locator('#wb-sources > summary').click();
+    assert(await page.locator('#wb-source-detail a').count() > 0, language + ' must identify lesson references');
+    assert.match(await page.locator('#wb-source-detail').textContent(), /Reference links open online/);
+    for (const href of await page.locator('#wb-source-detail a').evaluateAll(links => links.map(link => link.href))) {
+      assert.match(href, /^https:\/\/(drive\.google\.com|developer\.mozilla\.org)\//);
+    }
+    await page.locator('#wb-sources > summary').click();
+    if (language === 'html') assert.match(await page.locator('#wb-prose').textContent(), /id="counter"/, 'HTML walk-through must match the shared counter selector');
+    if (language !== 'js') await page.locator('.wb-samples-link').click();
+  }
+  const afterSamples = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), KEY);
+  assert.deepEqual(afterSamples.project, beforeSamples.project);
+  assert.deepEqual(afterSamples.lessons, beforeSamples.lessons, 'sample navigation must preserve notes, answers, reading marks, bookmarks and saved places');
+  await preserved();
+  console.log('PASS ' + engine + ': sample library, online source notes and saved-place resume preserve all learning records');
 
   await view('practice');
   await edit('js', 'try { parent.localStorage.setItem("preview-must-not-write", "bad"); document.querySelector("#counter").textContent = "ACCESS GRANTED"; } catch (e) { document.querySelector("#counter").textContent = "parent blocked"; }');
