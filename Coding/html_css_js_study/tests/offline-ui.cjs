@@ -13,10 +13,17 @@ assert(bootstrap && scriptTag, 'independent offline loading recovery is required
 assert(html.indexOf('id="wb-offline-watchdog"') < html.indexOf('<script src="offline.js'), 'watchdog must start before a stalled external script request');
 
 function harness(navigation = {}) {
-  const ids = ['wb-offline-download', 'wb-offline-check', 'wb-offline-pause', 'wb-offline-status', 'wb-offline-size', 'wb-offline-progress', 'wb-offline-error', 'wb-offline-help', 'wb-offline-toggle', 'wb-offline'];
-  const nodes = Object.fromEntries(ids.map(id => [id, { textContent: '', disabled: false, hidden: false, dataset: {}, addEventListener() {} }]));
+  const ids = ['wb-offline-download', 'wb-offline-check', 'wb-offline-pause', 'wb-offline-status', 'wb-offline-size', 'wb-offline-progress', 'wb-offline-error', 'wb-offline-help', 'wb-offline-toggle', 'wb-offline-study', 'wb-offline'];
+  const nodes = Object.fromEntries(ids.map(id => {
+    const classes = new Set();
+    return [id, { textContent: '', disabled: false, hidden: false, dataset: {}, addEventListener() {}, classList: {
+      toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); },
+      contains(name) { return classes.has(name); }
+    } }];
+  }));
   nodes['wb-offline-status'].textContent = 'Checking downloads…';
   nodes['wb-offline-download'].disabled = true;
+  nodes['wb-offline-study'].hidden = true;
   const timers = new Map(); let nextTimer = 0, reloads = 0;
   const document = { currentScript: { src: 'https://study.test/Commonplace/Coding/html_css_js_study/offline.js?v=1.7' }, getElementById: id => nodes[id], addEventListener() {} };
   const context = vm.createContext({
@@ -74,9 +81,28 @@ function harness(navigation = {}) {
   const repairedOffline = harness({ onLine: false, serviceWorker });
   vm.runInContext(manager, repairedOffline.context); await new Promise(resolve => setImmediate(resolve));
   assert.equal(repairedOffline.nodes['wb-offline-status'].textContent, 'Ready offline');
+  assert.equal(repairedOffline.nodes['wb-offline-study'].hidden, false, 'verified offline files expose the primary study action');
+  assert.equal(repairedOffline.nodes['wb-offline-download'].classList.contains('wb-primary'), false, 'checking an already saved pack is secondary to starting study');
   assert.equal(registerCalls, 0, 'an already repaired worker must be reused without a network registration offline');
   assert.equal(lookupCalls, 1);
   console.log('PASS reopening offline reuses the exact-scope repair worker without fetching a different script URL');
+
+  const verifiedReply = savedWorker.postMessage;
+  let recheckPort;
+  savedWorker.postMessage = (message, ports) => { recheckPort = ports[0]; };
+  const recheck = repairedOffline.nodes['wb-offline-check'].onclick();
+  await new Promise(resolve => setImmediate(resolve));
+  assert(recheckPort, 'the recheck request should reach the saved worker');
+  assert.equal(repairedOffline.nodes['wb-offline-study'].hidden, true, 'checking must not present the earlier verified result as current');
+  recheckPort.postMessage({ progress: true, checking: true, ready: true, done: 1, total: 1, bytes: 100, remainingBytes: 0 });
+  assert.equal(repairedOffline.nodes['wb-offline-study'].hidden, true, 'verification progress is not a completed ready result');
+  recheckPort.postMessage({ error: 'Saved pack could not be verified.' });
+  await recheck;
+  assert.equal(repairedOffline.nodes['wb-offline-study'].hidden, true, 'a failed recheck must remove the earlier ready-only action');
+  assert.equal(repairedOffline.nodes['wb-offline-download'].classList.contains('wb-primary'), true, 'download recovery becomes primary when verification fails');
+  assert.equal(repairedOffline.nodes['wb-offline-status'].textContent, 'Downloads need attention');
+  savedWorker.postMessage = verifiedReply;
+  console.log('PASS a failed recheck removes the previous ready-only study action');
 
   const lostConnection = harness({ onLine: true, serviceWorker });
   vm.runInContext(manager, lostConnection.context); await new Promise(resolve => setImmediate(resolve));
@@ -87,6 +113,15 @@ function harness(navigation = {}) {
   const parentWorker = harness({ onLine: false, serviceWorker: { ...serviceWorker, async getRegistration() { return { ...registration, scope: 'https://study.test/Commonplace/' }; } } });
   vm.runInContext(manager, parentWorker.context); await new Promise(resolve => setImmediate(resolve));
   assert.equal(parentWorker.nodes['wb-offline-status'].textContent, 'Downloads need attention');
+  assert.equal(parentWorker.nodes['wb-offline-study'].hidden, true, 'an unverified pack must not show the ready-only study action');
   assert.match(parentWorker.nodes['wb-offline-error'].textContent, /Offline script request/);
   console.log('PASS a parent Commonplace worker is never mistaken for Web Studio offline support');
+
+  const oldMarkup = harness({ onLine: false, serviceWorker });
+  delete oldMarkup.nodes['wb-offline-study'];
+  vm.runInContext(manager, oldMarkup.context); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(oldMarkup.nodes['wb-offline-status'].textContent, 'Ready offline', 'current manager must still verify files with cached markup lacking the new button');
+  assert.equal(oldMarkup.nodes['wb-offline-download'].disabled, false);
+  assert.equal(oldMarkup.nodes['wb-offline-download'].classList.contains('wb-primary'), true, 'old markup retains its existing primary control');
+  console.log('PASS cached markup without Start studying still verifies packs and keeps its existing controls');
 })().catch(error => { console.error(error); process.exitCode = 1; });

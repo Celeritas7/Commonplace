@@ -97,6 +97,12 @@ async function textHas(selector, pattern) {
 async function openPanel() {
   if (!await page.locator('#wb-offline').isVisible()) await page.locator('#wb-offline-toggle').click();
 }
+async function requireInViewport(selector, message) {
+  await until(() => page.locator(selector).evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.bottom <= innerHeight && rect.left >= 0 && rect.right <= innerWidth;
+  }), message, 5000);
+}
 async function readyController() {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 30000 });
 }
@@ -209,6 +215,8 @@ function revise(files) {
   assert.equal(fresh.ready, false); assert.equal(fresh.done, 0); assert.equal(fresh.remainingBytes, manifest.bytes);
   assert.equal((await savedKeys()).length, 0, 'installation must not silently download the study pack');
   assert(await page.locator('#wb-offline-download').isVisible());
+  await requireInViewport('#wb-offline-close', 'the phone must show a return control without scrolling through download instructions');
+  assert.equal(await page.locator('#wb-offline-study').isVisible(), false, 'Start studying must not imply a fresh pack is ready');
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'offline controls overflow on a phone');
   console.log('PASS ' + engine + ': real worker installation leaves the explicit pack empty and shows mobile download controls');
 
@@ -217,6 +225,13 @@ function revise(files) {
   blockedPath = relativePath(interruptedFile.url);
   await page.locator('#wb-offline-download').click();
   await until(() => held.size > 0, 'download did not reach the interrupted file');
+  await page.locator('#wb-offline-close').click();
+  assert.equal(await page.locator('#wb-offline').isVisible(), false);
+  assert.equal(await page.locator('#wb-offline-toggle').getAttribute('aria-expanded'), 'false');
+  await requireInViewport('#wb-part-title', 'leaving download controls must reveal the lesson on a phone');
+  await openPanel();
+  assert(await page.locator('#wb-offline-download').isDisabled(), 'hiding the panel must not cancel or restart its active download');
+  assert(await page.locator('#wb-offline-pause').isVisible(), 'the existing transfer can still be paused after reopening its controls');
   await page.locator('#wb-offline-pause').click();
   await until(async () => !(await page.locator('#wb-offline-download').isDisabled()), 'paused download did not release its button');
   const partial = await rpc('offline-status');
@@ -231,7 +246,13 @@ function revise(files) {
   assert.equal(full.bytes, originalManifest.bytes);
   console.log('PASS ' + engine + ': interrupted body transfer pauses visibly; resume skips completed hashes and verifies the complete pack');
 
-  await page.locator('#wb-offline-close').click();
+  assert(await page.locator('#wb-offline-study').isVisible(), 'a verified pack must offer a direct way into the lessons');
+  await page.locator('#wb-offline-study').click();
+  assert.equal(await page.locator('#wb-offline').isVisible(), false);
+  await requireInViewport('#wb-part-title', 'Start studying must place actual lesson content on the phone screen');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-part-title');
+  assert.equal((await rpc('offline-status')).ready, true, 'returning to lessons must retain the verified pack');
+  console.log('PASS ' + engine + ': phone download controls have an immediate exit; hiding preserves the transfer and Start studying reveals the lesson');
   await view('book');
   if (!await page.locator('#wb-contents').evaluate(element => element.open)) await page.locator('#wb-contents > summary').click();
   await page.locator('.wb-toc [data-part="2"]').click(); await page.locator('#wb-bookmark').click();
