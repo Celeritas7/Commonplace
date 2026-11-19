@@ -12,7 +12,9 @@
   const old=(saved.lessons||{})[lessonIds[key]]||{};
   return [key,{part:0,file:key,note:'',answers:Array(5).fill(null),question:0,submitted:false,practised:false,read:false,prediction:null,...old,file:key,source:project,bookmarks:new Set(old.bookmarks||[]),visited:new Set([old.part||0])}];
  }));
- let practice=null;
+ let practice=null,projectUI=null,importLocked=false;
+ const projectManager=window.WebStudioProjects?.create(saved,initialProject);
+ if(projectManager)Object.assign(project,projectManager.active().files);
  let language=saved.language||'html',view='book',textSize=saved.textSize||18,practiceOrigin=0,returnScroll=0,hasPreview=false,returnButton=null;
  const legacy=document.getElementById('legacy-course');
  const backToStudio=document.getElementById('return-studio');
@@ -30,10 +32,10 @@
  function snapshot(){
   const lessons={...(saved.lessons||{})};
   for(const [key,s]of Object.entries(state))lessons[lessonIds[key]]={...(lessons[lessonIds[key]]||{}),part:s.part,note:s.note,bookmarks:[...s.bookmarks],answers:s.answers.slice(),question:s.question,submitted:s.submitted,practised:s.practised,read:s.read,prediction:s.prediction};
-  return {...saved,version:1,language,view,textSize,project:{...project},lessons,...(practice?{exercises:practice.snapshot()}:{} )};
+  return {...saved,version:1,language,view,textSize,project:{...project},lessons,...(practice?{exercises:practice.snapshot()}:{} ),...(projectManager?{projects:projectManager.snapshot(project)}:{})};
  }
  function saveStatus(error){const el=$('#wb-save-status');el.textContent=error||'Saved on this device · no cloud sync';el.dataset.error=String(!!error);el.setAttribute('role',error?'alert':'status');}
- function persist(){const result=window.WebStudioStore.save(snapshot());saveStatus(result.ok?null:result.error);return result.ok;}
+ function persist(){if(importLocked)return false;try{const result=window.WebStudioStore.save(snapshot());saveStatus(result.ok?null:result.error);return result.ok;}catch(error){saveStatus(error.message||'Saving failed. Export your study backup before closing.');return false;}}
  function exportStudy(){
   const backup=window.WebStudioStore.exportData();backup.currentDraft=snapshot();backup.currentLegacyDraft=window.WebStudioLegacy?.snapshot?.()||null;
   const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
@@ -48,16 +50,18 @@
  }
  function renderReading(){const s=current(),c=chapters[language];renderSources(c);root.dataset.language=language;setText('#wb-contents-current',s.part===8?'Final check':(s.part+1)+' / 8 · '+names[s.part]);setText('#wb-chapter-label',c.label);setText('#wb-title',c.title);setText('#wb-objective',c.objective);all('[data-language]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.language===language)));all('[data-part]').forEach(b=>{const p=Number(b.dataset.part);if(p===s.part)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');b.classList.toggle('wb-visited',s.visited.has(p));});$('#wb-reading-part').hidden=s.part===8;$('#wb-finish').hidden=s.part!==8;if(s.part<8){setText('#wb-part-label',String(s.part+1).padStart(2,'0')+' / 08');setText('#wb-part-title',names[s.part]);$('#wb-prose').innerHTML=c.parts[s.part]+(s.part===4?'<div class="wb-predict-options" aria-label="Your prediction">'+c.prediction.options.map((o,i)=>'<button class="cursor-interaction" data-prediction="'+i+'" aria-pressed="'+(s.prediction===i)+'">'+escape(o)+'</button>').join('')+'</div><p class="wb-feedback" id="wb-prediction-feedback" aria-live="polite"></p>':'');if(s.part===4&&s.prediction!==null)renderPrediction();}else renderQuiz();$('#wb-prev').disabled=s.part===0;$('#wb-next').hidden=s.part===8;setText('#wb-next',s.part===7?'Before you go →':names[s.part+1]+' →');setText('#wb-page-count',s.part===8?'Before you go':'Part '+(s.part+1)+' of 8');setText('#wb-next-chapter',language==='html'?'Next: CSS →':language==='css'?'Next: JavaScript →':'Chapter library →');updateReadingState();}
  function setView(next){
+  if(projectUI?.recoveryPending())next='projects';
+  if(next!=='projects')projectUI?.leave();
   if(next!=='practice')practice?.cancel();
   if(next==='course'){showCourse(true);return;}
   view=next;legacy.hidden=true;backToStudio.hidden=true;if(topBack)topBack.hidden=true;root.hidden=false;$('#wb-contents').hidden=next!=='book';root.dataset.view=next;
   document.body.dataset.webView='book';document.getElementById('legacy-export').hidden=true;
-  all('[data-screen]').forEach(e=>e.hidden=e.dataset.screen!==next);all('.wb-app-tabs [data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next||(next==='mistakes'&&b.dataset.view==='practice'))));
-  if(next==='notes')renderNotes();if(next==='library')renderLibrary();if(next==='mistakes')practice?.renderBank();
+  all('[data-screen]').forEach(e=>e.hidden=e.dataset.screen!==next);all('.wb-app-tabs [data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next||(['mistakes','projects'].includes(next)&&b.dataset.view==='practice'))));
+  if(next==='notes')renderNotes();if(next==='library')renderLibrary();if(next==='mistakes')practice?.renderBank();if(next==='projects')projectUI?.refresh();
  }
- function showCourse(manual=false){view='course';stopPreview();root.hidden=true;legacy.hidden=false;backToStudio.hidden=false;if(topBack)topBack.hidden=false;document.body.dataset.webView='course';document.getElementById('legacy-export').hidden=false;window.WebStudioLegacy?.activate?.();const id=location.hash.slice(1);if(!manual&&/^[lxq]\d+$/.test(id))window.WebStudioLegacy?.reveal(id);if(manual){window.scrollTo({top:0,behavior:'auto'});topBack?.focus({preventScroll:true});}window.dispatchEvent(new Event('resize'));}
+ function showCourse(manual=false){if(projectUI?.recoveryPending()){setView('projects');return;}projectUI?.leave();view='course';stopPreview();root.hidden=true;legacy.hidden=false;backToStudio.hidden=false;if(topBack)topBack.hidden=false;document.body.dataset.webView='course';document.getElementById('legacy-export').hidden=false;window.WebStudioLegacy?.activate?.();const id=location.hash.slice(1);if(!manual&&/^[lxq]\d+$/.test(id))window.WebStudioLegacy?.reveal(id);if(manual){window.scrollTo({top:0,behavior:'auto'});topBack?.focus({preventScroll:true});}window.dispatchEvent(new Event('resize'));}
  function setPart(part){current().part=Math.max(0,Math.min(8,part));current().visited.add(current().part);renderReading();setView('book');if(root.getBoundingClientRect().width<830)$('#wb-contents').open=false;focusPart();}
- function selectLanguage(key){if(!chapters[key])return;stopPreview();language=key;renderReading();setView('book');focusView();}
+ function selectLanguage(key){if(projectUI?.recoveryPending()||!chapters[key])return;stopPreview();language=key;renderReading();setView('book');focusView();}
  function renderPrediction(){const s=current(),p=chapters[language].prediction;if(s.prediction===null)return;setText('#wb-prediction-feedback',s.prediction===p.answer?p.correct:p.wrong);all('[data-prediction]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.prediction)===s.prediction)));}
  function renderQuiz(){const s=current(),c=chapters[language];$('#wb-quiz-question').hidden=s.submitted;$('#wb-quiz-result').hidden=!s.submitted;const score=s.answers.reduce((n,a,i)=>n+(a===c.quiz[i].correct?1:0),0);setText('#wb-check-state',s.submitted?(score>=4?'✓ Check passed · '+score+' / 5':'Keep practising · '+score+' / 5 · aim for 4 / 5'):'Aim for 4 / 5. You can retry after reviewing.');if(s.submitted){setText('#wb-quiz-score',score+' / 5');setText('#wb-quiz-summary',score>=4?'Check passed. Review any missed answer, then finish your practice.':'Review the explanations and try again. Your lesson reading mark is independent.');$('#wb-answer-review').innerHTML=c.quiz.map((q,i)=>'<div class="wb-answer-review"><strong>'+((s.answers[i]===q.correct)?'✓ ':'↺ ')+escape(q.q)+'</strong><p>Answer: '+escape(q.a[q.correct])+'. '+escape(q.why)+'</p></div>').join('');return;}const q=c.quiz[s.question];setText('#wb-quiz-count','Question '+(s.question+1)+' of 5');setText('#wb-quiz-title',q.q);$('#wb-quiz-options').innerHTML=q.a.map((a,i)=>'<label class="wb-quiz-option cursor-interaction"><input type="radio" name="wb-answer" value="'+i+'"'+(s.answers[s.question]===i?' checked':'')+'><span>'+escape(a)+'</span></label>').join('');$('#wb-quiz-dots').innerHTML=s.answers.map(a=>'<span class="wb-question-dot'+(a!==null?' answered':'')+'" aria-hidden="true"></span>').join('');$('#wb-quiz-dots').setAttribute('aria-label',s.answers.filter(a=>a!==null).length+' of 5 questions answered');$('#wb-quiz-prev').disabled=s.question===0;setText('#wb-quiz-next',s.question===4?'Check answers':'Next question →');setText('#wb-quiz-feedback','');}
  function quizNext(){const s=current();if(s.answers[s.question]===null){setText('#wb-quiz-feedback','Choose an answer before continuing.');return;}if(s.question<4)s.question++;else{const missing=s.answers.indexOf(null);if(missing!==-1)s.question=missing;else s.submitted=true;}renderQuiz();}
@@ -69,7 +73,7 @@
    return '<div class="wb-library-entry"><div><span class="wb-eyebrow">'+escape(c.name)+'</span><h3>'+escape(c.sampleTitle||c.title)+'</h3><p>'+escape(c.objective)+'</p><p class="wb-small">'+(s.read?'Reading marked done':'Reading not marked done')+' · '+check+' · '+(s.practised?'Practice marked tested':'Practice not marked tested')+'</p><p class="wb-small">Saved place: '+escape(names[s.part])+'</p>'+(practice?'<p class="wb-small">'+escape(practice.summary(key))+'</p>':'')+'</div><button class="cursor-interaction" data-language="'+key+'">'+(s.part>0?'Continue lesson':'Open lesson')+'</button></div>';
   }).join('');
  }
- function renderEditor(){const s=current();$('#wb-editor').value=project[s.file];for(const file of Object.keys(fileNames))$('#wb-editor-'+file).value=project[file];setText('#wb-editor-label','Edit '+fileNames[s.file]);all('[data-file]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.file===s.file)));setText('#wb-editor-state','One shared project · '+fileNames[s.file]);}
+ function renderEditor(){const s=current();$('#wb-editor').value=project[s.file];for(const file of Object.keys(fileNames))$('#wb-editor-'+file).value=project[file];setText('#wb-editor-label','Edit '+fileNames[s.file]);all('[data-file]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.file===s.file)));setText('#wb-editor-state',(projectManager?projectManager.active().name:'One shared project')+' · '+fileNames[s.file]);setText('#wb-project-current',projectManager?projectManager.active().name:'Study project');}
  function openPractice(kind,restoring=false){practiceOrigin=current().part;returnScroll=window.scrollY;returnButton=document.activeElement;const c=chapters[language],challenge=kind==='challenge'||practiceOrigin===6;setText('#wb-return-label','Return to '+names[practiceOrigin]);setText('#wb-practice-title','My first webpage');setText('#wb-task-title',challenge?c.challengeTitle:c.taskTitle);setText('#wb-task-detail',challenge?c.challengeText:c.taskText);current().file=language;if(practice){const ex=window.WebStudioExercises.byLanguage(language);setText('#wb-task-title',ex.title);setText('#wb-task-detail',ex.goal);practice.selectLesson();}renderEditor();$('#wb-practice-confirm').checked=current().practised;setView('practice');setPane('code');const term=language==='html'?'<h1>':language==='css'?'padding':'count += ';const index=$('#wb-editor').value.indexOf(term);if(index>=0)$('#wb-editor').setSelectionRange(index,index+term.length);if(!restoring){if(compactLayout())focusContent($('#wb-practice-title'));else $('#wb-editor').focus({preventScroll:true});}}
  function returnToBook(){current().part=practiceOrigin;renderReading();setView('book');window.scrollTo({top:returnScroll,behavior:'auto'});if(returnButton?.isConnected)returnButton.focus({preventScroll:true});else $('#wb-next').focus({preventScroll:true});}
  function setPane(pane){$('#wb-work-grid').dataset.pane=pane;all('button[data-pane]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pane===pane)));}
@@ -80,6 +84,11 @@
   showPreview(){$('#wb-console').textContent='';$('#wb-preview-empty').hidden=true;hasPreview=true;setPane('result');},
   finishCheck(){$('#wb-preview-empty').hidden=false;hasPreview=false;setPane('code');},
   openExercise(key){selectLanguage(key);openPractice('challenge');persist();},onResult:updateReadingState
+ });
+ projectUI=window.WebStudioProjectUI?.mount({root,manager:projectManager,store:window.WebStudioStore,
+  getProject:()=>({...project}),getSnapshot:snapshot,getLegacySnapshot:()=>window.WebStudioLegacy?.snapshot?.()||null,save:persist,exportStudy,
+  replaceProject(files){stopPreview();for(const key of Object.keys(project))delete project[key];Object.assign(project,files);renderEditor();practice?.projectChanged();},
+  openPractice(){openPractice('try');persist();},setImportLock(value){importLocked=value;},reload(){location.reload();}
  });
  function stopPreview(){practice?.cancel();preview.stop();hasPreview=false;$('#wb-preview-empty').hidden=false;setPane('code');}
  function runPreview(){practice?.cancel();persist();$('#wb-console').textContent='';$('#wb-preview-empty').hidden=true;hasPreview=true;preview.run({...project});setPane('result');}
@@ -108,6 +117,7 @@
  // so leaving via a folder link has the same persistence as editing in place.
  siteNav?.addEventListener('click',event=>{
   if(!event.target.closest('a'))return;
+  if(projectUI?.isApplying()){event.preventDefault();return;}projectUI?.leave();
   const savedNow=persist();
   const legacyError=document.getElementById('legacy-save-status').textContent.trim();
   if((!savedNow||legacyError)&&!confirm('Some study changes could not be saved. Leave anyway? Choose Cancel to stay and export a study backup.'))event.preventDefault();
@@ -119,7 +129,8 @@
  $('#wb-reload').onclick=()=>{if(persist())location.reload();};
  if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{setText('#wb-update-status','Updated app files are available. Reload when you are ready.');$('#wb-reload').hidden=false;});
  renderReading();renderEditor();resizeText(0);
- if(saved.view==='practice')openPractice('try',true);else if(['notes','library',...(practice?['mistakes']:[])].includes(saved.view))setView(saved.view);else setView('book');
+ if(saved.view==='practice')openPractice('try',true);else if(['notes','library',...(practice?['mistakes']:[]),...(projectUI?['projects']:[])].includes(saved.view))setView(saved.view);else setView('book');
  if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash)||saved.view==='course')showCourse();
+ if(projectUI?.recoveryPending()){setView('projects');all('.wb-language-tabs button,.wb-app-tabs button,[data-screen=projects] [data-view]').forEach(button=>button.disabled=true);}
  saveStatus(loaded.error);
 })();
