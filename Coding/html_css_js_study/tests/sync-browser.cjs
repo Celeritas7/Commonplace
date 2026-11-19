@@ -163,6 +163,12 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
     await setCode(b, bHTML); await setNote(b, 'A note written on the iPad while offline.');
     assert.equal((await saved(a)).project.html, aHTML);
     assert.equal((await saved(b)).project.html, bHTML);
+    // Opening Practice initializes empty CSS/JS records during normal autosave.
+    // Compare synchronization with that actual saved state, while also requiring
+    // the original HTML attempt, hint flags and counts to remain exact.
+    const beforeOfflineSyncExercises = (await saved(b)).exercises;
+    assert.deepEqual(beforeOfflineSyncExercises['html-reading-card'], record.exercises['html-reading-card']);
+    assert.deepEqual((await saved(a)).exercises, beforeOfflineSyncExercises);
     assert.equal(rows.get(USER).snapshot.study.project.html, files.html, 'offline edits must wait locally');
     await aContext.setOffline(false); await sync(a);
     await remoteHas(row => row?.snapshot.study?.projects?.items?.some(project => project.files.html === aHTML), 'Desktop edit should upload after reconnect');
@@ -175,9 +181,11 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
     assert(merged.projects.items.some(project => project.files.html === bHTML));
     assert.match(merged.lessons['html-elements'].note, /desktop while offline/);
     assert.match(merged.lessons['html-elements'].note, /iPad while offline/);
-    assert.deepEqual(merged.exercises, record.exercises);
+    assert.deepEqual(merged.exercises, beforeOfflineSyncExercises, 'cloud merging must preserve the entire saved exercise state');
+    assert.deepEqual(merged.exercises['html-reading-card'], record.exercises['html-reading-card'], 'the original attempt and hint state must remain unchanged');
     await sync(a); await state(a, 'incoming'); await apply(a); await state(a, 'synced');
     const aMerged = await saved(a);
+    assert.deepEqual(aMerged.exercises, beforeOfflineSyncExercises);
     assert(aMerged.projects.items.some(project => project.files.html === aHTML));
     assert(aMerged.projects.items.some(project => project.files.html === bHTML));
     const count = aMerged.projects.items.length;
