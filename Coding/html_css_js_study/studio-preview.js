@@ -86,23 +86,112 @@
     return btoa(binary);
   }
 
-  async function buildDocument(files, token, parser, crypto, doc) {
+  var EXERCISE_CHECKS = {
+    'html-reading-card': [
+      ['main', 'main.card exists'], ['heading', 'Non-empty h1 inside main.card'],
+      ['paragraph', 'Non-empty p inside main.card'], ['button', 'Start reading']
+    ],
+    'css-card-spacing': [
+      ['card', 'main.card exists'], ['padding', '32px / 32px / 32px / 32px'],
+      ['corners', '12px / 12px / 12px / 12px']
+    ],
+    'js-count-twos': [
+      ['button', 'Enabled button#counter'], ['initial', 'Clicks: 0'],
+      ['click-1', 'Clicks: 2'], ['click-2', 'Clicks: 4'], ['click-3', 'Clicks: 6']
+    ]
+  };
+
+  // This trusted function is captured in the bootstrap, before student code.
+  // It observes actual DOM, computed CSS and native clicks in the opaque frame.
+  // It is a teaching check for these small, synchronous exercises, not an exam
+  // security boundary or a claim to validate arbitrary future asynchronous work.
+  function exerciseHarness(exerciseId, token, state, report) {
+    const send = parent.postMessage.bind(parent), later = setTimeout.bind(globalThis);
+    const query = document.querySelector.bind(document);
+    const within = Function.prototype.call.bind(Element.prototype.querySelector);
+    const matches = Function.prototype.call.bind(Element.prototype.matches);
+    const click = Function.prototype.call.bind(HTMLElement.prototype.click);
+    const text = Function.prototype.call.bind(Object.getOwnPropertyDescriptor(Node.prototype, 'textContent').get);
+    const style = getComputedStyle.bind(globalThis), PromiseType = Promise;
+    const normal = value => String(value).replace(/\s+/g, ' ').trim().slice(0, 500);
+    const label = element => element ? normal(text(element)) : 'Not found';
+    const pause = delay => new PromiseType(resolve => later(resolve, delay));
+    const rows = [];
+    const add = (id, passed, expected, actual) => rows.push({ id, passed: !!passed, expected, actual: normal(actual) });
+    return async function () {
+      try {
+        // Let immediate microtasks, browser errors and policy violations arrive.
+        await pause(0);
+        if (state.error) return;
+        if (exerciseId === 'html-reading-card') {
+          const card = query('main.card'), heading = card && within(card, 'h1');
+          const paragraph = card && within(card, 'p'), button = card && within(card, 'button#counter');
+          add('main', !!card, 'main.card exists', card ? 'main.card exists' : 'Not found');
+          add('heading', !!heading && !!label(heading), 'Non-empty h1 inside main.card', label(heading));
+          add('paragraph', !!paragraph && !!label(paragraph), 'Non-empty p inside main.card', label(paragraph));
+          add('button', !!button && label(button) === 'Start reading', 'Start reading', label(button));
+        } else if (exerciseId === 'css-card-spacing') {
+          const card = query('main.card'), computed = card && style(card);
+          const padding = computed ? [computed.paddingTop, computed.paddingRight, computed.paddingBottom, computed.paddingLeft] : [];
+          const corners = computed ? [computed.borderTopLeftRadius, computed.borderTopRightRadius, computed.borderBottomRightRadius, computed.borderBottomLeftRadius] : [];
+          add('card', !!card, 'main.card exists', card ? 'main.card exists' : 'Not found');
+          add('padding', padding.length === 4 && padding.every(value => value === '32px'), '32px / 32px / 32px / 32px', card ? padding.join(' / ') : 'Card not found');
+          add('corners', corners.length === 4 && corners.every(value => value === '12px'), '12px / 12px / 12px / 12px', card ? corners.join(' / ') : 'Card not found');
+        } else {
+          const button = query('button#counter'), enabled = !!button && !matches(button, ':disabled');
+          add('button', enabled, 'Enabled button#counter', enabled ? 'Enabled button#counter' : button ? 'Button is disabled' : 'Not found');
+          add('initial', !!button && label(button) === 'Clicks: 0', 'Clicks: 0', label(button));
+          for (let i = 1; i <= 3; i++) {
+            if (enabled) click(button);
+            await pause(40);
+            if (state.error) return;
+            const expected = 'Clicks: ' + i * 2;
+            add('click-' + i, enabled && label(button) === expected, expected, label(button));
+          }
+        }
+        // Catch errors/rejections queued by the final handler before a pass.
+        await pause(80);
+        if (!state.error) send({ source: 'commonplace-web-preview', token, type: 'checks', exerciseId, checks: rows }, '*');
+      } catch (error) {
+        report('error', error && error.message || 'The exercise could not be checked.');
+      }
+    };
+  }
+
+  function validateChecks(exerciseId, rows) {
+    var expected = EXERCISE_CHECKS[exerciseId];
+    if (!expected || !Array.isArray(rows) || rows.length !== expected.length) return null;
+    var result = [];
+    for (var i = 0; i < expected.length; i++) {
+      var row = rows[i];
+      if (!row || row.id !== expected[i][0] || typeof row.passed !== 'boolean' ||
+          row.expected !== expected[i][1] || typeof row.actual !== 'string' || row.actual.length > 500) return null;
+      result.push({ id: row.id, passed: row.passed, expected: row.expected, actual: row.actual });
+    }
+    return result;
+  }
+
+  async function buildDocument(files, token, parser, crypto, doc, exerciseId) {
     var html = String(files.html || ''), css = String(files.css || ''), js = String(files.js || '');
     inspectMarkup(html, css, doc);
     if (!/^[a-f0-9]{48}$/.test(token)) throw new Error('Invalid preview token.');
-    var guard = '__ws_guard_' + token;
+    if (exerciseId && !Object.prototype.hasOwnProperty.call(EXERCISE_CHECKS, exerciseId)) throw new Error('This exercise check is not available.');
+    var guard = '__ws_guard_' + token, state = '__ws_state_' + token, checker = '__ws_check_' + token;
     var compiled = instrument(js, guard, parser);
     var reporter = '__ws_report_' + token;
-    var bootstrap = guardCode(guard) +
-      'const ' + reporter + '=(()=>{const send=parent.postMessage.bind(parent);let count=0;return(type,message)=>{if(++count>250)return;send({source:"commonplace-web-preview",token:' + JSON.stringify(token) + ',type,message:String(message).slice(0,3000)},"*");};})();' +
+    var bootstrap = guardCode(guard) + 'const ' + state + '={error:""};' +
+      'const ' + reporter + '=(()=>{const send=parent.postMessage.bind(parent);let count=0,errors=0;return(type,message)=>{message=String(message).slice(0,3000);if(type==="error"){' + state + '.error=message;if(++errors>1)return;}else if(++count>250)return;send({source:"commonplace-web-preview",token:' + JSON.stringify(token) + ',type,message},"*");};})();' +
       'addEventListener("error",e=>{' + reporter + '("error",e.message||"JavaScript error");e.preventDefault();});' +
       'addEventListener("unhandledrejection",e=>{' + reporter + '("error",e.reason&&e.reason.message||String(e.reason));e.preventDefault();});' +
       'addEventListener("securitypolicyviolation",e=>{' + reporter + '("error","Blocked "+e.effectiveDirective+". External resources, inline handlers and dynamic code are disabled in this preview.");});' +
-      '["log","info","warn","error"].forEach(level=>{console[level]=(...args)=>{' + reporter + '("log",level+": "+args.slice(0,10).map(x=>{try{return String(x).slice(0,500)}catch(e){return "[unprintable]"}}).join(" "));};});';
+      '["log","info","warn","error"].forEach(level=>{console[level]=(...args)=>{' + reporter + '("log",level+": "+args.slice(0,10).map(x=>{try{return String(x).slice(0,500)}catch(e){return "[unprintable]"}}).join(" "));};});' +
+      (exerciseId ? 'const ' + checker + '=(' + exerciseHarness.toString() + ')(' + JSON.stringify(exerciseId) + ',' + JSON.stringify(token) + ',' + state + ',' + reporter + ');' : '');
     var user = '(()=>{"use strict";try{' + guard + '();\n' + compiled + '\n' + reporter + '("ready","Preview running. Changes are local; external assets and services are blocked.");}catch(e){' + reporter + '("error",e&&e.message||String(e));}})();';
-    var hashes = await Promise.all([digest(bootstrap, crypto), digest(user, crypto)]);
-    var policy = "default-src 'none'; script-src 'sha256-" + hashes[0] + "' 'sha256-" + hashes[1] + "'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
-    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + policy + '"><style>html{color-scheme:light dark}body{margin:0;padding:16px;background:Canvas;color:CanvasText;font:16px/1.5 system-ui,sans-serif;overflow-wrap:anywhere}*{box-sizing:border-box}button,input,select,textarea{font:inherit}button{min-height:44px}h1{font-size:26px;line-height:1.2}\n' + css.replace(/<\/style/gi, '<\\/style') + '</style><script>' + bootstrap + '</script></head><body>' + html + '<script>' + user + '</script></body></html>';
+    var scripts = [bootstrap, user];
+    if (exerciseId) scripts.push(checker + '();');
+    var hashes = await Promise.all(scripts.map(function (script) { return digest(script, crypto); }));
+    var policy = "default-src 'none'; script-src " + hashes.map(function (hash) { return "'sha256-" + hash + "'"; }).join(' ') + "; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="' + policy + '"><style>html{color-scheme:light dark}body{margin:0;padding:16px;background:Canvas;color:CanvasText;font:16px/1.5 system-ui,sans-serif;overflow-wrap:anywhere}*{box-sizing:border-box}button,input,select,textarea{font:inherit}button{min-height:44px}h1{font-size:26px;line-height:1.2}\n' + css.replace(/<\/style/gi, '<\\/style') + '</style><script>' + bootstrap + '</script></head><body>' + html + '<script>' + scripts.slice(1).join('</script><script>') + '</script></body></html>';
   }
 
   function create(options) {
@@ -110,52 +199,91 @@
     var container = options.container, doc = container.ownerDocument || global.document;
     var onStatus = typeof options.onStatus === 'function' ? options.onStatus : function () {};
     var onLog = typeof options.onLog === 'function' ? options.onLog : function () {};
-    var active = null, generation = 0;
+    var active = null;
+    function settle(session, result) {
+      if (!session.resolve || session.settled) return;
+      session.settled = true;
+      global.clearTimeout(session.timeout);
+      session.resolve(result);
+    }
     function dispose() {
       if (!active) return;
-      global.clearTimeout(active.timeout);
-      global.removeEventListener('message', active.listener);
-      active.frame.remove();
-      active = null;
+      var old = active; active = null;
+      global.clearTimeout(old.timeout);
+      if (old.listener) global.removeEventListener('message', old.listener);
+      if (old.frame) old.frame.remove();
+      settle(old, { status: 'cancelled', checks: [], error: 'Check cancelled. Your code is kept.' });
     }
-    function stop() { generation++; dispose(); container.replaceChildren(); onStatus('Preview stopped. Your code and study data are kept.', false); }
-    async function run(files) {
-      var ownGeneration = ++generation;
-      dispose(); container.replaceChildren(); onStatus('Preparing local preview…', false);
+    function stop() { dispose(); container.replaceChildren(); onStatus('Preview stopped. Your code and study data are kept.', false); }
+    function fail(session, message) {
+      if (active !== session) return;
+      session.failed = true;
+      global.clearTimeout(session.timeout);
+      onStatus(message, true);
+      settle(session, { status: 'error', checks: [], error: message });
+      // A failed check cannot continue running student timers after settlement.
+      if (session.exerciseId) dispose();
+    }
+    async function launch(files, exerciseId, resolve) {
+      dispose(); container.replaceChildren(); onStatus(exerciseId ? 'Checking a fresh copy of your code…' : 'Preparing local preview…', false);
+      var session = { frame: null, failed: false, timeout: null, listener: null, exerciseId: exerciseId, resolve: resolve, settled: false };
+      active = session;
+      // Deadline includes document construction/hash generation, not just loading.
+      session.timeout = global.setTimeout(function () {
+        if (active === session) fail(session, exerciseId ? 'Exercise check timed out. Stop, inspect your code and try Check again.' : 'Preview startup did not finish. Press Stop, check the code, then Run again.');
+      }, 5000);
       try {
         var crypto = global.crypto;
         if (!crypto || !crypto.subtle || !crypto.getRandomValues) throw new Error('This preview needs HTTPS or localhost for safe execution. Open the Commonplace website and try again.');
         var token = Array.from(crypto.getRandomValues(new Uint8Array(24)), function (x) { return x.toString(16).padStart(2, '0'); }).join('');
-        var source = await buildDocument(files, token, global.acorn, crypto, doc);
-        if (generation !== ownGeneration) return;
-        var frame = doc.createElement('iframe');
+        var source = await buildDocument(files, token, global.acorn, crypto, doc, exerciseId);
+        if (active !== session || session.failed) return;
+        var frame = doc.createElement('iframe'); session.frame = frame;
         frame.setAttribute('sandbox', 'allow-scripts');
         frame.setAttribute('referrerpolicy', 'no-referrer');
-        frame.setAttribute('title', 'Web Studio browser preview');
+        frame.setAttribute('title', exerciseId ? 'Web Studio exercise check' : 'Web Studio browser preview');
         frame.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'");
         frame.style.cssText = 'display:block;width:100%;min-height:320px;border:0;background:transparent';
-        var session = { frame: frame, failed: false, timeout: null, listener: null };
         session.listener = function (event) {
           var data = event.data;
-          if (active !== session || event.source !== frame.contentWindow || !data || data.source !== 'commonplace-web-preview' || data.token !== token || typeof data.message !== 'string') return;
+          if (active !== session || event.source !== frame.contentWindow || !data || data.source !== 'commonplace-web-preview' || data.token !== token) return;
+          if (data.type === 'checks' && exerciseId && !session.settled) {
+            var rows = data.exerciseId === exerciseId && validateChecks(exerciseId, data.checks);
+            if (!rows) { fail(session, 'The exercise returned an invalid result. Check again.'); return; }
+            if (session.failed) return;
+            var passed = rows.every(function (row) { return row.passed; });
+            onStatus(passed ? 'Automatic checks passed. Review the page visually too.' : 'Some checks need work. Review the feedback and try again.', false);
+            settle(session, { status: passed ? 'passed' : 'failed', checks: rows });
+            // Freeze the observation: no later timer or click can silently change
+            // an already recorded attempt. Run preview remains separately available.
+            dispose();
+            return;
+          }
+          if (typeof data.message !== 'string') return;
           if (data.type === 'log') { onLog(data.message.slice(0,3000)); return; }
           if (data.type !== 'ready' && data.type !== 'error') return;
-          global.clearTimeout(session.timeout);
-          if (data.type === 'error') { session.failed = true; onStatus(data.message.slice(0,3000), true); }
-          else if (!session.failed) onStatus(data.message.slice(0,3000), false);
+          if (data.type === 'error') { fail(session, data.message.slice(0,3000)); return; }
+          if (!exerciseId) { global.clearTimeout(session.timeout); if (!session.failed) onStatus(data.message.slice(0,3000), false); }
+          // A ready message never settles a grading request or removes its deadline.
         };
-        active = session;
         global.addEventListener('message', session.listener);
         frame.srcdoc = source;
         container.replaceChildren(frame);
-        session.timeout = global.setTimeout(function () {
-          if (active === session) onStatus('Preview startup did not finish. Press Stop, check the code, then Run again.', true);
-        }, 5000);
       } catch (error) {
-        if (generation === ownGeneration) onStatus(error && error.message || 'The preview could not start.', true);
+        fail(session, error && error.message || 'The preview could not start.');
       }
     }
-    return { run: run, stop: stop };
+    function run(files) { return launch(files, null, null); }
+    function check(files, exerciseId) {
+      if (!Object.prototype.hasOwnProperty.call(EXERCISE_CHECKS, exerciseId)) {
+        stop();
+        var error = 'This exercise check is not available.';
+        onStatus(error, true);
+        return Promise.resolve({ status: 'error', checks: [], error: error });
+      }
+      return new Promise(function (resolve) { launch(files, exerciseId, resolve); });
+    }
+    return { run: run, check: check, stop: stop };
   }
-  return { create: create, _test: { instrument: instrument, inspectMarkup: inspectMarkup, guardCode: guardCode, buildDocument: buildDocument } };
+  return { create: create, _test: { instrument: instrument, inspectMarkup: inspectMarkup, guardCode: guardCode, buildDocument: buildDocument, validateChecks: validateChecks, exerciseChecks: EXERCISE_CHECKS } };
 });

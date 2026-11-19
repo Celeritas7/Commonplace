@@ -9,6 +9,7 @@
   var KEY = 'commonplace_web_studio_v1';
   var LEGACY_KEY = 'commonplace_wdb_v1';
   var LESSONS = ['html-elements', 'css-spacing', 'js-events'];
+  var EXERCISES = ['html-reading-card', 'css-card-spacing', 'js-count-twos'];
   var own = function (value, key) { return Object.prototype.hasOwnProperty.call(value, key); };
   var record = function (value) {
     return value !== null && Object.prototype.toString.call(value) === '[object Object]';
@@ -16,6 +17,31 @@
   var integer = function (value, low, high) {
     return Number.isInteger(value) && value >= low && value <= high;
   };
+  var text = function (value, max, nonempty) {
+    return typeof value === 'string' && value.length <= max && (!nonempty || value.length > 0);
+  };
+  var timestamp = function (value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return false;
+    var parsed = new Date(value);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
+  };
+
+  function validateAttempt(attempt) {
+    if (!record(attempt) || !text(attempt.id, 100, true) || !timestamp(attempt.at) || attempt.exerciseVersion !== 1) return false;
+    if (!['passed', 'failed', 'error'].includes(attempt.status) || typeof attempt.assisted !== 'boolean') return false;
+    if (!Array.isArray(attempt.checks) || attempt.checks.length > 10) return false;
+    for (var check of attempt.checks) {
+      if (!record(check) || !text(check.id, 100, true) || typeof check.passed !== 'boolean' || !text(check.expected, 1000) || !text(check.actual, 1000)) return false;
+    }
+    if (own(attempt, 'error') && !text(attempt.error, 3000)) return false;
+    if (!record(attempt.files)) return false;
+    var size = 0;
+    for (var file of ['html', 'css', 'js']) {
+      if (!own(attempt.files, file) || typeof attempt.files[file] !== 'string') return false;
+      size += attempt.files[file].length;
+    }
+    return size <= 30000;
+  }
 
   function validate(value) {
     if (!record(value)) return 'The saved study record must be an object.';
@@ -44,6 +70,26 @@
         for (var flag of ['submitted', 'practised', 'read']) {
           if (own(lesson, flag) && typeof lesson[flag] !== 'boolean') return 'A saved lesson completion value is invalid.';
         }
+      }
+    }
+    // The exercise extension is optional, so older saved books need no rewrite.
+    // Only this release's known exercises are interpreted; future records remain
+    // opaque and are retained by the same merge/export rules as other study data.
+    if (own(value, 'exercises')) {
+      if (!record(value.exercises)) return 'The saved exercises are invalid.';
+      for (var exerciseId of EXERCISES) {
+        if (!own(value.exercises, exerciseId)) continue;
+        var exercise = value.exercises[exerciseId];
+        if (!record(exercise)) return 'The saved exercise ' + exerciseId + ' is invalid.';
+        if (own(exercise, 'attempts')) {
+          if (!Array.isArray(exercise.attempts) || exercise.attempts.length > 20) return 'The saved exercise attempts are invalid.';
+          for (var attempt of exercise.attempts) {
+            if (!validateAttempt(attempt)) return 'A saved exercise attempt is invalid.';
+          }
+        }
+        if (own(exercise, 'totalAttempts') && !integer(exercise.totalAttempts, 0, Number.MAX_SAFE_INTEGER)) return 'The saved exercise attempt count is invalid.';
+        if (own(exercise, 'hintsSeen') && !integer(exercise.hintsSeen, 0, 10)) return 'The saved exercise hint count is invalid.';
+        if (own(exercise, 'solutionViewed') && typeof exercise.solutionViewed !== 'boolean') return 'The saved exercise solution state is invalid.';
       }
     }
     return null;

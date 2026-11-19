@@ -133,10 +133,12 @@ Acceptance: review the three samples in sequence, edit/run/check, then reopen to
 
 ### Phase 4 — exercises and feedback
 
-- [ ] Starter code, hints, behavioural tests, solutions and retry history.
-- [ ] Separate automatic correctness from visual self-review.
-- [ ] Distinguish authored course exercises from shared generated quizzes.
-Acceptance: known correct/incorrect solutions behave predictably and feedback explains failures.
+- [x] Three sample exercises with starter code, progressive hints, browser checks, possible solutions and retry history.
+- [x] Separate automatic correctness from visual self-review.
+- [x] Distinguish original authored exercises from lesson quizzes and shared generated quizzes.
+- [x] Mistake Bank, latest 20 attempts per exercise, scoped backup inclusion and visible save failures.
+- [ ] Physical iPad Safari/Home Screen acceptance (tracked in Phase 7).
+Acceptance: known correct/incorrect solutions behave predictably and feedback explains failures. Node coverage and the Chromium/WebKit acceptance suite cover the sample rubrics, errors, cancellation, local history and data preservation; device acceptance remains separate. See [exercises and feedback](EXERCISES.md).
 
 ### Phase 5 — projects and export
 
