@@ -296,7 +296,8 @@ function revise(files) {
 
   const beforeRepair = await localRecords(), packBeforeRepair = await savedKeys();
   await page.goto(origin + BASE + 'offline-repair.html'); await page.locator('#repair').click();
-  await textHas('#result', /Repair complete\./i);
+  await page.waitForFunction(() => !document.querySelector('#repair').disabled);
+  assert.match(await page.locator('#result').textContent(), /Repair complete\./i, 'scoped repair must complete successfully');
   await readyController();
   assert.deepEqual(await localRecords(), beforeRepair, 'repair changed study/auth/annotation records');
   assert.deepEqual(await savedKeys(), packBeforeRepair, 'repair removed downloaded pack files');
@@ -336,6 +337,21 @@ function revise(files) {
   console.log('PASS ' + engine + ': offline acceptance complete; physical iPad/Home Screen testing remains manual');
 })().catch(async error => {
   console.error(error);
+  if (page && !page.isClosed()) {
+    const diagnostic = await page.evaluate(async base => {
+      const registration = await navigator.serviceWorker.getRegistration(base);
+      const cache = await caches.open('cp-web-studio-offline-v1'), keys = await cache.keys(), metadata = [];
+      for (const key of keys) {
+        try {
+          const value = await (await cache.match(key)).json();
+          const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value.files)))), byte => byte.toString(16).padStart(2, '0')).join('');
+          metadata.push({ key: key.url, revision: value.revision, digest, bytes: value.bytes, files: value.files?.length });
+        } catch (failure) { metadata.push({ key: key.url, error: failure.message }); }
+      }
+      return { url: location.href, result: document.querySelector('#result')?.textContent, online: navigator.onLine, scope: registration?.scope, active: registration?.active?.scriptURL, controller: navigator.serviceWorker.controller?.scriptURL, metadata };
+    }, BASE).catch(failure => ({ diagnosticError: failure.message }));
+    console.error('Offline fixture diagnostics:', JSON.stringify({ expectedRevision: manifest.revision, networkDown, blockedPath, ...diagnostic }));
+  }
   if (page && !page.isClosed()) { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-offline-' + engine + '.png', fullPage: true }).catch(() => {}); }
   process.exitCode = 1;
 }).finally(async () => {

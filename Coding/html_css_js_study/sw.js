@@ -95,18 +95,24 @@ async function network(request, milliseconds = NETWORK_MS, task) {
     })(), milliseconds, 'The connection timed out. Reconnect and resume.', () => controller.abort());
   } finally { if (task && task.controller === controller) task.controller = null; }
 }
-async function readManifest(key) {
+async function readManifest(key, strict = false) {
   const cache = await storage(caches.open(META_CACHE));
   const response = await storage(cache.match(key));
   if (!response) return null;
   try { return await validateManifest(await storage(response.json())); }
-  catch (error) { if (/storage did not respond|verification timed out/.test(error.message)) throw error; return null; }
+  catch (error) {
+    if (strict) throw new Error('Saved download list verification failed: ' + error.message);
+    if (/storage did not respond|verification timed out/.test(error.message)) throw error;
+    return null;
+  }
 }
 async function writeManifest(key, manifest) {
   const cache = await storage(caches.open(META_CACHE));
   await storage(cache.put(key, new Response(JSON.stringify(manifest), { headers: { 'Content-Type': 'application/json' } })));
-  const saved = await readManifest(key);
-  if (!saved || saved.revision !== manifest.revision) throw new Error('The download list could not be saved. Retry or repair offline setup.');
+  const saved = await readManifest(key, true);
+  const label = key === COMPLETE_KEY ? 'complete' : 'candidate';
+  if (!saved) throw new Error('The ' + label + ' download list could not be read back after saving. Retry or repair offline setup.');
+  if (saved.revision !== manifest.revision) throw new Error('The ' + label + ' download list changed during verification (' + manifest.revision.slice(0, 12) + ' to ' + saved.revision.slice(0, 12) + '). Another check may be running. Retry when it finishes.');
 }
 async function currentManifest() {
   let response;
