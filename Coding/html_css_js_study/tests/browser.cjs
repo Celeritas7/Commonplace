@@ -305,8 +305,40 @@ async function preserved() {
   assert.deepEqual(oldErrors,[],'new scripts tolerate cached markup');
   await oldContext.close();
   console.log('PASS '+engine+': cached older navigation markup remains usable with new scripts');
+
+  // Phase 3 HTML may be cached while the main controller/runtime update first.
+  // Missing exercise modules and controls must not erase already saved attempts.
+  const phase3Files={html:'<main class="card"><h1>Cached lesson</h1><p>Keep learning.</p><button id="counter">Clicks: 0</button></main>',css:'.card { padding: 24px; }',js:'const b=document.querySelector("#counter");let n=0;b.addEventListener("click",()=>{n++;b.textContent="Clicks: "+n;});'};
+  const phase4Exercises={'html-reading-card':{totalAttempts:1,hintsSeen:1,solutionViewed:false,unknownFutureFlag:'keep',attempts:[{id:'cached-document-attempt',at:'2026-11-19T00:00:00.000Z',exerciseVersion:1,status:'failed',checks:[{id:'button',passed:false,expected:'Start reading',actual:'Clicks: 0'}],files:phase3Files,assisted:false}]}};
+  const phase3Context=await context({...untouched,[KEY]:JSON.stringify({version:1,language:'html',view:'mistakes',project:phase3Files,exercises:phase4Exercises})});
+  const phase3Markup=fs.readFileSync(path.join(ROOT,SECTION),'utf8')
+    .replace(/<section\b[^>]*\bid="wb-exercise-panel"[^>]*>[\s\S]*?<\/section>/,'')
+    .replace(/<p\b[^>]*\bid="wb-exercise-unavailable"[^>]*>[\s\S]*?<\/p>/,'')
+    .replace(/<section\b[^>]*\bdata-screen="mistakes"[^>]*>[\s\S]*?<\/section>/,'')
+    .replace(/<script\b[^>]*\bsrc="studio-(?:exercises|practice)\.js(?:\?[^"]*)?"[^>]*><\/script>/g,'');
+  assert(!/id="wb-exercise-panel"|data-screen="mistakes"|src="studio-(?:exercises|practice)\.js/.test(phase3Markup),'fixture must remove all Phase 4 controls/modules');
+  await phase3Context.route(origin+SECTION,route=>route.fulfill({status:200,contentType:'text/html',body:phase3Markup}));
+  const phase3=await phase3Context.newPage(),phase3Errors=[];phase3.on('pageerror',error=>phase3Errors.push(error.message));
+  await phase3.goto(origin+SECTION);await phase3.locator('#wb-title').waitFor({state:'visible'});
+  assert.equal(await phase3.locator('#wb-exercise-panel,[data-screen="mistakes"]').count(),0);
+  await phase3.locator('.wb-app-tabs [data-view="practice"]').click();
+  const editedCachedHTML=phase3Files.html.replace('Cached lesson','Edited cached lesson');
+  await phase3.locator('#wb-editor').fill(editedCachedHTML);
+  await phase3.locator('#wb-run').click();
+  const cachedPreview=phase3.frameLocator('#wb-preview-host iframe');
+  await cachedPreview.locator('#counter').click();
+  assert.equal(await cachedPreview.locator('#counter').textContent(),'Clicks: 1');
+  assert.equal(await cachedPreview.locator('h1').textContent(),'Edited cached lesson');
+  const phase3Saved=await phase3.evaluate(key=>JSON.parse(localStorage.getItem(key)),KEY);
+  assert.deepEqual(phase3Saved.exercises,phase4Exercises,'older document must preserve attempt history and unknown fields');
+  assert.equal(phase3Saved.project.html,editedCachedHTML,'older document still saves code');
+  assert.deepEqual(await phase3.evaluate(keys=>Object.fromEntries(keys.map(key=>[key,localStorage.getItem(key)])),Object.keys(untouched)),untouched);
+  assert.deepEqual(phase3Errors,[],'current controller must tolerate missing exercise modules/markup');
+  await phase3Context.close();
+  console.log('PASS '+engine+': cached Phase 3 document still edits/runs and preserves new exercise records without Phase 4 modules');
   assert.deepEqual(errors, [], 'uncaught page errors');
   console.log('PASS ' + engine + ': original lesson deep links, saved tracker data and malformed-record preservation');
+  await require('./exercises-browser.cjs')({ context, origin, SECTION, KEY, untouched, engine, setPage: value => { page = value; } });
 })().catch(async error => {
   console.error(error);
   if (page) { try { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-' + engine + '.png', fullPage: true }); } catch (_) {} }

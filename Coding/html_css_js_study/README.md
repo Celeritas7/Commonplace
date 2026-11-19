@@ -6,16 +6,22 @@ Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practic
 
 1. Read the HTML chapter's eight parts, including prediction, common mistakes and a practice challenge.
 2. Select **Open practice**. The relevant file opens with its key expression selected. All three files belong to one project; your edits carry across chapters.
-3. Select **Run preview**, then **Return to lesson** to continue reading.
+3. Use **Check exercise** for expected/observed feedback, or **Run preview** to inspect the page yourself. Hints and a possible solution are available. Select **Return to lesson** to continue reading.
 4. Finish the single five-question check (4/5 to pass), test your practice change and mark the lesson read. The reading mark is independent of quiz/practice results.
 
-Select **3 sample lessons** in the book header to see the review sequence, saved place and separate reading/check/practice status. Source notes are collapsed inside each chapter.
+Select **3 sample lessons** in the book header to see the review sequence, saved place and separate reading/quiz/visual-review/exercise status. Source notes are collapsed inside each chapter.
 
 The integrated curriculum currently has **three source-aligned sample chapters with original explanations and exercises**: HTML elements, CSS spacing and JavaScript events. Selected HTML/CSS material has been reviewed against the Drive study books; the JavaScript bridge follows the course outline with browser APIs checked against MDN. See [sample sources and scope](docs/SAMPLE_LESSONS.md). The full learning book is deferred. It does not reproduce the full paid course. **Course index** retains all 35 sections and 453 original entries, their existing Drive/Udemy links, notes and stars. IDs are frozen in `tests/legacy-id-map.json`.
 
+## Exercises and feedback
+
+Each sample has one checked exercise: build an HTML reading card, set CSS spacing and corners, or make a JavaScript counter increase by two. Checks inspect the rendered DOM, computed styles and real button clicks. Run preview alone and the visual-review checkbox do not award automatic passes.
+
+Failed checks enter **Mistake Bank**; a later passing check resolves them. **Attempt history** keeps the latest 20 submissions per exercise with code and feedback. Loading starter code or restoring an attempt asks before replacing the shared project. Hints and solution viewing are recorded as help. See [exercise scope and limits](docs/EXERCISES.md).
+
 ## Saving and backups
 
-- Code, lesson notes, bookmarks, quiz answers and reading marks save locally under `commonplace_web_studio_v1`. There is **no cloud synchronization** for these records.
+- Code, lesson notes, bookmarks, quiz answers, reading marks and exercise history save locally under `commonplace_web_studio_v1`. There is **no cloud synchronization** for these records.
 - The original tracker keeps `commonplace_wdb_v1`. Shared annotation keys and the page URL remain intact. The original tracker DOM precedes the new book to retain text-occurrence anchor ordering.
 - Save errors and conflicting edits from another tab appear visibly. Corrupt/unsupported data is never replaced automatically. Keep the tab open and export a backup when saving fails.
 - **My notes → Export study backup** includes only this section's new and old raw records plus the current unsaved drafts. It excludes authentication/session data and other sections. A scoped export is also available beneath Course index. The shared all-storage backup menu is hidden here.
@@ -50,6 +56,7 @@ Physical iPad Safari/Home Screen acceptance remains required. Automated WebKit i
 
 - `index.html`, `studio.css`, `studio.js`: interface and study interactions.
 - `studio-lessons.js`: original foundation lessons.
+- `studio-exercises.js`, `studio-practice.js`: exercise definitions, feedback, hints and local attempt/Mistake Bank UI.
 - `studio-store.js`: scoped, recoverable local records.
 - `studio-preview.js`, `vendor/acorn.js`: execution and loop guards; license included.
 - `legacy-tracker.js`, `data/course-index.js`: original course tracker.
