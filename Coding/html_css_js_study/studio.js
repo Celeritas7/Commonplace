@@ -122,7 +122,7 @@
   const legacyError=document.getElementById('legacy-save-status').textContent.trim();
   if((!savedNow||legacyError)&&!confirm('Some study changes could not be saved. Leave anyway? Choose Cancel to stay and export a study backup.'))event.preventDefault();
  });
- for(const eventName of ['click','input','change'])root.addEventListener(eventName,event=>{if(!event.target.closest('.wb-sync-details'))persist();});
+ for(const eventName of ['click','input','change'])root.addEventListener(eventName,event=>{if(!event.target.closest('.wb-sync-details,.wb-offline,#wb-offline-toggle'))persist();});
  window.addEventListener('pagehide',()=>{persist();preview.stop();});
  window.addEventListener('hashchange',()=>{if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash))showCourse();});
  $('#wb-update').onclick=async()=>{const button=$('#wb-update');button.disabled=true;setText('#wb-update-status','Checking for updates…');try{if(!('serviceWorker' in navigator))throw new Error('App updates are not supported in this browser.');const registration=await Promise.race([navigator.serviceWorker.getRegistration('./'),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);if(!registration)throw new Error('App update registration is not ready. Reload while connected and try again.');await Promise.race([registration.update(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);setText('#wb-update-status','Update check finished. If new files are ready, use Reload app.');$('#wb-reload').hidden=false;}catch(error){setText('#wb-update-status',error.message);}finally{button.disabled=false;}};
