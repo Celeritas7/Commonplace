@@ -91,10 +91,10 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
   async function state(page, value) {
     await page.waitForFunction(value => document.querySelector('#wb-sync-status')?.dataset.state === value, value, { timeout: 20000 });
   }
-  async function remoteHas(predicate, message) {
+  async function remoteHas(predicate, message, user = USER) {
     const until = Date.now() + 20000;
     while (Date.now() < until) {
-      if (predicate(rows.get(USER))) return;
+      if (predicate(rows.get(user))) return;
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     assert.fail(message);
@@ -220,6 +220,104 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
     await sharedUnchanged(a);
     assert(requests.every(request => request.user === USER), 'the bound account alone may access this device’s sync data');
     console.log('PASS ' + engine + ': sign-out preserves saved work and account switching cannot leak or rebind queued data');
+
+    // A download/cache failure may deliver the page without its sync engine.
+    // Saving and preview stay usable, and the visible recovery action reloads
+    // the missing file instead of leaving a permanent checking state.
+    const MISSING_USER = '8ebc0509-f83e-45f9-a027-4d02f2a560eb';
+    const missingContext = await makeContext({ ...untouched, [KEY]: JSON.stringify(record) }, MISSING_USER);
+    await missingContext.route('**/studio-sync.js*', route => route.fulfill({ status: 200, contentType: 'text/javascript', body: '/* Missing sync module fixture. */' }));
+    const missing = await open(missingContext), missingErrors = [];
+    missing.on('pageerror', error => missingErrors.push(error.message));
+    await state(missing, 'error');
+    assert.match(await missing.locator('#wb-sync-status').textContent(), /files could not load|reload/i);
+    await setNote(missing, 'A local note still saves when sync files are missing.');
+    assert.equal((await saved(missing)).lessons['html-elements'].note, 'A local note still saves when sync files are missing.');
+    assert.equal(rows.has(MISSING_USER), false);
+    await setCode(missing, '<main><h1>Local work still runs</h1></main>');
+    await missing.locator('#wb-run').click();
+    assert.equal(await missing.frameLocator('#wb-preview-host iframe').locator('h1').textContent(), 'Local work still runs');
+    await missingContext.unroute('**/studio-sync.js*');
+    await accountPanel(missing);
+    assert.match(await missing.locator('#wb-sync-now').textContent(), /Reload/i);
+    await Promise.all([missing.waitForNavigation({ waitUntil: 'load' }), missing.locator('#wb-sync-now').click()]);
+    await state(missing, 'synced');
+    assert.equal(rows.get(MISSING_USER).snapshot.study.lessons['html-elements'].note, 'A local note still saves when sync files are missing.');
+    assert.equal(rows.get(MISSING_USER).snapshot.study.project.html, '<main><h1>Local work still runs</h1></main>');
+    assert.deepEqual(missingErrors, []);
+    await sharedUnchanged(missing);
+    console.log('PASS ' + engine + ': a missing sync module leaves local editing and execution usable and recovers through Reload sync files');
+
+    // The original course tracker can be the only saved account record. Merely
+    // opening sync controls or loading it must not manufacture a default project
+    // that later competes with the learner’s actual code on another device.
+    const LEGACY_USER = '7bf812fa-e2cb-4651-9288-f393a148ae20';
+    const legacyOnly = { done: { l123: 1 }, star: { l7: 1 }, notes: { l123: 'A course-only account note.' }, open: {}, hide: {}, show: 'all' };
+    rows.set(LEGACY_USER, { revision: 1, snapshot: { version: 1, study: null, legacy: clone(legacyOnly) } });
+    const legacyContext = await makeContext(Object.fromEntries(Object.entries(untouched).filter(([key]) => key !== LEGACY)), LEGACY_USER);
+    const legacyPage = await open(legacyContext);
+    await state(legacyPage, 'incoming');
+    assert.equal(await saved(legacyPage), null);
+    await accountPanel(legacyPage);
+    assert.equal(await saved(legacyPage), null, 'opening account controls must not create a default native study record');
+    await apply(legacyPage); await state(legacyPage, 'synced');
+    assert.equal(await saved(legacyPage), null, 'loading a course-only snapshot must retain the absent native record');
+    assert.deepEqual(await legacyPage.evaluate(key => JSON.parse(localStorage.getItem(key)), LEGACY), legacyOnly);
+    await sync(legacyPage); await state(legacyPage, 'synced');
+    assert.equal(await saved(legacyPage), null);
+    assert.equal(rows.get(LEGACY_USER).snapshot.study, null);
+    await setNote(legacyPage, 'My first native lesson note.');
+    await remoteHas(row => row?.snapshot.study?.lessons?.['html-elements']?.note === 'My first native lesson note.', 'A genuine native lesson edit should start and synchronize the native record', LEGACY_USER);
+    assert.equal((await saved(legacyPage)).lessons['html-elements'].note, 'My first native lesson note.');
+    await sharedUnchanged(legacyPage);
+    console.log('PASS ' + engine + ': a course-only account stays course-only through sync and begins native storage only after a learner edit');
+
+    // Hold the acknowledgement after the guarded local write. The previous
+    // editor remains on screen during this real async boundary, but must be
+    // inert so typing cannot create an unpersisted draft just before reload.
+    const DELAY_USER = '6fcc3ee4-c487-4313-88fb-397be57d57ca';
+    const delayedLocal = clone(record); delayedLocal.view = 'practice'; delayedLocal.lessons['html-elements'].note = '';
+    rows.set(DELAY_USER, { revision: 1, snapshot: { version: 1, study: clone(record), legacy: null } });
+    const delayedContext = await makeContext({ [KEY]: JSON.stringify(delayedLocal) }, DELAY_USER);
+    await delayedContext.addInitScript(() => {
+      if (window !== window.top) return;
+      let syncAPI;
+      Object.defineProperty(window, 'WebStudioSync', {
+        configurable: true,
+        get() { return syncAPI; },
+        set(api) {
+          const create = api.create;
+          api.create = options => {
+            const value = create(options), acknowledge = value.applied;
+            value.applied = async (...args) => {
+              window.__webStudioAckPending = true;
+              await new Promise(resolve => { window.__releaseWebStudioAck = resolve; });
+              return acknowledge(...args);
+            };
+            return value;
+          };
+          syncAPI = api;
+        }
+      });
+    });
+    const delayed = await open(delayedContext);
+    await state(delayed, 'incoming'); await delayed.locator('#wb-editor').waitFor({ state: 'visible' });
+    const beforeTyping = await delayed.locator('#wb-editor').inputValue();
+    await accountPanel(delayed); await delayed.locator('#wb-sync-apply').click();
+    await delayed.waitForFunction(() => window.__webStudioAckPending === true);
+    assert(await delayed.locator('#web-book').evaluate(element => element.inert));
+    const committed = await saved(delayed);
+    assert.equal(committed.lessons['html-elements'].note, 'Original account note.');
+    await delayed.locator('#wb-editor').click({ force: true });
+    await delayed.keyboard.type('This must not become a lost edit.');
+    assert.equal(await delayed.locator('#wb-editor').inputValue(), beforeTyping);
+    assert.deepEqual(await saved(delayed), committed);
+    assert.equal(await delayed.locator('#wb-editor').evaluate(element => document.activeElement === element), false);
+    await Promise.all([delayed.waitForNavigation({ waitUntil: 'load' }), delayed.evaluate(() => window.__releaseWebStudioAck())]);
+    await state(delayed, 'synced');
+    assert.deepEqual(await saved(delayed), committed);
+    console.log('PASS ' + engine + ': committed cloud work blocks editing through a delayed acknowledgement and reloads without losing a late draft');
+
   } finally {
     for (const ctx of contexts) await ctx.close();
   }

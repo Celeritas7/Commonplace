@@ -151,7 +151,7 @@
    importLocked=true;window.WebStudioCloudLocked=true;stopPreview();
    const result=window.WebStudioStore.applyImport(plan);
    if(!result.ok){importLocked=!!result.recoveryPending;window.WebStudioCloudLocked=importLocked;throw new Error(result.error);}
-   root.inert=true;legacy.inert=true;siteNav.inert=true;backToStudio.disabled=true;if(topBack)topBack.disabled=true;
+   root.inert=true;legacy.inert=true;if(siteNav)siteNav.inert=true;backToStudio.disabled=true;if(topBack)topBack.disabled=true;
    return cloudSnapshotAfterApply();
   },reload(){location.reload();}
  });

@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   var OWNER = 'commonplace_web_studio_owner_v1';
-  var URL = 'https://wylxvmkcrexwfpjpbhyy.supabase.co';
+  var SUPABASE_URL = 'https://wylxvmkcrexwfpjpbhyy.supabase.co';
   var KEY = 'sb_publishable_e3pDOuxIdstaC7s0a680kQ_R10TrAyv';
   var SDK = new URL('../../_lib/supabase.js', document.currentScript.src).href;
   function bounded(promise, ms, message) {
@@ -36,7 +36,7 @@
     if (root.__cpSupabase) return Promise.resolve(root.__cpSupabase);
     return bounded(new Promise(function (resolve, reject) {
       function create() {
-        try { resolve(root.__cpSupabase || (root.__cpSupabase = root.supabase.createClient(URL, KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }))); }
+        try { resolve(root.__cpSupabase || (root.__cpSupabase = root.supabase.createClient(SUPABASE_URL, KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }))); }
         catch (_) { reject(new Error('Account sync could not start. Retry while connected.')); }
       }
       if (root.supabase?.createClient) return create();
