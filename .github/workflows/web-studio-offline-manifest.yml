@@ -1,0 +1,61 @@
+name: Keep Web Studio offline downloads current
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Coding/html_css_js_study/**'
+      - '_lib/**'
+      - 'extras.js'
+      - '.github/workflows/web-studio-offline-manifest.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: web-studio-offline-manifest-main
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Refresh only Web Studio's generated file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          published=false
+          for attempt in 1 2 3; do
+            # Rebuild from the newest source after another section updates main.
+            # This is an ephemeral Actions checkout, never a user's worktree.
+            git fetch origin main
+            git reset --hard origin/main
+            python3 Coding/html_css_js_study/tools/build-offline.py
+            python3 Coding/html_css_js_study/tools/build-offline.py --check
+            python3 Coding/html_css_js_study/tests/offline-manifest.py
+            if git diff --quiet -- Coding/html_css_js_study/offline-assets.json; then
+              exit 0
+            fi
+            git add -- Coding/html_css_js_study/offline-assets.json
+            git commit -m 'Refresh Web Studio offline pack after source changes'
+            if git push origin HEAD:main; then
+              published=true
+              break
+            fi
+          done
+          if [ "$published" != true ]; then
+            echo 'Could not publish the refreshed Web Studio manifest after concurrent updates.'
+            exit 1
+          fi
+          # GITHUB_TOKEN commits do not trigger branch Pages builds themselves.
+          gh api --method POST "repos/$GH_REPO/pages/builds"

@@ -1,9 +1,9 @@
 name: Web Studio learning and data preservation
 on:
   pull_request:
-    paths: ['Coding/html_css_js_study/**', '_lib/gate.js', '_lib/progress-backup.js', 'extras.js', '.github/workflows/web-studio.yml']
+    paths: ['Coding/html_css_js_study/**', '_lib/**', 'extras.js', '.github/workflows/web-studio.yml', '.github/workflows/web-studio-offline-manifest.yml']
   push:
-    paths: ['Coding/html_css_js_study/**', '_lib/gate.js', '_lib/progress-backup.js', 'extras.js', '.github/workflows/web-studio.yml']
+    paths: ['Coding/html_css_js_study/**', '_lib/**', 'extras.js', '.github/workflows/web-studio.yml', '.github/workflows/web-studio-offline-manifest.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,12 +16,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Generated offline pack matches all current dependencies
+        run: |
+          python3 Coding/html_css_js_study/tools/build-offline.py --check
+          python3 Coding/html_css_js_study/tests/offline-manifest.py
       - name: Storage, legacy tracker, preview and worker contracts
         run: |
           node Coding/html_css_js_study/tests/storage.cjs
           node Coding/html_css_js_study/tests/legacy.cjs
           node Coding/html_css_js_study/tests/preview.cjs
           node Coding/html_css_js_study/tests/worker.cjs
+          node Coding/html_css_js_study/tests/offline-ui.cjs
           node Coding/html_css_js_study/tests/projects.cjs
           node Coding/html_css_js_study/tests/backup.cjs
           node Coding/html_css_js_study/tests/sync-merge.cjs
@@ -30,7 +35,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
-    timeout-minutes: 12
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +50,11 @@ jobs:
           npm install --prefix /tmp/web-studio-tests --no-save playwright@1.56.1
       - name: Real browser learning and persistence checks
         run: node Coding/html_css_js_study/tests/browser.cjs
+        env:
+          NODE_PATH: /tmp/web-studio-tests/node_modules
+          BROWSER: ${{ matrix.browser }}
+      - name: Real service worker downloads, resume and offline persistence
+        run: node Coding/html_css_js_study/tests/offline-browser.cjs
         env:
           NODE_PATH: /tmp/web-studio-tests/node_modules
           BROWSER: ${{ matrix.browser }}

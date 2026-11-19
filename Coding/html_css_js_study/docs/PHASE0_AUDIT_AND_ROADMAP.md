@@ -150,12 +150,12 @@ Acceptance: export/import round trip preserves code/assets, handles invalid impo
 
 ### Phase 6 — reliable offline preparation
 
-- [ ] Small worker install, explicit packs, byte sizes and remaining progress.
-- [ ] Hash verification, resume unchanged files, deadlines and visible retry.
-- [ ] Manifest maintenance covers shared-file changes and dynamic dependencies.
-- [ ] Repair preserves data/packs and affects only this section.
-- [ ] Document Safari/Home Screen context and online-only services.
-Acceptance: fresh setup, interrupted resume, corrupt file, old-cache upgrade, repair and offline reopen with ordinary HTTP cache cleared all pass.
+- [x] Small worker install, explicit study pack, byte sizes and remaining progress.
+- [x] Hash verification, reuse unchanged files on resume, deadlines and visible retry.
+- [x] Generated manifest checks and automatic main refresh cover shared-file changes and dynamic dependencies.
+- [x] Scoped repair preserves study data and downloaded packs.
+- [x] Safari/Home Screen preparation and online-only services documented in [OFFLINE_STUDY.md](OFFLINE_STUDY.md).
+Acceptance: automated fresh setup, interrupted resume, corrupt file, old-cache upgrade, repair and offline reopen checks are defined in the worker/manifest/Chromium/WebKit suites. Actual run results must be recorded with delivery; physical iPad Safari and Home Screen acceptance remains in Phase 7.
 
 ### Phase 7 — device and integration validation
 
@@ -176,4 +176,4 @@ Phase 1 may begin with the visual prototype; runtime changes should follow revie
 
 ## Added phase — account synchronization (v1.6)
 
-Added after Projects and backup: local-first Supabase synchronization of projects/code, native notes/bookmarks/progress/quizzes/exercises and the original course tracker, using Commonplace’s existing account. Incoming changes use an explicit safe reload; conflicting code and notes are retained. See [CLOUD_SYNC.md](CLOUD_SYNC.md). Shared highlights and downloaded packs remain local. Reliable offline preparation and physical-device acceptance remain separate pending phases.
+Added after Projects and backup: local-first Supabase synchronization of projects/code, native notes/bookmarks/progress/quizzes/exercises and the original course tracker, using Commonplace’s existing account. Incoming changes use an explicit safe reload; conflicting code and notes are retained. See [CLOUD_SYNC.md](CLOUD_SYNC.md). Shared highlights and downloaded packs remain local. Reliable offline preparation is implemented in Phase 6; physical-device acceptance remains in Phase 7.
