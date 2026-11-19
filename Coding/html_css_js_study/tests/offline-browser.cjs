@@ -6,6 +6,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const http = require('node:http');
 const crypto = require('node:crypto');
 let playwright;
@@ -20,9 +21,10 @@ const PACK = 'cp-web-studio-downloads-v1';
 const engine = process.env.BROWSER || 'chromium';
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const originalManifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../offline-assets.json'), 'utf8'));
-let manifest = originalManifest, origin, server, browser, page;
+let manifest = originalManifest, origin, server, page;
 let networkDown = false, blockedPath = '', oldWorker = false;
 const replacements = new Map(), requests = [], held = new Set();
+const profiles = [], contexts = [];
 const cloud = { row: null, writes: 0 };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff': 'font/woff', '.woff2': 'font/woff2' };
 const relativePath = value => new URL(value, 'http://fixture' + BASE).pathname;
@@ -119,7 +121,18 @@ async function localRecords() {
   return page.evaluate(() => Object.fromEntries(Object.keys(localStorage).sort().map(key => [key, localStorage.getItem(key)])));
 }
 async function setupContext() {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  // Study preparation targets a normal Safari/Home Screen profile. WebKit's
+  // ephemeral/private context intentionally does not retain CacheStorage over
+  // reloads: https://github.com/microsoft/playwright/pull/41701 . Use a fresh,
+  // isolated on-disk profile for each scenario; never a user's browser profile.
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'commonplace-web-offline-' + engine + '-'));
+  profiles.push(profile);
+  const ctx = await playwright[engine].launchPersistentContext(profile, { headless: true, viewport: { width: 390, height: 844 } });
+  contexts.push(ctx);
+  // Persistent launches may create about:blank. It must not keep the browser's
+  // last page/worker alive during the cold-close-and-reopen acceptance below.
+  for (const initial of ctx.pages()) await initial.close();
+  assert.equal(ctx.pages().length, 0, 'the isolated persistent profile starts with no open page');
   // Routing disables Playwright's ordinary HTTP cache. Do not intercept local
   // worker requests in WebKit: its automation transport cannot reliably route
   // a cold offline navigation through a service worker. External-only routing
@@ -186,7 +199,8 @@ function revise(files) {
 
 (async () => {
   assert(['chromium', 'webkit'].includes(engine));
-  await startServer(); browser = await playwright[engine].launch({ headless: true });
+  await startServer();
+  console.log('TEST ' + engine + ': isolated normal persistent profiles; no user profile, private-mode claim or physical iPad claim');
   const ctx = await setupContext(); await openApp(ctx); await openPanel();
   const fresh = await rpc('offline-status'); assert(!fresh.error, fresh.error);
   assert.equal(fresh.ready, false); assert.equal(fresh.done, 0); assert.equal(fresh.remainingBytes, manifest.bytes);
@@ -234,7 +248,9 @@ function revise(files) {
     await new Promise((resolve, reject) => { const request = indexedDB.open('offline-unrelated-fixture', 1); request.onupgradeneeded = () => request.result.createObjectStore('data'); request.onerror = () => reject(request.error); request.onsuccess = () => { const db = request.result, transaction = db.transaction('data', 'readwrite'); transaction.objectStore('data').put('Keep unrelated IndexedDB', 'sentinel'); transaction.oncomplete = () => { db.close(); resolve(); }; transaction.onerror = () => reject(transaction.error); }; });
   });
 
-  await clearHttpCache(ctx); networkDown = true; await ctx.setOffline(true); await page.close(); await openApp(ctx);
+  await clearHttpCache(ctx); networkDown = true; await ctx.setOffline(true); await page.close();
+  assert.equal(ctx.pages().length, 0, 'cold reopening must start after the last app/blank page has closed');
+  await openApp(ctx);
   assert.equal(await page.evaluate(async () => { try { await fetch('/__uncached_offline_probe', { cache: 'no-store' }); return false; } catch (_) { return true; } }), true, 'negative control: an uncached network request must fail');
   assert.equal(await page.evaluate(() => window.__offlineBeforeAppRecord), native, 'reopening must not reseed or replace saved study data');
   await view('notes'); assert.equal(await page.locator('#wb-note-editor').inputValue(), 'Offline acceptance note, before reconnect.');
@@ -356,6 +372,7 @@ function revise(files) {
   process.exitCode = 1;
 }).finally(async () => {
   for (const response of held) response.destroy();
-  if (browser) await browser.close();
+  for (const context of contexts) await context.close().catch(() => {});
+  for (const profile of profiles) fs.rmSync(profile, { recursive: true, force: true });
   if (server) await new Promise(resolve => server.close(resolve));
 });

@@ -6,7 +6,7 @@ HTML, CSS and JavaScript previews execute locally in the browser's sandbox. The 
 
 ## Prepare this iPad
 
-1. Connect to the internet and open Web Studio in Safari. If you want a Home Screen app, use Safari's Share menu → Add to Home Screen, then open that installed app.
+1. Connect to the internet and open Web Studio in a regular Safari tab. If you want a Home Screen app, use Safari's Share menu → Add to Home Screen, then open that installed app.
 2. Sign into Commonplace in the browser or installed app where you will study. Safari and a Home Screen app may have separate storage. Each needs its own sign-in and its own download.
 3. Select **Study offline**, then download the study pack. Keep this screen open while downloading. Size, remaining bytes, progress and any file error appear beside the controls.
 4. Wait for **Ready offline**. This means the required files have been checked in this browser's storage. It is not a promise that the device will retain them forever or that an expired/missing login can be renewed without internet.
@@ -55,6 +55,6 @@ The pack cache is `cp-web-studio-downloads-v1`; candidate/complete manifest meta
 
 ## Validation scope
 
-Automated coverage is defined in `tests/worker.cjs`, `tests/offline-manifest.py` and `tests/offline-browser.cjs`, alongside the existing learning, projects/backup and sync suites. It covers fresh setup, interrupted resume, changed and corrupted assets, old-cache upgrade, scoped repair, offline reopen and preservation of saved work. The browser workflow runs Chromium and WebKit in the pinned Playwright container. Check the pull request's actual results before treating a run as passed.
+Automated coverage is defined in `tests/worker.cjs`, `tests/offline-manifest.py` and `tests/offline-browser.cjs`, alongside the existing learning, projects/backup and sync suites. It covers fresh setup, interrupted resume, changed and corrupted assets, old-cache upgrade, scoped repair, offline reopen and preservation of saved work. The offline browser workflow runs Chromium and WebKit with isolated persistent profiles in the pinned Playwright 1.65.1 container. Ordinary HTTP caching is disabled; Chromium also clears it through CDP. Network access is disabled before closing the last page and reopening the app, and an uncached request must fail. Temporary/private browser profiles are not the supported offline study setup. Check the pull request's actual results before treating a run as passed.
 
 Physical iPad Safari and installed Home Screen acceptance are still pending. Desktop WebKit is not a physical iPad test. The ordinary HTTP-cache clearing technique and offline execution results must be reported with the engine that actually ran them; deleting website data is neither required nor an acceptable substitute for this check.
