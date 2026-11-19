@@ -120,10 +120,12 @@ async function localRecords() {
 }
 async function setupContext() {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  // Routing disables the ordinary HTTP cache in Playwright. This also applies
-  // to WebKit, where CDP's clearBrowserCache command is unavailable. All server
-  // responses additionally carry no-store, and the server is cut off offline.
-  await ctx.route('**/*', route => route.continue());
+  // Routing disables Playwright's ordinary HTTP cache. Do not intercept local
+  // worker requests in WebKit: its automation transport cannot reliably route
+  // a cold offline navigation through a service worker. External-only routing
+  // plus no-store on every fixture response avoids the ordinary HTTP cache;
+  // the actual server is also cut off during every offline check.
+  await ctx.route(engine === 'webkit' ? 'https://**/*' : '**/*', route => route.continue());
   await ctx.addInitScript(({ origin }) => {
     if (window !== window.top || location.origin !== origin) return;
     const seedKey = 'offline-test-profile-seeded';
@@ -164,7 +166,9 @@ async function setupContext() {
 async function openApp(ctx) {
   page = await ctx.newPage(); page.setDefaultTimeout(25000);
   await page.goto(origin + BASE + 'index.html', { waitUntil: 'domcontentloaded' });
-  await page.locator('#wb-title').waitFor({ state: 'visible' }); await readyController();
+  // Reopening correctly restores the selected Practice/Projects/Notes screen;
+  // the Book title can therefore be hidden even when the app loaded correctly.
+  await page.locator('#wb-save-status').waitFor({ state: 'visible' }); await readyController();
 }
 const view = name => page.locator('.wb-app-tabs [data-view="' + name + '"]').click();
 async function edit(file, value) { await page.locator('.wb-file-tabs [data-file="' + file + '"]').click(); await page.locator('#wb-editor').fill(value); }
@@ -297,7 +301,7 @@ function revise(files) {
   assert.deepEqual(await savedKeys(), packBeforeRepair, 'repair removed downloaded pack files');
   assert.equal(await page.evaluate(async () => (await (await caches.open('cp-python-downloads-v1')).match('/python-preserved-pack')).text()), 'Do not touch other Commonplace downloads');
   assert.equal(await page.evaluate(() => new Promise((resolve, reject) => { const request = indexedDB.open('offline-unrelated-fixture', 1); request.onerror = () => reject(request.error); request.onsuccess = () => { const db = request.result, get = db.transaction('data').objectStore('data').get('sentinel'); get.onsuccess = () => { db.close(); resolve(get.result); }; get.onerror = () => reject(get.error); }; })), 'Keep unrelated IndexedDB');
-  await page.goto(origin + BASE + 'index.html'); await page.locator('#wb-title').waitFor({ state: 'visible' }); assert.equal((await rpc('offline-status')).ready, true);
+  await page.goto(origin + BASE + 'index.html'); await page.locator('#wb-save-status').waitFor({ state: 'visible' }); assert.equal((await rpc('offline-status')).ready, true);
   console.log('PASS ' + engine + ': scoped setup repair preserves downloaded packs, study/auth/annotation data and unrelated caches/IndexedDB');
   await ctx.close();
 
@@ -323,7 +327,7 @@ function revise(files) {
       new Promise(resolve => setTimeout(() => resolve(null), 1000))
     ]), BASE); return !!result && Number.isInteger(result.total); } catch (_) { return false; }
   }, 'new worker did not activate over the old cached page');
-  await page.goto(origin + BASE + 'index.html'); await page.locator('#wb-title').waitFor({ state: 'visible' });
+  await page.goto(origin + BASE + 'index.html'); await page.locator('#wb-save-status').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#old-shell').count(), 0);
   assert((await page.evaluate(() => caches.keys())).includes('html-css-js-study-shell-v2'), 'upgrade should not delete the older cache');
   console.log('PASS ' + engine + ': the new network-first worker replaces a stale cache-first worker without clearing old data');
