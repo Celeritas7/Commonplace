@@ -172,3 +172,8 @@ Performed: immutable GitHub source reads, full section file inventory, immediate
 Not verified: Drive PDF contents, external course access, actual device storage, cloud session/sync operation, deployed cache state, teaching accuracy across linked materials. Existing shared generated quizzes were identified as a dependency but not exhaustively audited.
 
 Phase 1 may begin with the visual prototype; runtime changes should follow review of that design. Use separate scoped pull requests, keep unrelated work intact and refresh affected offline manifests whenever implementation changes shared files.
+
+
+## Added phase — account synchronization (v1.6)
+
+Added after Projects and backup: local-first Supabase synchronization of projects/code, native notes/bookmarks/progress/quizzes/exercises and the original course tracker, using Commonplace’s existing account. Incoming changes use an explicit safe reload; conflicting code and notes are retained. See [CLOUD_SYNC.md](CLOUD_SYNC.md). Shared highlights and downloaded packs remain local. Reliable offline preparation and physical-device acceptance remain separate pending phases.

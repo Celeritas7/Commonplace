@@ -8,7 +8,7 @@ Open **Projects & backup** from Practice or My notes. The existing working code 
 
 The optional `projects` collection extends `commonplace_web_studio_v1`; the root `project` working copy remains compatible with older cached controllers. On reopening, working-copy edits overlay the active project's saved files. A collection-only record also retains its active files. Lesson IDs, notes, bookmarks, quiz answers, reading marks and exercise history are not tied to project switching and are not reset.
 
-There are at most 20 projects, names of 1–80 characters, and 150,000 characters per source file. A save failure leaves the in-memory work available to Export study backup. There is no cloud synchronization.
+There are at most 20 projects, names of 1–80 characters, and 150,000 characters per source file. A save failure leaves the in-memory work available to Export study backup. Version 1.6 adds account synchronization; see [CLOUD_SYNC.md](CLOUD_SYNC.md).
 
 ## Images and website export
 

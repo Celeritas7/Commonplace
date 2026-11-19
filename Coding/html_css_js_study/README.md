@@ -1,3 +1,7 @@
+# Web Studio account sync (v1.6)
+
+Account sync is implemented for native study records and the original course tracker. See [CLOUD_SYNC.md](docs/CLOUD_SYNC.md) for scope, conflict rules and device checks. Shared highlights and downloaded packs remain local. The phase history below records earlier delivery scopes.
+
 # Web Studio · Commonplace
 
 Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open `index.html` through HTTPS or localhost.
