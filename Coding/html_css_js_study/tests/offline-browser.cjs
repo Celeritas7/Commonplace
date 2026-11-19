@@ -25,6 +25,7 @@ let manifest = originalManifest, origin, server, page;
 let networkDown = false, blockedPath = '', oldWorker = false;
 const replacements = new Map(), requests = [], held = new Set();
 const profiles = [], contexts = [];
+const contextProfiles = new Map();
 const cloud = { row: null, writes: 0 };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff': 'font/woff', '.woff2': 'font/woff2' };
 const relativePath = value => new URL(value, 'http://fixture' + BASE).pathname;
@@ -120,19 +121,20 @@ async function savedKeys() {
 async function localRecords() {
   return page.evaluate(() => Object.fromEntries(Object.keys(localStorage).sort().map(key => [key, localStorage.getItem(key)])));
 }
-async function setupContext() {
+async function setupContext({ profile, offline = false } = {}) {
   // Study preparation targets a normal Safari/Home Screen profile. WebKit's
   // ephemeral/private context intentionally does not retain CacheStorage over
   // reloads: https://github.com/microsoft/playwright/pull/41701 . Use a fresh,
   // isolated on-disk profile for each scenario; never a user's browser profile.
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'commonplace-web-offline-' + engine + '-'));
-  profiles.push(profile);
-  const ctx = await playwright[engine].launchPersistentContext(profile, { headless: true, viewport: { width: 390, height: 844 } });
+  if (!profile) { profile = fs.mkdtempSync(path.join(os.tmpdir(), 'commonplace-web-offline-' + engine + '-')); profiles.push(profile); }
+  else assert(profiles.includes(profile), 'only a profile allocated by this test may be reopened');
+  const ctx = await playwright[engine].launchPersistentContext(profile, { headless: true, offline, viewport: { width: 390, height: 844 } });
   contexts.push(ctx);
-  // Persistent launches may create about:blank. It must not keep the browser's
-  // last page/worker alive during the cold-close-and-reopen acceptance below.
-  for (const initial of ctx.pages()) await initial.close();
-  assert.equal(ctx.pages().length, 0, 'the isolated persistent profile starts with no open page');
+  contextProfiles.set(ctx, profile);
+  // WebKit closes its persistent browser when its final page closes. Reuse the
+  // initial blank page as the app instead of leaving an invisible keepalive;
+  // the cold test below closes/restarts the entire browser on the same profile.
+  for (const extra of ctx.pages().slice(1)) await extra.close();
   // Routing disables Playwright's ordinary HTTP cache. Do not intercept local
   // worker requests in WebKit: its automation transport cannot reliably route
   // a cold offline navigation through a service worker. External-only routing
@@ -177,7 +179,8 @@ async function setupContext() {
   return ctx;
 }
 async function openApp(ctx) {
-  page = await ctx.newPage(); page.setDefaultTimeout(25000);
+  page = ctx.pages()[0] || await ctx.newPage(); page.setDefaultTimeout(25000);
+  assert.equal(ctx.pages().length, 1, 'no other blank or app page may keep the worker alive');
   await page.goto(origin + BASE + 'index.html', { waitUntil: 'domcontentloaded' });
   // Reopening correctly restores the selected Practice/Projects/Notes screen;
   // the Book title can therefore be hidden even when the app loaded correctly.
@@ -201,7 +204,7 @@ function revise(files) {
   assert(['chromium', 'webkit'].includes(engine));
   await startServer();
   console.log('TEST ' + engine + ': isolated normal persistent profiles; no user profile, private-mode claim or physical iPad claim');
-  const ctx = await setupContext(); await openApp(ctx); await openPanel();
+  let ctx = await setupContext(); await openApp(ctx); await openPanel();
   const fresh = await rpc('offline-status'); assert(!fresh.error, fresh.error);
   assert.equal(fresh.ready, false); assert.equal(fresh.done, 0); assert.equal(fresh.remainingBytes, manifest.bytes);
   assert.equal((await savedKeys()).length, 0, 'installation must not silently download the study pack');
@@ -248,8 +251,10 @@ function revise(files) {
     await new Promise((resolve, reject) => { const request = indexedDB.open('offline-unrelated-fixture', 1); request.onupgradeneeded = () => request.result.createObjectStore('data'); request.onerror = () => reject(request.error); request.onsuccess = () => { const db = request.result, transaction = db.transaction('data', 'readwrite'); transaction.objectStore('data').put('Keep unrelated IndexedDB', 'sentinel'); transaction.oncomplete = () => { db.close(); resolve(); }; transaction.onerror = () => reject(transaction.error); }; });
   });
 
-  await clearHttpCache(ctx); networkDown = true; await ctx.setOffline(true); await page.close();
-  assert.equal(ctx.pages().length, 0, 'cold reopening must start after the last app/blank page has closed');
+  await clearHttpCache(ctx); networkDown = true; await ctx.setOffline(true);
+  const profile = contextProfiles.get(ctx); await ctx.close();
+  assert.equal(ctx.pages().length, 0, 'cold reopening must start after every app/blank page and the browser have closed');
+  ctx = await setupContext({ profile, offline: true });
   await openApp(ctx);
   assert.equal(await page.evaluate(async () => { try { await fetch('/__uncached_offline_probe', { cache: 'no-store' }); return false; } catch (_) { return true; } }), true, 'negative control: an uncached network request must fail');
   assert.equal(await page.evaluate(() => window.__offlineBeforeAppRecord), native, 'reopening must not reseed or replace saved study data');
@@ -270,7 +275,7 @@ function revise(files) {
   const offlineState = await rpc('offline-status'); assert.equal(offlineState.ready, true); assert.equal(offlineState.remainingBytes, 0);
   assert.notEqual(cloud.row?.snapshot?.study?.lessons?.['html-elements']?.note, 'Written without Wi-Fi; upload after reconnect.');
   assert.deepEqual(await page.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), Object.keys(protectedBefore)), protectedBefore);
-  console.log('PASS ' + engine + ': cold offline reopen without ordinary HTTP cache preserves notes/bookmarks/projects and runs real HTML, CSS, JavaScript and graded exercises');
+  console.log('PASS ' + engine + ': cold offline browser restart without ordinary HTTP cache preserves notes/bookmarks/projects and runs real HTML, CSS, JavaScript and graded exercises');
 
   networkDown = false; await ctx.setOffline(false);
   await until(() => cloud.row?.snapshot?.study?.lessons?.['html-elements']?.note === 'Written without Wi-Fi; upload after reconnect.', 'queued offline note did not upload after reconnection');
@@ -327,7 +332,8 @@ function revise(files) {
   // cache-first worker. This tests upgrade activation over old cached pages;
   // the fixture does not claim to be every historic production worker.
   manifest = originalManifest; replacements.clear(); oldWorker = true;
-  const upgrade = await setupContext(); page = await upgrade.newPage(); page.setDefaultTimeout(30000);
+  const upgrade = await setupContext(); page = upgrade.pages()[0] || await upgrade.newPage(); page.setDefaultTimeout(30000);
+  assert.equal(upgrade.pages().length, 1, 'the upgrade profile must not have a hidden keepalive page');
   await page.goto(origin + BASE + '__offline_harness.html');
   await page.evaluate(async base => { await navigator.serviceWorker.register(base + 'sw.js', { scope: base, updateViaCache: 'none' }); await navigator.serviceWorker.ready; }, BASE); await readyController();
   await page.goto(origin + BASE + 'index.html'); assert.equal(await page.locator('#old-shell').textContent(), 'Older cached Web Studio');
