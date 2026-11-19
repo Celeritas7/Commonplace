@@ -235,6 +235,7 @@ function revise(files) {
   });
 
   await clearHttpCache(ctx); networkDown = true; await ctx.setOffline(true); await page.close(); await openApp(ctx);
+  assert.equal(await page.evaluate(async () => { try { await fetch('/__uncached_offline_probe', { cache: 'no-store' }); return false; } catch (_) { return true; } }), true, 'negative control: an uncached network request must fail');
   assert.equal(await page.evaluate(() => window.__offlineBeforeAppRecord), native, 'reopening must not reseed or replace saved study data');
   await view('notes'); assert.equal(await page.locator('#wb-note-editor').inputValue(), 'Offline acceptance note, before reconnect.');
   await page.locator('#wb-note-editor').fill('Written without Wi-Fi; upload after reconnect.');
