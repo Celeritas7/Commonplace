@@ -1,6 +1,6 @@
 # Projects and backup
 
-Phase 5 adds named local projects and portable backups to the three-lesson sample app. It does not expand the curriculum or certify reliable offline reopening.
+Phase 5 adds named local projects and portable backups to the three-lesson sample app. It does not expand the curriculum. Verified offline preparation is implemented separately in [Phase 6](OFFLINE_STUDY.md); physical-device acceptance remains in [Phase 7](PHASE7_VALIDATION.md).
 
 ## Projects
 
@@ -35,4 +35,4 @@ The journal needs temporary free browser storage. An import may fail for lack of
 
 ## Validation
 
-Node tests cover project identity, compatibility, duplication, export encoding, backup validation, merge/replace, quota failures, rollback, pending recovery and stale tabs. Chromium/WebKit acceptance covers actual rendering/execution, embedded images, downloaded website/backup files, restored study data, mobile widths and older cached markup. Physical iPad Safari/Home Screen acceptance and verified offline packs remain later phases.
+Node tests cover project identity, compatibility, duplication, export encoding, backup validation, merge/replace, quota failures, rollback, pending recovery and stale tabs. Chromium/WebKit acceptance covers actual rendering/execution, embedded images, downloaded website/backup files, restored study data, mobile widths and older cached markup. Verified offline packs are implemented and covered by the real service-worker suites. Physical iPad Safari/Home Screen file download, opening and import acceptance remain pending in [Phase 7](PHASE7_VALIDATION.md).

@@ -1,6 +1,6 @@
-# Account sync — Web Studio 1.6
+# Web Studio account sync
 
-Web Studio uses Commonplace’s existing General_apps Supabase project and sign-in session. Personal study records are owned by the signed-in user, protected by row-level security and uploaded through a revision-checked RPC. This adds account synchronization; it does not complete the planned reliable offline download packs.
+Web Studio uses Commonplace’s existing General_apps Supabase project and sign-in session. Personal study records are owned by the signed-in user, protected by row-level security and uploaded through a revision-checked RPC. Account sync was introduced in v1.6; verified offline preparation followed in v1.7 and is documented separately in [OFFLINE_STUDY.md](OFFLINE_STUDY.md).
 
 ## What travels between devices
 
@@ -36,4 +36,4 @@ The common sync baseline lives in the `commonplace-web-studio-sync` IndexedDB da
 3. Disconnect, edit the note/code, then reconnect with Web Studio open. Wait for synced. On your other device choose **Sync now → Load synced work** and check the edit.
 4. For a conflict check, change the same project’s HTML differently on both devices while offline; reconnect both, load merged work, and confirm both versions exist in Projects & backup.
 
-Do not clear website data. Safari and an installed Home Screen app may have separate local storage, so each needs the same sign-in and its own prepared offline downloads. Physical iPad/Home Screen acceptance is still required; automated WebKit testing is not an iPad test.
+Do not clear website data. Safari and an installed Home Screen app may have separate local storage, so each needs the same sign-in and its own prepared offline downloads. Physical iPad/Home Screen acceptance is still required; automated WebKit testing is not an iPad test. Record results using [Phase 7 validation](PHASE7_VALIDATION.md).

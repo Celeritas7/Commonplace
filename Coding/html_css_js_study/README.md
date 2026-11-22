@@ -1,10 +1,8 @@
-# Web Studio account sync (v1.6)
+# Web Studio · Commonplace (v1.7.1)
 
-Account sync is implemented for native study records and the original course tracker. See [CLOUD_SYNC.md](docs/CLOUD_SYNC.md) for scope, conflict rules and device checks. Shared highlights and downloaded packs remain local. The phase history below records earlier delivery scopes.
+Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open the [hosted app](https://celeritas7.github.io/Commonplace/Coding/html_css_js_study/index.html) through HTTPS; localhost is for development.
 
-# Web Studio · Commonplace
-
-Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open `index.html` through HTTPS or localhost.
+The three-lesson sample app includes checked exercises, projects and backups, account sync, and verified offline downloads. **Phase 7 validation is in progress**: automated browser results and outstanding physical Android/iPad checks are recorded in [PHASE7_VALIDATION.md](docs/PHASE7_VALIDATION.md). The full learning book remains deferred.
 
 ## Start learning
 
@@ -31,7 +29,7 @@ Open **Projects & backup** from Practice or My notes. Your existing working page
 
 ## Saving and backups
 
-- Code, lesson notes, bookmarks, quiz answers, reading marks and exercise history save locally under `commonplace_web_studio_v1`. There is **no cloud synchronization** for these records.
+- Code, lesson notes, bookmarks, quiz answers, reading marks and exercise history save locally under `commonplace_web_studio_v1`. These records, named projects and the original course tracker also participate in [account sync](docs/CLOUD_SYNC.md) through the existing Commonplace sign-in. Offline edits stay local until this app is open, connected and signed in; check **Account sync** for success or errors. Incoming work waits for **Load synced work** before replacing the open workspace.
 - The original tracker keeps `commonplace_wdb_v1`. Shared annotation keys and the page URL remain intact. The original tracker DOM precedes the new book to retain text-occurrence anchor ordering.
 - Save errors and conflicting edits from another tab appear visibly. Corrupt/unsupported data is never replaced automatically. Keep the tab open and export a backup when saving fails.
 - **My notes → Export study backup** includes only this section's new and old raw records plus the current unsaved drafts. It excludes authentication/session data and other sections. A scoped export is also available beneath Course index. The shared all-storage backup menu is hidden here.
@@ -52,17 +50,19 @@ The bundled Acorn parser adds checks to loops/functions. Ordinary infinite loops
 
 ## Offline and updates
 
-**Study offline** explains the current limitation: verified downloadable packs, resumable download progress and safe pack repair are **not implemented in this release**. Keep internet available when opening the app. The worker has a small shell cache and bounded network-first updates; this does not certify offline readiness. Activation clears no caches, study data or packs.
+**Study offline** explicitly downloads the lessons, exercises, editor/preview, fonts, icons and supporting scripts. The panel shows total bytes, remaining bytes, progress and useful errors. Completed, unchanged files are reused after an interrupted download or update. **Ready offline** appears only after required saved files pass byte-length and SHA-256 checks. Worker installation does not download the larger study pack.
 
-Use **Study offline → Check for app updates → Reload app** while connected. Reload is blocked if the current study draft cannot be saved. The old v1 cache remains a fallback; other sections are untouched.
+Choose **Back to study** at the panel heading or **Start studying** after verification to reveal the selected lesson/workspace. Learning tabs also dismiss the panel. Hiding the controls keeps an active download running while the app remains open.
 
-On iPad, open in Safari and choose **Share → Add to Home Screen**. Safari and the installed app may have separate storage. Study, save and eventually prepare downloads in the same browser/app context. Drive books, Udemy and initial sign-in remain online features.
+Use **Study offline → Updates and repair → Check for app updates → Reload app** while connected. Reload is blocked if the current study draft cannot be saved. Then check/download the updated pack; the previous complete pack stays available during an incomplete update. Section-only repair preserves saved study records, downloaded packs and other Commonplace sections. See [offline preparation, repair and limitations](docs/OFFLINE_STUDY.md).
+
+On iPad, open in regular Safari and choose **Share → Add to Home Screen** if desired. Sign in and prepare downloads inside the browser or installed app where you will study; their storage may differ. Drive books, Udemy, external links, parent Commonplace folders, new sign-in and account sync require internet. Shared highlights/annotations and downloaded packs remain local and are outside account sync.
 
 ## Validation
 
-Run `tests/storage.cjs`, `tests/legacy.cjs`, `tests/preview.cjs`, `tests/worker.cjs`, `tests/projects.cjs` and `tests/backup.cjs` with Node. `tests/browser.cjs` uses Playwright Chromium/WebKit and a local HTTP fixture with the gate stubbed **only in tests**. Production authentication is unchanged. `.github/workflows/web-studio.yml` runs these checks.
+[The Web Studio workflow](../../.github/workflows/web-studio.yml) runs the generated-manifest check, Node/Python contracts and Chromium/WebKit learning, projects/backup, sync and real service-worker suites. Coverage includes fresh preparation, interrupted resume, corrupted files, old-cache updates, offline cold reopening, code execution and preservation of saved records. The learning suite uses a stubbed login gate; the offline suite uses localhost, where the shared gate bypasses sign-in. Sync uses fixture accounts, not production account writes. Those results do not establish physical Google sign-in or cross-device acceptance.
 
-Physical iPad Safari/Home Screen acceptance remains required. Automated WebKit is not an iPad device test. Full offline acceptance belongs to the later download phase.
+See [Phase 7 validation](docs/PHASE7_VALIDATION.md) for the exact evidence, additional authentication checks and the device checklist. Physical iPad Safari and Home Screen acceptance remain pending and must be recorded separately; desktop WebKit and simulated phone widths are not physical-device tests.
 
 ## Files
 
@@ -73,6 +73,8 @@ Physical iPad Safari/Home Screen acceptance remains required. Automated WebKit i
 - `studio-projects.js`, `studio-project-ui.js`: named projects, embedded images, website export and backup controls.
 - `studio-preview.js`, `vendor/acorn.js`: execution and loop guards; license included.
 - `legacy-tracker.js`, `data/course-index.js`: original course tracker.
-- `sw.js`, `pwa/`: update caching and Home Screen metadata.
+- `offline.js`, `sw.js`, `offline-assets.json`, `tools/build-offline.py`: explicit pack preparation, verification and updates.
+- `offline-repair.html`, `pwa/`: scoped repair and Home Screen metadata.
+- `studio-sync.js`, `studio-sync-merge.js`, `studio-cloud.js`, `sql/`: account sync, conflict handling and database setup.
 
 Do not reorder legacy course entries: their numeric IDs are order-derived. New teaching content uses explicit stable IDs.
