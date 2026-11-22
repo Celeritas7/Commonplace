@@ -35,7 +35,7 @@ function allowed(url) {
   if (url.origin !== BASE.origin || url.username || url.password) return false;
   const local = url.pathname.startsWith(BASE.pathname) ? url.pathname.slice(BASE.pathname.length) : null;
   if (local !== null) {
-    return local === '' || /^(?:index|offline-repair)\.html$/.test(local) ||
+    return local === '' || /^(?:index|offline|offline-repair)\.html$/.test(local) ||
       /^(?:studio(?:-[a-z]+)*|legacy-tracker|offline)\.(?:js|css)$/.test(local) ||
       /^data\/[\w.-]+\.(?:js|json)$/.test(local) || /^vendor\/[\w.-]+\.js$/.test(local) ||
       /^pwa\/(?:manifest\.json|icon-\d+\.png)$/.test(local) ||

@@ -184,10 +184,15 @@ async function setupContext({ profile, offline = false } = {}) {
   }, { origin });
   return ctx;
 }
-async function openApp(ctx) {
+async function openFromLauncher(ctx, action) {
   page = ctx.pages()[0] || await ctx.newPage(); page.setDefaultTimeout(25000);
   assert.equal(ctx.pages().length, 1, 'no other blank or app page may keep the worker alive');
-  await page.goto(origin + BASE + 'index.html', { waitUntil: 'domcontentloaded' });
+  const launcher = await page.goto(origin + BASE + 'offline.html', { waitUntil: 'domcontentloaded' });
+  assert.equal(launcher.status(), 200);
+  assert(await page.getByRole('heading', { name: 'Web Studio', exact: true }).isVisible());
+  assert.equal(await page.locator('link[rel=manifest]').getAttribute('href'), 'pwa/manifest.json');
+  assert.equal(await page.locator('link[rel=apple-touch-icon]').getAttribute('href'), 'pwa/icon-180.png');
+  await page.getByRole('link', { name: action, exact: true }).click();
   // Reopening correctly restores the selected Practice/Projects/Notes screen;
   // the Book title can therefore be hidden even when the app loaded correctly.
   await page.locator('#wb-save-status').waitFor({ state: 'visible' }); await readyController();
@@ -210,7 +215,9 @@ function revise(files) {
   assert(['chromium', 'webkit'].includes(engine));
   await startServer();
   console.log('TEST ' + engine + ': isolated normal persistent profiles; no user profile, private-mode claim or physical iPad claim');
-  let ctx = await setupContext(); await openApp(ctx); await openPanel();
+  let ctx = await setupContext(); await openFromLauncher(ctx, 'Prepare or check downloads');
+  assert(await page.locator('#wb-offline').isVisible(), 'the launcher must open download controls directly');
+  assert.equal(await page.getByRole('link', { name: 'Offline launcher and setup steps' }).getAttribute('href'), 'offline.html');
   const fresh = await rpc('offline-status'); assert(!fresh.error, fresh.error);
   assert.equal(fresh.ready, false); assert.equal(fresh.done, 0); assert.equal(fresh.remainingBytes, manifest.bytes);
   assert.equal((await savedKeys()).length, 0, 'installation must not silently download the study pack');
@@ -276,7 +283,14 @@ function revise(files) {
   const profile = contextProfiles.get(ctx); await ctx.close();
   assert.equal(ctx.pages().length, 0, 'cold reopening must start after every app/blank page and the browser have closed');
   ctx = await setupContext({ profile, offline: true });
-  await openApp(ctx);
+  await openFromLauncher(ctx, 'Open Web Studio');
+  const installStart = await page.evaluate(async () => {
+    const link = document.querySelector('link[rel=manifest]');
+    const manifest = await (await fetch(link.href)).json();
+    return new URL(manifest.start_url, link.href).href;
+  });
+  assert.equal(page.url(), installStart, 'the launcher and Home Screen icon must open the same saved app');
+  console.log('PASS ' + engine + ': cold offline bookmark launch opens the installed start URL');
   assert.equal(await page.evaluate(async () => { try { await fetch('/__uncached_offline_probe', { cache: 'no-store' }); return false; } catch (_) { return true; } }), true, 'negative control: an uncached network request must fail');
   assert.equal(await page.evaluate(() => window.__offlineBeforeAppRecord), native, 'reopening must not reseed or replace saved study data');
   await view('notes'); assert.equal(await page.locator('#wb-note-editor').inputValue(), 'Offline acceptance note, before reconnect.');
