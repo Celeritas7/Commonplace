@@ -134,8 +134,10 @@
  if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{setText('#wb-update-status','Updated app files are available. Reload when you are ready.');$('#wb-reload').hidden=false;});
  renderReading();renderEditor();resizeText(0);
  if(saved.view==='practice')openPractice('try',true);else if(['notes','library',...(practice?['mistakes']:[]),...(projectUI?['projects']:[])].includes(saved.view))setView(saved.view);else setView('book');
- if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash)||saved.view==='course')showCourse();
+ const requestedOfflineSetup=location.hash==='#study-offline';
+ if(!requestedOfflineSetup&&(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash)||saved.view==='course'))showCourse();
  if(projectUI?.recoveryPending()){setView('projects');all('.wb-language-tabs button,.wb-app-tabs button,[data-screen=projects] [data-view]').forEach(button=>button.disabled=true);}
+ if(requestedOfflineSetup){offline(true);focusContent($('#wb-offline-title'));}
  saveStatus(loaded.error);
  function cloudSnapshot(){
   if(importLocked||saveError)throw new Error(saveError||'Finish the backup review or recovery before syncing.');

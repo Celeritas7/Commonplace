@@ -6,7 +6,7 @@ HTML, CSS and JavaScript previews execute locally in the browser's sandbox. The 
 
 ## Prepare this iPad
 
-1. Connect to the internet and open Web Studio in a regular Safari tab. If you want a Home Screen app, use Safari's Share menu → Add to Home Screen, then open that installed app.
+1. Open the [Web Studio offline launcher](../offline.html) in Safari while connected. Tap **Share → Add to Home Screen** (under **More** on some iPads), keep **Open as Web App** on if shown, then tap **Add**. Open the **Web Studio** icon. If you study in Safari instead, bookmark the launcher and use **Prepare or check downloads** there.
 2. Sign into Commonplace in the browser or installed app where you will study. Safari and a Home Screen app may have separate storage. Each needs its own sign-in and its own download.
 3. Select **Study offline**, then download the study pack. Keep this app open while downloading. Size, remaining bytes, progress and any file error appear beside the controls. **Back to study** at the top returns to your current lesson or workspace; it does not cancel the download. The learning tabs also close the panel.
 4. Wait for **Ready offline**, then select **Start studying** to reveal your lesson or workspace. Ready means the required files have been checked in this browser's storage. It is not a promise that the device will retain them forever or that an expired/missing login can be renewed without internet.

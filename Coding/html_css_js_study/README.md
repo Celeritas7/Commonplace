@@ -1,4 +1,4 @@
-# Web Studio · Commonplace (v1.7.1)
+# Web Studio · Commonplace (v1.7.2)
 
 Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open the [hosted app](https://celeritas7.github.io/Commonplace/Coding/html_css_js_study/index.html) through HTTPS; localhost is for development.
 
@@ -56,7 +56,7 @@ Choose **Back to study** at the panel heading or **Start studying** after verifi
 
 Use **Study offline → Updates and repair → Check for app updates → Reload app** while connected. Reload is blocked if the current study draft cannot be saved. Then check/download the updated pack; the previous complete pack stays available during an incomplete update. Section-only repair preserves saved study records, downloaded packs and other Commonplace sections. See [offline preparation, repair and limitations](docs/OFFLINE_STUDY.md).
 
-On iPad, open in regular Safari and choose **Share → Add to Home Screen** if desired. Sign in and prepare downloads inside the browser or installed app where you will study; their storage may differ. Drive books, Udemy, external links, parent Commonplace folders, new sign-in and account sync require internet. Shared highlights/annotations and downloaded packs remain local and are outside account sync.
+On iPad, open the [offline launcher](offline.html) in regular Safari and choose **Share → Add to Home Screen** if desired. Sign in and prepare downloads inside the browser or installed app where you will study; their storage may differ. Drive books, Udemy, external links, parent Commonplace folders, new sign-in and account sync require internet. Shared highlights/annotations and downloaded packs remain local and are outside account sync.
 
 ## Validation
 
