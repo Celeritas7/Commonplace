@@ -34,7 +34,7 @@ const protectedSeed = {
 };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.woff2': 'font/woff2' };
 const engine = process.env.BROWSER || 'chromium';
-let browser, page;
+let browser, page, activeFixture;
 
 async function fixture({ callbackUser = approved, cached = false, offline = false } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -47,7 +47,11 @@ async function fixture({ callbackUser = approved, cached = false, offline = fals
       const target = new URL(url.searchParams.get('redirect_to'));
       assert.equal(target.origin, ORIGIN, 'fake provider must return only to the isolated test origin');
       target.hash = 'access_token=FIXTURE-ONLY&refresh_token=FIXTURE-ONLY&type=signup';
-      await route.fulfill({ status: 302, headers: { location: target.href }, body: '' }); return;
+      // Playwright/WebKit cannot fulfill intercepted requests with a 302, and
+      // Chromium may follow an HTTP redirect outside the route handler. This
+      // inert provider fixture creates a new, interceptable page navigation.
+      const targetLiteral = JSON.stringify(target.href).replace(/</g, '\\u003c');
+      await route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><meta charset="utf-8"><title>Test provider return</title><script>location.replace(' + targetLiteral + ');</script>' }); return;
     }
     if (url.origin !== ORIGIN || !url.pathname.startsWith('/Commonplace/')) {
       unexpected.push(url.href); await route.abort(); return;
@@ -125,7 +129,8 @@ async function fixture({ callbackUser = approved, cached = false, offline = fals
   }, { origin: ORIGIN, sessionKey, approved, callbackUser, protectedSeed, cached });
   if (offline) await ctx.setOffline(true);
   page = await ctx.newPage(); page.setDefaultTimeout(15000); page.on('pageerror', error => errors.push(error.message));
-  return { ctx, page, errors, unexpected, providerRequests };
+  activeFixture = { ctx, page, errors, unexpected, providerRequests };
+  return activeFixture;
 }
 
 async function boot(p, suffix = '') {
@@ -211,6 +216,7 @@ async function healthy(f) {
   const href = new URL(await link.getAttribute('href'));
   assert.equal(href.searchParams.get('redirect_to'), APP + '?from=mobile');
   await link.click();
+  await google.page.waitForURL(url => url.origin === ORIGIN && url.hash.includes('access_token=FIXTURE-ONLY'));
   await google.page.waitForFunction(() => window.__authFixture?.returning === true && window.__authFixture.seenUrls.length > 0);
   await locked(google.page);
   assert.equal(google.providerRequests.length, 1, 'native link makes exactly one intercepted provider navigation');
@@ -223,6 +229,7 @@ async function healthy(f) {
   console.log('PASS ' + engine + ': authentication integration complete; production Google, account allowlist and physical Safari/Home Screen acceptance remain manual');
 })().catch(async error => {
   console.error(error);
+  console.error('Auth fixture diagnostics:', JSON.stringify({ url: page?.url(), pageErrors: activeFixture?.errors, unexpectedRequests: activeFixture?.unexpected, providerRequests: activeFixture?.providerRequests }));
   if (page && !page.isClosed()) { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-auth-' + engine + '.png', fullPage: true }).catch(() => {}); }
   process.exitCode = 1;
 }).finally(async () => { if (browser) await browser.close(); });
