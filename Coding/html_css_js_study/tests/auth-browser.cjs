@@ -166,7 +166,10 @@ async function healthy(f) {
     assert.equal(await p.locator('#wb-part-title').textContent(), 'Walk-through');
     await p.waitForFunction(() => document.querySelector('#wb-sync-status').dataset.state === 'synced');
     assert.equal(await p.evaluate(key => localStorage.getItem(key), OWNER), approved.id);
-    assert((await p.evaluate(() => window.__authFixture.cloudCalls)).every(call => call.locked === false));
+    const cloudCalls = await p.evaluate(() => window.__authFixture.cloudCalls);
+    assert(cloudCalls.some(call => call.kind === 'read'), 'approved callback must actually read the account snapshot');
+    assert(cloudCalls.some(call => call.kind === 'write'), 'approved callback must actually upload the seeded study snapshot');
+    assert(cloudCalls.every(call => call.locked === false), 'all cloud access must wait for gate approval');
     const options = await p.evaluate(() => window.__authFixture.clientOptions);
     assert(options.length > 0); assert(options.every(option => option.auth.persistSession && option.auth.autoRefreshToken && option.auth.detectSessionInUrl));
     await unchanged(p); await healthy(f);
