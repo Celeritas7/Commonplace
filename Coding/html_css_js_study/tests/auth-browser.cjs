@@ -140,11 +140,30 @@ async function boot(p, suffix = '') {
 async function unchanged(p) {
   assert.deepEqual(await p.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), Object.keys(protectedSeed)), protectedSeed);
 }
-async function locked(p) {
+async function preservedAfterNavigation(p) {
+  // The real provider navigation fires Web Studio's pagehide save. That save
+  // legitimately adds default lesson fields and a named-project snapshot;
+  // compare every seeded value, while requiring the saved project to agree.
+  const records = await p.evaluate(keys => Object.fromEntries(keys.map(key => [key, localStorage.getItem(key)])), Object.keys(protectedSeed));
+  const before = JSON.parse(native), after = JSON.parse(records[KEY]);
+  for (const [key, value] of Object.entries(before)) {
+    if (key === 'lessons') continue;
+    assert.deepEqual(after[key], value, 'provider navigation must preserve native ' + key);
+  }
+  for (const [lessonId, lesson] of Object.entries(before.lessons)) {
+    assert(after.lessons[lessonId], 'provider navigation must retain the saved lesson');
+    for (const [key, value] of Object.entries(lesson)) assert.deepEqual(after.lessons[lessonId][key], value, 'provider navigation must preserve lesson ' + key);
+  }
+  const active = after.projects?.items?.find(item => item.id === after.projects.activeId);
+  assert(active, 'pagehide must retain an active project snapshot');
+  assert.deepEqual(active.files, before.project, 'named project and working source must both retain the original code');
+  for (const [key, value] of Object.entries(protectedSeed)) if (key !== KEY) assert.equal(records[key], value, 'provider navigation must leave ' + key + ' byte-for-byte unchanged');
+}
+async function locked(p, preserve = unchanged) {
   assert(await p.evaluate(() => document.documentElement.classList.contains('cp-locked')));
   assert.equal(await p.evaluate(key => localStorage.getItem(key), OWNER), null, 'locked gate must not bind local work to an account');
   assert.deepEqual(await p.evaluate(() => window.__authFixture.cloudCalls), [], 'locked gate must not read or write cloud study data');
-  await unchanged(p);
+  await preserve(p);
 }
 async function healthy(f) {
   assert.deepEqual(f.errors, [], 'auth integration has no unhandled page errors');
@@ -218,13 +237,13 @@ async function healthy(f) {
   await link.click();
   await google.page.waitForURL(url => url.origin === ORIGIN && url.hash.includes('access_token=FIXTURE-ONLY'));
   await google.page.waitForFunction(() => window.__authFixture?.returning === true && window.__authFixture.seenUrls.length > 0);
-  await locked(google.page);
+  await locked(google.page, preservedAfterNavigation);
   assert.equal(google.providerRequests.length, 1, 'native link makes exactly one intercepted provider navigation');
   await google.page.evaluate(() => window.__authFixture.release());
   await google.page.locator('#wb-title').waitFor({ state: 'visible' });
   assert.equal(google.page.url(), APP + '?from=mobile');
   assert.equal(await google.page.evaluate(() => localStorage.getItem('cp:gate:next')), null);
-  await unchanged(google.page); await healthy(google);
+  await preservedAfterNavigation(google.page); await healthy(google);
   console.log('PASS ' + engine + ': native same-window Google link returns through an isolated redirect fixture to the same study URL');
   console.log('PASS ' + engine + ': authentication integration complete; production Google, account allowlist and physical Safari/Home Screen acceptance remain manual');
 })().catch(async error => {
