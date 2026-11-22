@@ -20,7 +20,7 @@ A passing result means that the published rubric passed for the submitted files.
 
 ## Attempts and Mistake Bank
 
-Exercise records are additive fields inside `commonplace_web_studio_v1`; the storage version and existing lesson IDs stay unchanged. They remain local to this browser or installed app. There is no cloud synchronization.
+Exercise records are additive fields inside `commonplace_web_studio_v1`; the storage version and existing lesson IDs stay unchanged. They save locally first and participate in [account sync](CLOUD_SYNC.md), including attempts, hints and Mistake Bank state. Reconnect with the app open and signed in to upload queued changes; use the sync status to check the result.
 
 Each attempt records its timestamp, exercise version, submitted files, per-check feedback, outcome and whether hints or the solution had been viewed. The latest 20 attempts per exercise are retained, along with a total attempt count. Submitted exercise projects are limited to 30,000 characters across the three files to keep the local history manageable. The ordinary preview retains its own existing limits.
 
@@ -30,4 +30,4 @@ The section’s study backup includes the retained exercise records and the curr
 
 ## Delivery boundaries
 
-Exercise definitions and grading code are bundled app assets and require no remote execution service. Verified offline preparation is still a later phase, so this release does not claim that reopening the whole app without internet is ready. Physical iPad Safari and Home Screen acceptance remains separate from automated Chromium/WebKit tests.
+Exercise definitions and grading code are bundled app assets and require no remote execution service. They are included in the verified [offline study pack](OFFLINE_STUDY.md). Prepare that pack in the browser/app where you will study and wait for **Ready offline** before disconnecting. Physical iPad Safari and Home Screen acceptance remain separate from automated Chromium/WebKit results; see [Phase 7 validation](PHASE7_VALIDATION.md).

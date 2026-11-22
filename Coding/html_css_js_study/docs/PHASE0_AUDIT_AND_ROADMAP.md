@@ -5,13 +5,15 @@ Repository: Celeritas7/Commonplace
 Audited main commit: `2f150ee24637fa2225e72387fae7fd386fb03856`
 Scope: `Coding/html_css_js_study/` and its immediate shared dependencies.
 
-## Decision
+**Reading this document:** the audit, inventory, findings and design brief below describe the pinned Phase 0 commit, not the current application. The phased checklist is maintained as implementation progresses. The current sample release is v1.7.1 with account sync and verified offline packs; [PHASE7_VALIDATION.md](PHASE7_VALIDATION.md) records current validation evidence and outstanding device acceptance.
+
+## Historical Phase 0 decision
 
 Proceed to Phase 1 design prototype. The current application is a course tracker, not yet an integrated web-development learning environment. Preserve that tracker while adding Web Studio capabilities incrementally. No runtime, authentication, production database, study data or deployment changes are part of Phase 0.
 
 This is a source audit plus a small Node data validation, not a browser/device acceptance test or full security audit. No live personal records were accessed. Linked Drive PDFs and Udemy lessons were not opened; their content quality, completeness and accessibility remain unverified.
 
-## Verified inventory
+## Historical Phase 0 inventory
 
 | Feature | Existing evidence | Status / implication |
 | --- | --- | --- |
@@ -46,7 +48,7 @@ Source: index.html lines 161–170 and row-building logic; extras.js lines 12–
 
 Existing users' records have not been read or migrated. Phase 0 protects them by making no runtime edits. Phase 1 must retain the current page URL and IDs, preserve unknown state fields, and verify existing annotation anchors before changing the DOM. Prefer new explicit IDs for new lessons; never renumber legacy records in place. Any later migration needs an exact mapping, recoverable backup and repeat-run checks.
 
-## Findings and priorities
+## Historical Phase 0 findings and priorities
 
 | ID | Priority | Evidence and impact | Planned action |
 | --- | --- | --- | --- |
@@ -91,6 +93,8 @@ A visual prototype is the Phase 1 review deliverable before the main redesign is
 
 ## Phased checklist and acceptance gates
 
+Checked implementation items describe shipped functionality, not a physical-device sign-off. The v1.7.1 baseline passed [Chromium/WebKit CI run 44559585170](https://github.com/Celeritas7/Commonplace/actions/runs/44559585170) for [PR #64](https://github.com/Celeritas7/Commonplace/pull/64). Phase 7 tracks new validation and the remaining manual checks.
+
 ### Phase 0 — audit (complete)
 
 - [x] Pin current main and inventory section files.
@@ -102,22 +106,23 @@ A visual prototype is the Phase 1 review deliverable before the main redesign is
 
 ### Phase 1 — UI prototype, then navigation
 
-- [ ] Show phone, portrait iPad and landscape/desktop visual prototype for review.
-- [ ] Retain current tracker and URL; freeze legacy ID mapping.
-- [ ] Establish scoped styles; avoid shared-style regressions.
-- [ ] Preserve notes/stars/completion/annotations across refresh and UI transitions.
-- [ ] Fix Continue filter edge case and stale note totals.
-- [ ] Add safe storage error handling and scoped recovery design.
-- [ ] Check keyboard focus, labels, contrast and touch sizing.
-Acceptance: existing tracker fixtures survive unchanged; all controls accurately describe working functions.
+- [x] Apply the reviewed learning UI with phone, portrait iPad and landscape/desktop layouts.
+- [x] Retain the tracker and URL; freeze the legacy ID mapping in `tests/legacy-id-map.json`.
+- [x] Scope new styles to Web Studio and retain direct Commonplace/Coding navigation.
+- [x] Preserve notes/stars/completion and stored annotation records across refresh and UI transitions in automated fixtures.
+- [x] Fix the Continue filter edge case and stale note totals (`tests/legacy.cjs`).
+- [x] Add visible storage errors, scoped exports and recoverable import/merge.
+- [x] Add touch targets and heading focus; automated phone layouts verify navigation without forcing the editor keyboard.
+- [ ] Complete physical-device visual/accessibility review, including contrast, touch comfort and actual annotation placement (Phase 7).
+Acceptance: tracker fixtures and navigation/data-preservation suites pass. Physical review remains distinct from viewport simulation.
 
 ### Phase 2 — editor and real preview
 
-- [ ] HTML/CSS/JS editing, explicit Run, console/errors, reset and local drafts.
-- [ ] Sandbox preview away from parent storage, login and navigation.
-- [ ] Validate preview messages; prevent unsafe parent privileges and handle runaway examples.
-- [ ] Clearly identify remote assets/services and block or label unsupported offline cases.
-Acceptance: a button changes preview content through real JavaScript; drafts survive reopen; preview cannot read parent study/session data.
+- [x] HTML/CSS/JS editing, explicit Run, console/errors, reset and local drafts.
+- [x] Sandbox preview away from parent storage, login and navigation.
+- [x] Validate preview messages; block parent privileges and stop ordinary runaway loops/recursion.
+- [x] Identify and block unsupported external assets/services in the preview; warn about export dependencies.
+Acceptance: Chromium/WebKit tests execute real JavaScript, retain drafts through reopening, and verify that preview code cannot read parent study/session storage. Extremely expensive native browser operations are not guaranteed preemptible; see the README's execution limits.
 
 ### Phase 3 — sample learning book and learning flow
 
@@ -157,21 +162,25 @@ Acceptance: export/import round trip preserves code/assets, handles invalid impo
 - [x] Safari/Home Screen preparation and online-only services documented in [OFFLINE_STUDY.md](OFFLINE_STUDY.md).
 Acceptance: automated fresh setup, interrupted resume, corrupt file, old-cache upgrade, repair and offline reopen checks are defined in the worker/manifest/Chromium/WebKit suites. Actual run results must be recorded with delivery; physical iPad Safari and Home Screen acceptance remains in Phase 7.
 
-### Phase 7 — device and integration validation
+### Phase 7 — device and integration validation (in progress)
 
-- [ ] Run desktop/touch browser suites; identify actual tested engines.
-- [ ] Physical iPad Safari and Home Screen checks separately.
-- [ ] Test login return, draft persistence, annotation anchors and update survival.
-- [ ] Verify no unrelated Commonplace section regressions.
-Acceptance: publish precise tested/not-tested results, limitations and a short user test.
+- [x] Establish the v1.7.1 automated Chromium/WebKit baseline, including simulated phone/tablet/desktop widths, real offline execution, resume, repair, updates and saved-work preservation (PR #64).
+- [x] Preserve unrelated section records/caches in fixtures; SQL and BAT checks passed on the baseline PR.
+- [x] Add the Phase 7 app/shared-gate integration suite and evidence record; require Chromium/WebKit CI results before merge. See [PHASE7_VALIDATION.md](PHASE7_VALIDATION.md) for fixture boundaries and run evidence.
+- [ ] Confirm the latest **Start studying** mobile fix on the user's Android device. The earlier screenshot verified a completed download, but reported the lesson-obscuring panel; it was not a passing study-flow test.
+- [ ] Test physical iPad Safari and installed Home Screen separately: sign-in return, cold offline reopen, editing/checking, notes/bookmarks, updates and backups.
+- [ ] Confirm actual shared annotation placement and comfortable keyboard/touch/contrast behavior on physical devices.
+- [ ] Verify production cross-device account sync using the same signed-in account; distinguish this from fixture-account tests.
+- [ ] Record any real-device Commonplace navigation or other-section regressions found during review.
+Acceptance: [PHASE7_VALIDATION.md](PHASE7_VALIDATION.md) must distinguish passed automation, user-reported results, not-tested checks and known limitations. This phase remains open until its required device checks are recorded; no physical iPad result is inferred from WebKit.
 
-## Validation record and remaining uncertainty
+## Historical Phase 0 validation record and remaining uncertainty
 
 Performed: immutable GitHub source reads, full section file inventory, immediate dependency review, isolated Node evaluation of course data and numbering validation. No repository runtime files were edited. No device or browser tests were performed in Phase 0.
 
 Not verified: Drive PDF contents, external course access, actual device storage, cloud session/sync operation, deployed cache state, teaching accuracy across linked materials. Existing shared generated quizzes were identified as a dependency but not exhaustively audited.
 
-Phase 1 may begin with the visual prototype; runtime changes should follow review of that design. Use separate scoped pull requests, keep unrelated work intact and refresh affected offline manifests whenever implementation changes shared files.
+The Phase 0 recommendation was to begin with a visual prototype and apply runtime changes after design review. That work has since shipped through the phases above. The ongoing preservation rule remains: use scoped pull requests, keep unrelated work intact and refresh affected offline manifests whenever implementation changes app or shared files.
 
 
 ## Added phase — account synchronization (v1.6)

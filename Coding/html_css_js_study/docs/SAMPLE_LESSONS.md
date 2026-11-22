@@ -35,4 +35,4 @@ Each sample retains eight reading parts, a prediction, a practice challenge with
 
 The stable lesson IDs are `html-elements`, `css-spacing` and `js-events`. Their reading-part order, quiz choice order, answers and prediction choices remain unchanged so existing records keep their meaning. Existing code wins over starter defaults on load.
 
-The sample lesson content is bundled with the app. Drive source links and the original course remain online resources. This sample release does not certify complete offline packs or add cloud synchronization; the app’s existing offline-status and local-save messages continue to apply.
+The three sample lessons are bundled with the app and included in its verified [offline study pack](OFFLINE_STUDY.md). Native learning records participate in [account sync](CLOUD_SYNC.md); shared highlights and downloaded packs remain local. Drive source links and external course resources require internet. The original course index is included offline, but its 453 entries are not 453 downloaded lessons. Physical-device acceptance remains in [Phase 7](PHASE7_VALIDATION.md).
