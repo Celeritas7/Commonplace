@@ -1,13 +1,15 @@
 'use strict';
-// Real service-worker acceptance against an isolated HTTP origin. Production
-// gate.js is served byte-for-byte; its documented localhost bypass applies.
-// The account client below is a test double: no production account is used.
-// Chromium/WebKit here are desktop engines, not a physical iPad/Safari test.
+// Cold restart with an actual worker, no-store responses and a disconnected server.
+// Chromium uses a loopback-bound HTTPS server named studio.example.test so the
+// real shared gate runs. Only the test profile contains a synthetic approved
+// session. WebKit also exercises the existing localhost transport fixture.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const http = require('node:http');
+const https = require('node:https');
+const { execFileSync } = require('node:child_process');
 const crypto = require('node:crypto');
 let playwright;
 try { playwright = require('playwright'); }
@@ -24,7 +26,10 @@ const originalManifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../off
 let manifest = originalManifest, origin, server, page;
 let networkDown = false, blockedPath = '', oldWorker = false;
 const replacements = new Map(), requests = [], held = new Set();
-const profiles = [], contexts = [];
+const profiles = [], contexts = [], launchArgs = [];
+const testHost = 'studio.example.test';
+const gateSource = fs.readFileSync(path.join(ROOT, '_lib/gate.js'), 'utf8');
+const sessionKey = gateSource.match(/var SKEY = '([^']+)'/)[1];
 const contextProfiles = new Map();
 const cloud = { row: null, writes: 0 };
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff': 'font/woff', '.woff2': 'font/woff2' };
@@ -42,7 +47,7 @@ self.addEventListener('fetch', event => {
 });`;
 
 async function startServer() {
-  server = http.createServer(async (req, res) => {
+  const handle = async (req, res) => {
     const url = new URL(req.url, 'http://fixture');
     requests.push(url.pathname);
     if (networkDown) { req.socket.destroy(); return; }
@@ -81,9 +86,20 @@ async function startServer() {
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     if (replacements.has(url.pathname)) res.end(replacements.get(url.pathname));
     else fs.createReadStream(file).pipe(res);
-  });
+  };
+  if (engine === 'chromium') {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(),'web-studio-test-cert-'));
+    profiles.push(dir);
+    const key = path.join(dir,'key.pem'), cert = path.join(dir,'cert.pem');
+    execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','1','-subj','/CN='+testHost,
+      '-addext','subjectAltName=DNS:'+testHost,'-keyout',key,'-out',cert],{stdio:'ignore'});
+    const publicKey = crypto.createPublicKey(fs.readFileSync(key)).export({type:'spki',format:'der'});
+    const fingerprint = crypto.createHash('sha256').update(publicKey).digest('base64');
+    launchArgs.push('--host-resolver-rules=MAP '+testHost+' 127.0.0.1', '--ignore-certificate-errors-spki-list='+fingerprint, '--no-proxy-server');
+    server = https.createServer({key:fs.readFileSync(key),cert:fs.readFileSync(cert)},handle);
+  } else server = http.createServer(handle);
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  origin = 'http://127.0.0.1:' + server.address().port;
+  origin = (engine === 'chromium' ? 'https://'+testHost : 'http://127.0.0.1') + ':' + server.address().port;
 }
 
 async function until(predicate, message, ms = 20000) {
@@ -134,7 +150,7 @@ async function setupContext({ profile, offline = false } = {}) {
   // isolated on-disk profile for each scenario; never a user's browser profile.
   if (!profile) { profile = fs.mkdtempSync(path.join(os.tmpdir(), 'commonplace-web-offline-' + engine + '-')); profiles.push(profile); }
   else assert(profiles.includes(profile), 'only a profile allocated by this test may be reopened');
-  const ctx = await playwright[engine].launchPersistentContext(profile, { headless: true, offline, viewport: { width: 390, height: 844 } });
+  const ctx = await playwright[engine].launchPersistentContext(profile, { headless: true, args: launchArgs, offline, viewport: { width: 390, height: 844 } });
   contexts.push(ctx);
   contextProfiles.set(ctx, profile);
   // WebKit closes its persistent browser when its final page closes. Reuse the
@@ -146,12 +162,15 @@ async function setupContext({ profile, offline = false } = {}) {
   // a cold offline navigation through a service worker. External-only routing
   // plus no-store on every fixture response avoids the ordinary HTTP cache;
   // the actual server is also cut off during every offline check.
-  await ctx.route(engine === 'webkit' ? 'https://**/*' : '**/*', route => route.continue());
-  await ctx.addInitScript(({ origin }) => {
+  await ctx.route(engine === 'webkit' ? 'https://**/*' : '**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  await ctx.addInitScript(({ origin, sessionKey }) => {
     if (window !== window.top || location.origin !== origin) return;
+    const user = { id: '851fc877-ddac-44a4-885f-f7de570f0907', email: 'offline-learner@example.test' };
     const seedKey = 'offline-test-profile-seeded';
     if (!localStorage.getItem(seedKey)) {
       localStorage.setItem(seedKey, '1');
+      localStorage.setItem(sessionKey, JSON.stringify({user,access_token:'FIXTURE-ONLY'}));
+      localStorage.setItem('cp:gate:ok',user.email);
       localStorage.setItem('cpx.bookmarks', '[{"path":"/other-section","title":"Keep bookmark"}]');
       localStorage.setItem('cpx.marks', '{"/other-section":[{"text":"Keep highlight"}]}');
       localStorage.setItem('cpx.resume', '{"/other-section":[{"text":"Keep position"}]}');
@@ -159,7 +178,6 @@ async function setupContext({ profile, offline = false } = {}) {
       localStorage.setItem('commonplace_wdb_v1', '{"done":{"l123":1},"notes":{"l123":"Keep course note"}}');
     }
     window.__offlineBeforeAppRecord = localStorage.getItem('commonplace_web_studio_v1');
-    const user = { id: '851fc877-ddac-44a4-885f-f7de570f0907', email: 'offline-learner@example.test' };
     function query(payload) {
       let signal, promise;
       const builder = {
@@ -181,7 +199,7 @@ async function setupContext({ profile, offline = false } = {}) {
       from(name) { if (name !== 'commonplace_web_studio') throw new Error('Unexpected table'); return query({ kind: 'read' }); },
       rpc(name, params) { if (name !== 'web_studio_sync_write') throw new Error('Unexpected writer'); return query({ kind: 'write', params }); }
     };
-  }, { origin });
+  }, { origin, sessionKey });
   return ctx;
 }
 async function openFromLauncher(ctx, action) {
@@ -189,6 +207,7 @@ async function openFromLauncher(ctx, action) {
   assert.equal(ctx.pages().length, 1, 'no other blank or app page may keep the worker alive');
   const launcher = await page.goto(origin + BASE + 'offline.html', { waitUntil: 'domcontentloaded' });
   assert.equal(launcher.status(), 200);
+  if(networkDown)assert(launcher.fromServiceWorker(),'cold launcher was served by the real worker');
   assert(await page.getByRole('heading', { name: 'Web Studio', exact: true }).isVisible());
   assert.equal(await page.locator('link[rel=manifest]').getAttribute('href'), 'pwa/manifest.json');
   assert.equal(await page.locator('link[rel=apple-touch-icon]').getAttribute('href'), 'pwa/icon-180.png');
@@ -246,7 +265,7 @@ function revise(files) {
   assert(partial.remainingBytes > 0 && partial.remainingBytes < partial.bytes);
   const completed = await savedKeys(); assert(completed.length > 0);
   const resumeStart = requests.length; blockedPath = ''; for (const response of held) response.destroy(); held.clear();
-  await page.locator('#wb-offline-download').click(); await textHas('#wb-offline-status', /Ready offline/i);
+  await page.locator('#wb-offline-download').click(); await textHas('#wb-offline-status', /Saved files verified/i);
   const full = await rpc('offline-status'); assert.equal(full.ready, true); assert.equal(full.remainingBytes, 0); assert.equal(full.done, manifest.files.length);
   const resumedPaths = requests.slice(resumeStart);
   for (const key of completed) assert(!resumedPaths.includes(new URL(key).pathname), 'resume downloaded an already saved unchanged file: ' + key);
@@ -289,6 +308,10 @@ function revise(files) {
     const manifest = await (await fetch(link.href)).json();
     return new URL(manifest.start_url, link.href).href;
   });
+  const startResponse = await page.goto(installStart);
+  assert(startResponse.fromServiceWorker(), 'direct offline Home Screen start URL must be served by the worker');
+  await textHas('#wb-offline-help', /opened offline from the saved pack/);
+  assert.equal(await page.evaluate(()=>window.__cpGate),1);
   assert.equal(page.url(), installStart, 'the launcher and Home Screen icon must open the same saved app');
   console.log('PASS ' + engine + ': cold offline bookmark launch opens the installed start URL');
   assert.equal(await page.evaluate(async () => { try { await fetch('/__uncached_offline_probe', { cache: 'no-store' }); return false; } catch (_) { return true; } }), true, 'negative control: an uncached network request must fail');
@@ -324,6 +347,10 @@ function revise(files) {
   const nextJS = Buffer.concat([fs.readFileSync(path.join(__dirname, '../studio.js')), Buffer.from('\n/* Offline acceptance: next JS revision. */\n')]);
   replacements.set(BASE + 'studio.css', nextCSS); replacements.set(BASE + 'studio.js', nextJS);
   manifest = revise({ 'studio.css': nextCSS, 'studio.js': nextJS });
+  await openPanel();
+  await page.locator('.wb-offline-instructions summary').filter({hasText:'Updates and repair'}).click();
+  await page.locator('#wb-update').click();
+  await textHas('#wb-offline-status',/Update incomplete · previous pack verified/);
   const outdated = await rpc('offline-status'); assert.equal(outdated.ready, false); assert.equal(outdated.remainingBytes, nextCSS.length + nextJS.length);
   blockedPath = BASE + 'studio.js';
   const updating = rpc('offline-download'); await until(() => held.size > 0, 'changed JS was not requested');
@@ -336,6 +363,26 @@ function revise(files) {
   const updateResumeStart = requests.length; const updated = await rpc('offline-download'); assert.equal(updated.ready, true, updated.error); assert.equal(updated.remainingBytes, 0);
   assert(!requests.slice(updateResumeStart).includes(BASE + 'studio.css'), 'resume re-downloaded the already verified changed CSS');
   console.log('PASS ' + engine + ': interrupted update keeps the old complete pack coherent, then resumes only missing changed files');
+
+  const afterPromotion = await page.evaluate(async base=>(await fetch(base+'studio.css')).text(),BASE);
+  assert.equal(hash(afterPromotion),hash(oldCSS),'already-open document stays on the old revision after promotion');
+  await page.locator('#wb-offline-check').click();
+  await textHas('#wb-offline-status',/Saved files verified/);
+  await page.evaluate(key=>{
+    const put=Storage.prototype.setItem;
+    window.restoreTestStorage=()=>{Storage.prototype.setItem=put;};
+    Storage.prototype.setItem=function(name,value){
+      if(name===key)throw new DOMException('Fixture storage full','QuotaExceededError');
+      return put.call(this,name,value);
+    };
+  },KEY);
+  await page.locator('#wb-reload').click();
+  await textHas('#wb-update-status',/Reload paused/);
+  await page.evaluate(()=>window.restoreTestStorage());
+  await Promise.all([page.waitForNavigation(),page.locator('#wb-reload').click()]);
+  assert.equal(hash(await page.evaluate(async base=>(await fetch(base+'studio.css')).text(),BASE)),hash(nextCSS));
+  const afterReload = JSON.parse(await page.evaluate(key=>localStorage.getItem(key),KEY));
+  assert.equal(afterReload.lessons['html-elements'].note, 'Written without Wi-Fi; upload after reconnect.');
 
   const cssEntry = manifest.files.find(file => file.url === 'studio.css');
   await page.evaluate(async ({ pack, base, digest }) => {
@@ -361,6 +408,40 @@ function revise(files) {
   assert.equal(await page.evaluate(() => new Promise((resolve, reject) => { const request = indexedDB.open('offline-unrelated-fixture', 1); request.onerror = () => reject(request.error); request.onsuccess = () => { const db = request.result, get = db.transaction('data').objectStore('data').get('sentinel'); get.onsuccess = () => { db.close(); resolve(get.result); }; get.onerror = () => reject(get.error); }; })), 'Keep unrelated IndexedDB');
   await page.goto(origin + BASE + 'index.html'); await page.locator('#wb-save-status').waitFor({ state: 'visible' }); assert.equal((await rpc('offline-status')).ready, true);
   console.log('PASS ' + engine + ': scoped setup repair preserves downloaded packs, study/auth/annotation data and unrelated caches/IndexedDB');
+  const lessonFile = manifest.files.find(file=>file.url==='studio-lessons.js');
+  await page.evaluate(async ({pack,base,file})=>{
+    const key=new URL(base+file.url,location.origin);
+    key.searchParams.set('__cp_sha256',file.sha256);
+    await (await caches.open(pack)).delete(key.href);
+  }, {pack:PACK,base:BASE,file:lessonFile});
+  await page.reload();
+  await page.locator('#wb-startup-recovery').waitFor({state:'visible'});
+  assert(await page.locator('#wb-startup-recovery button').isVisible());
+  await textHas('#wb-startup-detail',/missing or damaged/);
+  await page.locator('#wb-startup-recovery a').click();
+  await page.locator('#repair').click();
+  await textHas('#result',/Repair complete/);
+  await page.locator('#continue').click();
+  await textHas('#wb-save-status',/Saved on this device/);
+  assert.equal(await page.locator('#wb-startup-recovery').isVisible(),false);
+  if(engine==='chromium'){
+    for(const suffix of ['?code=FIXTURE-ONLY','#access_token=FIXTURE-ONLY']){
+      const callback = await page.goto(origin+BASE+'index.html'+suffix);
+      assert(callback.fromServiceWorker());
+      await textHas('#cp-gate h1',/Not allowed/);
+      assert.equal(page.url(),origin+BASE+'index.html'+suffix,'the worker must preserve the URL seen by the gate and fixture SDK');
+    }
+    await page.evaluate(key=>{localStorage.removeItem(key);localStorage.removeItem('cp:gate:ok');},sessionKey);
+    networkDown=true;await ctx.setOffline(true);
+    const locked=await page.goto(origin+BASE+'index.html?from=offline-test');
+    assert(locked.fromServiceWorker());
+    await page.locator('#cp-gate [data-a=google]').click();
+    await textHas('#cp-gate .g-msg',/offline/i);
+    assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('cp-locked')),true);
+    networkDown=false;await ctx.setOffline(false);
+    console.log('PASS Chromium: real shared gate and real worker at non-localhost HTTPS admit a cached test session and lock a signed-out offline profile');
+  }
+  console.log('PASS '+engine+': lesson startup failure exposes independent repair and restores the missing script');
   await ctx.close();
 
   // A separate browser profile starts controlled by an intentionally stale,
@@ -389,7 +470,7 @@ function revise(files) {
   await page.goto(origin + BASE + 'index.html'); await page.locator('#wb-save-status').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#old-shell').count(), 0);
   assert((await page.evaluate(() => caches.keys())).includes('html-css-js-study-shell-v2'), 'upgrade should not delete the older cache');
-  console.log('PASS ' + engine + ': the new network-first worker replaces a stale cache-first worker without clearing old data');
+  console.log('PASS ' + engine + ': the verified-pack worker replaces a stale cache-first worker without clearing old data');
   await upgrade.close();
   console.log('PASS ' + engine + ': offline acceptance complete; physical iPad/Home Screen testing remains manual');
 })().catch(async error => {

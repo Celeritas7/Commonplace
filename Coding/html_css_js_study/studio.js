@@ -1,6 +1,8 @@
 
 (()=>{
  'use strict';
+ if(document.documentElement.hasAttribute('data-gate-unavailable'))return;
+ let initialized=false;
  const root=document.getElementById('web-book');
  const $=s=>root.querySelector(s),all=s=>root.querySelectorAll(s);
  const {names,fileNames,chapters,initialProject}=window.WebStudioLessons;
@@ -37,7 +39,7 @@
   return {...saved,version:1,language,view,textSize,project:{...project},lessons,...(practice?{exercises:practice.snapshot()}:{} ),...(projectManager?{projects:projectManager.snapshot(project)}:{})};
  }
  function saveStatus(error){saveError=error;const el=$('#wb-save-status');el.textContent=error||'Saved on this device';el.dataset.error=String(!!error);el.setAttribute('role',error?'alert':'status');}
- function persist(){if(importLocked)return false;try{const result=window.WebStudioStore.save(snapshot());saveStatus(result.ok?null:result.error);if(result.ok)window.dispatchEvent(new Event('web-studio-saved'));return result.ok;}catch(error){saveStatus(error.message||'Saving failed. Export your study backup before closing.');return false;}}
+ function persist(){if(!initialized||importLocked)return false;try{const result=window.WebStudioStore.save(snapshot());saveStatus(result.ok?null:result.error);if(result.ok)window.dispatchEvent(new Event('web-studio-saved'));return result.ok;}catch(error){saveStatus(error.message||'Saving failed. Export your study backup before closing.');return false;}}
  function exportStudy(){
   const backup=window.WebStudioStore.exportData();backup.currentDraft=snapshot();backup.currentLegacyDraft=window.WebStudioLegacy?.snapshot?.()||null;
   const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
@@ -129,9 +131,10 @@
  for(const eventName of ['click','input','change'])root.addEventListener(eventName,event=>{if(!event.target.closest('.wb-sync-details,.wb-offline,#wb-offline-toggle'))persist();});
  window.addEventListener('pagehide',()=>{persist();preview.stop();});
  window.addEventListener('hashchange',()=>{if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash))showCourse();});
- $('#wb-update').onclick=async()=>{const button=$('#wb-update');button.disabled=true;setText('#wb-update-status','Checking for updates…');try{if(!('serviceWorker' in navigator))throw new Error('App updates are not supported in this browser.');const registration=await Promise.race([navigator.serviceWorker.getRegistration('./'),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);if(!registration)throw new Error('App update registration is not ready. Reload while connected and try again.');await Promise.race([registration.update(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);setText('#wb-update-status','Update check finished. If new files are ready, use Reload app.');$('#wb-reload').hidden=false;}catch(error){setText('#wb-update-status',error.message);}finally{button.disabled=false;}};
- $('#wb-reload').onclick=()=>{if(persist())location.reload();};
- if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{setText('#wb-update-status','Updated app files are available. Reload when you are ready.');$('#wb-reload').hidden=false;});
+ $('#wb-reload').onclick=()=>{
+  if(persist() && window.WebStudioLegacy?.flush?.()!==false)location.reload();
+  else setText('#wb-update-status','Reload paused. Check the save status and save or export your work first.');
+ };
  renderReading();renderEditor();resizeText(0);
  if(saved.view==='practice')openPractice('try',true);else if(['notes','library',...(practice?['mistakes']:[]),...(projectUI?['projects']:[])].includes(saved.view))setView(saved.view);else setView('book');
  const requestedOfflineSetup=location.hash==='#study-offline';
@@ -164,4 +167,6 @@
  if(!cloud){const status=$('#wb-sync-status'),button=$('#wb-sync-now');if(status){status.dataset.state='error';status.textContent='Account sync files could not load. Local saving is available. Reconnect and reload to retry.';}if(button){button.textContent='Reload sync files';button.onclick=()=>{if(!saveError)location.reload();};}}
  function cloudSnapshotAfterApply(){const record=window.WebStudioStore.exportData().records;return {version:1,study:JSON.parse(record.commonplace_web_studio_v1||'null'),legacy:JSON.parse(record.commonplace_wdb_v1||'null')};}
 
+ initialized=true;
+ window.WebStudioStartup?.complete();
 })();

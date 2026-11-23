@@ -74,13 +74,13 @@ function harness(navigation = {}) {
   console.log('PASS successful mount cancels the bootstrap watchdog and keeps its own useful setup errors');
 
   const root = 'https://study.test/Commonplace/Coding/html_css_js_study/';
-  const savedWorker = { state: 'activated', scriptURL: root + 'sw.js?repair=1.7', postMessage(message, ports) { assert.equal(message.type, 'offline-status'); ports[0].postMessage({ ready: true, done: 1, total: 1, bytes: 100, remainingBytes: 0 }); } };
+  const savedWorker = { state: 'activated', scriptURL: root + 'sw.js?repair=1.7', postMessage(message, ports) { assert(['offline-status','offline-local-status'].includes(message.type)); ports[0].postMessage({ ready: true, done: 1, total: 1, bytes: 100, remainingBytes: 0 }); } };
   const registration = { scope: root, active: savedWorker };
   let registerCalls = 0, lookupCalls = 0;
-  const serviceWorker = { addEventListener() {}, async getRegistration(scope) { assert.equal(scope, root); lookupCalls++; return registration; }, async register() { registerCalls++; throw new Error('Offline script request'); } };
+  const serviceWorker = { controller: savedWorker, addEventListener() {}, async getRegistration(scope) { assert.equal(scope, root); lookupCalls++; return registration; }, async register() { registerCalls++; throw new Error('Offline script request'); } };
   const repairedOffline = harness({ onLine: false, serviceWorker });
   vm.runInContext(manager, repairedOffline.context); await new Promise(resolve => setImmediate(resolve));
-  assert.equal(repairedOffline.nodes['wb-offline-status'].textContent, 'Ready offline');
+  assert.equal(repairedOffline.nodes['wb-offline-status'].textContent, 'Saved files verified');
   assert.equal(repairedOffline.nodes['wb-offline-study'].hidden, false, 'verified offline files expose the primary study action');
   assert.equal(repairedOffline.nodes['wb-offline-download'].classList.contains('wb-primary'), false, 'checking an already saved pack is secondary to starting study');
   assert.equal(registerCalls, 0, 'an already repaired worker must be reused without a network registration offline');
@@ -106,9 +106,9 @@ function harness(navigation = {}) {
 
   const lostConnection = harness({ onLine: true, serviceWorker });
   vm.runInContext(manager, lostConnection.context); await new Promise(resolve => setImmediate(resolve));
-  assert.equal(lostConnection.nodes['wb-offline-status'].textContent, 'Ready offline');
-  assert.equal(registerCalls, 1);
-  console.log('PASS a failed online registration can still verify packs through the saved section worker');
+  assert.equal(lostConnection.nodes['wb-offline-status'].textContent, 'Saved files verified');
+  assert.equal(registerCalls, 0);
+  console.log('PASS an installed worker is reused even when Wi-Fi appears online');
 
   const parentWorker = harness({ onLine: false, serviceWorker: { ...serviceWorker, async getRegistration() { return { ...registration, scope: 'https://study.test/Commonplace/' }; } } });
   vm.runInContext(manager, parentWorker.context); await new Promise(resolve => setImmediate(resolve));
@@ -117,10 +117,15 @@ function harness(navigation = {}) {
   assert.match(parentWorker.nodes['wb-offline-error'].textContent, /Offline script request/);
   console.log('PASS a parent Commonplace worker is never mistaken for Web Studio offline support');
 
+  const noControl = harness({ onLine:true, serviceWorker:{...serviceWorker,controller:null} });
+  vm.runInContext(manager,noControl.context); await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(noControl.nodes['wb-offline-study'].hidden,true);
+  assert.match(noControl.nodes['wb-offline-help'].textContent,/does not control this page/);
+
   const oldMarkup = harness({ onLine: false, serviceWorker });
   delete oldMarkup.nodes['wb-offline-study'];
   vm.runInContext(manager, oldMarkup.context); await new Promise(resolve => setImmediate(resolve));
-  assert.equal(oldMarkup.nodes['wb-offline-status'].textContent, 'Ready offline', 'current manager must still verify files with cached markup lacking the new button');
+  assert.equal(oldMarkup.nodes['wb-offline-status'].textContent, 'Saved files verified', 'current manager must still verify files with cached markup lacking the new button');
   assert.equal(oldMarkup.nodes['wb-offline-download'].disabled, false);
   assert.equal(oldMarkup.nodes['wb-offline-download'].classList.contains('wb-primary'), true, 'old markup retains its existing primary control');
   console.log('PASS cached markup without Start studying still verifies packs and keeps its existing controls');

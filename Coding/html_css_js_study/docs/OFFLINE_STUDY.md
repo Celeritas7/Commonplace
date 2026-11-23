@@ -9,8 +9,8 @@ HTML, CSS and JavaScript previews execute locally in the browser's sandbox. The 
 1. Open the [Web Studio offline launcher](../offline.html) in Safari while connected. Tap **Share → Add to Home Screen** (under **More** on some iPads), keep **Open as Web App** on if shown, then tap **Add**. Open the **Web Studio** icon. If you study in Safari instead, bookmark the launcher and use **Prepare or check downloads** there.
 2. Sign into Commonplace in the browser or installed app where you will study. Safari and a Home Screen app may have separate storage. Each needs its own sign-in and its own download.
 3. Select **Study offline**, then download the study pack. Keep this app open while downloading. Size, remaining bytes, progress and any file error appear beside the controls. **Back to study** at the top returns to your current lesson or workspace; it does not cancel the download. The learning tabs also close the panel.
-4. Wait for **Ready offline**, then select **Start studying** to reveal your lesson or workspace. Ready means the required files have been checked in this browser's storage. It is not a promise that the device will retain them forever or that an expired/missing login can be renewed without internet.
-5. Turn off the connection, close and reopen Web Studio, edit a sample and run its preview. Add a note and bookmark, reopen again and check them. Test Safari and Home Screen separately if you use both.
+4. Wait for **Saved files verified**, then select **Start studying** to reveal your lesson or workspace. This checks the pack in this installation. A missing sign-in needs a connection.
+5. Close Web Studio completely, disconnect, reopen from the icon, edit a sample and run its preview. Add a note and bookmark, reopen again and check them. Test Safari and Home Screen separately if you use both.
 
 An interrupted download retains completed files. Reconnect and resume: completed files whose content has not changed are verified and reused. A missing, damaged or changed file is downloaded again. Keep a separate study backup under **Projects & backup**; do not clear website data to install an update or repair downloads.
 
@@ -31,11 +31,18 @@ Account synchronization is the existing v1.6 local-first implementation, describ
 
 ## Updates and repair
 
-The worker installs without downloading the study pack. Normal connected requests check the network so cached pages and scripts do not conceal fixes. Download checks obtain the latest generated list, then verify saved files by byte length and SHA-256 content. Downloaded file identities include the hash, allowing unchanged files to survive manifest changes. The previous complete pack remains available while a replacement is incomplete.
+Safari bookmarks enter through `offline.html`. The installed manifest starts at `index.html`. Both use the section-scoped worker and the shared Commonplace sign-in gate. The main page loads the store, lessons, preview and other modules before `studio.js` mounts the interface. The separate download manager can operate independently. A missing lesson script shows **Retry startup** and **Repair offline setup** above the app. An unavailable sign-in script shows sign-in recovery.
 
-**Ready offline** is calculated from verified saved files, not from a remembered success flag. Browser storage, network requests and worker messages have deadlines. Errors identify the affected operation or file and keep retry/resume available. Browser eviction or manual removal of a file makes the next check incomplete.
+A prepared installation serves its verified HTML and allowlisted static dependencies directly from Cache Storage. Each new navigation selects a completed revision. The worker records the selection against the browser's document ID so an open session can keep reading the same files after another tab downloads an update or the worker restarts. Content-addressed file keys and the original complete-pack metadata are compatible with v1.7.2. An incomplete candidate is never used for navigation. Corrections to a damaged pack require an explicit download or repair. The repair page is independent of the lesson scripts and can fetch its connected copy directly.
 
-The section's **Repair offline setup** page refreshes Web Studio's worker registration and checks the download again. It preserves the two study records, import recovery journal, sign-in, account owner and sync baseline, shared annotations, downloaded packs and other Commonplace sections. It does not clear website data. After repair, resume any required files and repeat the offline reopen test in the same Safari/Home Screen context.
+**Update an existing installation**
+
+1. Open the same Web Studio icon while connected and confirm the save indicator. Choose **Study offline → Updates and repair → Check for app updates**.
+2. Choose **Check downloads**, then **Download study pack** or **Resume download** if offered. The previous pack remains usable while the new revision is incomplete.
+3. After verification, choose **Reload app** under **Updates and repair**. If the older interface is stuck, open **Repair Web Studio offline setup** in the same installation, select **Repair offline setup**, then **Return to Web Studio**. The repair action resumes verified downloads and preserves study and account storage.
+4. Check the footer for **Version 1.8** and run the offline reopen test above. In **Study offline**, **Saved files verified** describes file integrity. “Lesson interface opened offline from the saved pack” describes this particular successful launch. The device acceptance test also exercises the preview and verifies your own records.
+
+A storage read error, a missing file, a sign-in prompt, lack of worker control and a lesson interface that failed to start each have different recovery text. Diagnostics contain no callback parameters, account details or study content.
 
 ## Keeping the download list current
 

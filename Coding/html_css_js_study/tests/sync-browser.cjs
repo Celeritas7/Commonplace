@@ -342,7 +342,7 @@ module.exports = async function syncAcceptance({ context, origin, SECTION, KEY, 
     // That hidden account must not claim or upload this device’s legacy work.
     const GATE_USER = '31e6f8b0-9a0f-4ebc-9306-5e31eb253676';
     const gatedContext = await makeContext({ ...untouched, [KEY]: JSON.stringify(record) }, GATE_USER);
-    await gatedContext.route('**/_lib/gate.js', route => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'document.documentElement.classList.add("cp-locked");' }));
+    await gatedContext.route('**/_lib/gate.js', route => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.__cpGate=1;document.documentElement.classList.add("cp-locked");' }));
     const gated = await open(gatedContext);
     await state(gated, 'signed-out');
     assert.match(await gated.locator('#wb-sync-status').textContent(), /waits for Commonplace to approve sign-in/);

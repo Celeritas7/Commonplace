@@ -42,7 +42,7 @@ function startServer() {
 
 async function context(seed = untouched) {
   const ctx = await browser.newContext({ viewport: { width: 1024, height: 1000 }, acceptDownloads: true });
-  await ctx.route('**/_lib/gate.js', route => route.fulfill({ status: 200, contentType: 'text/javascript', body: '/* Authentication fixture: browser acceptance only. */' }));
+  await ctx.route('**/_lib/gate.js', route => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.__cpGate=1; /* Authentication fixture: browser acceptance only. */' }));
   await ctx.addInitScript(({ seed, origin }) => {
     if (window !== window.top || location.origin !== origin) return;
     // Playwright's serviceWorkers: 'block' reads navigator.serviceWorker in
