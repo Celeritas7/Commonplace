@@ -66,9 +66,9 @@ function harness() {
     await Promise.all(pending);
     return { messages, result: messages.filter(m => !m.progress).at(-1) };
   }
-  async function request(url, { method = 'GET', navigate = false } = {}) {
+  async function request(url, { method = 'GET', navigate = false, clientId = '', resultingClientId = '' } = {}) {
     let pending;
-    listeners.fetch({ request: navigate ? { url, method, mode: 'navigate' } : new Request(url, { method }), respondWith(p) { pending = p; } });
+    listeners.fetch({ clientId, resultingClientId, request: navigate ? { url, method, mode: 'navigate' } : new Request(url, { method }), respondWith(p) { pending = p; } });
     return pending ? await pending : null;
   }
   async function validate(value) {
@@ -118,13 +118,15 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   h.configure({ failFile: 'studio.css' });
   assert.match((await h.rpc('offline-download')).result.error, /studio\.css/);
   h.configure({ offline: true });
-  assert.equal(await (await h.request(BASE, { navigate: true })).text(), '<h1>original</h1>');
+  assert.equal(await (await h.request(BASE, { navigate: true, resultingClientId: 'open-page' })).text(), '<h1>original</h1>');
   assert.equal(await (await h.request(BASE + 'studio.css?v=1.7')).text(), 'body{color:green}');
   const partial = (await h.rpc('offline-status')).result;
   assert.equal(partial.ready, false, 'a previous complete pack cannot claim the update is ready');
   h.configure({});
   const updateBefore = h.requests.length; assert.equal((await h.rpc('offline-download')).result.ready, true);
   assert.deepEqual(h.requests.slice(updateBefore).filter(r => !r.url.endsWith('offline-assets.json')).map(r => r.url), [BASE + 'studio.css']);
+  assert.equal(partial.previousReady, true);
+  assert.equal(await (await h.request(BASE + 'studio.css', {clientId:'open-page'})).text(), 'body{color:green}', 'old document remains pinned after update promotion');
   h.configure({ offline: true });
   assert.equal(await (await h.request(BASE + 'index.html')).text(), '<h1>updated</h1>');
   assert.equal(await (await h.request(BASE + 'studio.css?another-version')).text(), 'body{color:purple}');
@@ -133,19 +135,39 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   console.log('PASS coherent previous pack during partial update, content-addressed reuse, complete revision switch');
 
   h.configure({});
-  await h.request(BASE + 'index.html?code=private-callback&next=book', { navigate: true });
-  assert(h.requests.some(r => r.url.includes('code=private-callback')));
+  const callback = await h.request(BASE + 'index.html?code=private-callback&next=book', {navigate:true, resultingClientId:'callback'});
+  assert.equal(await callback.text(), '<h1>updated</h1>');
+  assert.equal(await h.request('https://auth.example.test/auth/v1/authorize'), null);
+  assert.equal(await h.request('https://study.test/rest/v1/notes'), null);
   assert(![...h.stores.get(PACK).keys(), ...h.stores.get(META).keys()].some(k => k.includes('private-callback')));
   assert.equal(await h.request('https://study.test/Commonplace/Coding/Python/index.html'), null);
   assert.equal(await h.request('https://drive.google.com/book'), null);
   assert.equal(await h.request(BASE + 'studio.js', { method: 'POST' }), null);
   assert.equal(await h.request(BASE + 'private-notes.json'), null);
-  h.configure({ serverStatus: 404 }); assert.equal((await h.request(BASE + 'studio.js')).status, 404);
-  h.configure({ serverStatus: 503 }); assert.match(await (await h.request(BASE + 'studio.js')).text(), /answer=42/);
-  h.configure({ hang: true }); let start = Date.now(); assert.match(await (await h.request(BASE + 'studio.js')).text(), /answer=42/); assert(Date.now() - start < 1000);
-  h.configure({ hangBody: true }); assert.match(await (await h.request(BASE + 'studio.css')).text(), /purple/);
-  h.configure({ offline: true, hangRead: true }); start = Date.now(); assert.equal((await h.request(BASE + 'studio.js')).status, 503); assert(Date.now() - start < 1000);
-  console.log('PASS network fixes, OAuth parameters, strict section scope, transport/body/cache deadlines');
+  const networkCount = h.requests.length;
+  for (const fault of [{serverStatus:404}, {serverStatus:503}, {badMime:'studio.js'}, {hang:true}, {hangBody:true}]) {
+    h.configure(fault);
+    assert.equal(await (await h.request(BASE + 'studio.js')).text(), 'window.answer=42;');
+  }
+  assert.equal(h.requests.length, networkCount, 'saved startup makes zero network attempts');
+  h.configure({ offline:true, failRead:true });
+  assert.match(await (await h.request(BASE, {navigate:true})).text(), /could not read.*storage/);
+  h.configure({ offline:true, hangRead:true });
+  const start = Date.now();
+  assert.match(await (await h.request(BASE + 'studio.js')).text(), /could not read.*storage/);
+  assert(Date.now() - start < 1000);
+  h.configure({});
+  h.stores.get(PACK).delete(jsKey);
+  assert.match(await (await h.request(BASE+'studio.js')).text(), /missing or damaged/);
+  assert.equal((await h.rpc('offline-download')).result.ready, true);
+  const fresh = harness();
+  fresh.configure({failFile:'studio.css'});
+  await fresh.rpc('offline-download');
+  fresh.configure({offline:true});
+  assert.match(await (await fresh.request(BASE,{navigate:true})).text(), /No complete study download/);
+  fresh.configure({badMime:'studio.js'});
+  assert.equal((await fresh.request(BASE+'studio.js')).status,503);
+  console.log('PASS saved startup never waits for Wi-Fi, safe callback handling, isolation, missing files and storage error recovery');
 
   for (const fault of ['badBody', 'badMime', 'failWrite', 'hangWrite']) {
     const f = harness(); f.configure({ [fault]: fault.startsWith('bad') ? 'studio.js' : true });

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script src="../../_lib/gate.js"></script>
+<style>html[data-gate-unavailable] body > :not(.wb-signin-recovery) { display: none !important; } html:not([data-gate-unavailable]) .wb-signin-recovery { display: none; }</style>
+<script src="../../_lib/gate.js" onerror="document.documentElement.setAttribute('data-gate-unavailable','')"></script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Web Studio — Learn HTML, CSS & JavaScript · Commonplace</title>
@@ -131,6 +132,23 @@ body{display:flex;flex-direction:column}
 </style>
 </head>
 <body>
+<aside class="wb-signin-recovery" role="alert"><h1>Commonplace sign-in could not load</h1><p>Reconnect in this Safari tab or Home Screen app and <a href="offline-repair.html">repair the saved sign-in files</a>.</p></aside>
+<aside id="wb-startup-recovery" hidden role="alert">
+ <h2>Web Studio could not start</h2><p>The lesson interface did not finish loading. Your saved work is kept.</p>
+ <button type="button" onclick="location.reload()">Retry startup</button> · <a href="offline-repair.html">Repair offline setup</a>
+</aside>
+<script>
+(() => {
+  const recovery = document.getElementById('wb-startup-recovery');
+  const boot = window.WebStudioStartup = {
+    ready: false,
+    openedOffline: navigator.onLine === false,
+    check() { recovery.hidden = boot.ready; },
+    complete() { boot.ready = true; clearTimeout(timer); boot.check(); }
+  };
+  const timer = setTimeout(boot.check, 10000);
+})();
+</script>
 <div class="wrap" id="legacy-course">
   <p id="legacy-save-status" role="status" aria-live="polite"></p>
   <div class="crumb">
@@ -193,13 +211,13 @@ body{display:flex;flex-direction:column}
     <p id="wb-offline-help" class="wb-small">Keep this app open during the download. You can return to studying while it saves. Completed files are kept if the connection stops.</p>
    </div>
    <details class="wb-offline-instructions"><summary>iPad setup and what works offline</summary>
-    <ol><li>Open Web Studio in a regular Safari tab while connected. For a Home Screen app, use Share → Add to Home Screen, then open its icon.</li><li>Sign in and download <strong>inside the browser or installed app where you will study</strong>. Safari and the Home Screen app may have separate saved data.</li><li>Wait for <strong>Ready offline</strong>. Turn Wi-Fi off, close and reopen Web Studio, then run a preview. Keep your account signed in for offline access.</li></ol>
+    <ol><li>Open Web Studio in a regular Safari tab while connected. For a Home Screen app, use Share → Add to Home Screen, then open its icon.</li><li>Sign in and download <strong>inside the browser or installed app where you will study</strong>. Safari and the Home Screen app may have separate saved data.</li><li>Wait for <strong>Saved files verified</strong>. Close Web Studio, turn Wi-Fi off and reopen it, then run a preview. Keep your account signed in for offline access.</li></ol>
     <p>Included: reading, quizzes, real code previews and exercise checks, projects, embedded images, notes, bookmarks and backups. External scripts, remote images and web services are blocked in the practice preview; use embedded images for offline projects.</p>
     <p>Online only: new sign-in, account sync, Google Drive books, Udemy, external links and parent Commonplace folders. Your projects, native notes, bookmarks and progress save here first and sync when this app is open, connected and signed in. Use Account sync to check errors or load incoming work. Shared highlights and downloaded packs stay in this browser.</p>
     <p>Device storage can be removed by the browser or by clearing website data. Keep a study backup; check downloads before leaving Wi-Fi. Updates download only changed files.</p>
    </details>
    <details class="wb-offline-instructions"><summary>Updates and repair</summary>
-    <p>Check for app updates while connected, then reload when your work is saved. Download the updated pack before your next offline session.</p>
+    <p>Check while connected. Finish downloading any update, then reload to use the verified files after saving your work.</p>
     <div class="wb-backup-buttons"><button type="button" id="wb-update">Check for app updates</button><button type="button" id="wb-reload" hidden>Reload app</button></div><p id="wb-update-status" role="status" aria-live="polite"></p>
     <p><a href="offline-repair.html">Repair Web Studio offline setup</a> if checking or downloading keeps failing. Repair keeps study records and downloaded files, and leaves other Commonplace sections alone.</p>
    </details>
@@ -295,7 +313,7 @@ body{display:flex;flex-direction:column}
     <section data-screen="library" hidden><div class="wb-notes"><div class="wb-eyebrow">SAMPLE LEARNING BOOK</div><h2>Build one small webpage.</h2><p>Three short lessons to review the app: give a reading card its structure, style it, then make its button count.</p><p class="wb-small">Start with HTML, then CSS, then JavaScript. Each lesson has eight reading parts, editable practice, a prediction and one five-question check. Your saved place and edits stay when switching lessons.</p><details class="wb-sources"><summary>A quick way to review the app</summary><ol><li>Open HTML and read the walk-through. Bookmark a part and add a note in My notes.</li><li>Open practice, change the heading and run the preview. Return to the lesson.</li><li>Finish Before you go: answer the check and mark the lesson read.</li><li>Continue with CSS spacing, then JavaScript: add two per click and check for Clicks: 4 after two clicks.</li><li>Reload while connected and check that your note, edits and reading mark remain.</li></ol><p>These samples run without external services. Use Study offline to download and verify all required files before disconnecting.</p></details><div id="wb-library-list"></div><button id="wb-show-course">Open original course index →</button><p class="wb-small" style="margin-top:20px">Continue with your original 35-section course index, existing notes, stars and linked study books below.</p></div></section>
    </main>
   </div>
-  <footer><span>COMMONPLACE / WEB STUDIO</span><span>Version 1.7.2 · offline study + account sync</span></footer>
+  <footer><span>COMMONPLACE / WEB STUDIO</span><span>Version 1.8 · offline study + account sync</span></footer>
  </div>
 </div>
 <button type="button" id="legacy-export" hidden>Export this section’s study backup</button>
@@ -314,7 +332,8 @@ body{display:flex;flex-direction:column}
 <script src="studio-sync-merge.js?v=1.7"></script>
 <script src="studio-sync.js?v=1.7"></script>
 <script src="studio-cloud.js?v=1.7"></script>
-<script src="studio.js?v=1.7.2"></script>
+<script src="studio.js?v=1.8"></script>
+<script>window.WebStudioStartup.check();</script>
 <script id="wb-offline-watchdog">
 /* Starts before the external module request, including when its body stalls. */
 (()=>{const boot=window.WebStudioOfflineBoot={started:false,ready:false};
@@ -322,7 +341,7 @@ boot.fail=message=>{if(boot.ready)return;clearTimeout(boot.timer);document.getEl
 boot.timer=setTimeout(()=>boot.fail('Offline controls did not finish loading.'),15000);
 })();
 </script>
-<script src="offline.js?v=1.7.1" onerror="window.WebStudioOfflineBoot.fail('Offline controls could not load.');"></script>
+<script src="offline.js?v=1.8" onerror="window.WebStudioOfflineBoot.fail('Offline controls could not load.');"></script>
 <script src="../../_lib/progress-backup.js"></script>
 </body>
 </html>

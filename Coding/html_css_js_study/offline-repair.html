@@ -1,23 +1,42 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#315c51"><title>Repair offline setup · Web Studio</title>
 <style>body{margin:0;background:#f3f3ef;color:#243b33;font:16px/1.65 system-ui,sans-serif}main{max-width:620px;margin:auto;padding:32px 20px}h1{font-size:28px;line-height:1.2}a{color:#315c51}button{font:inherit;min-height:48px;padding:10px 20px;background:#315c51;color:white;border:0;border-radius:7px}button:disabled{opacity:.6}[hidden]{display:none!important}#result{padding:16px;border:1px solid #bac9bf;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere}small{display:block;margin-top:24px}</style></head>
-<body><main><p>COMMONPLACE / WEB STUDIO</p><h1>Repair offline setup</h1><p>This refreshes Web Studio’s offline worker and checks saved files. It keeps your study records, sign-in, downloaded packs and other Commonplace sections.</p><p>Connect to the internet and keep this page open in the same Safari browser or Home Screen app where you study.</p><button id="repair" type="button">Repair offline setup</button><p id="result" role="status" aria-live="polite">Ready to check this browser.</p><p><a id="continue" href="index.html">Return to Web Studio</a></p><small>Missing or changed files can be resumed from Study offline. No website data is cleared. Repair version 1.7.</small><noscript><p>Enable JavaScript to use offline study.</p></noscript></main>
+<body><main><p>COMMONPLACE / WEB STUDIO</p><h1>Repair offline setup</h1><p>This refreshes Web Studio’s offline worker and resumes missing or damaged files. It keeps your study records, sign-in, downloaded packs and other Commonplace sections.</p><p>Connect to the internet and keep this page open in the same Safari browser or Home Screen app where you study.</p><button id="repair" type="button">Repair offline setup</button><p id="result" role="status" aria-live="polite">Ready to check this browser.</p><p><a id="continue" href="index.html">Return to Web Studio</a></p><small>No website data is cleared. Repair version 1.8.</small><noscript><p>Enable JavaScript to use offline study.</p></noscript></main>
 <script>
 (()=>{'use strict';
 const root=new URL('./',location.href).href,button=document.getElementById('repair'),result=document.getElementById('result');
 function bounded(promise,ms,label){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label+' timed out. Keep this page open and retry while connected.')),ms);})]).finally(()=>clearTimeout(timer));}
 function activated(reg){return new Promise((resolve,reject)=>{const end=Date.now()+20000;function poll(){if(reg.active?.state==='activated'&&!reg.installing&&!reg.waiting)return resolve(reg.active);if(Date.now()>end)return reject(new Error('The new worker could not activate. Close other Web Studio tabs and retry.'));setTimeout(poll,100);}poll();});}
-function status(worker){return new Promise((resolve,reject)=>{const channel=new MessageChannel();const timer=setTimeout(()=>{channel.port1.close();reject(new Error('The worker did not finish checking saved files. Return to Study offline and retry.'));},60000);channel.port1.onmessage=e=>{if(e.data.progress)return;clearTimeout(timer);channel.port1.close();if(e.data.error)reject(new Error(e.data.error));else resolve(e.data);};worker.postMessage({type:'offline-status'},[channel.port2]);});}
+function restore(worker) {
+  return new Promise((resolve, reject) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => {
+      channel.port1.close();
+      reject(new Error('Download timed out. Keep this page open and retry.'));
+    }, 300000);
+    channel.port1.onmessage = ({data}) => {
+      if (data.progress) {
+        if (Number.isFinite(data.total)) result.textContent = 'Verifying and repairing files… ' + data.done + ' / ' + data.total;
+        return;
+      }
+      clearTimeout(timer);
+      channel.port1.close();
+      if (data.error) reject(new Error(data.error));
+      else resolve(data);
+    };
+    worker.postMessage({type:'offline-download'}, [channel.port2]);
+  });
+}
 button.onclick=async()=>{button.disabled=true;try{
 if(!isSecureContext||!navigator.serviceWorker)throw new Error('Open the hosted Web Studio repair page using HTTPS.');
 if(navigator.onLine===false)throw new Error('Reconnect before repairing. Your existing offline download has been kept.');
 result.textContent='Refreshing Web Studio offline support…';
 // A query forces a new script fetch even when an older worker has the same URL.
 // register updates only this exact scope; it does not unregister any app or clear caches.
-const reg=await bounded(navigator.serviceWorker.register(root+'sw.js?repair=1.7',{scope:root,updateViaCache:'none'}),25000,'Worker refresh');
+const reg=await bounded(navigator.serviceWorker.register(root+'sw.js?repair=1.8',{scope:root,updateViaCache:'none'}),25000,'Worker refresh');
 if(reg.scope!==root)throw new Error('The browser returned an unexpected worker scope. No study data was changed.');
-const worker=await activated(reg);result.textContent='Checking downloaded files…';const saved=await status(worker);
-result.textContent=saved.ready?'Repair complete. All required files are verified. Return to Web Studio and test it offline.':'Repair complete. '+saved.done+' / '+saved.total+' files verified. Return to Study offline and resume the download.';
+const worker=await activated(reg);result.textContent='Checking downloaded files…';const saved=await restore(worker);
+result.textContent=saved.ready?'Repair complete. All required files are verified. Return to Web Studio and test it offline.':'Repair paused. Reconnect and choose Repair offline setup again to resume.';
 }catch(e){result.textContent=e.message+' Your study records and downloaded files have been kept.';}finally{button.disabled=false;}};
 })();
 </script></body></html>

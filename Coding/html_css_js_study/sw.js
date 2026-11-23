@@ -114,7 +114,7 @@ async function writeManifest(key, manifest) {
   if (!saved) throw new Error('The ' + label + ' download list could not be read back after saving. Retry or repair offline setup.');
   if (saved.revision !== manifest.revision) throw new Error('The ' + label + ' download list changed during verification (' + manifest.revision.slice(0, 12) + ' to ' + saved.revision.slice(0, 12) + '). Another check may be running. Retry when it finishes.');
 }
-async function currentManifest() {
+async function currentManifest(requireNetwork = false) {
   let response;
   try { response = await network(new Request(MANIFEST_URL), DOWNLOAD_MS); }
   catch (_) { /* Saved list supports checking and resuming after interruption. */ }
@@ -126,6 +126,7 @@ async function currentManifest() {
     await writeManifest(CANDIDATE_KEY, manifest);
     return manifest;
   }
+  if (requireNetwork) throw new Error('Could not reach the published download list. Reconnect and check for updates again.');
   const saved = await readManifest(CANDIDATE_KEY) || await readManifest(COMPLETE_KEY);
   if (!saved) throw new Error('Connect to the internet once to load the download list, then retry.');
   return saved;
@@ -156,11 +157,24 @@ async function inspect(manifest, port, task) {
   }
   return { cache, missing, status: stateFor(manifest, done, savedBytes) };
 }
-async function checkDownloads(port) {
-  const manifest = await currentManifest();
-  const inspected = await inspect(manifest, port);
-  if (inspected.status.ready) await writeManifest(COMPLETE_KEY, manifest);
-  return inspected.status;
+async function checkDownloads(port, type, clientId) {
+  const complete = await readManifest(COMPLETE_KEY, true);
+  const local = type === 'offline-local-status';
+  const manifest = local && (await readManifest(CANDIDATE_KEY) || complete)
+    || await currentManifest(type === 'offline-update');
+  const { status } = await inspect(manifest, port);
+  // Only the downloader commits revisions. A concurrent check must never
+  // roll back a newer completed download or promote an unfinished transfer.
+  if (complete?.revision !== manifest.revision) {
+    status.ready = false;
+    if (complete) status.previousReady = (await inspect(complete)).status.ready;
+  }
+  if (clientId) {
+    const cache = await storage(caches.open(META_CACHE));
+    const record = await storage(cache.match(clientKey(clientId)));
+    status.pageRevision = record && (await storage(record.json()))?.revision;
+  }
+  return status;
 }
 async function download(port) {
   if (activeDownload) throw new Error('A download is already running. Keep its screen open, or pause it before retrying.');
@@ -170,6 +184,8 @@ async function download(port) {
   const deadline = setTimeout(() => { task.paused = true; if (task.controller) task.controller.abort(); }, OPERATION_MS);
   try {
     const manifest = await currentManifest(); checkTask(task);
+    const complete = await readManifest(COMPLETE_KEY, true);
+    task.previousReady = Boolean(complete && complete.revision !== manifest.revision && (await inspect(complete)).status.ready);
     const inspected = await inspect(manifest, port, task);
     let done = inspected.status.done, savedBytes = manifest.bytes - inspected.status.remainingBytes;
     for (const file of inspected.missing) {
@@ -202,33 +218,101 @@ async function download(port) {
     checkTask(task); await writeManifest(COMPLETE_KEY, manifest); checkTask(task);
     return final.status;
   } catch (error) {
-    if (task.paused || error.paused) return { ...(task.status || {}), ready: false, paused: true };
-    error.status = task.status; throw error;
+    if (task.paused || error.paused) return { ...(task.status || {}), ready: false, paused: true, previousReady: task.previousReady };
+    error.status = { ...task.status, previousReady: task.previousReady }; throw error;
   } finally {
     clearInterval(heartbeat); clearTimeout(deadline);
     if (activeDownload === task) activeDownload = null;
   }
 }
-async function fallback(url) {
-  // Never mix a partially downloaded revision into an existing complete pack.
-  const manifest = await readManifest(COMPLETE_KEY) || await readManifest(CANDIDATE_KEY);
-  if (!manifest) return null;
-  const file = manifest.files.find(entry => fileURL(entry) === canonical(url));
-  if (!file) return null;
-  return verifiedFile(await storage(caches.open(PACK_CACHE)), file);
+// Keep each navigation's selection across worker suspension and replacement.
+// Only generated client IDs and public pack metadata enter this cache.
+const CLIENT_PREFIX = new URL('__offline/client/', BASE).href;
+function clientKey(id) { return CLIENT_PREFIX + encodeURIComponent(id); }
+async function pin(cache, id, manifest) {
+  await storage(cache.put(clientKey(id), new Response(JSON.stringify(manifest), {
+    headers: { 'Content-Type': 'application/json', 'Date': new Date().toUTCString() }
+  })));
+}
+async function prunePins() {
+  const cache = await storage(caches.open(META_CACHE));
+  const keys = (await storage(cache.keys())).filter(key => key.url.startsWith(CLIENT_PREFIX));
+  const clients = await self.clients.matchAll({ includeUncontrolled: true });
+  const live = new Set(clients.map(client => clientKey(client.id)));
+  for (const key of keys) {
+    if (live.has(key.url)) continue;
+    const record = await storage(cache.match(key));
+    // A navigation can be reserved but not yet visible to matchAll.
+    if (record && Date.parse(record.headers.get('Date')) < Date.now() - 86400000) await storage(cache.delete(key));
+  }
+}
+async function selectedManifest(event) {
+  const cache = await storage(caches.open(META_CACHE));
+  if (event.request.mode === 'navigate') {
+    const manifest = await readManifest(COMPLETE_KEY, true);
+    if (event.resultingClientId) await pin(cache, event.resultingClientId, manifest);
+    return manifest;
+  }
+  if (event.clientId) {
+    const record = await storage(cache.match(clientKey(event.clientId)));
+    if (record) {
+      const value = await storage(record.json());
+      return value && validateManifest(value);
+    }
+    // Newly claimed online pages loaded their HTML from the deployment.
+    if ('resultingClientId' in event) return null;
+    // Older WebKit supplies the client ID only on subresource requests.
+    const manifest = await readManifest(COMPLETE_KEY, true);
+    await pin(cache, event.clientId, manifest);
+    return manifest;
+  }
+  return readManifest(COMPLETE_KEY, true);
+}
+function unavailable(request, message) {
+  const navigation = request.mode === 'navigate';
+  const body = navigation ? '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Web Studio recovery</title><main><h1>Web Studio could not open</h1><p>' + message + '</p><p><a href="offline-repair.html">Repair offline setup</a> · <a href="index.html">Retry Web Studio</a></p></main>' : message;
+  return new Response(body, { status: 503, headers: { 'Content-Type': navigation ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+async function serve(event) {
+  const request = event.request, url = canonical(request.url);
+  // Repair is a standalone maintenance page with no study dependencies. Fetch
+  // the current repair UI online, including when an old pack cannot boot.
+  const repair = url === new URL('offline-repair.html', BASE).href;
+  if (repair) {
+    try { const response = await network(request); if (goodResponse(response, url)) return response; } catch (_) {}
+  }
+  try {
+    const manifest = await selectedManifest(event);
+    if (manifest) {
+      const file = manifest.files.find(entry => fileURL(entry) === url);
+      const cache = await storage(caches.open(PACK_CACHE));
+      const saved = file && await verifiedFile(cache, file);
+      if (saved) return saved;
+      return unavailable(request, 'A required file in this saved revision is missing or damaged. Reconnect and repair the study pack.');
+    }
+  } catch (_) {
+    return unavailable(request, 'Web Studio could not read or verify offline storage. Retry in this app or reconnect and open Repair offline setup.');
+  }
+  try {
+    const response = await network(request);
+    if (goodResponse(response, url)) return response;
+    return unavailable(request, 'The server returned an unavailable or invalid study file. Reconnect and check for updates.');
+  } catch (_) {
+    return unavailable(request, 'No complete study download is available in this app. Reconnect and prepare Study offline here.');
+  }
 }
 self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
-self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); });
+self.addEventListener('activate', event => { event.waitUntil(Promise.all([self.clients.claim(), prunePins().catch(() => {})])); });
 self.addEventListener('message', event => {
   const type = event.data && event.data.type, port = event.ports && event.ports[0];
-  if (!port || !['offline-status', 'offline-download', 'offline-pause'].includes(type)) return;
+  if (!port || !['offline-local-status', 'offline-status', 'offline-update', 'offline-download', 'offline-pause'].includes(type)) return;
   event.waitUntil((async () => {
     try {
       if (type === 'offline-pause') {
         if (activeDownload) { activeDownload.paused = true; if (activeDownload.controller) activeDownload.controller.abort(); }
         post(port, { paused: true }); return;
       }
-      const state = type === 'offline-download' ? await download(port) : await checkDownloads(port);
+      const state = type === 'offline-download' ? await download(port) : await checkDownloads(port, type, event.source?.id);
       post(port, state);
     } catch (error) { post(port, { ...(error.status || {}), ready: false, error: error.message || 'Offline setup failed. Retry or repair offline setup.' }); }
   })());
@@ -236,16 +320,5 @@ self.addEventListener('message', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || !allowed(new URL(request.url))) return;
-  event.respondWith((async () => {
-    let response;
-    try {
-      // OAuth parameters reach the network unchanged and never enter cache keys.
-      response = await network(request);
-      if (goodResponse(response, request.url) || response.status < 500) return response;
-    } catch (_) {}
-    try { const saved = await fallback(request.url); if (saved) return saved; } catch (_) {}
-    return response || new Response('This Web Studio file is not saved on this device. Reconnect, open Study offline, and download or repair the study pack.', {
-      status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
-    });
-  })());
+  event.respondWith(serve(event));
 });

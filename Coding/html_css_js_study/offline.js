@@ -6,6 +6,11 @@
  const $=id=>document.getElementById(id),root=new URL('./',document.currentScript.src).href;
  const button=$('wb-offline-download'),study=$('wb-offline-study'),check=$('wb-offline-check'),pause=$('wb-offline-pause'),status=$('wb-offline-status'),size=$('wb-offline-size'),bar=$('wb-offline-progress'),error=$('wb-offline-error'),help=$('wb-offline-help'),toggle=$('wb-offline-toggle');
  let busy=false,downloading=false,workerPromise=null,last=null,checkedAt=0;
+ const update=$('wb-update'),reload=$('wb-reload'),updateStatus=$('wb-update-status');
+ function controlled(){
+  const url=navigator.serviceWorker?.controller?.scriptURL;
+  return !!url && new URL(url).href.split('?')[0]===root+'sw.js';
+ }
  function bounded(promise,ms,message){let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));}
  function activated(reg){return new Promise((resolve,reject)=>{const deadline=Date.now()+20000;function poll(){if(reg.active?.state==='activated'&&!reg.installing&&!reg.waiting)return resolve(reg.active);if(Date.now()>=deadline)return reject(new Error('Offline support could not activate. Retry while connected, or use Repair Web Studio offline setup below.'));setTimeout(poll,100);}poll();});}
  async function existingWorker(){
@@ -17,7 +22,7 @@
  async function prepareWorker(){
   // Repair deliberately uses a query on sw.js. Re-registering its queryless
   // URL while disconnected can fail even though the repaired worker is ready.
-  if(navigator.onLine===false){const active=await existingWorker();if(active)return active;}
+  const existing=await existingWorker();if(existing)return existing;
   try{return await bounded(navigator.serviceWorker.register(root+'sw.js',{scope:root,updateViaCache:'none'}).then(activated),25000,'Offline setup timed out. Retry while connected, or use Repair below.');}
   catch(error){const active=await existingWorker().catch(()=>null);if(active)return active;throw error;}
  }
@@ -33,28 +38,46 @@
    function finish(err,data){if(finished)return;finished=true;clearTimeout(idle);clearTimeout(total);channel.port1.close();if(err){workerPromise=null;reject(err);}else resolve(data);}
    function reset(){clearTimeout(idle);idle=setTimeout(()=>finish(new Error('Offline storage stopped responding. Completed files are kept. Retry, or use Repair below.')),40000);}
    reset();total=setTimeout(()=>finish(new Error('This operation took too long. Completed files are kept. Keep the app open and retry.')),type==='offline-download'?300000:60000);
-   channel.port1.onmessage=event=>{const data=event.data||{};reset();if(data.progress){onProgress?.(data);return;}if(data.error){if(Number.isFinite(data.bytes))render(data);finish(new Error(data.error));}else finish(null,data);};
+   channel.port1.onmessage=event=>{const data=event.data||{};reset();if(data.progress){onProgress?.(data);return;}if(data.error){if(Number.isFinite(data.bytes))render(data);const failure=new Error(data.error);failure.previousReady=data.previousReady;finish(failure);}else finish(null,data);};
    channel.port1.onmessageerror=()=>finish(new Error('The offline worker sent an unreadable response. Retry setup.'));
    try{active.postMessage({type},[channel.port2]);}catch(e){finish(e);}
   });
  }
  function bytes(n){return n>=1000000?(n/1000000).toFixed(2)+' MB':Math.ceil(n/1000)+' kB';}
- function controls(){button.disabled=busy;check.disabled=busy;pause.hidden=!downloading;pause.disabled=false;}
+ function controls(){button.disabled=busy;check.disabled=busy;if(update)update.disabled=busy;pause.hidden=!downloading;pause.disabled=false;}
  function readyAction(ready){if(study)study.hidden=!ready;button.classList.toggle('wb-primary',!ready||!study);}
  function render(s){
   if(!Number.isFinite(s.bytes)||!Number.isFinite(s.remainingBytes)){if(s.paused){readyAction(false);status.textContent='Download paused · completed files kept';button.textContent='Resume download';toggle.dataset.ready='false';}return;}
   last=s;size.textContent=bytes(s.bytes)+' total · '+bytes(Math.max(0,s.remainingBytes))+' remaining · '+s.done+' / '+s.total+' files';
   bar.value=s.bytes?Math.max(0,Math.min(1,(s.bytes-s.remainingBytes)/s.bytes)):0;
-  const ready=s.ready===true&&!downloading&&!s.checking;readyAction(ready);toggle.dataset.ready=String(ready);toggle.title=ready?'Required files verified in this browser':'Prepare and check offline downloads';
-  status.textContent=s.checking?'Verifying saved files… '+s.done+' / '+s.total:downloading?'Saving '+s.done+' / '+s.total+' files…':ready?'Ready offline':s.paused?'Download paused · completed files kept':s.done?'Download incomplete · resume to finish':'Not downloaded';
+  const ready=s.ready===true&&!downloading&&!s.checking;readyAction(ready && controlled() && window.WebStudioStartup?.ready!==false);toggle.dataset.ready=String(ready && controlled());toggle.title=ready?'Required files verified in this browser':'Prepare and check offline downloads';
+  status.textContent=s.checking?'Verifying saved files… '+s.done+' / '+s.total:downloading?'Saving '+s.done+' / '+s.total+' files…':ready?'Saved files verified':s.previousReady?'Update incomplete · previous pack verified':s.paused?'Download paused · completed files kept':s.done?'Download incomplete · resume to finish':'Not downloaded';
   button.textContent=ready?'Check saved pack':s.done?'Resume download':'Download study pack';
-  if(ready)help.textContent='Your study files are saved. Return to your lesson or workspace, then test a preview with Wi-Fi off before your next study session.';
+  if(ready){
+   const boot=window.WebStudioStartup;
+   if(!controlled())help.textContent='Files are saved, but the Web Studio worker does not control this page. Reopen this app while connected or use Repair offline setup.';
+   else if(boot && !boot.ready)help.textContent='Files are saved. The lesson interface could not start. Open Repair offline setup.';
+   else if(boot?.openedOffline && s.pageRevision && !document.documentElement.classList.contains('cp-locked'))help.textContent='Lesson interface opened offline from the saved pack in this app.';
+   else help.textContent='Close this app completely, disconnect, then reopen it from the same icon or Safari bookmark and run a preview.';
+   if(reload && (!s.pageRevision || s.pageRevision!==s.revision))reload.hidden=false;
+  }
  }
- function fail(e){readyAction(false);status.textContent='Downloads need attention';toggle.dataset.ready='false';error.textContent=e.message||'Offline setup failed. Retry while connected.';check.textContent='Retry check';button.textContent=last?.done?'Resume download':'Retry download';}
- async function inspect(){
+ function fail(e){last=null;readyAction(false);status.textContent=e.previousReady?'Update incomplete · previous pack verified':'Downloads need attention';toggle.dataset.ready='false';error.textContent=e.message||'Offline setup failed. Retry while connected.';check.textContent='Retry check';button.textContent=last?.done?'Resume download':'Retry download';}
+ async function inspect(type='offline-local-status'){
   if(busy)return;busy=true;controls();readyAction(false);error.textContent='';status.textContent='Checking downloads…';
-  try{render(await rpc('offline-status',render));check.textContent='Check downloads';checkedAt=Date.now();}
-  catch(e){fail(e);}finally{busy=false;controls();}
+  try{
+   if(type==='offline-update'){
+    updateStatus.textContent='Checking the published revision…';
+    await worker();
+    const reg=await bounded(navigator.serviceWorker.getRegistration(root),4000,'Worker registration did not respond.');
+    await bounded(reg.update(),12000,'Worker update timed out. Reconnect and retry.');
+    workerPromise=null;
+    await activated(reg);
+   }
+   const state=await rpc(type,render);render(state);check.textContent='Check downloads';checkedAt=Date.now();
+   if(type==='offline-update')updateStatus.textContent=state.ready?'Published files verified. Reload when your work is saved.':'Download or resume this revision, then reload when your work is saved.';
+  }
+  catch(e){fail(e);if(type==='offline-update')updateStatus.textContent='Update check failed.';}finally{busy=false;controls();}
  }
  async function download(){
   if(busy)return;if(last?.ready)return inspect();busy=true;downloading=true;controls();readyAction(false);error.textContent='';status.textContent='Preparing download…';toggle.dataset.ready='false';
@@ -65,7 +88,8 @@
    if(s.paused)help.textContent='Download paused. Reconnect and choose Resume download when ready.';
   }catch(e){downloading=false;fail(e);}finally{busy=false;downloading=false;controls();}
  }
- button.onclick=download;check.onclick=inspect;
+ button.onclick=download;check.onclick=()=>inspect('offline-status');
+ if(update)update.onclick=()=>inspect('offline-update');
  pause.onclick=async()=>{pause.disabled=true;try{await rpc('offline-pause');if(downloading)help.textContent='Pausing… Completed files will be kept.';}catch(e){error.textContent=e.message;pause.disabled=false;}};
  toggle.addEventListener('click',()=>{if(!$('wb-offline').hidden&&Date.now()-checkedAt>15000)inspect();});
  navigator.serviceWorker?.addEventListener('controllerchange',()=>{workerPromise=null;if(!busy)inspect();});
