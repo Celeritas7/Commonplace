@@ -165,6 +165,10 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   assert.equal((await h.rpc('offline-download')).result.ready, true);
   h.stores.get(PACK).delete(keyFor(h, '../../_lib/gate.js'));
   assert.match(await (await h.request(BASE,{navigate:true})).text(),/sign-in file is missing/);
+  await h.cache(META).put(BASE+'__offline/complete.json', new Response('{broken'));
+  assert.match(await (await h.request(BASE,{navigate:true})).text(), /could not read or verify offline storage/);
+  assert.equal((await h.rpc('offline-download')).result.ready, true, 'repair can reconstruct a damaged complete manifest');
+  assert.equal(await (await h.request(BASE,{navigate:true})).text(), '<h1>updated</h1>');
   const fresh = harness();
   fresh.configure({failFile:'studio.css'});
   await fresh.rpc('offline-download');

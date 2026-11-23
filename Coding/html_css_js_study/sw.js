@@ -189,7 +189,9 @@ async function download(port) {
   const deadline = setTimeout(() => { task.paused = true; if (task.controller) task.controller.abort(); }, OPERATION_MS);
   try {
     const manifest = await currentManifest(); checkTask(task);
-    const complete = await readManifest(COMPLETE_KEY, true);
+    // A malformed completion marker must not prevent explicit repair from
+    // rebuilding it using verified file bodies and the published manifest.
+    const complete = await readManifest(COMPLETE_KEY);
     task.previousReady = Boolean(complete && complete.revision !== manifest.revision && (await inspect(complete)).status.ready);
     const inspected = await inspect(manifest, port, task);
     let done = inspected.status.done, savedBytes = manifest.bytes - inspected.status.remainingBytes;
