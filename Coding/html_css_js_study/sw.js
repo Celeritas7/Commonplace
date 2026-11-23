@@ -54,13 +54,18 @@ function fileURL(file) { return new URL(file.url, BASE).href; }
 function fileKey(file) { const url = new URL(fileURL(file)); url.searchParams.set('__cp_sha256', file.sha256); return url.href; }
 function goodResponse(response, url) {
   if (!response || response.status !== 200 || response.redirected || response.type === 'opaque') return false;
-  const type = (response.headers.get('content-type') || '').toLowerCase();
+  const type = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
   const pathname = new URL(url).pathname;
-  if (/\.js$/.test(pathname)) return /javascript|ecmascript/.test(type);
-  if (/\.css$/.test(pathname)) return type.includes('text/css');
-  if (/\.html$/.test(pathname) || pathname === BASE.pathname) return type.includes('text/html');
-  if (/\.json$/.test(pathname)) return type.includes('json');
-  return true;
+  if (/\.js$/.test(pathname)) return /^(text|application)\/(x-)?(javascript|ecmascript)$/.test(type);
+  if (/\.css$/.test(pathname)) return type === 'text/css';
+  if (/\.html$/.test(pathname) || pathname === BASE.pathname) return type === 'text/html';
+  if (/\.json$/.test(pathname)) return type === 'application/json' || type.endsWith('+json');
+  // Some static hosts send binary assets as octet-stream. Their bytes still
+  // have to match the published hash before they can enter the pack.
+  if (type === 'application/octet-stream') return true;
+  if (/\.woff2?$/.test(pathname)) return /^(?:font\/woff2?|application\/(?:font-woff2?|x-font-woff2?))$/.test(type);
+  if (/\.(?:mp3|ogg)$/.test(pathname)) return type.startsWith('audio/');
+  return type.startsWith('image/');
 }
 async function digest(bytes) {
   const value = await bounded(crypto.subtle.digest('SHA-256', bytes), STORAGE_MS, 'File verification timed out. Retry the download.');
@@ -268,7 +273,13 @@ async function selectedManifest(event) {
   }
   return readManifest(COMPLETE_KEY, true);
 }
-function unavailable(request, message) {
+async function unavailable(event, message) {
+  const request = event.request;
+  if (event.clientId && request.mode !== 'navigate') {
+    // Only fixed recovery text is sent to the requesting page. Never echo URLs,
+    // exceptions, callback parameters or the contents of a failed response.
+    try { (await self.clients.get(event.clientId))?.postMessage({ type:'web-studio-file-error', message }); } catch (_) {}
+  }
   const navigation = request.mode === 'navigate';
   const body = navigation ? '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Web Studio recovery</title><main><h1>Web Studio could not open</h1><p>' + message + '</p><p><a href="offline-repair.html">Repair offline setup</a> · <a href="index.html">Retry Web Studio</a></p></main>' : message;
   return new Response(body, { status: 503, headers: { 'Content-Type': navigation ? 'text/html; charset=utf-8' : 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -286,25 +297,31 @@ async function serve(event) {
     if (manifest) {
       const file = manifest.files.find(entry => fileURL(entry) === url);
       const cache = await storage(caches.open(PACK_CACHE));
+      if (request.mode === 'navigate' && !repair) {
+        // Previously downloaded documents predate the sign-in script watchdog.
+        const gate = manifest.files.find(entry => fileURL(entry) === new URL('_lib/gate.js', REPO).href);
+        if (!gate || !await verifiedFile(cache, gate)) return unavailable(event, 'The saved Commonplace sign-in file is missing or damaged. Reconnect and repair the study pack.');
+      }
       const saved = file && await verifiedFile(cache, file);
       if (saved) return saved;
-      return unavailable(request, 'A required file in this saved revision is missing or damaged. Reconnect and repair the study pack.');
+      return unavailable(event, 'A required file in this saved revision is missing or damaged. Reconnect and repair the study pack.');
     }
   } catch (_) {
-    return unavailable(request, 'Web Studio could not read or verify offline storage. Retry in this app or reconnect and open Repair offline setup.');
+    return unavailable(event, 'Web Studio could not read or verify offline storage. Retry in this app or reconnect and open Repair offline setup.');
   }
   try {
     const response = await network(request);
     if (goodResponse(response, url)) return response;
-    return unavailable(request, 'The server returned an unavailable or invalid study file. Reconnect and check for updates.');
+    return unavailable(event, 'The server returned an unavailable or invalid study file. Reconnect and check for updates.');
   } catch (_) {
-    return unavailable(request, 'No complete study download is available in this app. Reconnect and prepare Study offline here.');
+    return unavailable(event, 'No complete study download is available in this app. Reconnect and prepare Study offline here.');
   }
 }
 self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
 self.addEventListener('activate', event => { event.waitUntil(Promise.all([self.clients.claim(), prunePins().catch(() => {})])); });
 self.addEventListener('message', event => {
-  const type = event.data && event.data.type, port = event.ports && event.ports[0];
+  const type = event.data?.type === 'offline-status' && event.data.localOnly ? 'offline-local-status' : event.data?.type;
+  const port = event.ports && event.ports[0];
   if (!port || !['offline-local-status', 'offline-status', 'offline-update', 'offline-download', 'offline-pause'].includes(type)) return;
   event.waitUntil((async () => {
     try {

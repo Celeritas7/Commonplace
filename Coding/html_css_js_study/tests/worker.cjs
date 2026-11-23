@@ -35,7 +35,7 @@ function harness() {
       }
     };
   };
-  const context = vm.createContext({
+  const globals = {
     self: { location: { href: BASE + 'sw.js?repair=1.7' }, addEventListener(name, fn) { listeners[name] = fn; }, skipWaiting: async () => skipped++, clients: { claim: async () => claimed++ } },
     caches: { async open(name) { return cache(name); }, async delete(name) { deleted.push(name); return stores.delete(name); } },
     URL, Set, Map, Request, Response, Headers, AbortController, TextEncoder, Uint8Array, crypto: webcrypto,
@@ -57,8 +57,10 @@ function harness() {
       if (config.badMime && url.includes(config.badMime)) return reply(body || 'bad', BASE + 'error.html');
       return reply(body || 'missing', url, config.serverStatus || (body === undefined ? 404 : 200));
     }
-  });
-  vm.runInContext(SOURCE, context);
+  };
+  let context;
+  function restart() { context = vm.createContext({...globals}); vm.runInContext(SOURCE, context); }
+  restart();
   async function lifecycle(name) { const pending = []; listeners[name]({ waitUntil(p) { pending.push(p); } }); await Promise.all(pending); }
   async function rpc(type, onProgress) {
     const messages = [], pending = [];
@@ -76,7 +78,7 @@ function harness() {
     try { return await vm.runInContext('validateManifest(testManifest)', context); }
     finally { delete context.testManifest; }
   }
-  return { stores, cache, files, requests, deleted, manifest, rpc, request, lifecycle, validate, configure(value) { config = value; }, get skipped() { return skipped; }, get claimed() { return claimed; } };
+  return { stores, cache, files, requests, deleted, manifest, rpc, request, lifecycle, validate, restart, configure(value) { config = value; }, get skipped() { return skipped; }, get claimed() { return claimed; } };
 }
 const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manifest().files.find(f => f.url === file).sha256;
 (async () => {
@@ -126,6 +128,7 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   const updateBefore = h.requests.length; assert.equal((await h.rpc('offline-download')).result.ready, true);
   assert.deepEqual(h.requests.slice(updateBefore).filter(r => !r.url.endsWith('offline-assets.json')).map(r => r.url), [BASE + 'studio.css']);
   assert.equal(partial.previousReady, true);
+  h.restart();  // Discard all worker globals; retain only Cache Storage.
   assert.equal(await (await h.request(BASE + 'studio.css', {clientId:'open-page'})).text(), 'body{color:green}', 'old document remains pinned after update promotion');
   h.configure({ offline: true });
   assert.equal(await (await h.request(BASE + 'index.html')).text(), '<h1>updated</h1>');
@@ -160,6 +163,8 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   h.stores.get(PACK).delete(jsKey);
   assert.match(await (await h.request(BASE+'studio.js')).text(), /missing or damaged/);
   assert.equal((await h.rpc('offline-download')).result.ready, true);
+  h.stores.get(PACK).delete(keyFor(h, '../../_lib/gate.js'));
+  assert.match(await (await h.request(BASE,{navigate:true})).text(),/sign-in file is missing/);
   const fresh = harness();
   fresh.configure({failFile:'studio.css'});
   await fresh.rpc('offline-download');

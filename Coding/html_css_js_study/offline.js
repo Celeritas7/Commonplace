@@ -40,7 +40,9 @@
    reset();total=setTimeout(()=>finish(new Error('This operation took too long. Completed files are kept. Keep the app open and retry.')),type==='offline-download'?300000:60000);
    channel.port1.onmessage=event=>{const data=event.data||{};reset();if(data.progress){onProgress?.(data);return;}if(data.error){if(Number.isFinite(data.bytes))render(data);const failure=new Error(data.error);failure.previousReady=data.previousReady;finish(failure);}else finish(null,data);};
    channel.port1.onmessageerror=()=>finish(new Error('The offline worker sent an unreadable response. Retry setup.'));
-   try{active.postMessage({type},[channel.port2]);}catch(e){finish(e);}
+   // v1.7.2 workers understand offline-status and ignore the optional localOnly field.
+   const message=type==='offline-local-status'?{type:'offline-status',localOnly:true}:{type};
+   try{active.postMessage(message,[channel.port2]);}catch(e){finish(e);}
   });
  }
  function bytes(n){return n>=1000000?(n/1000000).toFixed(2)+' MB':Math.ceil(n/1000)+' kB';}
@@ -50,7 +52,9 @@
   if(!Number.isFinite(s.bytes)||!Number.isFinite(s.remainingBytes)){if(s.paused){readyAction(false);status.textContent='Download paused · completed files kept';button.textContent='Resume download';toggle.dataset.ready='false';}return;}
   last=s;size.textContent=bytes(s.bytes)+' total · '+bytes(Math.max(0,s.remainingBytes))+' remaining · '+s.done+' / '+s.total+' files';
   bar.value=s.bytes?Math.max(0,Math.min(1,(s.bytes-s.remainingBytes)/s.bytes)):0;
-  const ready=s.ready===true&&!downloading&&!s.checking;readyAction(ready && controlled() && window.WebStudioStartup?.ready!==false);toggle.dataset.ready=String(ready && controlled());toggle.title=ready?'Required files verified in this browser':'Prepare and check offline downloads';
+  const ready=s.ready===true&&!downloading&&!s.checking;
+  const canStudy=ready && controlled() && window.WebStudioStartup?.ready!==false;
+  readyAction(canStudy);toggle.dataset.ready=String(canStudy);toggle.title=ready?'Required files verified in this browser':'Prepare and check offline downloads';
   status.textContent=s.checking?'Verifying saved files… '+s.done+' / '+s.total:downloading?'Saving '+s.done+' / '+s.total+' files…':ready?'Saved files verified':s.previousReady?'Update incomplete · previous pack verified':s.paused?'Download paused · completed files kept':s.done?'Download incomplete · resume to finish':'Not downloaded';
   button.textContent=ready?'Check saved pack':s.done?'Resume download':'Download study pack';
   if(ready){
@@ -62,7 +66,7 @@
    if(reload && (!s.pageRevision || s.pageRevision!==s.revision))reload.hidden=false;
   }
  }
- function fail(e){last=null;readyAction(false);status.textContent=e.previousReady?'Update incomplete · previous pack verified':'Downloads need attention';toggle.dataset.ready='false';error.textContent=e.message||'Offline setup failed. Retry while connected.';check.textContent='Retry check';button.textContent=last?.done?'Resume download':'Retry download';}
+ function fail(e){const resume=last?.done;last=null;readyAction(false);status.textContent=e.previousReady?'Update incomplete · previous pack verified':'Downloads need attention';toggle.dataset.ready='false';error.textContent=e.message||'Offline setup failed. Retry while connected.';check.textContent='Retry check';button.textContent=resume?'Resume download':'Retry download';}
  async function inspect(type='offline-local-status'){
   if(busy)return;busy=true;controls();readyAction(false);error.textContent='';status.textContent='Checking downloads…';
   try{

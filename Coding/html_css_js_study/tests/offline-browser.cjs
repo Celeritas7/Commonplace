@@ -368,6 +368,17 @@ function revise(files) {
   assert.equal(hash(afterPromotion),hash(oldCSS),'already-open document stays on the old revision after promotion');
   await page.locator('#wb-offline-check').click();
   await textHas('#wb-offline-status',/Saved files verified/);
+  await page.evaluate(key=>{
+    const put=Storage.prototype.setItem;
+    window.restoreTestStorage=()=>{Storage.prototype.setItem=put;};
+    Storage.prototype.setItem=function(name,value){
+      if(name===key)throw new DOMException('Fixture storage full','QuotaExceededError');
+      return put.call(this,name,value);
+    };
+  },KEY);
+  await page.locator('#wb-reload').click();
+  await textHas('#wb-update-status',/Reload paused/);
+  await page.evaluate(()=>window.restoreTestStorage());
   await Promise.all([page.waitForNavigation(),page.locator('#wb-reload').click()]);
   assert.equal(hash(await page.evaluate(async base=>(await fetch(base+'studio.css')).text(),BASE)),hash(nextCSS));
   const afterReload = JSON.parse(await page.evaluate(key=>localStorage.getItem(key),KEY));
@@ -406,6 +417,7 @@ function revise(files) {
   await page.reload();
   await page.locator('#wb-startup-recovery').waitFor({state:'visible'});
   assert(await page.locator('#wb-startup-recovery button').isVisible());
+  await textHas('#wb-startup-detail',/missing or damaged/);
   await page.locator('#wb-startup-recovery a').click();
   await page.locator('#repair').click();
   await textHas('#result',/Repair complete/);
@@ -413,9 +425,15 @@ function revise(files) {
   await textHas('#wb-save-status',/Saved on this device/);
   assert.equal(await page.locator('#wb-startup-recovery').isVisible(),false);
   if(engine==='chromium'){
+    for(const suffix of ['?code=FIXTURE-ONLY','#access_token=FIXTURE-ONLY']){
+      const callback = await page.goto(origin+BASE+'index.html'+suffix);
+      assert(callback.fromServiceWorker());
+      await textHas('#cp-gate h1',/Not allowed/);
+      assert.equal(page.url(),origin+BASE+'index.html'+suffix,'the worker must preserve the URL seen by the gate and fixture SDK');
+    }
     await page.evaluate(key=>{localStorage.removeItem(key);localStorage.removeItem('cp:gate:ok');},sessionKey);
     networkDown=true;await ctx.setOffline(true);
-    const locked=await page.goto(origin+BASE+'index.html');
+    const locked=await page.goto(origin+BASE+'index.html?from=offline-test');
     assert(locked.fromServiceWorker());
     await page.locator('#cp-gate [data-a=google]').click();
     await textHas('#cp-gate .g-msg',/offline/i);

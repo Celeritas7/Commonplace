@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <style>html[data-gate-unavailable] body > :not(.wb-signin-recovery) { display: none !important; } html:not([data-gate-unavailable]) .wb-signin-recovery { display: none; }</style>
-<script src="../../_lib/gate.js" onerror="document.documentElement.setAttribute('data-gate-unavailable','')"></script>
+<script src="../../_lib/gate.js"></script>
+<script>if (!window.__cpGate) document.documentElement.setAttribute('data-gate-unavailable', '');</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Web Studio — Learn HTML, CSS & JavaScript · Commonplace</title>
@@ -134,7 +135,7 @@ body{display:flex;flex-direction:column}
 <body>
 <aside class="wb-signin-recovery" role="alert"><h1>Commonplace sign-in could not load</h1><p>Reconnect in this Safari tab or Home Screen app and <a href="offline-repair.html">repair the saved sign-in files</a>.</p></aside>
 <aside id="wb-startup-recovery" hidden role="alert">
- <h2>Web Studio could not start</h2><p>The lesson interface did not finish loading. Your saved work is kept.</p>
+ <h2>Web Studio could not start</h2><p>The lesson interface did not finish loading. Your saved work is kept.</p><p id="wb-startup-detail"></p>
  <button type="button" onclick="location.reload()">Retry startup</button> · <a href="offline-repair.html">Repair offline setup</a>
 </aside>
 <script>
@@ -146,6 +147,10 @@ body{display:flex;flex-direction:column}
     check() { recovery.hidden = boot.ready; },
     complete() { boot.ready = true; clearTimeout(timer); boot.check(); }
   };
+  navigator.serviceWorker?.addEventListener('message', event => {
+    if (event.source !== navigator.serviceWorker.controller || event.data?.type !== 'web-studio-file-error') return;
+    document.getElementById('wb-startup-detail').textContent = event.data.message;
+  });
   const timer = setTimeout(boot.check, 10000);
 })();
 </script>
