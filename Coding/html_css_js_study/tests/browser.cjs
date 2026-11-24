@@ -103,6 +103,9 @@ async function preserved() {
   await starterPreview.locator('#counter').click();
   assert.equal(await starterPreview.locator('#counter').textContent(), 'Clicks: 1');
   await page.locator('#wb-return').click();
+  const afterPreviewBoot = await page.evaluate(() => ({state:window.WebStudioStartup?.state,reason:window.WebStudioStartup?.reason,asset:window.WebStudioStartup?.asset,hidden:document.getElementById('wb-startup-recovery')?.hidden}));
+  assert.equal(afterPreviewBoot.state, 'ready', 'preview must not change healthy startup status: '+JSON.stringify(afterPreviewBoot));
+  assert.equal(afterPreviewBoot.hidden, true, 'preview must not open recovery panel: '+JSON.stringify(afterPreviewBoot));
   console.log('PASS ' + engine + ': fresh sample starter renders its card and runs the click counter');
 
   await part(2); await page.locator('#wb-bookmark').click();
