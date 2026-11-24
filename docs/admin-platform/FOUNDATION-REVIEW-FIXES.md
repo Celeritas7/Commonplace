@@ -8,6 +8,8 @@ Baseline: `e063905`, after PR #79 merged. This correction does not activate the 
 2. **Browser CI never reached the tests.** Since U2, `ubuntu-latest` selected Ubuntu 26.04, which Playwright 1.58.2 does not support. The workflow now pins Ubuntu 24.04, supported by the installed Playwright browser and dependency registry. Both Node/database and browser suites remain required steps; no checks are skipped or marked optional.
 3. **Valid content keys exceeded U1 storage limits.** A valid 57-character assignment ID produced a 171-character tuple, rejected by both the account store and PostgreSQL's 160-character constraint. `progressIdentity` now returns an awaited key: short tuples retain their exact previous values; long tuples use an 85-character SHA-256 key containing the same versioned identity inputs. No SQL constraint is widened and no legacy progress is migrated. Future adapters must await the result, then perform the existing ownership-checked write.
 
+The restored CI browser run also exposed a narrow-screen worksheet overflow in the existing content preview. Fixed table layout, wrapping for imported text and shrinkable inputs keep all cells and controls inside the viewport; the original failing assertion remains intact. Additional checks cover long unbroken product names at 320, 390 and 768 pixels.
+
 ## Regression evidence
 
 - API tests exercise same-owner token refresh during pending requests, repeated sign-in, initial-session timing, real account changes, signout carrying an old user, absent session identity and conflicting verified identity. A preserved session still receives a server permission denial.
