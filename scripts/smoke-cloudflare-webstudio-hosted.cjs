@@ -139,6 +139,9 @@ async function test() {
   assert.equal(downloaded.remainingBytes, 0);
   assert.equal(downloaded.completeRevision, manifest.revision,
     'The hosted complete revision differs from the expected staging release');
+  assert.equal(await browser.evaluate(() =>
+    !!document.documentElement.classList.contains('cp-locked')), true,
+    'Downloading public assets must not unlock the Commonplace gate');
   assert.equal(await browser.evaluate(pack => caches.keys().then(keys => keys.includes(pack)), PACK), true);
   console.log('PASS ' + engine + ': hosted worker downloaded and verified all 58 public staging files');
 
@@ -156,6 +159,8 @@ async function test() {
   await controller();
   await assertLocked();
   await assertLocalOnly();
+  assert.equal(await offlineBrowser.evaluate(() => navigator.onLine), false,
+    'Cold-reopened browser must genuinely be disconnected');
   const offlineState = await rpc('offline-status');
   assert.equal(offlineState.ready, true, 'Saved study pack must remain ready after browser restart');
   assert.equal(offlineState.completeRevision, manifest.revision);
