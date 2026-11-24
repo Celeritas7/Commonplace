@@ -12,7 +12,7 @@ export function createAdminAPI({client, enabled=false, online=()=>navigator.onLi
     const result=await client.rpc(name,args);
     if(start!==generation || stopped) throw Error('Account changed. Reload Admin Studio.');
     if(result.error) {
-      const messages={'40001':'Access changed in another tab. Reload before saving.','42501':'Administrator access is required.','23505':'This account is already registered. Select it in the learner list.','22023':'Check the verified login email and selected study sections.'};
+      const messages={'40001':'This record changed in another tab. Reload before saving.','42501':'Administrator access is required.','23505':name==='cp_admin_save_profile_group'?'A group with this name already exists.':'This account is already registered. Select it in the learner list.','22023':name.includes('profile')?'Check the profile fields, learner and selected groups.':'Check the verified login email and selected study sections.'};
       const error=Error(messages[result.error.code] || 'The request failed. Reload to confirm the current saved state before retrying.');
       error.code=result.error.code; throw error;
     }
@@ -20,6 +20,9 @@ export function createAdminAPI({client, enabled=false, online=()=>navigator.onLi
   }
   return {
     load:()=>call('cp_admin_directory'),
+    profile:target=>call('cp_admin_profile',{target}),
+    saveProfile:(target,revision,profile,groups)=>call('cp_admin_save_profile',{target,expected_revision:revision,new_profile:profile,group_ids:groups}),
+    saveGroup:group=>call('cp_admin_save_profile_group',{target:group.id||null,expected_revision:group.revision||'0',new_name:group.name,new_description:group.description}),
     register:(email,name)=>call('cp_admin_register',{login_email:email,learner_name:name}),
     save:(draft)=>call('cp_admin_save',{target:draft.user_id,expected_revision:draft.revision,learner_name:draft.display_name,new_status:draft.status,allowed_sections:draft.allowed}),
     onInvalidate(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
