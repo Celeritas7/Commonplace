@@ -67,3 +67,7 @@ Rollback before activation: revert the UI/code changes. After a pilot, disable t
 ## U3 follow-on
 
 The **Professional profile** view now adds reusable learning context and administrator-managed profile groups. See [U3 contracts, review steps and security evidence](../PROFILES.md). Profile/group saves are separate from study permission saves; the same disabled live-activation boundary remains in place.
+
+## U5 follow-on
+
+**Tutorial prompts** now combines the selected learner's professional profile with reusable subject guidance, material-specific instructions, preview and reviewed clipboard copy. See [Prompt Studio workflow and privacy limitations](../prompts/README.md). No AI API, automatic publication or persistent prompt history is added.
