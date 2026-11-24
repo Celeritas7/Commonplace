@@ -11,8 +11,8 @@ const PACK = 'cp-web-studio-downloads-v1', META = 'cp-web-studio-offline-v1';
 const sha = body => createHash('sha256').update(body).digest('hex');
 const mime = url => /\.js(?:\?|$)/.test(url) ? 'application/javascript' : /\.css(?:\?|$)/.test(url) ? 'text/css' : /\.json(?:\?|$)/.test(url) ? 'application/json' : 'text/html';
 const reply = (body, url, status = 200) => new Response(body, { status, headers: { 'Content-Type': mime(url) } });
-function harness() {
-  const stores = new Map(), listeners = {}, requests = [], deleted = [];
+function harness(existingStores) {
+  const stores = existingStores || new Map(), listeners = {}, requests = [], deleted = [];
   const files = new Map([['index.html', '<h1>original</h1>'], ['studio.js', 'window.answer=42;'], ['studio.css', 'body{color:green}'], ['../../_lib/gate.js', 'window.gate=true;']]);
   let config = {}, skipped = 0, claimed = 0;
   const manifest = () => {
@@ -66,9 +66,13 @@ function harness() {
     await Promise.all(pending);
     return { messages, result: messages.filter(m => !m.progress).at(-1) };
   }
-  async function request(url, { method = 'GET', navigate = false } = {}) {
+  async function request(url, { method = 'GET', navigate = false, clientId = '', resultingClientId = '' } = {}) {
     let pending;
-    listeners.fetch({ request: navigate ? { url, method, mode: 'navigate' } : new Request(url, { method }), respondWith(p) { pending = p; } });
+    listeners.fetch({
+      request: navigate ? { url, method, mode: 'navigate' } : new Request(url, { method }),
+      clientId, resultingClientId,
+      respondWith(p) { pending = p; }
+    });
     return pending ? await pending : null;
   }
   async function validate(value) {
@@ -114,6 +118,9 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   console.log('PASS corrupt saved bytes never count as ready; repair fetches only the corrupt file');
 
   const originalManifest = h.manifest();
+  // A document opened before an update must keep using its original revision.
+  const originalPage = 'study-before-update';
+  assert.equal(await (await h.request(BASE, { navigate: true, resultingClientId: originalPage })).text(), '<h1>original</h1>');
   h.files.set('index.html', '<h1>updated</h1>'); h.files.set('studio.css', 'body{color:purple}');
   h.configure({ failFile: 'studio.css' });
   assert.match((await h.rpc('offline-download')).result.error, /studio\.css/);
@@ -126,26 +133,76 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   const updateBefore = h.requests.length; assert.equal((await h.rpc('offline-download')).result.ready, true);
   assert.deepEqual(h.requests.slice(updateBefore).filter(r => !r.url.endsWith('offline-assets.json')).map(r => r.url), [BASE + 'studio.css']);
   h.configure({ offline: true });
+  assert.equal(await (await h.request(BASE + 'studio.css', { clientId: originalPage })).text(), 'body{color:green}', 'old document must keep old CSS after update');
   assert.equal(await (await h.request(BASE + 'index.html')).text(), '<h1>updated</h1>');
   assert.equal(await (await h.request(BASE + 'studio.css?another-version')).text(), 'body{color:purple}');
+  const newPage = 'study-after-update';
+  assert.equal(await (await h.request(BASE, { navigate: true, resultingClientId: newPage })).text(), '<h1>updated</h1>');
+  assert.equal(await (await h.request(BASE + 'studio.css', { clientId: newPage })).text(), 'body{color:purple}');
+  assert.equal(await (await h.request(BASE + 'studio.js', { clientId: originalPage })).text(), 'window.answer=42;');
+  // Service workers are short-lived on iPad: losing all in-memory state must
+  // not erase a previously pinned document's revision choice.
+  const restarted = harness(h.stores);
+  restarted.configure({ offline: true });
+  assert.equal(await (await restarted.request(BASE + 'studio.css', { clientId: originalPage })).text(), 'body{color:green}');
+  assert.equal(await (await restarted.request(BASE + 'studio.css', { clientId: newPage })).text(), 'body{color:purple}');
   const oldIndexKey = BASE + 'index.html?__cp_sha256=' + originalManifest.files[0].sha256;
   assert(h.stores.get(PACK).has(oldIndexKey), 'older completed downloads survive updates');
-  console.log('PASS coherent previous pack during partial update, content-addressed reuse, complete revision switch');
+
+  console.log('PASS interrupted updates preserve the old pinned page, and a new page selects the new complete revision');
 
   h.configure({});
-  await h.request(BASE + 'index.html?code=private-callback&next=book', { navigate: true });
-  assert(h.requests.some(r => r.url.includes('code=private-callback')));
+  const beforeCached = h.requests.length;
+  assert.equal(await (await h.request(BASE + 'index.html?code=private-callback&next=book', { navigate: true, resultingClientId: 'oauth-return' })).text(), '<h1>updated</h1>');
+  assert.equal(h.requests.length, beforeCached, 'the saved callback shell does not send credentials to the network');
   assert(![...h.stores.get(PACK).keys(), ...h.stores.get(META).keys()].some(k => k.includes('private-callback')));
   assert.equal(await h.request('https://study.test/Commonplace/Coding/Python/index.html'), null);
   assert.equal(await h.request('https://drive.google.com/book'), null);
+  assert.equal(await h.request('https://example.test/auth/v1/token'), null);
   assert.equal(await h.request(BASE + 'studio.js', { method: 'POST' }), null);
   assert.equal(await h.request(BASE + 'private-notes.json'), null);
-  h.configure({ serverStatus: 404 }); assert.equal((await h.request(BASE + 'studio.js')).status, 404);
-  h.configure({ serverStatus: 503 }); assert.match(await (await h.request(BASE + 'studio.js')).text(), /answer=42/);
-  h.configure({ hang: true }); let start = Date.now(); assert.match(await (await h.request(BASE + 'studio.js')).text(), /answer=42/); assert(Date.now() - start < 1000);
-  h.configure({ hangBody: true }); assert.match(await (await h.request(BASE + 'studio.css')).text(), /purple/);
-  h.configure({ offline: true, hangRead: true }); start = Date.now(); assert.equal((await h.request(BASE + 'studio.js')).status, 503); assert(Date.now() - start < 1000);
-  console.log('PASS network fixes, OAuth parameters, strict section scope, transport/body/cache deadlines');
+  assert.equal((await h.request(BASE + 'studio-new.js')).status, 503, 'unlisted new files cannot enter an old revision');
+  for (const config of [{ serverStatus: 404 }, { serverStatus: 503 }, { badMime: 'studio.js' }, { hang: true }, { hangBody: true }]) {
+    h.configure(config);
+    const before = h.requests.length, start = Date.now();
+    assert.match(await (await h.request(BASE + 'studio.js')).text(), /answer=42/);
+    assert.equal(h.requests.length, before, 'saved-first must avoid live network for verified scripts');
+    assert(Date.now() - start < 1000, 'bad or stalled Wi-Fi must not delay a saved study script');
+  }
+  h.configure({ offline: true, hangRead: true });
+  let start = Date.now();
+  const storageFailure = await h.request(BASE + 'studio.js');
+  assert.equal(storageFailure.status, 503);
+  assert.match(await storageFailure.text(), /storage/i);
+  assert(Date.now() - start < 1000);
+  h.configure({ offline: true, failRead: true });
+  assert.match(await (await h.request(BASE + 'studio.js')).text(), /storage/i);
+  h.configure({});
+  console.log('PASS verified files win over stalled/404/503/wrong-MIME networks; callbacks and storage failures remain separate');
+
+  // Damage is never masked by a different live release.
+  const latestJS = keyFor(h, 'studio.js');
+  await h.cache(PACK).put(latestJS, reply('broken', BASE + 'studio.js'));
+  h.configure({ serverStatus: 404 });
+  const damaged = await h.request(BASE + 'studio.js');
+  assert.equal(damaged.status, 503);
+  assert.match(await damaged.text(), /missing or damaged/);
+  h.configure({ badMime: 'studio.js' });
+  assert.equal((await h.request(BASE + 'studio.js')).status, 503);
+  h.configure({});
+  assert.equal((await h.rpc('offline-download')).result.ready, true, 'the explicit download repairs corrupted saved files');
+
+  const partialOnly = harness();
+  partialOnly.configure({ failFile: 'studio.css' });
+  assert.equal((await partialOnly.rpc('offline-download')).result.ready, false);
+  partialOnly.configure({ offline: true });
+  assert.equal((await partialOnly.request(BASE + 'index.html', { navigate: true })).status, 503, 'an incomplete candidate is not a runnable pack');
+  const liveOnly = harness();
+  liveOnly.configure({ serverStatus: 404 });
+  assert.equal((await liveOnly.request(BASE + 'studio.js')).status, 404, 'online errors remain visible if no saved revision exists');
+  liveOnly.configure({ badMime: 'studio.js' });
+  assert.equal((await liveOnly.request(BASE + 'studio.js')).status, 503, 'wrong MIME on an unprepared online visit is rejected');
+  console.log('PASS damaged files fail coherently, incomplete candidates are never used and live invalid content is rejected');
 
   for (const fault of ['badBody', 'badMime', 'failWrite', 'hangWrite']) {
     const f = harness(); f.configure({ [fault]: fault.startsWith('bad') ? 'studio.js' : true });
