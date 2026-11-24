@@ -21,6 +21,14 @@ Do **not** use the repository root as the Pages output or upload the entire GitH
 
 The finished site should have a clearly labelled staging landing page at `https://<project>.pages.dev/` linking to `/Commonplace/Coding/html_css_js_study/offline.html`. Do not replace or reinstall the existing Home Screen icon to visit it.
 
+## Pre-deployment browser test of the exact staging output
+
+The Cloudflare pilot workflow now includes separate **Chromium** and **WebKit** jobs that build the actual `dist-cloudflare/` output, serve it on an isolated non-localhost HTTPS origin and run its original Commonplace login gate and service worker together.
+
+These browser tests use a **synthetic previously-approved cached session**, not a real Google sign-in. They verify 58/58 pack hashing, local-only staging sync (no production account writes), code preview, notes, bookmarks, a named project, complete browser shutdown and offline cold reopening, and re-locking when the synthetic session is removed. All profiles, certificates and the restricted proxy exist only during the CI run.
+
+**Do not mistake this for a live `pages.dev` or physical iPad result.** The live checker below still requires your separate Cloudflare Pages project URL, and real Google login needs a separate, narrow Supabase redirect configuration.
+
 ## Step B — Verify the *live* file delivery from GitHub Actions
 
 After deployment, open [Build isolated Cloudflare Web Studio staging pilot](https://github.com/Celeritas7/Commonplace/actions/workflows/cloudflare-webstudio-pilot.yml), choose **Run workflow**, select **main**, and enter the actual staging **root** in the optional `staging_url` field.
