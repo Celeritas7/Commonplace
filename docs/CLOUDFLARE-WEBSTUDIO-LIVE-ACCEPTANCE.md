@@ -48,6 +48,23 @@ A failing check may indicate a stale Cloudflare deploy, wrong output directory, 
 
 If the deployed stage is connected to a *different branch* from the workflow's chosen branch, use matching revisions before comparing hashes. Updating `main` does not by itself guarantee Cloudflare has finished deploying.
 
+## Step B2 — Browser smoke test against the actual Cloudflare hostname
+
+The same **Run workflow** action now includes two optional jobs, **live_browser_smoke (chromium)** and **live_browser_smoke (webkit)**, after the hosted-file checker succeeds. These jobs require a non-empty `staging_url` and **never** run for ordinary PR/push builds.
+
+They use fresh temporary browser profiles with **no sign-in session** and no Google/Supabase credentials. On the exact `https://<pilot>.pages.dev/` origin they:
+
+- verify the real Commonplace gate is locked, startup has completed and staging account sync is disabled;
+- verify the actual service worker controls the correct Web Studio scope;
+- download and verify the complete public 58-file study pack using the existing worker, with no user account;
+- close the entire browser and reopen the same isolated profile **offline**;
+- confirm the launcher and worker still work offline while an unauthorized visitor remains locked;
+- confirm an unrelated uncached request cannot reach the network.
+
+This is a **signed-out infrastructure smoke test**, not a login bypass and **not** an approved learner's offline-study test. It does not click the Google sign-in link, read another user's notes, access production Supabase study data, or verify full lesson/practice interaction after login. The physical iPad/Home Screen test and real approved-account Google OAuth return remain outstanding.
+
+If the live check fails because Cloudflare Pages was not deployed, uses a different build, requires Cloudflare Access, or has incorrect static headers, do not reset your original GitHub Pages app. Correct the separate staging deployment and rerun the workflow. The live browser jobs are skipped if the preceding static-file verification fails.
+
 ## Step C — Configure login only when ready to test
 
 Web Studio uses the original Commonplace shared gate and an approved Supabase account. The pilot deliberately **disables production study progress sync** while retaining genuine sign-in. In Supabase **Auth → URL Configuration → Additional Redirect URLs**, add the exact staging callback path(s) appropriate to how you open the study page, including:
@@ -77,6 +94,7 @@ Test the **new Cloudflare origin separately** in ordinary Safari first. Do not a
 | Hosted worker + manifest MIME and cache behavior | NOT TESTED |
 | No admin/Python source exposed | NOT TESTED |
 | Live approved login/redirect | NOT TESTED |
+| Live signed-out Cloudflare browser cold startup (Chromium/WebKit) | NOT TESTED — requires staging URL |
 | iPad Safari cold offline startup | NOT TESTED |
 | iPad Home Screen cold offline startup | NOT TESTED |
 | Practice preview, notes and bookmarks preserved | NOT TESTED |
