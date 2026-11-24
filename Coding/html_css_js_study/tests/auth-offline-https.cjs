@@ -138,8 +138,12 @@ async function profile({ offline = false, callbackUser = approved, previous } = 
   const ctx = await playwright[engine].launchPersistentContext(folder, {
     headless: true, offline, viewport: { width: 390, height: 844 },
     ignoreHTTPSErrors: true, proxy: { server: proxyURL },
+    // Chromium's service-worker TLS fetch does not inherit every page-level
+    // certificate exception. Only the isolated browser gets this test flag.
+    ...(engine === 'chromium' ? { args: ['--ignore-certificate-errors'] } : {}),
     acceptDownloads: true
   });
+  if (!offline) await ctx.setOffline(false);
   for (const extra of ctx.pages().slice(1)) await extra.close();
   await ctx.addInitScript(({ origin, sessionKey, protectedSeed, callbackUser, approved }) => {
     if (window !== window.top || location.origin !== origin) return;
@@ -415,10 +419,13 @@ async function run() {
       try {
         const diag = await page.evaluate(async base => {
           const reg = await navigator.serviceWorker?.getRegistration(base);
-          return { host: location.hostname, protocol: location.protocol, locked: document.documentElement.classList.contains('cp-locked'),
+          return { host: location.hostname, protocol: location.protocol, secure: isSecureContext,
+            locked: document.documentElement.classList.contains('cp-locked'),
             controller: navigator.serviceWorker?.controller?.scriptURL ? 'present' : 'missing',
-            workerActive: reg?.active ? 'yes' : 'no', startup: document.body?.dataset.webStudioStartup,
-            offline: navigator.onLine };
+            workerActive: reg?.active ? 'yes' : 'no', installing: reg?.installing?.state || 'none',
+            workerScope: reg?.scope ? 'present' : 'none', startup: document.body?.dataset.webStudioStartup,
+            offline: navigator.onLine, offlineControls:document.getElementById('wb-offline-status')?.textContent,
+            offlineError:document.getElementById('wb-offline-error')?.textContent };
         }, BASE);
         console.error('Synthetic diagnostic (no tokens or local records):', JSON.stringify(diag));
       } catch (_) {}
