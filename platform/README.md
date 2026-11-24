@@ -8,7 +8,7 @@ Status: implementation for review, **not deployed or enabled**. Baseline main: `
 - RLS and least-privilege API grants. Learners cannot write membership, grants, catalogue or audit tables. Only the administrator can call the two mutation RPCs, with fresh database authorization. Definer functions use an empty search path and fully qualified references; private helpers avoid recursive membership policies. `cp_private` must never be exposed as a Data API schema.
 - Controlled owner bootstrap: operator-only function, confirmed auth account required, one-time unique owner, no first-signup or metadata-based promotion. The admin API cannot demote, revoke, delete or replace the owner. Account deletion is restricted by foreign keys. Owner transfer/recovery requires a separately reviewed operator procedure; database owners and privileged service credentials are trusted and are not constrained like learners.
 - New project/UUID-scoped local store, invalidated operation tickets, abort signals, validated same-owner backups, conservative fill-missing restore, no automatic adoption/deletion of legacy work.
-- Opt-in `learner-context.mjs`: verifies with `auth.getUser()`, reads fresh membership and RLS-filtered catalogue, fails closed online, invalidates storage tickets on auth events and ignores late responses. Returns a single-section landing ID when applicable. No OAuth implementation replacement.
+- Opt-in `learner-context.mjs`: verifies with `auth.getUser()`, reads fresh membership and RLS-filtered catalogue, fails closed online, invalidates storage tickets on account changes/signout and ignores late responses. Same-owner token refreshes preserve the current ticket; explicit context refresh still requires fresh membership/section reads. Returns a single-section landing ID when applicable. No OAuth implementation replacement.
 - Repeatable local security tests and a credential-free CI workflow. PGlite executes real PostgreSQL grants/RLS/functions in isolation; the tests provide a minimal `auth.users`/`auth.uid()` fixture and use `SET ROLE`.
 
 ## Run locally
@@ -80,3 +80,7 @@ The [central Admin Studio](admin/README.md) now provides the isolated learner-ma
 ## U5 follow-on
 
 The [AI Tutorial Prompt Studio](prompts/README.md) provides administrator-only learner-context access and locally generated, reviewable prompts for external manual use. The live entry stays disabled; U6 will add material importing and publication.
+
+## U0–U5 review corrections
+
+The [foundation review corrections](../docs/admin-platform/FOUNDATION-REVIEW-FIXES.md) preserve same-account drafts during session refresh, bound content progress keys to the existing storage contract, and pin CI to a Playwright-supported runner. The live activation and release gates above remain open.

@@ -1,14 +1,16 @@
+import {observeAuthOwner} from '../lib/auth-owner.mjs';
 export function createAdminAPI({client, enabled=false, online=()=>navigator.onLine}={}) {
   if(!enabled) throw Error('Admin Studio is not enabled');
   let generation=0, stopped=false;
   const listeners=new Set();
-  const {data:{subscription}}=client.auth.onAuthStateChange(()=>{generation++; for(const fn of listeners)fn();});
+  const authOwner=observeAuthOwner(client,()=>{generation++; for(const fn of listeners)fn();});
   async function call(name,args={}) {
     if(stopped || !online()) throw Error('Connect to the internet to use Admin Studio.');
     const start=generation;
     const user=await client.auth.getUser();
     if(start!==generation || stopped) throw Error('Account changed. Reload Admin Studio.');
     if(user.error || !user.data?.user?.id) throw Error('Sign in with the administrator account.');
+    authOwner.verified(user.data.user.id);
     const result=await client.rpc(name,args);
     if(start!==generation || stopped) throw Error('Account changed. Reload Admin Studio.');
     if(result.error) {
@@ -26,7 +28,7 @@ export function createAdminAPI({client, enabled=false, online=()=>navigator.onLi
     register:(email,name)=>call('cp_admin_register',{login_email:email,learner_name:name}),
     save:(draft)=>call('cp_admin_save',{target:draft.user_id,expected_revision:draft.revision,learner_name:draft.display_name,new_status:draft.status,allowed_sections:draft.allowed}),
     onInvalidate(fn){listeners.add(fn);return ()=>listeners.delete(fn);},
-    dispose(){stopped=true;generation++;subscription.unsubscribe();listeners.clear();}
+    dispose(){stopped=true;generation++;authOwner.dispose();listeners.clear();}
   };
 }
 // Pure preview of the current explicit leaf model; not an authorization substitute.

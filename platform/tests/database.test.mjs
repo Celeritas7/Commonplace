@@ -2,6 +2,9 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile, readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
+import {progressIdentity} from '../content/contracts.mjs';
+import {longLesson} from './fixtures/long-lesson.mjs';
+import {createAccountStore} from '../lib/account-store.mjs';
 const owner='10000000-0000-4000-8000-000000000001', a='10000000-0000-4000-8000-000000000002', b='10000000-0000-4000-8000-000000000003', unverified='10000000-0000-4000-8000-000000000004';
 test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted calls)', async t => {
  const db=new PGlite();
@@ -72,6 +75,20 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
   await denied(a,`update public.cp_study_state set user_id='${b}'`);
   assert.equal(await scalar(a,'select count(*)::int n from public.cp_memberships'),1);
   assert.equal(await scalar(a,'select count(*)::int n from public.cp_audit'),0);
+ });
+ await t.test('maximum valid lesson identity round-trips through account storage and authorized SQL',async()=>{
+  const f=longLesson(),id=await progressIdentity(f.assignment,f.bundle,f.activityId),values=new Map();
+  const storage={get length(){return values.size;},key:i=>[...values.keys()][i],getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};
+  const store=createAccountStore(storage,'test');store.switchAccount(a);
+  const record={section:'office.excel',kind:'progress',id,value:{done:true}};store.put(store.ticket(),record);
+  assert.deepEqual(store.list(store.ticket()),[record]);
+  await as(a,'select 1');
+  await db.query("insert into cp_study_state(user_id,section_id,record_id,kind,value) values($1,'office.excel',$2,'progress',$3)",[a,id,JSON.stringify(record.value)]);
+  const saved=await db.query('select record_id,value from cp_study_state where record_id=$1',[id]);
+  assert.deepEqual(saved.rows,[{record_id:id,value:{done:true}}]);
+  await as(b,'select 1');assert.equal((await db.query('select * from cp_study_state where record_id=$1',[id])).rows.length,0);
+  await assert.rejects(()=>db.query("insert into cp_study_state(user_id,section_id,record_id,kind,value) values($1,'office.excel',$2,'progress','{}')",[a,id]),e=>e.code==='42501');
+  await as(a,'select 1');await db.query('delete from cp_study_state where record_id=$1',[id]);
  });
  await t.test('deny and revoked/suspended memberships take effect with the same identity token',async()=>{
   await as(owner,`select public.cp_set_section_grant('${a}','office.excel','deny')`);

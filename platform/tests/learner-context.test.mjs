@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createLearnerContext} from '../lib/learner-context.mjs';
+import {createAccountStore} from '../lib/account-store.mjs';
 const uid='10000000-0000-4000-8000-000000000001';
 function fixture() {
  let event,account=null;
@@ -9,8 +10,9 @@ function fixture() {
  async getUser(){if(f.hold)await f.hold;return {data:{user:{id:f.user}},error:f.error};}},
  from(table){return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{user_id:uid,role:'learner',status:f.status,display_name:'Learner'}};},
  async order(){return {data:[{id:'office',kind:'hub'},{id:'office.excel',kind:'section'}]};}};}};
- const store={switchAccount(user){account=user;},ticket(){return {owner:account};}};
- f.context=createLearnerContext({enabled:true,client,store});f.event=()=>event();f.account=()=>account;return f;
+ const ownedStore=createAccountStore({},'test');
+ const store={switchAccount(user){account=user;ownedStore.switchAccount(user);},ticket(){return ownedStore.ticket();}};
+ f.context=createLearnerContext({enabled:true,client,store});f.event=(type='SIGNED_OUT',user=f.user)=>event(type,user?{user:{id:user}}:null);f.account=()=>account;return f;
 }
 test('adapter is disabled by default',()=>assert.throws(()=>createLearnerContext(),/not enabled/));
 test('verified active context chooses Excel-only landing without tokens',async()=>{
@@ -24,4 +26,15 @@ test('revoked account and verification failure never open account storage',async
 test('late identity response after auth event cannot re-open old account',async()=>{
  const f=fixture();let release;f.hold=new Promise(resolve=>release=resolve);const loading=f.context.refresh();f.event();release();
  await assert.rejects(()=>loading,/Account changed/);assert.equal(f.account(),null);
+});
+test('same-user refresh keeps the learner storage ticket; account switch and signout abort it',async()=>{
+ for(const [type,user] of [['SIGNED_IN','10000000-0000-4000-8000-000000000002'],['SIGNED_OUT',uid]]){
+  const f=fixture();const context=await f.context.refresh();f.event('TOKEN_REFRESHED');f.event('SIGNED_IN');
+  assert.equal(context.ticket.signal.aborted,false);assert.equal(f.account(),uid);
+  f.event(type,user);assert.equal(context.ticket.signal.aborted,true);assert.equal(f.account(),null);
+ }
+});
+test('initial session can arrive during learner verification without cancelling its context',async()=>{
+ const f=fixture();let done;f.hold=new Promise(r=>done=r);const pending=f.context.refresh();f.event('INITIAL_SESSION');done();
+ const context=await pending;assert.equal(context.userId,uid);assert.equal(context.ticket.signal.aborted,false);
 });

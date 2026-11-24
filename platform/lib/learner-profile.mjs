@@ -1,6 +1,6 @@
 import {validateProfile} from './learning-profile.mjs';
 // Shared adapter for future section integrations. The U1 context ticket is
-// invalidated on auth events. RLS is the actual permission boundary.
+// invalidated on account changes/signout. RLS is the permission boundary.
 export async function readLearnerProfile(client,context){
  const check=()=>{if(!context?.ticket||context.ticket.owner!==context.userId||context.ticket.signal.aborted)throw Error('Account changed.');};
  check();

@@ -45,10 +45,15 @@ export function composeLesson(input,capabilities){
  function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;}
  return freeze(bundle);
 }
-export function progressIdentity(assignment,bundle,activityId){
+export async function progressIdentity(assignment,bundle,activityId){
  const a=validateRecord(assignment),b=validateBundle(bundle);
  if(a.kind!=='assignment'||a.section_id!==b.lesson.section_id||!matches(b.lesson,a.lesson_ref)||!b.lesson.activities.some(x=>x.id===activityId))fail('Progress reference mismatch');
- return JSON.stringify(['cp-content-v1',a.section_id,a.id,a.version,b.lesson.id,b.lesson.version,b.concept.id,b.concept.version,b.scenario.id,b.scenario.version,b.dataset.id,b.dataset.version,activityId]);
+ const identity=JSON.stringify(['cp-content-v1',a.section_id,a.id,a.version,b.lesson.id,b.lesson.version,b.concept.id,b.concept.version,b.scenario.id,b.scenario.version,b.dataset.id,b.dataset.version,activityId]);
+ // Preserve existing short identities. Valid descriptive IDs can produce a
+ // tuple longer than U1's 160-character record key; hash that entire tuple.
+ if(identity.length<=160)return identity;
+ const digest=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(identity));
+ return 'cp-content-v1:sha256:'+Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
 }
 export function safeCSV(dataset){
  const d=validateRecord(dataset);if(d.kind!=='dataset')fail('Dataset required');
