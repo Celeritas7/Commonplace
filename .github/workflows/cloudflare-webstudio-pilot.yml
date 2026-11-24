@@ -7,6 +7,7 @@ on:
       - 'scripts/test-cloudflare-webstudio.cjs'
       - 'scripts/check-cloudflare-webstudio-live.cjs'
       - 'scripts/test-cloudflare-webstudio-live.cjs'
+      - 'scripts/test-cloudflare-webstudio-browser.cjs'
       - 'Coding/html_css_js_study/**'
       - '_lib/**'
       - 'extras.js'
@@ -19,6 +20,7 @@ on:
       - 'scripts/test-cloudflare-webstudio.cjs'
       - 'scripts/check-cloudflare-webstudio-live.cjs'
       - 'scripts/test-cloudflare-webstudio-live.cjs'
+      - 'scripts/test-cloudflare-webstudio-browser.cjs'
       - 'Coding/html_css_js_study/**'
       - '_lib/**'
       - 'extras.js'
@@ -32,6 +34,36 @@ on:
 permissions:
   contents: read
 jobs:
+  browser_pilot:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Playwright test runtime
+        run: npm install --prefix /tmp/web-studio-tests --no-save playwright@1.65.1
+      - name: Build pilot from exact source manifest
+        run: node scripts/build-cloudflare-webstudio.cjs
+      - name: Exercise staged login, verified download and cold offline browser reopen
+        run: node scripts/test-cloudflare-webstudio-browser.cjs
+        env:
+          NODE_PATH: /tmp/web-studio-tests/node_modules
+          BROWSER: ${{ matrix.browser }}
+      - name: Failure screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-pilot-${{ matrix.browser }}-failure
+          path: test-results/
+          if-no-files-found: ignore
   stage:
     runs-on: ubuntu-24.04
     timeout-minutes: 8
