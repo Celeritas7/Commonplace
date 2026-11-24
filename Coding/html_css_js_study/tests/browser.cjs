@@ -88,6 +88,9 @@ async function preserved() {
   const ctx = await context(); page = await ctx.newPage(); page.setDefaultTimeout(12000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(origin + SECTION); await page.locator('#wb-title').waitFor({ state: 'visible' });
+  const startup = await page.evaluate(() => ({state: window.WebStudioStartup?.state, reason: window.WebStudioStartup?.reason, asset: window.WebStudioStartup?.asset}));
+  assert.equal(startup.state, 'ready', 'the main app must acknowledge readiness before study interactions: ' + JSON.stringify(startup));
+  assert.equal(await page.locator('#wb-startup-recovery').isVisible(), false, 'healthy startup must never obscure lessons');
   assert.equal(await page.locator('#wb-title').textContent(), 'Give your page meaning.');
   assert.equal(await page.locator('.wb-toc [data-part]').count(), 9);
   await preserved();
@@ -100,6 +103,9 @@ async function preserved() {
   await starterPreview.locator('#counter').click();
   assert.equal(await starterPreview.locator('#counter').textContent(), 'Clicks: 1');
   await page.locator('#wb-return').click();
+  const afterPreviewBoot = await page.evaluate(() => ({state:window.WebStudioStartup?.state,reason:window.WebStudioStartup?.reason,asset:window.WebStudioStartup?.asset,hidden:document.getElementById('wb-startup-recovery')?.hidden}));
+  assert.equal(afterPreviewBoot.state, 'ready', 'preview must not change healthy startup status: '+JSON.stringify(afterPreviewBoot));
+  assert.equal(afterPreviewBoot.hidden, true, 'preview must not open recovery panel: '+JSON.stringify(afterPreviewBoot));
   console.log('PASS ' + engine + ': fresh sample starter renders its card and runs the click counter');
 
   await part(2); await page.locator('#wb-bookmark').click();
@@ -372,7 +378,18 @@ async function preserved() {
   await require('./sync-browser.cjs')({ context, origin, SECTION, KEY, untouched, engine, setPage: value => { page = value; } });
 })().catch(async error => {
   console.error(error);
-  if (page) { try { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-' + engine + '.png', fullPage: true }); } catch (_) {} }
+  if (page && !page.isClosed()) {
+    try {
+      const startup = await page.evaluate(() => {
+        const panel=document.getElementById('wb-startup-recovery');
+        return {url:location.pathname,state:window.WebStudioStartup?.state,reason:window.WebStudioStartup?.reason,asset:window.WebStudioStartup?.asset,
+         hidden:panel?.hidden,style:panel?getComputedStyle(panel).display:null,gate:document.documentElement.classList.contains('cp-locked'),
+         errors:document.getElementById('wb-startup-message')?.textContent};
+      });
+      console.error('Startup recovery fixture diagnostic:', JSON.stringify(startup));
+    } catch (_) {}
+    try { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-' + engine + '.png', fullPage: true }); } catch (_) {}
+  }
   process.exitCode = 1;
 }).finally(async () => {
   if (browser) await browser.close();

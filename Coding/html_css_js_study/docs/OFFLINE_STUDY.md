@@ -29,6 +29,16 @@ An interrupted download retains completed files. Reconnect and resume: completed
 
 Account synchronization is the existing v1.6 local-first implementation, described in [CLOUD_SYNC.md](CLOUD_SYNC.md). Downloads and shared highlights never upload as part of the account snapshot. Incoming synced work still waits for **Load synced work** so an open editor is not replaced while typing.
 
+## If the study interface does not start
+
+Web Studio v1.7.3 includes a **separate startup recovery screen**. Its inline watchdog starts before the lesson scripts load, and the learning application only reports startup success after the reading content, editor and Run preview control have initialized. This is **different from Ready offline**, which only means the required saved files passed their integrity checks. A verified download is not proof of a successful cold reopening on an iPad.
+
+If a required script fails, a learning dependency is unavailable, a startup exception occurs or startup stalls, an independent screen offers **Retry opening Web Studio**, **Repair offline setup** and **Open offline launcher**. These controls work even if `studio.js` never runs. The message gives a category and, when available, a safe filename; it never includes authentication callback parameters, personal study notes or code, raw error stacks, or access tokens. When the shared Commonplace sign-in gate is active, the gate remains visible and takes priority; it is never bypassed by recovery.
+
+If you see the recovery screen, first use Retry. If the issue persists, reconnect, open Repair offline setup in the **same Safari or installed Home Screen context**, and recheck the study pack. Do **not** clear website data, reinstall the app or delete downloaded files. If the recovery screen reports that the offline worker does not control this page, retry while connected before testing offline again. The worker diagnosis is informational: a registered worker and a verified pack do not automatically prove page control.
+
+The regression suites `tests/startup.cjs` and `tests/startup-browser.cjs` cover missing dependencies, main-script exceptions, stalled startup, redacted diagnostics, gate priority and preserved local data in Node/Chromium/WebKit. They are not physical iPad tests.
+
 ## Updates and repair
 
 The worker installs without downloading the study pack. After a complete pack has been saved, the worker **serves its verified static files immediately**, even when Wi-Fi appears connected but is unusable. It does not prefer HTTP 404, HTTP 503, wrong-MIME responses or partially downloaded candidate files over an intact saved revision. If a saved file is missing, the worker accepts a live replacement only if its bytes match the pinned file's SHA-256 digest; otherwise it displays an error requiring repair. Before any complete pack exists, a fresh connected visit uses the network, not individual candidate files.

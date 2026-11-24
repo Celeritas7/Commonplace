@@ -164,4 +164,6 @@
  if(!cloud){const status=$('#wb-sync-status'),button=$('#wb-sync-now');if(status){status.dataset.state='error';status.textContent='Account sync files could not load. Local saving is available. Reconnect and reload to retry.';}if(button){button.textContent='Reload sync files';button.onclick=()=>{if(!saveError)location.reload();};}}
  function cloudSnapshotAfterApply(){const record=window.WebStudioStore.exportData().records;return {version:1,study:JSON.parse(record.commonplace_web_studio_v1||'null'),legacy:JSON.parse(record.commonplace_wdb_v1||'null')};}
 
+ // Report success only after the learning and editor bootstrap has finished.
+ window.WebStudioStartup?.ready();
 })();

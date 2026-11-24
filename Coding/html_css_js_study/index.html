@@ -295,11 +295,124 @@ body{display:flex;flex-direction:column}
     <section data-screen="library" hidden><div class="wb-notes"><div class="wb-eyebrow">SAMPLE LEARNING BOOK</div><h2>Build one small webpage.</h2><p>Three short lessons to review the app: give a reading card its structure, style it, then make its button count.</p><p class="wb-small">Start with HTML, then CSS, then JavaScript. Each lesson has eight reading parts, editable practice, a prediction and one five-question check. Your saved place and edits stay when switching lessons.</p><details class="wb-sources"><summary>A quick way to review the app</summary><ol><li>Open HTML and read the walk-through. Bookmark a part and add a note in My notes.</li><li>Open practice, change the heading and run the preview. Return to the lesson.</li><li>Finish Before you go: answer the check and mark the lesson read.</li><li>Continue with CSS spacing, then JavaScript: add two per click and check for Clicks: 4 after two clicks.</li><li>Reload while connected and check that your note, edits and reading mark remain.</li></ol><p>These samples run without external services. Use Study offline to download and verify all required files before disconnecting.</p></details><div id="wb-library-list"></div><button id="wb-show-course">Open original course index →</button><p class="wb-small" style="margin-top:20px">Continue with your original 35-section course index, existing notes, stars and linked study books below.</p></div></section>
    </main>
   </div>
-  <footer><span>COMMONPLACE / WEB STUDIO</span><span>Version 1.7.2 · offline study + account sync</span></footer>
+  <footer><span>COMMONPLACE / WEB STUDIO</span><span>Version 1.7.3 · offline startup recovery</span></footer>
  </div>
 </div>
 <button type="button" id="legacy-export" hidden>Export this section’s study backup</button>
 <button type="button" id="return-studio" hidden>← Back to Web Studio</button>
+<!-- This recovery panel and watchdog deliberately do not require studio.js,
+     offline.js, the editor, or the regular Web Studio stylesheet. -->
+<section id="wb-startup-recovery" role="alert" aria-labelledby="wb-startup-title" hidden>
+ <div class="wb-startup-card">
+  <p class="wb-startup-eyebrow">COMMONPLACE / WEB STUDIO</p>
+  <h1 id="wb-startup-title" tabindex="-1">Web Studio could not start</h1>
+  <p id="wb-startup-message">The study interface did not finish loading.</p>
+  <p id="wb-startup-detail"></p>
+  <p>Your saved code, notes, bookmarks and downloaded files have not been reset. A verified download does not guarantee that the lesson interface started.</p>
+  <div class="wb-startup-actions">
+   <button type="button" id="wb-startup-retry">Retry opening Web Studio</button>
+   <a href="offline-repair.html">Repair offline setup</a>
+   <a href="offline.html">Open offline launcher</a>
+  </div>
+  <p class="wb-startup-small">If Commonplace is asking you to sign in, finish that while connected first. Repair does not clear website data.</p>
+ </div>
+</section>
+<style>
+ #wb-startup-recovery[hidden]{display:none!important}
+ #wb-startup-recovery{position:fixed;inset:0;z-index:100000;overflow:auto;box-sizing:border-box;background:#f3f3ef;color:#25343b;padding:6vh 18px;font:16px/1.55 system-ui,sans-serif}
+ #wb-startup-recovery *{box-sizing:border-box}
+ #wb-startup-recovery .wb-startup-card{max-width:550px;margin:0 auto;background:white;border:1px solid #bccac1;border-radius:12px;padding:clamp(18px,4vw,30px)}
+ #wb-startup-recovery .wb-startup-eyebrow{font:600 11px/1.5 system-ui,sans-serif;letter-spacing:1.3px;color:#315c51}
+ #wb-startup-recovery h1{font:600 29px/1.2 Georgia,serif;margin:12px 0}
+ #wb-startup-recovery .wb-startup-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+ #wb-startup-recovery button,#wb-startup-recovery a{min-height:44px;display:inline-flex;align-items:center;padding:10px 13px;border-radius:6px;border:1px solid #315c51;font:600 13px/1.4 system-ui,sans-serif;color:#315c51;background:transparent;text-decoration:none;cursor:pointer}
+ #wb-startup-recovery button{color:white;background:#315c51}
+ #wb-startup-recovery :is(button,a):focus-visible{outline:3px solid #ad813b;outline-offset:3px}
+ #wb-startup-recovery .wb-startup-small,#wb-startup-detail{font-size:13px;color:#56675e}
+ @media(prefers-color-scheme:dark){#wb-startup-recovery{background:#151d24;color:#e1e9ec}#wb-startup-recovery .wb-startup-card{background:#222d32;border-color:#657b72}#wb-startup-recovery a{color:#a9d4bc}#wb-startup-recovery .wb-startup-small,#wb-startup-detail{color:#b6c5bf}}
+</style>
+<script id="wb-startup-watchdog">
+(() => {
+ 'use strict';
+ const panel=document.getElementById('wb-startup-recovery');
+ const message=document.getElementById('wb-startup-message');
+ const detail=document.getElementById('wb-startup-detail');
+ const heading=document.getElementById('wb-startup-title');
+ const root=document.documentElement;
+ const essential=new Set(['studio-store.js','studio-lessons.js','vendor/acorn.js','acorn.js','studio-preview.js','studio-exercises.js','studio-practice.js','studio-projects.js','studio-project-ui.js','studio.js']);
+ const messages={
+  asset:'A required learning script did not load.',
+  dependency:'A required learning component was unavailable.',
+  exception:'The learning interface stopped during startup.',
+  incomplete:'The learning interface did not finish initializing.',
+  timeout:'The learning interface did not finish loading in time.'
+ };
+ function safeAsset(value){
+  if(typeof value!=='string')return '';
+  const base=location.origin+location.pathname.slice(0,location.pathname.lastIndexOf('/')+1);
+  if(!value.startsWith(base))return '';
+  const name=value.slice(base.length).split(/[?#]/,1)[0].split('/').pop();
+  return /^[A-Za-z0-9._-]{1,64}$/.test(name)?name:'';
+ }
+ const gateLocked=()=>root.classList.contains('cp-locked');
+ function show(){
+  if(boot.state!=='failed')return;
+  const wasHidden=panel.hidden;
+  panel.hidden=gateLocked();
+  if(wasHidden&&!panel.hidden)heading.focus({preventScroll:true});
+ }
+ const boot=window.WebStudioStartup={
+  state:'starting',reason:null,asset:null,timer:null,
+  fail(reason,asset){
+   if(this.state!=='starting')return;
+   this.state='failed';this.reason=messages[reason]?reason:'exception';
+   this.asset=typeof asset==='string'&&/^[A-Za-z0-9._-]{1,64}$/.test(asset)?asset:null;
+   clearTimeout(this.timer);
+   message.textContent=messages[this.reason];
+   const worker=navigator.serviceWorker&&navigator.serviceWorker.controller?
+    'An offline worker controls this page.':'The offline worker is not controlling this page.';
+   detail.textContent=(this.asset?'Affected file: '+this.asset+'. ':'')+worker;
+   document.body.dataset.webStudioStartup='failed';
+   show();
+  },
+  ready(){
+   if(this.state!=='starting')return;
+   const learning=document.getElementById('web-book');
+   const editor=document.getElementById('wb-editor');
+   const run=document.getElementById('wb-run');
+   // On the quiz/notes screen the reading prose may legitimately be empty.
+   // Confirm the real initialized navigation and editor handlers instead.
+   if(!learning||!learning.dataset.view||!editor||typeof editor.oninput!=='function'||!run||typeof run.onclick!=='function'){
+    this.fail('incomplete');return;
+   }
+   this.state='ready';clearTimeout(this.timer);
+   document.body.dataset.webStudioStartup='ready';
+  },
+  checkDependencies(){
+   const required=[
+    ['WebStudioLessons','chapters','studio-lessons.js'],
+    ['WebStudioStore','load','studio-store.js'],
+    ['WebStudioPreview','create','studio-preview.js']
+   ];
+   for(const [global,field,file] of required){
+    if(!window[global]||!window[global][field]){this.fail('dependency',file);return false;}
+   }
+   return true;
+  }
+ };
+ document.getElementById('wb-startup-retry').onclick=()=>location.reload();
+ window.addEventListener('error',event=>{
+  if(boot.state!=='starting')return;
+  if(event.target&&event.target.tagName==='SCRIPT'){
+   const name=safeAsset(event.target.src);
+   if(essential.has(name))boot.fail('asset',name);
+  }else if(event.filename||event.error)boot.fail('exception');
+ },true);
+ window.addEventListener('unhandledrejection',()=>{if(boot.state==='starting')boot.fail('exception');});
+ if(typeof MutationObserver==='function')new MutationObserver(show).observe(root,{attributes:true,attributeFilter:['class']});
+ boot.timer=setTimeout(()=>boot.fail('timeout'),15000);
+})();
+</script>
 <script src="data/course-index.js"></script>
 <script src="legacy-tracker.js"></script>
 <script>window.CP_QUIZ_OFF=true;window.CP_AUTOSCROLL_OFF=true;</script>
@@ -314,7 +427,8 @@ body{display:flex;flex-direction:column}
 <script src="studio-sync-merge.js?v=1.7"></script>
 <script src="studio-sync.js?v=1.7"></script>
 <script src="studio-cloud.js?v=1.7"></script>
-<script src="studio.js?v=1.7.2"></script>
+<script>window.WebStudioStartup.checkDependencies();</script>
+<script src="studio.js?v=1.7.3" onerror="window.WebStudioStartup.fail('asset','studio.js')"></script>
 <script id="wb-offline-watchdog">
 /* Starts before the external module request, including when its body stalls. */
 (()=>{const boot=window.WebStudioOfflineBoot={started:false,ready:false};
