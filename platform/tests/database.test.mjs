@@ -10,10 +10,10 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
  alter default privileges in schema public grant all on tables to anon,authenticated,service_role;
  alter default privileges in schema public grant all on sequences to anon,authenticated,service_role;
  alter default privileges grant execute on functions to anon,authenticated,service_role;
- create schema auth; create table auth.users(id uuid primary key, email_confirmed_at timestamptz);
+ create schema auth; create table auth.users(id uuid primary key, email_confirmed_at timestamptz, email text);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema public,auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated;
- insert into auth.users values('${owner}',now()),('${a}',now()),('${b}',now()),('${unverified}',null);`);
+ insert into auth.users values('${owner}',now(),'owner@example.invalid'),('${a}',now(),'a@example.invalid'),('${b}',now(),'b@example.invalid'),('${unverified}',null,'unverified@example.invalid');`);
  for (const file of (await readdir(new URL('../supabase/migrations/',import.meta.url))).sort()) await db.exec(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  const as=async(user,sql)=>{
   await db.exec('reset role');
@@ -100,6 +100,41 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
   assert.equal(await scalar(owner,'select count(*)::int n from public.cp_audit'),before);
   await denied(a,'truncate public.cp_study_state');
   await denied(owner,'truncate public.cp_memberships');
+ });
+ await t.test('U2 directory and email registration reject anonymous/learner callers',async()=>{
+  await denied(null,'select public.cp_admin_directory()');
+  await denied(a,'select public.cp_admin_directory()');
+  await denied(a,"select public.cp_admin_register('unknown@example.invalid','X')");
+  await denied(a,`select public.cp_admin_save('${a}',0,'X','active',array['coding.python'])`);
+  const result=await as(owner,'select public.cp_admin_directory() data');
+  assert.equal(result.rows[0].data.members.find(m=>m.user_id===a).email,'a@example.invalid');
+ });
+ await t.test('U2 registration binds one confirmed email to UUID and cannot reactivate existing membership',async()=>{
+  await denied(owner,"select public.cp_admin_register('unverified@example.invalid','New')",'22023');
+  await denied(owner,"select public.cp_admin_register('missing@example.invalid','New')",'22023');
+  await denied(owner,"select public.cp_admin_register('a@example.invalid','New')",'23505');
+  await db.exec('reset role');await db.exec(`update auth.users set email_confirmed_at=now() where id='${unverified}'`);
+  const result=await as(owner,"select public.cp_admin_register('  UNVERIFIED@example.invalid  ','New learner') id");
+  assert.equal(result.rows[0].id,unverified);
+  assert.equal((await as(unverified,'select status from public.cp_memberships')).rows[0].status,'suspended');
+  assert.equal(await scalar(unverified,'select count(*)::int n from public.cp_sections'),0);
+ });
+ await t.test('U2 save is atomic and stale revisions including U1 writes are rejected',async()=>{
+  const revision=async()=>String((await as(owner,`select access_revision from public.cp_memberships where user_id='${a}'`)).rows[0].access_revision);
+  let rev=await revision();
+  await as(owner,`select public.cp_admin_save('${a}',${rev},'Excel learner','active',array['office.excel'])`);
+  await denied(owner,`select public.cp_admin_save('${a}',${rev},'Stale','revoked',array[]::text[])`,'40001');
+  rev=await revision();
+  await denied(owner,`select public.cp_admin_save('${a}',${rev},'Bad','revoked',array['office'])`,'22023');
+  assert.equal(await revision(),rev);
+  assert.equal((await as(a,'select status from public.cp_memberships')).rows[0].status,'active');
+  await as(owner,`select public.cp_set_section_grant('${a}','coding.python','allow')`);
+  await denied(owner,`select public.cp_admin_save('${a}',${rev},'Old','active',array['office.excel'])`,'40001');
+  rev=await revision();await as(owner,`select public.cp_admin_save('${a}',${rev},'Excel learner','revoked',array['office.excel'])`);
+  assert.equal(await scalar(a,'select count(*)::int n from public.cp_sections'),0);
+  rev=await revision();await as(owner,`select public.cp_admin_save('${a}',${rev},'Excel learner','active',array['office.excel'])`);
+  assert.deepEqual((await as(a,'select id from public.cp_sections order by id')).rows.map(r=>r.id),['office','office.excel']);
+  await denied(owner,`select public.cp_admin_save('${owner}',0,'Owner','revoked',array[]::text[])`,'22023');
  });
  await t.test('audit records actor from session and failed operations leave no successful audit event',async()=>{
   const before=await scalar(owner,'select count(*)::int n from public.cp_audit');
