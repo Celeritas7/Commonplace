@@ -2,7 +2,7 @@
 
 Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open the [hosted app](https://celeritas7.github.io/Commonplace/Coding/html_css_js_study/index.html) through HTTPS; localhost is for development.
 
-The three-lesson sample app includes checked exercises, projects and backups, account sync, and verified offline downloads. **Phase 7 validation is in progress**: automated browser results and outstanding physical Android/iPad checks are recorded in [PHASE7_VALIDATION.md](docs/PHASE7_VALIDATION.md). The full learning book remains deferred.
+The three-lesson sample app includes checked exercises, projects and backups, account sync, and verified offline downloads. **Phase 5 physical iPad acceptance is pending**: follow the [current v1.7.4 acceptance checklist and deployment gate](docs/PHASE5_IPAD_ACCEPTANCE.md). The older [Phase 7 validation report](docs/PHASE7_VALIDATION.md) preserves the historical v1.7.1 checkpoint. The full learning book remains deferred.
 
 ## Start learning
 
