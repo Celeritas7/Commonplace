@@ -8,6 +8,7 @@ on:
       - 'scripts/check-cloudflare-webstudio-live.cjs'
       - 'scripts/test-cloudflare-webstudio-live.cjs'
       - 'scripts/test-cloudflare-webstudio-browser.cjs'
+      - 'scripts/smoke-cloudflare-webstudio-hosted.cjs'
       - 'Coding/html_css_js_study/**'
       - '_lib/**'
       - 'extras.js'
@@ -21,6 +22,7 @@ on:
       - 'scripts/check-cloudflare-webstudio-live.cjs'
       - 'scripts/test-cloudflare-webstudio-live.cjs'
       - 'scripts/test-cloudflare-webstudio-browser.cjs'
+      - 'scripts/smoke-cloudflare-webstudio-hosted.cjs'
       - 'Coding/html_css_js_study/**'
       - '_lib/**'
       - 'extras.js'
@@ -34,6 +36,32 @@ on:
 permissions:
   contents: read
 jobs:
+  live_browser_smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.staging_url != '' }}
+    needs: stage
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned browser test runtime
+        run: npm install --prefix /tmp/web-studio-tests --no-save playwright@1.65.1
+      - name: Recreate expected staging revision
+        run: node scripts/build-cloudflare-webstudio.cjs
+      - name: Live Pages signed-out worker and offline cold-start smoke
+        run: node scripts/smoke-cloudflare-webstudio-hosted.cjs
+        env:
+          NODE_PATH: /tmp/web-studio-tests/node_modules
+          BROWSER: ${{ matrix.browser }}
+          CLOUDFLARE_STAGING_URL: ${{ inputs.staging_url }}
   browser_pilot:
     runs-on: ubuntu-24.04
     container:
@@ -82,6 +110,8 @@ jobs:
         run: node scripts/test-cloudflare-webstudio.cjs
       - name: Validate safe live URL and staged-manifest checking rules
         run: node scripts/test-cloudflare-webstudio-live.cjs
+      - name: Verify hosted-browser test script syntax without contacting a live site
+        run: node --check scripts/smoke-cloudflare-webstudio-hosted.cjs
       - name: Read-only verification against an explicitly selected Pages pilot
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.staging_url != '' }}
         env:
