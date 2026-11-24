@@ -1,3 +1,4 @@
+import {mountPromptStudio} from './prompt-studio.mjs';
 import {mountProfileEditor} from './profile-editor.mjs';
 import {accessPreview,descendants} from './api.mjs';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -13,7 +14,7 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
  const message=(text,error=false)=>{notice.textContent=text;notice.className=error?'notice error':'notice';};
  function invalidate(){clearProfile();epoch++;data=null;draft=null;dirty=false;blocked=true;busy=false;root.querySelector('#reload').disabled=false;workspace.replaceChildren();message('Account changed. Reload to verify administrator access.',true);}
  const unsubscribe=api.onInvalidate(invalidate);
- function lock(){for(const n of workspace.querySelectorAll('button,input,textarea,select,fieldset'))n.disabled=busy;root.querySelector('#reload').disabled=busy;const save=workspace.querySelector('#save');if(save)save.disabled=busy||blocked;}
+ function lock(){for(const panel of workspace.querySelectorAll('[data-managed-editor]'))panel.inert=busy;for(const n of workspace.querySelectorAll('button,input,textarea,select,fieldset'))if(!n.closest('[data-managed-editor]'))n.disabled=busy;root.querySelector('#reload').disabled=busy;const save=workspace.querySelector('#save');if(save)save.disabled=busy||blocked;}
  async function load(){
   clearProfile();const request=++epoch;busy=true;lock();workspace.replaceChildren();draft=null;dirty=false;
   message('Verifying administrator access…');
@@ -55,10 +56,14 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
   editor.append(el('p','ACCOUNT & ACCESS','eyebrow'),el('h2',draft.display_name||'Unnamed learner'),el('p',draft.email||'No login email','muted'));
   if(draft.role==='administrator'){editor.append(el('p','Designated administrator','badge'),el('p','This account manages Commonplace. Its role and access cannot be changed here.'));return;}
   const tabs=el('div',undefined,'profile-toolbar');
-  for(const [mode,label] of [['access','Study access'],['profile','Professional profile']]){const button=el('button',label,mode===editorMode?'':'secondary');button.type='button';button.setAttribute('aria-pressed',String(mode===editorMode));button.onclick=()=>{if(busy)return;if((dirty||profileDirty)&&!window.confirm('Discard unsaved changes and switch views?'))return;dirty=false;draft=structuredClone(data.members.find(m=>m.user_id===selected));editorMode=mode;renderEditor();};tabs.append(button);}editor.append(tabs);
+  for(const [mode,label] of [['access','Study access'],['profile','Professional profile'],['prompts','Tutorial prompts']]){const button=el('button',label,mode===editorMode?'':'secondary');button.type='button';button.setAttribute('aria-pressed',String(mode===editorMode));button.onclick=()=>{if(busy)return;if((dirty||profileDirty)&&!window.confirm('Discard unsaved changes and switch views?'))return;dirty=false;draft=structuredClone(data.members.find(m=>m.user_id===selected));editorMode=mode;renderEditor();};tabs.append(button);}editor.append(tabs);
   if(editorMode==='profile'){
-   const panel=el('div');editor.append(panel);
+   const panel=el('div');panel.dataset.managedEditor='';editor.append(panel);
    disposeProfile=mountProfileEditor(panel,api,draft.user_id,{onDirty:value=>{profileDirty=value;},onBusy:value=>{busy=value;lock();},onDenied:invalidate});return;
+  }
+  if(editorMode==='prompts'){
+   const panel=el('div');panel.dataset.managedEditor='';editor.append(panel);
+   disposeProfile=mountPromptStudio(panel,api,draft,data.sections,{onDirty:value=>{profileDirty=value;},onBusy:value=>{busy=value;lock();},onDenied:invalidate});return;
   }
   const form=el('form');const fields=el('fieldset');fields.append(el('legend','Learner details'));
   const nameLabel=el('label','Display name'),name=el('input');name.value=draft.display_name;name.required=true;name.maxLength=120;nameLabel.append(name);
