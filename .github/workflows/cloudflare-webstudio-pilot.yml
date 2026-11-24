@@ -1,0 +1,47 @@
+name: Build isolated Cloudflare Web Studio staging pilot
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cloudflare-webstudio-pilot.yml'
+      - 'scripts/build-cloudflare-webstudio.cjs'
+      - 'scripts/test-cloudflare-webstudio.cjs'
+      - 'Coding/html_css_js_study/**'
+      - '_lib/**'
+      - 'extras.js'
+      - '.gitignore'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-webstudio-pilot.yml'
+      - 'scripts/build-cloudflare-webstudio.cjs'
+      - 'scripts/test-cloudflare-webstudio.cjs'
+      - 'Coding/html_css_js_study/**'
+      - '_lib/**'
+      - 'extras.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify original Web Studio manifest before staging
+        run: |
+          python3 Coding/html_css_js_study/tools/build-offline.py --check
+          python3 Coding/html_css_js_study/tests/offline-manifest.py
+      - name: Build exact Pages upload directory
+        run: node scripts/build-cloudflare-webstudio.cjs
+      - name: Verify staging paths, hashes and local-only sync
+        run: node scripts/test-cloudflare-webstudio.cjs
+      - name: Package non-production staging artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: commonplace-webstudio-cloudflare-pilot
+          path: dist-cloudflare/
+          if-no-files-found: error
+          retention-days: 7
