@@ -78,8 +78,15 @@ physical iPad/Safari acceptance.
 
 ## Next checkpoint
 
-Select the disposable staging backend and canonical origin, then complete the
-hosted matrix and backup scope together. The separate-project direction remains
+PR #90 is merged. The follow-on checkpoint adds
+[disposable full Supabase integration](../../platform/acceptance/LOCAL-STACK.md)
+on a GitHub runner, using real local Auth/REST/Storage/Edge services and signed
+user tokens. It requires its own successful CI result; the historical results
+above do not establish that new checkpoint. It provisions no cloud resource and
+keeps `deployment = null` and all five migrations unchanged.
+
+After that, select the disposable hosted staging backend and canonical origin,
+then complete the hosted matrix and backup scope together. The separate-project direction remains
 the U0 recommendation; no project purchase is authorized by this report. Physical
 offline UI testing can begin with the explicitly synthetic sample, but real Google
 login, permissions and cross-device sync require staging. After hosted/device and

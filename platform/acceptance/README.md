@@ -4,6 +4,9 @@ U9 has two kinds of evidence: repeatable tests of this repository, and acceptanc
 of the actual hosted deployment and physical devices. Passing one does not imply
 the other. The live entry remains `deployment = null`. See the current
 [readiness assessment](../../docs/admin-platform/U9-READINESS.md).
+The next U9 checkpoint adds [disposable full Supabase integration](LOCAL-STACK.md)
+with real local Auth, PostgreSQL, REST, Storage and Edge services. It does not
+provision a hosted staging project or replace the hosted/device gates below.
 
 ## Repeat the automated checks
 
@@ -95,8 +98,9 @@ running this repository's tests.
 
 Record request class, role label, expected/actual outcome and time. Never record
 Authorization headers, JWTs, learner emails, personal notes or signing keys in
-public reports. Store private evidence separately. No blanket migration, owner
-creation, test account creation or hosted request runner is triggered by CI.
+public reports. Store private evidence separately. CI creates synthetic users and
+applies migrations only inside its fresh disposable local stack. It never applies
+migrations, creates owners/users or sends acceptance requests to a hosted project.
 
 ## Physical iPad / Android acceptance
 

@@ -1,0 +1,30 @@
+name: Admin platform local Supabase
+on:
+  pull_request:
+    paths: ['platform/**', '.github/workflows/admin-platform-integration.yml']
+  push:
+    branches: [main]
+    paths: ['platform/**', '.github/workflows/admin-platform-integration.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-supabase-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13 # v3
+        with:
+          version: 3.3.0
+      - run: npm ci --ignore-scripts
+        working-directory: platform
+      # All credentials and synthetic fixtures belong to a fresh runner-local stack.
+      # No GitHub secrets, Supabase access token, remote ref or deployment is used.
+      - run: npm run test:stack
+        working-directory: platform
