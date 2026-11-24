@@ -92,3 +92,7 @@ The [central material library](materials/README.md) adds validated imports, draf
 ## U7 follow-on
 
 The [authorized learner workspace](learn/README.md) now connects Excel to central profiles, published assignments and protected downloads. It reuses the existing Excel Ribbon and supported SUM model, with versioned account-specific local progress, notes and bookmarks. Review `/platform/learn/preview.html`; live activation remains disabled. Existing personal lessons/offline packs are unchanged, and assigned offline study/cloud sync remain U8 work.
+
+## U8 follow-on
+
+[Authorized offline study and synchronization](offline/README.md) adds signed, expiring per-owner packs, resumable verified downloads, a separate public application worker and transactional progress with server revision checks. Review `/platform/learn/offline-preview.html`. Conflicts retain both versions; backups can be restored without replacing newer work. Activation remains disabled, and the migration, signing-key/origin policy and hosted/device acceptance are documented prerequisites for U9.

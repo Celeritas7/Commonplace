@@ -54,3 +54,7 @@ Automated coverage includes strict catalogue/file manifests, SUM capability boun
 Before activation, retain the U0/U1/U6 backup/restore and isolated-backend/origin gates. Test this exact client with real A/B/admin/revoked JWTs and the private Storage service, including permissions changed in another tab, downloads interrupted by revocation, expired sessions, account switching and iPad Home Screen Google callbacks. Verify the configured deployment namespace stays stable. Test actual XLSX/PDF downloads and foreground/back-forward lifecycle on physical iPad/Safari and Android. U8 must implement and validate owned offline packs, cross-tab coordination and conflict-safe cloud sync before offering assigned study offline.
 
 Rollback before activation: revert the code. After an approved pilot, disable the deployment boundary/route and retain the new study records, material versions, assignments and files. No table drops, token copying or clearing devices is required.
+
+## U8 follow-on
+
+The [offline and synchronization adapter](../offline/README.md) now extends this host when explicitly enabled in deployment configuration. It adds signed saved packs, offline reopening, account-scoped IndexedDB progress, CAS synchronization, conflicts and backup recovery. The original U7 preview remains an in-memory online example; use `offline-preview.html` to review U8 with synthetic persistent data. Live activation remains disabled.
