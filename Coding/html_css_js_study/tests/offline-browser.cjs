@@ -359,7 +359,13 @@ function revise(files) {
   assert(!requests.slice(updateResumeStart).includes(BASE + 'studio.css'), 'resume re-downloaded the already verified changed CSS');
   const stillOldCSS = await page.evaluate(async base => (await fetch(base + 'studio.css?after-update-before-reload')).text(), BASE);
   assert.equal(hash(stillOldCSS), hash(oldCSS), 'already-open document must remain pinned to the previous complete revision');
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await openPanel();
+  await page.locator('#wb-offline-check').click();
+  await textHas('#wb-offline-status', /Updated pack verified.*reload/);
+  await page.waitForFunction(() => document.getElementById('wb-reload')?.disabled === false);
+  assert.match(await page.locator('#wb-offline-revision').textContent(), /this page uses an older revision/i);
+  await page.locator('#wb-offline .wb-offline-instructions').last().evaluate(element => { element.open = true; });
+  await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded' }), page.locator('#wb-reload').click()]);
   await page.locator('#wb-save-status').waitFor({ state: 'visible' });
   await readyController();
   const switchedCSS = await page.evaluate(async base => (await fetch(base + 'studio.css?after-safe-reload')).text(), BASE);
