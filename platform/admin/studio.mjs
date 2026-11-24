@@ -1,26 +1,29 @@
+import {mountProfileEditor} from './profile-editor.mjs';
 import {accessPreview,descendants} from './api.mjs';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 export function mountAdminStudio(root,api,{preview=false}={}) {
  let data=null,draft=null,selected=null,busy=false,dirty=false,blocked=false,epoch=0,disposed=false;
+ let editorMode='access',profileDirty=false,disposeProfile=null;
+ function clearProfile(){const cleanup=disposeProfile;disposeProfile=null;cleanup?.();profileDirty=false;}
  root.innerHTML=`<header class="masthead"><a class="brand" href="../index.html">C<span>COMMONPLACE</span></a><span class="mode"></span></header>
  <main><div class="heading"><div><p class="eyebrow">CENTRAL ADMINISTRATION</p><h1>Admin Studio</h1><p class="intro">Give each learner a focused place to study.</p></div><button id="reload" class="secondary">Reload access</button></div>
  <p id="notice" role="status" aria-live="polite"></p><div id="workspace"></div></main>`;
  root.querySelector('.mode').textContent=preview?'PREVIEW · NOTHING IS SAVED':'ADMINISTRATOR · ONLINE ONLY';
  const workspace=root.querySelector('#workspace'),notice=root.querySelector('#notice');
  const message=(text,error=false)=>{notice.textContent=text;notice.className=error?'notice error':'notice';};
- function invalidate(){epoch++;data=null;draft=null;dirty=false;blocked=true;busy=false;root.querySelector('#reload').disabled=false;workspace.replaceChildren();message('Account changed. Reload to verify administrator access.',true);}
+ function invalidate(){clearProfile();epoch++;data=null;draft=null;dirty=false;blocked=true;busy=false;root.querySelector('#reload').disabled=false;workspace.replaceChildren();message('Account changed. Reload to verify administrator access.',true);}
  const unsubscribe=api.onInvalidate(invalidate);
- function lock(){for(const n of workspace.querySelectorAll('button,input,select,fieldset'))n.disabled=busy;root.querySelector('#reload').disabled=busy;const save=workspace.querySelector('#save');if(save)save.disabled=busy||blocked;}
+ function lock(){for(const n of workspace.querySelectorAll('button,input,textarea,select,fieldset'))n.disabled=busy;root.querySelector('#reload').disabled=busy;const save=workspace.querySelector('#save');if(save)save.disabled=busy||blocked;}
  async function load(){
-  const request=++epoch;busy=true;lock();workspace.replaceChildren();draft=null;dirty=false;
+  clearProfile();const request=++epoch;busy=true;lock();workspace.replaceChildren();draft=null;dirty=false;
   message('Verifying administrator access…');
   try {const result=await api.load();if(disposed||request!==epoch)return;data=result;blocked=false;message(preview?'Preview uses sample records in memory. It does not contact Supabase.':'Administrator access verified. Changes take effect when you save.');render();return true;}
   catch(error){if(request===epoch){data=null;workspace.replaceChildren();message(error.message,true);}}
   finally{if(request===epoch){busy=false;lock();}}
  }
  function choose(member){
-  if(dirty&&!window.confirm('Discard your unsaved changes?'))return;
-  selected=member.user_id;draft=structuredClone(member);dirty=false;blocked=false;renderEditor();
+  if((dirty||profileDirty)&&!window.confirm('Discard your unsaved changes?'))return;
+  clearProfile();selected=member.user_id;draft=structuredClone(member);dirty=false;blocked=false;renderEditor();
   for(const row of workspace.querySelectorAll('[data-user]'))row.classList.toggle('selected',row.dataset.user===selected);
  }
  function render(){
@@ -37,7 +40,7 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
   const emailLabel=el('label','Login email'),email=el('input');email.type='email';email.required=true;email.maxLength=320;email.autocomplete='off';emailLabel.append(email);
   const nameLabel=el('label','Display name'),name=el('input');name.required=true;name.maxLength=120;nameLabel.append(name);
   const add=el('button','Register learner','secondary');add.type='submit';form.append(emailLabel,nameLabel,add);side.append(form);
-  form.onsubmit=async event=>{event.preventDefault();if(busy)return;if(dirty&&!window.confirm('Discard unsaved changes before registering another learner?'))return;busy=true;lock();const request=epoch;
+  form.onsubmit=async event=>{event.preventDefault();if(busy)return;if((dirty||profileDirty)&&!window.confirm('Discard unsaved changes before registering another learner?'))return;busy=true;lock();const request=epoch;
    try{const id=await api.register(email.value.trim(),name.value.trim());if(disposed||request!==epoch)return;selected=id;await load();const member=data?.members.find(m=>m.user_id===id);if(member)choose(member);}
    catch(error){if(request===epoch){message(error.message,true);if(error.code==='42501')invalidate();}}
    finally{if(request===epoch){busy=false;lock();}}
@@ -47,10 +50,16 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
   lock();
  }
  function renderEditor(){
-  const editor=workspace.querySelector('.editor');editor.replaceChildren();
+  clearProfile();const editor=workspace.querySelector('.editor');editor.replaceChildren();
   if(!draft)return;
   editor.append(el('p','ACCOUNT & ACCESS','eyebrow'),el('h2',draft.display_name||'Unnamed learner'),el('p',draft.email||'No login email','muted'));
   if(draft.role==='administrator'){editor.append(el('p','Designated administrator','badge'),el('p','This account manages Commonplace. Its role and access cannot be changed here.'));return;}
+  const tabs=el('div',undefined,'profile-toolbar');
+  for(const [mode,label] of [['access','Study access'],['profile','Professional profile']]){const button=el('button',label,mode===editorMode?'':'secondary');button.type='button';button.setAttribute('aria-pressed',String(mode===editorMode));button.onclick=()=>{if(busy)return;if((dirty||profileDirty)&&!window.confirm('Discard unsaved changes and switch views?'))return;dirty=false;draft=structuredClone(data.members.find(m=>m.user_id===selected));editorMode=mode;renderEditor();};tabs.append(button);}editor.append(tabs);
+  if(editorMode==='profile'){
+   const panel=el('div');editor.append(panel);
+   disposeProfile=mountProfileEditor(panel,api,draft.user_id,{onDirty:value=>{profileDirty=value;},onBusy:value=>{busy=value;lock();},onDenied:invalidate});return;
+  }
   const form=el('form');const fields=el('fieldset');fields.append(el('legend','Learner details'));
   const nameLabel=el('label','Display name'),name=el('input');name.value=draft.display_name;name.required=true;name.maxLength=120;nameLabel.append(name);
   const statusLabel=el('label','Account status'),status=el('select');for(const value of ['active','suspended','revoked']){const option=el('option',value[0].toUpperCase()+value.slice(1));option.value=value;status.append(option);}status.value=draft.status;statusLabel.append(status);
@@ -78,10 +87,10 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
    finally{if(request===epoch){busy=false;lock();}}
   };lock();
  }
- root.querySelector('#reload').onclick=()=>{if(!dirty||window.confirm('Discard unsaved changes and reload saved access?'))load();};
- const beforeUnload=event=>{if(dirty){event.preventDefault();event.returnValue='';}};
+ root.querySelector('#reload').onclick=()=>{if(!(dirty||profileDirty)||window.confirm('Discard unsaved changes and reload saved access?'))load();};
+ const beforeUnload=event=>{if(dirty||profileDirty){event.preventDefault();event.returnValue='';}};
  const offline=()=>{invalidate();message('Admin Studio requires an internet connection. Reconnect, then reload.',true);};
  window.addEventListener('beforeunload',beforeUnload);window.addEventListener('offline',offline);
  load();
- return ()=>{disposed=true;epoch++;unsubscribe();api.dispose();window.removeEventListener('beforeunload',beforeUnload);window.removeEventListener('offline',offline);root.replaceChildren();};
+ return ()=>{disposed=true;clearProfile();epoch++;unsubscribe();api.dispose();window.removeEventListener('beforeunload',beforeUnload);window.removeEventListener('offline',offline);root.replaceChildren();};
 }
