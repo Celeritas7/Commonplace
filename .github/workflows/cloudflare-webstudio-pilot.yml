@@ -5,6 +5,8 @@ on:
       - '.github/workflows/cloudflare-webstudio-pilot.yml'
       - 'scripts/build-cloudflare-webstudio.cjs'
       - 'scripts/test-cloudflare-webstudio.cjs'
+      - 'scripts/check-cloudflare-webstudio-live.cjs'
+      - 'scripts/test-cloudflare-webstudio-live.cjs'
       - 'Coding/html_css_js_study/**'
       - '_lib/**'
       - 'extras.js'
@@ -15,10 +17,18 @@ on:
       - '.github/workflows/cloudflare-webstudio-pilot.yml'
       - 'scripts/build-cloudflare-webstudio.cjs'
       - 'scripts/test-cloudflare-webstudio.cjs'
+      - 'scripts/check-cloudflare-webstudio-live.cjs'
+      - 'scripts/test-cloudflare-webstudio-live.cjs'
       - 'Coding/html_css_js_study/**'
       - '_lib/**'
       - 'extras.js'
   workflow_dispatch:
+    inputs:
+      staging_url:
+        description: 'Optional HTTPS root of the *separate* Cloudflare Pages pilot (*.pages.dev). Leave blank to build only.'
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -38,6 +48,13 @@ jobs:
         run: node scripts/build-cloudflare-webstudio.cjs
       - name: Verify staging paths, hashes and local-only sync
         run: node scripts/test-cloudflare-webstudio.cjs
+      - name: Validate safe live URL and staged-manifest checking rules
+        run: node scripts/test-cloudflare-webstudio-live.cjs
+      - name: Read-only verification against an explicitly selected Pages pilot
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.staging_url != '' }}
+        env:
+          CLOUDFLARE_STAGING_URL: ${{ inputs.staging_url }}
+        run: node scripts/check-cloudflare-webstudio-live.cjs
       - name: Package non-production staging artifact
         uses: actions/upload-artifact@v4
         with:
