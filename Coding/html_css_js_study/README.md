@@ -1,4 +1,4 @@
-# Web Studio · Commonplace (v1.7.2)
+# Web Studio · Commonplace (v1.7.3)
 
 Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open the [hosted app](https://celeritas7.github.io/Commonplace/Coding/html_css_js_study/index.html) through HTTPS; localhost is for development.
 
@@ -47,6 +47,12 @@ On phones, chapter/view tabs use equal touch targets, the contents summary shows
 The workspace executes real HTML/CSS/DOM JavaScript in an iframe with `allow-scripts` and without `allow-same-origin`. The preview cannot read parent study or login storage. Put JavaScript in `script.js`; embedded HTML scripts/handlers, external assets/services, imports and dynamic eval/Function execution are blocked. Console messages and errors appear in the workspace.
 
 The bundled Acorn parser adds checks to loops/functions. Ordinary infinite loops and recursion stop with an execution error. Stop/re-run replaces the result. Extremely expensive native browser operations cannot be guaranteed preemptible: this is a learning workspace, not a hostile-code execution service.
+
+## Startup recovery (v1.7.3)
+
+The main lesson/editor startup now has a separate watchdog from **Study offline** download verification. A healthy initialization explicitly acknowledges rendered learning content and editor/preview controls. If a required script is missing, the app throws before initialization, or the startup stalls, a self-contained recovery panel provides Retry, Repair offline setup and the offline launcher even when `studio.js` is unavailable. It keeps the existing Commonplace sign-in gate in front of recovery and never displays raw exceptions, tokens, URLs or local study contents. No local records or caches are cleared.
+
+The recovery panel does not prove offline iPad acceptance. It only appears after the HTML shell itself has loaded. See [offline startup recovery](docs/OFFLINE_STUDY.md#if-the-study-interface-does-not-start) and run `tests/startup.cjs` plus `tests/startup-browser.cjs` alongside the existing workflow.
 
 ## Offline and updates
 
