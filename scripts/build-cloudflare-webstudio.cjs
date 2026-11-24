@@ -120,6 +120,18 @@ function build() {
     '</body></html>\n'
   ].join('\n');
   put('index.html', Buffer.from(landing, 'utf8'));
+  // Cloudflare Pages can otherwise serve the staging landing for unknown
+  // paths as an SPA fallback (HTTP 200). A real 404 is essential: don't make
+  // excluded admin/backend paths look like deployed application resources.
+  put('404.html', Buffer.from([
+    '<!doctype html><html lang="en"><head><meta charset="utf-8">',
+    '<meta name="robots" content="noindex,nofollow">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<title>Not found · Commonplace staging</title></head>',
+    '<body><main><h1>Not found</h1>',
+    '<p>This page is not part of the isolated Web Studio staging pilot.</p>',
+    '<a href="/">Back to staging landing</a></main></body></html>\n'
+  ].join(''), 'utf8'));
   put('robots.txt', Buffer.from('User-agent: *\nDisallow: /\n'));
   put('_headers', Buffer.from([
     '/*',
