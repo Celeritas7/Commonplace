@@ -11,6 +11,12 @@ const META_CACHE = 'cp-web-studio-offline-v1';
 const MANIFEST_URL = new URL('offline-assets.json', BASE).href;
 const CANDIDATE_KEY = new URL('__offline/candidate.json', BASE).href;
 const COMPLETE_KEY = new URL('__offline/complete.json', BASE).href;
+// Revision snapshots and document-to-revision pins live in Web Studio's own
+// metadata cache. They contain neither OAuth parameters nor study data.
+const REVISION_ROOT = new URL('__offline/revisions/', BASE).href;
+const CLIENT_ROOT = new URL('__offline/clients/', BASE).href;
+const revisionKey = revision => REVISION_ROOT + revision + '.json';
+const clientKey = id => CLIENT_ROOT + encodeURIComponent(id) + '.json';
 const STORAGE_MS = 4000;
 const NETWORK_MS = 6000;
 const DOWNLOAD_MS = 25000;
@@ -18,6 +24,7 @@ const DOWNLOAD_MS = 25000;
 // with an invisible, still-running download.
 const OPERATION_MS = 4 * 60 * 1000;
 let activeDownload = null;
+let completionQueue = Promise.resolve();
 
 function bounded(promise, milliseconds, message, onTimeout) {
   let timer;
@@ -110,9 +117,57 @@ async function writeManifest(key, manifest) {
   const cache = await storage(caches.open(META_CACHE));
   await storage(cache.put(key, new Response(JSON.stringify(manifest), { headers: { 'Content-Type': 'application/json' } })));
   const saved = await readManifest(key, true);
-  const label = key === COMPLETE_KEY ? 'complete' : 'candidate';
+  const label = key === COMPLETE_KEY ? 'complete' : key === CANDIDATE_KEY ? 'candidate' : 'revision';
   if (!saved) throw new Error('The ' + label + ' download list could not be read back after saving. Retry or repair offline setup.');
   if (saved.revision !== manifest.revision) throw new Error('The ' + label + ' download list changed during verification (' + manifest.revision.slice(0, 12) + ' to ' + saved.revision.slice(0, 12) + '). Another check may be running. Retry when it finishes.');
+}
+// Preserve both generations before publishing the new complete pointer. An
+// interrupted update must leave the old manifest and hashed files usable.
+function promoteComplete(manifest) {
+  const operation = completionQueue.then(async () => {
+    const old = await readManifest(COMPLETE_KEY, true);
+    if (old && old.revision !== manifest.revision) {
+      await writeManifest(revisionKey(old.revision), old);
+    }
+    await writeManifest(revisionKey(manifest.revision), manifest);
+    await writeManifest(COMPLETE_KEY, manifest);
+  });
+  completionQueue = operation.catch(() => {});
+  return operation;
+}
+async function pinnedRevision(id) {
+  if (!id) return null;
+  const cache = await storage(caches.open(META_CACHE));
+  const entry = await storage(cache.match(clientKey(id)));
+  if (!entry) return null;
+  const data = await storage(entry.json());
+  if (!data || !/^[a-f0-9]{64}$/.test(data.revision)) {
+    throw new Error('The saved page revision is invalid. Reopen Web Studio to retry.');
+  }
+  return data.revision;
+}
+async function pinRevision(id, revision) {
+  if (!id || !revision) return;
+  const cache = await storage(caches.open(META_CACHE));
+  await storage(cache.put(clientKey(id), new Response(JSON.stringify({ revision }), {
+    headers: { 'Content-Type': 'application/json' }
+  })));
+}
+// Navigation chooses a complete revision; subsequent requests from that
+// document continue to use it even after an update completes. Pins persist
+// across service-worker restarts. A new navigation selects the latest pack.
+async function manifestForClient(event) {
+  const complete = await readManifest(COMPLETE_KEY, true);
+  if (!complete) return null;
+  if (event.request.mode === 'navigate') {
+    await pinRevision(event.resultingClientId || event.clientId, complete.revision);
+    return complete;
+  }
+  const revision = await pinnedRevision(event.clientId);
+  if (!revision || revision === complete.revision) return complete;
+  const previous = await readManifest(revisionKey(revision), true);
+  if (!previous) throw new Error('This page\'s saved revision is unavailable. Save your work and reload Web Studio.');
+  return previous;
 }
 async function currentManifest() {
   let response;
@@ -159,7 +214,7 @@ async function inspect(manifest, port, task) {
 async function checkDownloads(port) {
   const manifest = await currentManifest();
   const inspected = await inspect(manifest, port);
-  if (inspected.status.ready) await writeManifest(COMPLETE_KEY, manifest);
+  if (inspected.status.ready) await promoteComplete(manifest);
   return inspected.status;
 }
 async function download(port) {
@@ -199,7 +254,7 @@ async function download(port) {
     // terminated worker leaves the previous complete manifest untouched.
     const final = await inspect(manifest, port, task);
     if (!final.status.ready) throw new Error('Some files were removed while downloading. Resume to save the missing files.');
-    checkTask(task); await writeManifest(COMPLETE_KEY, manifest); checkTask(task);
+    checkTask(task); await promoteComplete(manifest); checkTask(task);
     return final.status;
   } catch (error) {
     if (task.paused || error.paused) return { ...(task.status || {}), ready: false, paused: true };
@@ -209,13 +264,10 @@ async function download(port) {
     if (activeDownload === task) activeDownload = null;
   }
 }
-async function fallback(url) {
-  // Never mix a partially downloaded revision into an existing complete pack.
-  const manifest = await readManifest(COMPLETE_KEY) || await readManifest(CANDIDATE_KEY);
-  if (!manifest) return null;
-  const file = manifest.files.find(entry => fileURL(entry) === canonical(url));
-  if (!file) return null;
-  return verifiedFile(await storage(caches.open(PACK_CACHE)), file);
+function unavailable(message) {
+  return new Response(message, {
+    status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+  });
 }
 self.addEventListener('install', event => { event.waitUntil(self.skipWaiting()); });
 self.addEventListener('activate', event => { event.waitUntil(self.clients.claim()); });
@@ -224,6 +276,15 @@ self.addEventListener('message', event => {
   if (!port || !['offline-status', 'offline-download', 'offline-pause'].includes(type)) return;
   event.waitUntil((async () => {
     try {
+      // This also pins pages that loaded online just before the worker claimed
+      // them. Do not overwrite a pin when a newer pack becomes complete.
+      if (event.source && event.source.id && type !== 'offline-pause') {
+        const revision = await pinnedRevision(event.source.id);
+        if (!revision) {
+          const complete = await readManifest(COMPLETE_KEY, true);
+          if (complete) await pinRevision(event.source.id, complete.revision);
+        }
+      }
       if (type === 'offline-pause') {
         if (activeDownload) { activeDownload.paused = true; if (activeDownload.controller) activeDownload.controller.abort(); }
         post(port, { paused: true }); return;
@@ -237,15 +298,39 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET' || !allowed(new URL(request.url))) return;
   event.respondWith((async () => {
-    let response;
+    let manifest;
+    try { manifest = await manifestForClient(event); }
+    catch (error) { return unavailable('Web Studio offline storage or revision error: ' + error.message); }
+    if (manifest) {
+      const file = manifest.files.find(entry => fileURL(entry) === canonical(request.url));
+      // An old document must never load an unlisted file from a newer live
+      // deployment. The candidate pack is never used for runtime serving.
+      if (!file) return unavailable('This resource is not in the saved Web Studio revision. Save your work and reload after checking for updates.');
+      let saved;
+      try { saved = await verifiedFile(await storage(caches.open(PACK_CACHE)), file); }
+      catch (error) { return unavailable('Web Studio offline storage could not be read: ' + error.message); }
+      if (saved) return saved;
+      // A missing or corrupted saved file can be recovered online only when
+      // the server returns EXACTLY the bytes pinned by this document.
+      try {
+        const live = await network(request);
+        if (goodResponse(live, request.url)) {
+          const data = await storage(live.arrayBuffer());
+          if (data.byteLength === file.bytes && await digest(data) === file.sha256) {
+            return new Response(data, { headers: live.headers });
+          }
+        }
+      } catch (_) { /* Keep the active revision coherent on failures. */ }
+      return unavailable('Saved Web Studio file ' + file.url + ' is missing or damaged. Reconnect and repair the study pack; no newer incompatible file was loaded.');
+    }
+    // Before the first complete download, a fresh online visit uses the live
+    // release. Never assemble a page from an incomplete candidate download.
     try {
-      // OAuth parameters reach the network unchanged and never enter cache keys.
-      response = await network(request);
-      if (goodResponse(response, request.url) || response.status < 500) return response;
-    } catch (_) {}
-    try { const saved = await fallback(request.url); if (saved) return saved; } catch (_) {}
-    return response || new Response('This Web Studio file is not saved on this device. Reconnect, open Study offline, and download or repair the study pack.', {
-      status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
-    });
+      const live = await network(request);
+      if (goodResponse(live, request.url) || (live && live.status >= 400)) return live;
+      return unavailable('The server returned unexpected content for a Web Studio study file. Reconnect and retry.');
+    } catch (_) {
+      return unavailable('This Web Studio file is not saved in a complete study pack. Reconnect, open Study offline, and download or repair the pack.');
+    }
   })());
 });
