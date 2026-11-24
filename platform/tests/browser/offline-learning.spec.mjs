@@ -350,6 +350,54 @@ test("backup restore keeps newer notes, is repeatable, and rejects another owner
     "Newer note",
   );
 });
+test("saved status waits for queued worksheet and note writes to become durable", async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.evaluate(() => {
+    const update = u8.db.update.bind(u8.db);
+    let delayed = false;
+    u8.db.update = async (name, key, fn) => {
+      if (name === "study" && JSON.parse(key)[2] === "progress" && !delayed) {
+        delayed = true;
+        await new Promise((resolve) => {
+          u8.releaseProgress = resolve;
+        });
+      }
+      return update(name, key, fn);
+    };
+  });
+  await page.getByLabel("Formula for B5", { exact: true }).fill("=SUM(B2:B4)");
+  await expect.poll(() => page.evaluate(() => !!u8.releaseProgress)).toBe(true);
+  await page
+    .getByRole("button", { name: "Apply formula", exact: true })
+    .click();
+  await page.getByLabel("Your notes", { exact: true }).fill("Note saved first");
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        (await u8.db.all("study")).some(
+          (r) => r.data.value.text === "Note saved first",
+        ),
+      ),
+    )
+    .toBe(true);
+  await expect(page.locator(".learn-save-status")).toHaveText(
+    "Saving on this device…",
+  );
+  await page.evaluate(() => u8.releaseProgress());
+  await expect(page.locator(".learn-save-status")).toContainText(
+    "Saved on this device",
+  );
+  expect(
+    await page.evaluate(
+      async () =>
+        (await u8.db.all("study")).find(
+          (r) => r.data.identity.kind === "progress",
+        ).data.value.worksheet.applied,
+    ),
+  ).toBe(true);
+});
 test("storage failure reports unsaved changes and preserves the last durable note", async ({
   page,
 }) => {
@@ -361,7 +409,7 @@ test("storage failure reports unsaved changes and preserves the last durable not
   await page.evaluate(() => {
     const update = u8.db.update.bind(u8.db);
     u8.db.update = (name, key, fn) => {
-      if (name === "study")
+      if (name === "study" && JSON.parse(key)[2] === "note")
         throw Error("Device storage is full. Copy this note before closing.");
       return update(name, key, fn);
     };
@@ -379,5 +427,18 @@ test("storage failure reports unsaved changes and preserves the last durable not
   ).toBe("Saved note");
   await expect(page.getByLabel("Your notes", { exact: true })).toHaveValue(
     "Unsaved new note",
+  );
+  await page.getByRole("button", { name: "Bookmark", exact: true }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        (await u8.db.all("study")).some(
+          (r) => r.data.value.bookmarked === true,
+        ),
+      ),
+    )
+    .toBe(true);
+  await expect(page.locator(".learn-save-status")).toContainText(
+    "Device storage is full",
   );
 });

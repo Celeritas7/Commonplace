@@ -341,33 +341,54 @@ export function mountLearningWorkspace(
           "learn-completion",
         );
         reader.append(complete, content, status);
-        async function saved(work) {
+        let pendingSaves = 0,
+          saveSequence = 0;
+        const latestSaves = new Map(),
+          saveErrors = new Map();
+        function showSaveStatus() {
           if (!active(c, request, view)) return;
+          const error = saveErrors.values().next().value;
+          status.textContent = pendingSaves
+            ? "Saving on this device…"
+            : error ||
+              (support
+                ? "Saved on this device. Check synchronization status above."
+                : persistent
+                  ? "Saved on this device for your account. Cloud sync is not active yet."
+                  : "Sample changes stay in memory and reset when this preview is reloaded.");
+          status.className =
+            "learn-save-status" +
+            (!pendingSaves && error ? " learn-error" : "");
+        }
+        async function saved(kind, work) {
+          if (!active(c, request, view)) return;
+          const sequence = ++saveSequence;
+          latestSaves.set(kind, sequence);
+          pendingSaves++;
+          showSaveStatus();
           try {
             if (!records) throw Error(savedError);
             await work();
-            if (!active(c, request, view)) return;
-            status.textContent = support
-              ? "Saved on this device. Check synchronization status above."
-              : persistent
-                ? "Saved on this device for your account. Cloud sync is not active yet."
-                : "Sample changes stay in memory and reset when this preview is reloaded.";
-            status.className = "learn-save-status";
+            if (latestSaves.get(kind) === sequence) saveErrors.delete(kind);
           } catch (error) {
-            if (!active(c, request, view)) return;
-            status.textContent =
-              savedError ||
-              (support
-                ? error.message
-                : "Changes could not be saved on this device. Keep this page open and copy any important notes.");
-            status.className = "learn-save-status learn-error";
+            if (latestSaves.get(kind) === sequence)
+              saveErrors.set(
+                kind,
+                savedError ||
+                  (support
+                    ? error.message
+                    : "Changes could not be saved on this device. Keep this page open and copy any important notes."),
+              );
+          } finally {
+            pendingSaves--;
+            showSaveStatus();
           }
         }
         const change = (value) => {
           if (!active(c, request, view)) return;
           attempt = value;
           complete.textContent = value.completed ? "Studied" : "In progress";
-          saved(() => records.saveProgress(value));
+          saved("progress", () => records.saveProgress(value));
         };
         if (attempt.worksheet) {
           disposeMaterial = mountAssignedExcel(content, lesson.bundle, {
@@ -421,7 +442,7 @@ export function mountLearningWorkspace(
           bookmarked = !bookmarked;
           bookmark.textContent = bookmarked ? "Bookmarked" : "Bookmark";
           bookmark.setAttribute("aria-pressed", String(bookmarked));
-          saved(() => records.saveBookmark(bookmarked));
+          saved("bookmark", () => records.saveBookmark(bookmarked));
         };
         const label = el("label", "Your notes"),
           notes = el("textarea");
@@ -429,7 +450,8 @@ export function mountLearningWorkspace(
         notes.maxLength = 4000;
         notes.value = note;
         notes.setAttribute("aria-label", "Your notes");
-        notes.oninput = () => saved(() => records.saveNote(notes.value));
+        notes.oninput = () =>
+          saved("note", () => records.saveNote(notes.value));
         label.append(notes);
         personal.append(bookmark, label);
         reader.append(personal);
