@@ -137,6 +137,7 @@
   :focus-visible{outline:3px solid #b27a12;outline-offset:3px}
   @media(max-width:520px){.wrap{padding:18px 14px 50px}.hero{padding:22px 18px!important}.card .body-inner{padding:4px 16px 16px}.quiz{padding:16px}.progressbar{padding:10px 14px}.btn{padding:10px 14px}}
 </style>
+<link rel="stylesheet" href="excel-ribbon.css">
 </head>
 <body>
 <div class="progressbar">
@@ -147,23 +148,22 @@
 <main class="wrap">
   <nav class="crumb" aria-label="Breadcrumb"><a href="../../index.html">Commonplace</a> / <a href="../index.html">Office Work</a> / Excel Study</nav>
   <header class="hero">
-    <span class="badge">Section 1 · UI preview</span>
+    <span class="badge">Section 1 · Interface &amp; SUM</span>
     <h1>Excel Study</h1>
     <p>Learn to work with spreadsheets, formulas and data. This short sample is for reviewing the study layout before the full lessons are added.</p>
-    <div class="meta"><span>~5 min</span><span>2 concepts · worksheet · quiz</span></div>
+    <div class="meta"><span>~8 min</span><span>Ribbon exploration · 2 concepts · worksheet · quiz</span></div>
   </header>
-  <h2 class="sec"><span class="n">A</span> Try it now — worksheet</h2>
-  <p class="pg-intro">Edit the three quantities, then apply the formula to cell B5. This preview supports only the SUM formula shown below; it is not a full Excel engine.</p>
-  <section class="worksheet" aria-label="Sample worksheet">
-    <div class="sheet-title">Practice workbook · Sheet1</div>
+  <h2 class="sec"><span class="n">A</span> Explore Excel — Ribbon &amp; worksheet</h2>
+  <p class="pg-intro">Start with the Ribbon: tap a tab, then a tool to learn its location and purpose. Select cells to see their addresses in the name box and their contents in the formula bar. To practise SUM, select B5, edit the three quantities, and apply the formula. Only this existing SUM exercise calculates values; the other tools are for exploration.</p>
+  <section class="worksheet" id="excel-preview" data-excel-simulator aria-label="Excel interface simulator">
     <form id="practice">
-      <div class="formula-row"><strong>B5</strong><label for="formula">fx</label><input id="formula" type="text" value="=SUM(B2:B4)" spellcheck="false" autocomplete="off" aria-label="Formula for B5"></div>
-      <div class="sheet-scroll"><table aria-label="Office supplies quantities"><thead><tr><th scope="col">Row</th><th scope="col">A</th><th scope="col">B</th></tr></thead><tbody>
-        <tr><th scope="row">1</th><td>Item</td><td>Quantity</td></tr>
-        <tr><th scope="row">2</th><td>Notebooks</td><td><input id="b2" type="number" step="any" value="12" aria-label="B2, Notebooks"></td></tr>
-        <tr><th scope="row">3</th><td>Pens</td><td><input id="b3" type="number" step="any" value="8" aria-label="B3, Pens"></td></tr>
-        <tr><th scope="row">4</th><td>Folders</td><td><input id="b4" type="number" step="any" value="5" aria-label="B4, Folders"></td></tr>
-        <tr><th scope="row">5</th><td>Total</td><td class="result-cell"><output id="b5" aria-label="B5 total">—</output></td></tr>
+      <div class="formula-row"><span class="excel-name" data-excel-name aria-label="Selected cell" aria-live="polite">B5</span><span aria-hidden="true" style="font-weight:600;color:var(--accent)">fx</span><input id="formula" data-excel-formula type="text" value="=SUM(B2:B4)" spellcheck="false" autocomplete="off" aria-label="Formula for B5"><span class="excel-value" data-excel-value aria-label="Selected cell contents" hidden></span></div>
+      <div class="sheet-scroll" data-excel-sheet><table aria-label="Office supplies quantities"><thead><tr><th scope="col">Row</th><th scope="col">A</th><th scope="col">B</th></tr></thead><tbody>
+        <tr><th scope="row">1</th><td data-cell="A1">Item</td><td data-cell="B1">Quantity</td></tr>
+        <tr><th scope="row">2</th><td data-cell="A2">Notebooks</td><td data-cell="B2"><input id="b2" type="number" step="any" value="12" aria-label="B2, Notebooks"></td></tr>
+        <tr><th scope="row">3</th><td data-cell="A3">Pens</td><td data-cell="B3"><input id="b3" type="number" step="any" value="8" aria-label="B3, Pens"></td></tr>
+        <tr><th scope="row">4</th><td data-cell="A4">Folders</td><td data-cell="B4"><input id="b4" type="number" step="any" value="5" aria-label="B4, Folders"></td></tr>
+        <tr><th scope="row">5</th><td data-cell="A5">Total</td><td class="result-cell" data-cell="B5"><output id="b5" aria-label="B5 total">—</output></td></tr>
       </tbody></table></div>
       <div class="practice-foot"><button class="btn" type="submit">Apply formula</button><button class="btn ghost" type="button" id="reset-sheet">Reset worksheet</button></div>
       <p id="practice-feedback" role="status">Try applying the formula. The starting total should be 25.</p>
@@ -208,6 +208,7 @@
   </form>
   <footer>Excel Study · Sample lesson only<br><a href="../index.html">Back to Office Work</a></footer>
 </main>
+<script src="excel-ribbon.js"></script>
 <script>
 (() => {
   'use strict';
@@ -247,10 +248,12 @@
   const practice=document.getElementById('practice'),formula=document.getElementById('formula');
   const inputs=['b2','b3','b4'].map(id=>document.getElementById(id));
   const output=document.getElementById('b5'),feedback=document.getElementById('practice-feedback');
+  const simulator=window.CommonplaceExcelRibbon?.mount(document.getElementById('excel-preview'),{workbook:'Practice workbook — Excel',sheet:'Sheet1',formulaCell:'B5'});
   function invalidate(){output.textContent='—';feedback.textContent='Apply the formula to calculate the current values.';}
   [formula,...inputs].forEach(el=>el.addEventListener('input',invalidate));
   practice.addEventListener('submit',e=>{
     e.preventDefault();
+    simulator?.select('B5');
     if(!/^=SUM\(B2:B4\)$/i.test(formula.value.replace(/\s/g,''))){
       output.textContent='—';feedback.textContent='This preview supports =SUM(B2:B4) only. Please try that formula.';return;
     }
@@ -260,7 +263,7 @@
     output.textContent=String(Number(total.toPrecision(15)));
     feedback.textContent='Formula applied to B5: '+output.textContent;
   });
-  document.getElementById('reset-sheet').addEventListener('click',()=>{practice.reset();output.textContent='—';feedback.textContent='Try applying the formula. The starting total should be 25.';});
+  document.getElementById('reset-sheet').addEventListener('click',()=>{practice.reset();simulator?.select('B5');output.textContent='—';feedback.textContent='Try applying the formula. The starting total should be 25.';});
   const quiz=document.getElementById('quiz'),score=document.getElementById('score');
   const questions=[...quiz.querySelectorAll('.q')];
   function clearFeedback(){
