@@ -129,9 +129,55 @@
  for(const eventName of ['click','input','change'])root.addEventListener(eventName,event=>{if(!event.target.closest('.wb-sync-details,.wb-offline,#wb-offline-toggle'))persist();});
  window.addEventListener('pagehide',()=>{persist();preview.stop();});
  window.addEventListener('hashchange',()=>{if(/^#(?:[lxq]\d+|cpx-resume)/.test(location.hash))showCourse();});
- $('#wb-update').onclick=async()=>{const button=$('#wb-update');button.disabled=true;setText('#wb-update-status','Checking for updates…');try{if(!('serviceWorker' in navigator))throw new Error('App updates are not supported in this browser.');const registration=await Promise.race([navigator.serviceWorker.getRegistration('./'),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);if(!registration)throw new Error('App update registration is not ready. Reload while connected and try again.');await Promise.race([registration.update(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Try again while connected.')),10000))]);setText('#wb-update-status','Update check finished. If new files are ready, use Reload app.');$('#wb-reload').hidden=false;}catch(error){setText('#wb-update-status',error.message);}finally{button.disabled=false;}};
- $('#wb-reload').onclick=()=>{if(persist())location.reload();};
- if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{setText('#wb-update-status','Updated app files are available. Reload when you are ready.');$('#wb-reload').hidden=false;});
+ function updateReloadAvailability(state){
+  const reload=$('#wb-reload');
+  reload.hidden=false;
+  // Never switch a page into a partially deployed revision. The previous pack
+  // stays usable while the explicit update download finishes.
+  reload.disabled=!state||state.ready!==true;
+  if(!state){setText('#wb-update-status','Offline pack verification did not finish. Keep this page open, reconnect and retry the check.');return;}
+  if(state.updatePending&&state.previousReady)
+   setText('#wb-update-status','Updated pack incomplete. Your previous saved pack is ready; resume the new download before reloading.');
+  else if(state.ready&&state.reloadRecommended)
+   setText('#wb-update-status','Updated pack verified. Save your work, then reload to use it.');
+  else if(state.ready)
+   setText('#wb-update-status','Study pack verified. You may reload after saving your work.');
+  else setText('#wb-update-status','No complete updated pack verified. Use Study offline to finish the download before reloading.');
+ }
+ async function checkedUpdateState(){
+  const manager=window.WebStudioOfflineState;
+  if(!manager||typeof manager.check!=='function')return null;
+  return manager.check();
+ }
+ $('#wb-update').onclick=async()=>{
+  const button=$('#wb-update');button.disabled=true;
+  $('#wb-reload').disabled=true;
+  setText('#wb-update-status','Checking the worker and saved study pack…');
+  try{
+   if(!('serviceWorker' in navigator))throw new Error('App updates are not supported in this browser.');
+   const timeout=ms=>new Promise((_,reject)=>setTimeout(()=>reject(new Error('Update check timed out. Reconnect and retry.')),ms));
+   const registration=await Promise.race([navigator.serviceWorker.getRegistration('./'),timeout(10000)]);
+   if(!registration)throw new Error('Web Studio offline registration is not ready. Reconnect and repair offline setup.');
+   await Promise.race([registration.update(),timeout(15000)]);
+   updateReloadAvailability(await checkedUpdateState());
+  }catch(error){setText('#wb-update-status',error.message||'Update check failed. Reconnect and retry.');}
+  finally{button.disabled=false;}
+ };
+ $('#wb-reload').onclick=async()=>{
+  const button=$('#wb-reload');button.disabled=true;
+  // Save before checking and again before navigation, so a sync/import
+  // operation cannot silently replace an open workspace.
+  if(!persist()){setText('#wb-update-status','Could not save your current work. Export a backup before reloading.');return;}
+  setText('#wb-update-status','Verifying the saved update before reload…');
+  const state=await checkedUpdateState();
+  if(!state||state.ready!==true){updateReloadAvailability(state);return;}
+  if(!persist()){setText('#wb-update-status','Study changes could not be saved. Reload cancelled.');return;}
+  location.reload();
+ };
+ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{
+  $('#wb-reload').hidden=false;$('#wb-reload').disabled=true;
+  setText('#wb-update-status','Web Studio offline worker updated. Verify or download the complete pack before reloading.');
+ });
  renderReading();renderEditor();resizeText(0);
  if(saved.view==='practice')openPractice('try',true);else if(['notes','library',...(practice?['mistakes']:[]),...(projectUI?['projects']:[])].includes(saved.view))setView(saved.view);else setView('book');
  const requestedOfflineSetup=location.hash==='#study-offline';
