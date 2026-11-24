@@ -85,7 +85,9 @@ export function createOfflineSession({
   async function refresh() {
     invalidate();
     const request = generation;
-    if (offlineMode) {
+    // A saved-study selection (or a missed online event after backgrounding)
+    // must never suppress fresh authorization while the browser is online.
+    if (offlineMode && !online()) {
       const m = marker();
       if (!m) throw Error("Sign in online before opening saved study.");
       const lease = await packs.resume(m.owner);

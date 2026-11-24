@@ -28,9 +28,12 @@ real emails, a paid service or a production database.
 | Deliberate permission drift | The read-only preflight catches missing functions, disabled RLS, anonymous execution and excess table/column grants | A catalog check is not a policy semantics or whole-project audit |
 | U7 → U8 snapshot restore | Synthetic old/new study records, all platform table contents, revisions, audit, grants and RLS survive an isolated PGlite dump/reload; retry stays idempotent | Not a hosted `pg_dump`/Auth/Storage byte restore, disaster recovery certification or migration reversal |
 | Real worker code in controlled failures | Partial application downloads cannot report ready or serve partial shells; failed updates preserve the old shell; unchanged assets are reused; legacy caches and OAuth URLs are preserved | Cache/worker API harness, not an iPad lifecycle test |
-| Browser acceptance | A verification transport failure while `navigator.onLine` is true blocks fallback without deleting work; disabling/reopening the host retains queued edits and same-owner recovery | Synthetic identity, cloud and failure injection; real transport, sessions and devices remain pending |
+| Browser acceptance | Online saved-study resume rechecks revocation; a verification transport failure while `navigator.onLine` is true blocks fallback without deleting work; disabling/reopening the host retains queued edits and same-owner recovery | Synthetic identity, cloud and failure injection; real transport, sessions and devices remain pending |
 
-The worker scope and all runtime/legacy application files are unchanged by U9.
+U9 fixes the central session's offline branch so an online browser always checks
+current authorization, even after selecting saved study or missing an online event
+while backgrounded. The regression failed before the change. Its public shell
+manifest is refreshed; the worker scope and legacy application files are unchanged.
 
 ## Read-only target preflight
 

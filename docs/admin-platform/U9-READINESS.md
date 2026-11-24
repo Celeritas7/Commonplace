@@ -8,8 +8,10 @@ release-readiness decision, not a claim that a live learner accessed another app
 
 - Main baseline: `12a492f91f59a0b6ed58b5c49db56eacaebb7e99`, U8 PR #89 merged.
 - U9 adds tests, a read-only catalog preflight, acceptance instructions and CI
-  coverage for the administration documentation. It makes no runtime, curriculum,
-  authentication, migration, storage-permission or deployment changes.
+  coverage for the administration documentation. It also fixes online saved-study
+  revalidation in the central session and refreshes its public shell manifest.
+  Curriculum, legacy apps, authentication settings, migrations, hosted permissions
+  and production deployment are unchanged.
 - `platform/admin/deployment.mjs` remains `null`. The five migration files are
   unchanged. No live accounts, keys, permissions, files or assignments were created.
 - Excel PR #70 is still open/unmerged against `feat/excel-study-phase-a`; U9 tests
@@ -42,6 +44,13 @@ rest of the shared project's API.
 
 ## Evidence and remaining gates
 
+Finding U9-01: selecting **Resume saved study** while connected could choose the
+previously signed cache without a fresh server check. The same state could survive
+a missed online event after backgrounding. The offline branch now requires the
+browser to report offline; otherwise membership/assignment checks run normally.
+A targeted browser regression reproduced the online-resume failure before the
+fix. Revoked online access blocks the saved pack while retaining its bytes/work.
+
 | Gate | Status | Evidence / next requirement |
 | --- | --- | --- |
 | Merged U1–U8 contracts | Implemented | Existing suites plus final-state U9 checks; live bootstrap remains disabled |
@@ -49,7 +58,7 @@ rest of the shared project's API.
 | Preflight drift detection | Local PASS | Deliberately disable RLS, add excess table/column grants, expose a function and remove a required endpoint; findings are detected |
 | Synthetic restore | Local PASS | PGlite dump/reload after U7→U8; all platform table rows, catalog rules, old/new work and CAS retry preserved; B/revoked access still denied |
 | Worker failure recovery | Local PASS | Real worker code with deterministic Cache/network fixtures; failed updates keep the old shell and legacy caches |
-| Browser regression suite | Local PASS; exact-head CI required | 47 cases: existing 45 plus two U9 recovery cases; record the exact PR head and check results |
+| Browser regression suite | Local PASS; exact-head CI required | 48 cases: existing 45 plus three U9 recovery/revalidation cases; record the exact PR head and check results |
 | Backend and canonical origin | BLOCKED | Choose an isolated staging target/origin or approve a complete shared-project isolation review; no provisioning/cost decision made |
 | Hosted Auth/REST/RPC/Storage/Edge | BLOCKED | Deploy to the selected disposable target, run catalog/advisors and real JWT/direct-URL/concurrency matrix |
 | Actual backup and restore | PENDING | Reconcile existing private backup evidence with the chosen target; verify required Auth and private file restoration; local snapshot test is not this gate |
@@ -59,7 +68,7 @@ rest of the shared project's API.
 | Hosted rollback / pilot | PENDING | Disable/re-enable with retained data/queues, verified backups, no old-build overwrite or destructive schema rollback |
 
 Local results: **109 Node/PostgreSQL checks passed** (including eleven new counted
-database/recovery/worker checks) and **47 browser cases passed**. The installed full
+database/recovery/worker checks) and **48 browser cases passed**. The installed full
 Chromium could not launch under the environment's socket policy, and the pinned
 browser download was unavailable. A separate local headless Chromium 133 runtime
 completed the full suite; no project dependency was changed for that workaround.

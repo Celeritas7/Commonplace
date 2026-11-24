@@ -78,6 +78,27 @@ test("U9 failed online verification blocks cached fallback, retains work, and re
     await page.evaluate(async () => (await u9.db.all("packs"))[0].data.phase),
   ).toBe("ready");
 });
+test("U9 Resume saved study revalidates online revocation instead of selecting cached access", async ({
+  page,
+}) => {
+  await page.goto("/platform/learn/index.html");
+  await mount(page);
+  await pack(page);
+  await page.evaluate(() => {
+    u9.state.status = "revoked";
+  });
+  expect(await page.evaluate(() => navigator.onLine)).toBe(true);
+  await page
+    .getByRole("button", { name: "Resume saved study", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Resume saved study", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator("[data-private]")).toBeEmpty();
+  expect(
+    await page.evaluate(async () => (await u9.db.all("packs"))[0].data.phase),
+  ).toBe("blocked");
+});
 test("U9 disabling the host preserves queued study and re-enabling reconciles it for the same owner", async ({
   page,
 }) => {
