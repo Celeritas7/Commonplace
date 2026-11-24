@@ -102,9 +102,10 @@
         else feedback.textContent='Correct — move to the next highlighted action.';
       }else if(action?.type==='tool'){
         feedback.textContent='That did not complete this step. '+session.step.instruction+' You can restart to restore the sample data.';
-      }else if(action?.type==='select'||action?.type==='tab'){
+      }else if((action?.type==='select'||action?.type==='tab')&&action.type===session.step.expect.type){
         feedback.textContent='Follow the current instruction; this action did not advance the lesson.';
       }
+      // A pointer click can follow focusin on the same cell; navigation during a tool step is also allowed.
       render();
     });
     render();
