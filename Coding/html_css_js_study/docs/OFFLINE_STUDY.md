@@ -41,6 +41,21 @@ The regression suites `tests/startup.cjs` and `tests/startup-browser.cjs` cover 
 
 ## Updates and repair
 
+Web Studio v1.7.4 reports **two different revision states** in **Study offline**: the newest requested/downloaded revision and the last complete saved revision. The latter counts as **available** only when its actual saved files pass another byte-length and SHA-256 check. If a new download is interrupted, the panel says **Update incomplete · previous pack ready offline**, identifies both revisions, keeps **Start studying** reachable and offers **Resume download**. If the older pack was evicted or damaged, it does not promise offline readiness.
+
+Use this update sequence in the **same Safari or Home Screen app** where you study:
+
+1. While connected, save your practice and export a study backup as a precaution.
+2. Open **Study offline → Updates and repair → Check for app updates**. Wait for the worker and downloaded-file check.
+3. If the new revision is incomplete, return to **Study offline** and select **Download study pack** or **Resume download**. The old verified pack stays usable during an interrupted update; do **not** reload solely to adopt partial new files.
+4. After the updated revision is **Ready offline**, use **Reload app**. The button rechecks the saved pack and requires local work to save before navigation. The already-open page continues using the previous complete revision until this deliberate reload.
+5. Fully close the app, switch off Wi-Fi and mobile data, reopen from the existing Home Screen icon, run a code preview and confirm a note, bookmark and project. Repeat separately for regular Safari if you use it.
+
+If **Check for app updates** or the pack verification fails, a reload is not offered as a safe update. Reconnect and retry or use the scoped **Repair offline setup** page. Repair likewise distinguishes an incomplete update with an available previous pack from an incomplete update with no verified backup. Never clear website data or uninstall the app as a routine repair.
+
+**Status meanings:** **Ready offline** means the *requested* revision is complete and verified; **Previous pack ready offline** means an older complete revision was reverified while the new one remains incomplete; **Updated pack verified · reload to use it** means a newer complete revision is saved, but the current page retains its previous revision until you reload. None of these statuses alone proves iPad Home Screen cold-start acceptance.
+
+
 The worker installs without downloading the study pack. After a complete pack has been saved, the worker **serves its verified static files immediately**, even when Wi-Fi appears connected but is unusable. It does not prefer HTTP 404, HTTP 503, wrong-MIME responses or partially downloaded candidate files over an intact saved revision. If a saved file is missing, the worker accepts a live replacement only if its bytes match the pinned file's SHA-256 digest; otherwise it displays an error requiring repair. Before any complete pack exists, a fresh connected visit uses the network, not individual candidate files.
 
 Download checks still obtain the latest generated list and verify its files by byte length and SHA-256. Unchanged files are reused across revisions. The previous complete pack remains available while a replacement is incomplete; already-open Web Studio pages stay pinned to their original saved revision when the new pack becomes complete. A new navigation/reload selects the latest complete revision. Neither routine fetches nor repair removes the older hashed pack. To adopt deployed changes deliberately, connect, select **Study offline → Updates and repair → Check for app updates**, use **Reload app** after saving, then verify or download the changed pack and reload again if needed. **Ready offline** verifies saved assets, not actual physical iPad reopening or complete main-app initialization.

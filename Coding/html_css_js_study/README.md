@@ -1,4 +1,4 @@
-# Web Studio · Commonplace (v1.7.3)
+# Web Studio · Commonplace (v1.7.4)
 
 Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open the [hosted app](https://celeritas7.github.io/Commonplace/Coding/html_css_js_study/index.html) through HTTPS; localhost is for development.
 
@@ -53,6 +53,12 @@ The bundled Acorn parser adds checks to loops/functions. Ordinary infinite loops
 The main lesson/editor startup now has a separate watchdog from **Study offline** download verification. A healthy initialization explicitly acknowledges rendered learning content and editor/preview controls. If a required script is missing, the app throws before initialization, or the startup stalls, a self-contained recovery panel provides Retry, Repair offline setup and the offline launcher even when `studio.js` is unavailable. It keeps the existing Commonplace sign-in gate in front of recovery and never displays raw exceptions, tokens, URLs or local study contents. No local records or caches are cleared.
 
 The recovery panel does not prove offline iPad acceptance. It only appears after the HTML shell itself has loaded. See [offline startup recovery](docs/OFFLINE_STUDY.md#if-the-study-interface-does-not-start) and run `tests/startup.cjs` plus `tests/startup-browser.cjs` alongside the existing workflow.
+
+## Safe offline updates (v1.7.4)
+
+**Study offline** now distinguishes the verified previous complete pack from an incomplete newer download. It shows the saved revision and the pending update revision rather than calling both "not ready." A previously saved pack is offered only after its bytes pass verification again; missing or corrupted files are never described as available. Existing code, notes, bookmarks, session and sync records are untouched.
+
+The **Check for app updates** action refreshes the worker and verifies the pack. **Reload app** is blocked if the replacement pack is missing or incomplete; after the new pack verifies, it saves current work and checks again before reloading. Already-open pages continue using their earlier complete revision until a deliberate reload. See [safe update procedure](docs/OFFLINE_STUDY.md#updates-and-repair). A verified download still does not prove a physical iPad cold reopen; that remains a device acceptance step.
 
 ## Offline and updates
 

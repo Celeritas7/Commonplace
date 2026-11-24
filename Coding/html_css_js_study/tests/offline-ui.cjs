@@ -13,7 +13,7 @@ assert(bootstrap && scriptTag, 'independent offline loading recovery is required
 assert(html.indexOf('id="wb-offline-watchdog"') < html.indexOf('<script src="offline.js'), 'watchdog must start before a stalled external script request');
 
 function harness(navigation = {}) {
-  const ids = ['wb-offline-download', 'wb-offline-check', 'wb-offline-pause', 'wb-offline-status', 'wb-offline-size', 'wb-offline-progress', 'wb-offline-error', 'wb-offline-help', 'wb-offline-toggle', 'wb-offline-study', 'wb-offline'];
+  const ids = ['wb-offline-download', 'wb-offline-check', 'wb-offline-pause', 'wb-offline-status', 'wb-offline-size', 'wb-offline-progress', 'wb-offline-error', 'wb-offline-help', 'wb-offline-toggle', 'wb-offline-study', 'wb-offline', 'wb-offline-revision'];
   const nodes = Object.fromEntries(ids.map(id => {
     const classes = new Set();
     return [id, { textContent: '', disabled: false, hidden: false, dataset: {}, addEventListener() {}, classList: {
@@ -103,6 +103,35 @@ function harness(navigation = {}) {
   assert.equal(repairedOffline.nodes['wb-offline-status'].textContent, 'Downloads need attention');
   savedWorker.postMessage = verifiedReply;
   console.log('PASS a failed recheck removes the previous ready-only study action');
+
+  const oldPack = harness({ onLine: false, serviceWorker });
+  savedWorker.postMessage = (message, ports) => ports[0].postMessage({
+    ready:false,done:3,total:4,bytes:400,remainingBytes:100,
+    revision:'b'.repeat(64),completeRevision:'a'.repeat(64),
+    completeReady:true,previousReady:true,updatePending:true
+  });
+  vm.runInContext(manager, oldPack.context); await new Promise(resolve => setImmediate(resolve));
+  assert.match(oldPack.nodes['wb-offline-status'].textContent, /Update incomplete.*previous pack ready offline/);
+  assert.match(oldPack.nodes['wb-offline-revision'].textContent, /Saved revision a{12}.*update b{12}.*not complete/);
+  assert.equal(oldPack.nodes['wb-offline-study'].hidden,false,'the verified older pack is still usable');
+  assert.equal(oldPack.nodes['wb-offline-download'].textContent,'Resume download','new update needs a resume action');
+  assert.equal(oldPack.context.window.WebStudioOfflineState.snapshot().updatePending,true);
+  console.log('PASS an incomplete new update keeps the previous study action visible and explains both revisions');
+
+  const adopted = harness({ onLine: false, serviceWorker });
+  savedWorker.postMessage = (message, ports) => ports[0].postMessage({
+    ready:true,done:4,total:4,bytes:400,remainingBytes:0,
+    revision:'b'.repeat(64),completeRevision:'b'.repeat(64),
+    completeReady:true,previousReady:false,updatePending:false,
+    pageRevision:'a'.repeat(64),reloadRecommended:true
+  });
+  vm.runInContext(manager, adopted.context); await new Promise(resolve => setImmediate(resolve));
+  assert.match(adopted.nodes['wb-offline-status'].textContent, /Updated pack verified.*reload/);
+  assert.match(adopted.nodes['wb-offline-revision'].textContent, /this page uses an older revision/);
+  assert.equal(adopted.nodes['wb-offline-study'].hidden,false);
+  console.log('PASS a complete replacement labels the old open page and safe reload, not an incomplete download');
+  savedWorker.postMessage = verifiedReply;
+
 
   const lostConnection = harness({ onLine: true, serviceWorker });
   vm.runInContext(manager, lostConnection.context); await new Promise(resolve => setImmediate(resolve));

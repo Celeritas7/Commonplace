@@ -211,13 +211,31 @@ async function inspect(manifest, port, task) {
   }
   return { cache, missing, status: stateFor(manifest, done, savedBytes) };
 }
-async function checkDownloads(port) {
+// The candidate's readiness and the previous complete pack are different
+// facts. Check the previous files again: a manifest pointer alone cannot prove
+// Safari retained their bytes. These fields contain revisions, never user data.
+async function withCompleteStatus(state, clientId) {
+  const complete = await readManifest(COMPLETE_KEY, true);
+  const different = !!complete && !!state.revision && complete.revision !== state.revision;
+  const completeReady = !complete ? false :
+    different ? (await inspect(complete)).status.ready : state.ready === true;
+  const pageRevision = await pinnedRevision(clientId);
+  return { ...state,
+    completeRevision: complete ? complete.revision : null,
+    completeReady,
+    previousReady: different && completeReady,
+    updatePending: different && state.ready !== true,
+    pageRevision: pageRevision || null,
+    reloadRecommended: completeReady && !!pageRevision && pageRevision !== complete.revision
+  };
+}
+async function checkDownloads(port, clientId) {
   const manifest = await currentManifest();
   const inspected = await inspect(manifest, port);
   if (inspected.status.ready) await promoteComplete(manifest);
-  return inspected.status;
+  return withCompleteStatus(inspected.status, clientId);
 }
-async function download(port) {
+async function download(port, clientId) {
   if (activeDownload) throw new Error('A download is already running. Keep its screen open, or pause it before retrying.');
   const task = { paused: false, controller: null, status: null, file: '' };
   activeDownload = task;
@@ -255,10 +273,14 @@ async function download(port) {
     const final = await inspect(manifest, port, task);
     if (!final.status.ready) throw new Error('Some files were removed while downloading. Resume to save the missing files.');
     checkTask(task); await promoteComplete(manifest); checkTask(task);
-    return final.status;
+    return withCompleteStatus(final.status, clientId);
   } catch (error) {
-    if (task.paused || error.paused) return { ...(task.status || {}), ready: false, paused: true };
-    error.status = task.status; throw error;
+    if (task.paused || error.paused) {
+      return task.status ? withCompleteStatus({ ...task.status, ready: false, paused: true }, clientId) : { ready: false, paused: true };
+    }
+    try { error.status = task.status ? await withCompleteStatus({ ...task.status, ready: false }, clientId) : task.status; }
+    catch (_) { error.status = task.status; }
+    throw error;
   } finally {
     clearInterval(heartbeat); clearTimeout(deadline);
     if (activeDownload === task) activeDownload = null;
@@ -289,7 +311,8 @@ self.addEventListener('message', event => {
         if (activeDownload) { activeDownload.paused = true; if (activeDownload.controller) activeDownload.controller.abort(); }
         post(port, { paused: true }); return;
       }
-      const state = type === 'offline-download' ? await download(port) : await checkDownloads(port);
+      const clientId = event.source && event.source.id || '';
+      const state = type === 'offline-download' ? await download(port, clientId) : await checkDownloads(port, clientId);
       post(port, state);
     } catch (error) { post(port, { ...(error.status || {}), ready: false, error: error.message || 'Offline setup failed. Retry or repair offline setup.' }); }
   })());

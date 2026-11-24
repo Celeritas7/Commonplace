@@ -60,9 +60,9 @@ function harness(existingStores) {
   });
   vm.runInContext(SOURCE, context);
   async function lifecycle(name) { const pending = []; listeners[name]({ waitUntil(p) { pending.push(p); } }); await Promise.all(pending); }
-  async function rpc(type, onProgress) {
+  async function rpc(type, onProgress, clientId = '') {
     const messages = [], pending = [];
-    listeners.message({ data: { type }, ports: [{ postMessage(value) { messages.push(value); if (value.progress && onProgress) onProgress(value); } }], waitUntil(p) { pending.push(p); } });
+    listeners.message({ data: { type }, source: clientId ? { id: clientId } : null, ports: [{ postMessage(value) { messages.push(value); if (value.progress && onProgress) onProgress(value); } }], waitUntil(p) { pending.push(p); } });
     await Promise.all(pending);
     return { messages, result: messages.filter(m => !m.progress).at(-1) };
   }
@@ -95,6 +95,8 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   assert.equal(h.skipped, 1); assert.equal(h.claimed, 1); assert.deepEqual(h.deleted, []);
   const empty = (await h.rpc('offline-status')).result;
   assert.equal(empty.ready, false); assert.equal(empty.done, 0); assert.equal(empty.remainingBytes, empty.bytes);
+  assert.equal(empty.completeReady, false); assert.equal(empty.completeRevision, null);
+  assert.equal(empty.previousReady, false); assert.equal(empty.updatePending, false);
   console.log('PASS small installation, explicit downloads, existing app caches untouched');
 
   h.configure({ failFile: 'studio.css' });
@@ -105,7 +107,9 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   assert.equal(resumed.result.ready, true); assert.equal(resumed.result.remainingBytes, 0);
   assert(resumed.messages.some(m => m.progress && m.remainingBytes > 0));
   assert(!h.requests.slice(beforeResume).some(r => /index\.html$|studio\.js$/.test(r.url)), 'verified unchanged files are not fetched again');
-  assert.equal((await h.rpc('offline-status')).result.ready, true);
+  const readyStatus = (await h.rpc('offline-status')).result;
+  assert.equal(readyStatus.ready, true); assert.equal(readyStatus.completeReady, true);
+  assert.equal(readyStatus.completeRevision, readyStatus.revision); assert.equal(readyStatus.previousReady, false);
   console.log('PASS interrupted download resumes completed files, byte progress, saved-body verification');
 
   const jsKey = keyFor(h, 'studio.js');
@@ -129,8 +133,16 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   assert.equal(await (await h.request(BASE + 'studio.css?v=1.7')).text(), 'body{color:green}');
   const partial = (await h.rpc('offline-status')).result;
   assert.equal(partial.ready, false, 'a previous complete pack cannot claim the update is ready');
+  assert.equal(partial.previousReady, true, 'previous complete revision is still verified');
+  assert.equal(partial.completeReady, true);
+  assert.equal(partial.completeRevision, originalManifest.revision);
+  assert.equal(partial.updatePending, true);
   h.configure({});
-  const updateBefore = h.requests.length; assert.equal((await h.rpc('offline-download')).result.ready, true);
+  const updateBefore = h.requests.length; const completed = (await h.rpc('offline-download', null, originalPage)).result;
+  assert.equal(completed.ready, true); assert.equal(completed.completeReady, true);
+  assert.equal(completed.updatePending, false); assert.equal(completed.previousReady, false);
+  assert.equal(completed.pageRevision, originalManifest.revision);
+  assert.equal(completed.reloadRecommended, true, 'older study document must reload deliberately to adopt the complete update');
   assert.deepEqual(h.requests.slice(updateBefore).filter(r => !r.url.endsWith('offline-assets.json')).map(r => r.url), [BASE + 'studio.css']);
   h.configure({ offline: true });
   assert.equal(await (await h.request(BASE + 'studio.css', { clientId: originalPage })).text(), 'body{color:green}', 'old document must keep old CSS after update');
@@ -149,7 +161,7 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   const oldIndexKey = BASE + 'index.html?__cp_sha256=' + originalManifest.files[0].sha256;
   assert(h.stores.get(PACK).has(oldIndexKey), 'older completed downloads survive updates');
 
-  console.log('PASS interrupted updates preserve the old pinned page, and a new page selects the new complete revision');
+  console.log('PASS interrupted updates report the verified older pack and prompt a safe reload only after the replacement is complete');
 
   h.configure({});
   const beforeCached = h.requests.length;
@@ -203,6 +215,23 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   liveOnly.configure({ badMime: 'studio.js' });
   assert.equal((await liveOnly.request(BASE + 'studio.js')).status, 503, 'wrong MIME on an unprepared online visit is rejected');
   console.log('PASS damaged files fail coherently, incomplete candidates are never used and live invalid content is rejected');
+
+  // A previous manifest pointer is not proof the bytes remain on an iPad.
+  const evicted = harness();
+  assert.equal((await evicted.rpc('offline-download')).result.ready, true);
+  const evictedOriginal = evicted.manifest();
+  evicted.files.set('index.html', '<h1>future</h1>');
+  evicted.configure({ failFile: 'index.html' });
+  assert.equal((await evicted.rpc('offline-download')).result.ready, false);
+  const prevIndex = new URL('index.html', BASE).href + '?__cp_sha256=' + evictedOriginal.files[0].sha256;
+  await evicted.cache(PACK).put(prevIndex, reply('evicted', BASE + 'index.html'));
+  evicted.configure({ offline: true });
+  const evictedState = (await evicted.rpc('offline-status')).result;
+  assert.equal(evictedState.updatePending, true);
+  assert.equal(evictedState.previousReady, false, 'damaged old pack must not be called usable');
+  assert.equal(evictedState.completeReady, false);
+  console.log('PASS older revision availability requires re-verification, not just complete-manifest metadata');
+
 
   for (const fault of ['badBody', 'badMime', 'failWrite', 'hangWrite']) {
     const f = harness(); f.configure({ [fault]: fault.startsWith('bad') ? 'studio.js' : true });
