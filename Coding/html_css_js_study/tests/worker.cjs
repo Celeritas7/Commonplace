@@ -66,9 +66,13 @@ function harness() {
     await Promise.all(pending);
     return { messages, result: messages.filter(m => !m.progress).at(-1) };
   }
-  async function request(url, { method = 'GET', navigate = false } = {}) {
+  async function request(url, { method = 'GET', navigate = false, clientId = '', resultingClientId = '' } = {}) {
     let pending;
-    listeners.fetch({ request: navigate ? { url, method, mode: 'navigate' } : new Request(url, { method }), respondWith(p) { pending = p; } });
+    listeners.fetch({
+      request: navigate ? { url, method, mode: 'navigate' } : new Request(url, { method }),
+      clientId, resultingClientId,
+      respondWith(p) { pending = p; }
+    });
     return pending ? await pending : null;
   }
   async function validate(value) {
@@ -114,6 +118,9 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   console.log('PASS corrupt saved bytes never count as ready; repair fetches only the corrupt file');
 
   const originalManifest = h.manifest();
+  // A document opened before an update must keep using its original revision.
+  const originalPage = 'study-before-update';
+  assert.equal(await (await h.request(BASE, { navigate: true, resultingClientId: originalPage })).text(), '<h1>original</h1>');
   h.files.set('index.html', '<h1>updated</h1>'); h.files.set('studio.css', 'body{color:purple}');
   h.configure({ failFile: 'studio.css' });
   assert.match((await h.rpc('offline-download')).result.error, /studio\.css/);
@@ -126,8 +133,13 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   const updateBefore = h.requests.length; assert.equal((await h.rpc('offline-download')).result.ready, true);
   assert.deepEqual(h.requests.slice(updateBefore).filter(r => !r.url.endsWith('offline-assets.json')).map(r => r.url), [BASE + 'studio.css']);
   h.configure({ offline: true });
+  assert.equal(await (await h.request(BASE + 'studio.css', { clientId: originalPage })).text(), 'body{color:green}', 'old document must keep old CSS after update');
   assert.equal(await (await h.request(BASE + 'index.html')).text(), '<h1>updated</h1>');
   assert.equal(await (await h.request(BASE + 'studio.css?another-version')).text(), 'body{color:purple}');
+  const newPage = 'study-after-update';
+  assert.equal(await (await h.request(BASE, { navigate: true, resultingClientId: newPage })).text(), '<h1>updated</h1>');
+  assert.equal(await (await h.request(BASE + 'studio.css', { clientId: newPage })).text(), 'body{color:purple}');
+  assert.equal(await (await h.request(BASE + 'studio.js', { clientId: originalPage })).text(), 'window.answer=42;');
   const oldIndexKey = BASE + 'index.html?__cp_sha256=' + originalManifest.files[0].sha256;
   assert(h.stores.get(PACK).has(oldIndexKey), 'older completed downloads survive updates');
   console.log('PASS coherent previous pack during partial update, content-addressed reuse, complete revision switch');
