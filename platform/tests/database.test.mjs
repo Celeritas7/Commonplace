@@ -19,7 +19,9 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
  grant usage on schema public,auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated;
  insert into auth.users values('${owner}',now(),'owner@example.invalid'),('${a}',now(),'a@example.invalid'),('${b}',now(),'b@example.invalid'),('${unverified}',null,'unverified@example.invalid');`);
  await db.exec(storageFixture);
- for (const file of (await readdir(new URL('../supabase/migrations/',import.meta.url))).sort()) await db.exec(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
+ // Historical U1–U6 contract. U8 intentionally replaces raw study DML with CAS;
+ // offline-database.test.mjs applies ALL migrations and tests the new boundary.
+ for (const file of (await readdir(new URL('../supabase/migrations/',import.meta.url))).filter(f=>!f.includes('_u8_')).sort()) await db.exec(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  const as=async(user,sql)=>{
   await db.exec('reset role');
   await db.query("select set_config('request.jwt.claim.sub',$1,false)",[user??'']);

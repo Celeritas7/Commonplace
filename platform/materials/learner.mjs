@@ -66,14 +66,21 @@ function attachment(asset) {
   )
     throw Error("Invalid tutorial attachment.");
 }
-export async function readAssignedMaterial(client, context, id) {
+export async function readAssignedMaterial(
+  client,
+  context,
+  id,
+  signal = context.ticket.signal,
+) {
   check(context);
+  if (signal.aborted) throw Error("Download paused. Resume to continue.");
   if (!UUID.test(id)) throw Error("Invalid material ID.");
   const request = client.rpc("cp_read_material", { target: id });
   const result = await (request.abortSignal
-    ? request.abortSignal(context.ticket.signal)
+    ? request.abortSignal(signal)
     : request);
   check(context);
+  if (signal.aborted) throw Error("Download paused. Resume to continue.");
   if (
     result.error ||
     result.data?.id !== id ||
@@ -136,15 +143,30 @@ export function lessonFromMaterial(context, m, sectionId, capabilities) {
     },
   })(context, "material." + m.id);
 }
-export async function downloadAssignedMaterial(client, context, id) {
-  await readAssignedMaterial(client, context, id);
+export async function downloadAssignedMaterial(client, context, id, signal) {
   check(context);
-  const result = await client.functions.invoke("material-files", {
-    body: {},
-    headers: { "x-cp-action": "download", "x-cp-version": id },
-  });
-  check(context);
-  if (result.error || !(result.data instanceof Blob))
-    throw Error("Authorized download unavailable.");
-  return result.data;
+  const controller = new AbortController(),
+    cancel = () => controller.abort();
+  const sources = [context.ticket.signal, signal].filter(Boolean);
+  for (const source of sources) {
+    source.addEventListener("abort", cancel, { once: true });
+    if (source.aborted) cancel();
+  }
+  try {
+    await readAssignedMaterial(client, context, id, controller.signal);
+    check(context);
+    const result = await client.functions.invoke("material-files", {
+      body: {},
+      signal: controller.signal,
+      headers: { "x-cp-action": "download", "x-cp-version": id },
+    });
+    check(context);
+    if (controller.signal.aborted)
+      throw Error("Download paused. Resume to continue.");
+    if (result.error || !(result.data instanceof Blob))
+      throw Error("Authorized download unavailable.");
+    return result.data;
+  } finally {
+    for (const source of sources) source.removeEventListener("abort", cancel);
+  }
 }

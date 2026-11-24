@@ -33,9 +33,11 @@ export function mountLearningWorkspace(
     persistent = true,
     online = () => navigator.onLine,
     route = new URL(location.href),
+    support = null,
   } = {},
 ) {
-  const identity = createLearnerContext({ enabled, client, store });
+  const identity =
+    support?.identity || createLearnerContext({ enabled, client, store });
   let disposed = false,
     epoch = 0,
     viewEpoch = 0,
@@ -51,6 +53,11 @@ export function mountLearningWorkspace(
   const area = root.querySelector("[data-private]"),
     notice = root.querySelector("[data-notice]"),
     reload = root.querySelector("[data-reload]");
+  if (support?.mount) {
+    const tools = el("div");
+    area.before(tools);
+    support.mount(tools);
+  }
   root.querySelector("[data-mode]").textContent = preview
     ? "SAMPLE PREVIEW · NO ACCOUNT"
     : "ASSIGNED STUDY";
@@ -59,6 +66,7 @@ export function mountLearningWorkspace(
     notice.className = error ? "learn-notice learn-error" : "learn-notice";
   };
   function clear() {
+    support?.clear?.();
     viewEpoch++;
     disposeMaterial?.();
     disposeMaterial = null;
@@ -88,7 +96,7 @@ export function mountLearningWorkspace(
   }
   async function refresh() {
     if (disposed) return;
-    if (!online()) {
+    if (!online() && !support?.identity.canResumeOffline()) {
       cancel(
         "Connect to the internet to open assigned materials. Your saved work has been kept.",
       );
@@ -104,13 +112,14 @@ export function mountLearningWorkspace(
     try {
       const c = await identity.refresh();
       if (disposed || request !== epoch) return;
-      if (!online()) {
+      if (!online() && !c.offline) {
         cancel(
           "Connect to the internet to open assigned materials. Your saved work has been kept.",
         );
         return;
       }
       context = c;
+      const source = c.client || client;
       const invalidated = () => {
         if (context === c && !disposed) {
           epoch++;
@@ -124,6 +133,8 @@ export function mountLearningWorkspace(
       c.ticket.signal.addEventListener("abort", invalidated, { once: true });
       stopAbort = () =>
         c.ticket.signal.removeEventListener("abort", invalidated);
+      await support?.ready?.(c);
+      if (!active(c, request)) return;
       const connected = c.sections.filter(
         (s) => s.kind === "section" && s.id === "office.excel",
       );
@@ -175,15 +186,18 @@ export function mountLearningWorkspace(
           refresh();
         };
       const [profile, materials] = await Promise.all([
-        readLearnerProfile(client, c),
-        listAssignedMaterials(client, c, sectionId),
+        readLearnerProfile(source, c),
+        listAssignedMaterials(source, c, sectionId),
       ]);
       if (!active(c, request)) return;
+      support?.assignments?.(c, materials);
       render(c, profile.profile, materials, request);
-    } catch {
+    } catch (error) {
       if (!disposed && request === epoch)
         cancel(
-          "Study access could not be verified. Reconnect or sign in through Commonplace, then refresh access.",
+          support && !online()
+            ? error.message
+            : "Study access could not be verified. Reconnect or sign in through Commonplace, then refresh access.",
         );
     } finally {
       if (!disposed && request === epoch) reload.disabled = false;
@@ -273,7 +287,7 @@ export function mountLearningWorkspace(
           String(button.dataset.material === id),
         );
       try {
-        const material = await readAssignedMaterial(client, c, id);
+        const material = await readAssignedMaterial(c.client || client, c, id);
         if (!active(c, request, view)) return;
         if (material.payload.section_id !== sectionId)
           throw Error("Section mismatch");
@@ -297,7 +311,10 @@ export function mountLearningWorkspace(
           bookmarked = false,
           savedError = "";
         try {
-          records = openStudyRecords(store, c, material, key);
+          records = support
+            ? await support.openRecords(c, material, key, c.client || client)
+            : openStudyRecords(store, c, material, key);
+          if (!active(c, request, view)) return;
           attempt = records.state;
           note = records.note;
           bookmarked = records.bookmarked;
@@ -324,19 +341,25 @@ export function mountLearningWorkspace(
           "learn-completion",
         );
         reader.append(complete, content, status);
-        function saved(work) {
+        async function saved(work) {
           if (!active(c, request, view)) return;
           try {
             if (!records) throw Error(savedError);
-            work();
-            status.textContent = persistent
-              ? "Saved on this device for your account. Cloud sync is not active yet."
-              : "Sample changes stay in memory and reset when this preview is reloaded.";
+            await work();
+            if (!active(c, request, view)) return;
+            status.textContent = support
+              ? "Saved on this device. Check synchronization status above."
+              : persistent
+                ? "Saved on this device for your account. Cloud sync is not active yet."
+                : "Sample changes stay in memory and reset when this preview is reloaded.";
             status.className = "learn-save-status";
-          } catch {
+          } catch (error) {
+            if (!active(c, request, view)) return;
             status.textContent =
               savedError ||
-              "Changes could not be saved on this device. Keep this page open and copy any important notes.";
+              (support
+                ? error.message
+                : "Changes could not be saved on this device. Keep this page open and copy any important notes.");
             status.className = "learn-save-status learn-error";
           }
         }
@@ -359,7 +382,11 @@ export function mountLearningWorkspace(
             download: async () => {
               try {
                 say("Checking permission and downloading your tutorial…");
-                const blob = await downloadAssignedMaterial(client, c, id);
+                const blob = await downloadAssignedMaterial(
+                  c.client || client,
+                  c,
+                  id,
+                );
                 if (!active(c, request, view)) return;
                 const url = URL.createObjectURL(blob);
                 urls.add(url);
@@ -412,7 +439,13 @@ export function mountLearningWorkspace(
             ? "Progress, bookmarks and notes are saved on this device for your account."
             : "Sample work is kept in memory only.");
         if (savedError) status.className += " learn-error";
-        say("Assigned materials currently require an internet connection.");
+        say(
+          c.offline
+            ? `Studying saved assignments. Connect before ${new Date(c.expiresAt).toLocaleString()} to renew offline access.`
+            : support
+              ? "Your current assigned materials are available. Use Study offline to save them."
+              : "Assigned materials currently require an internet connection.",
+        );
       } catch {
         if (active(c, request, view))
           cancel(
@@ -432,11 +465,20 @@ export function mountLearningWorkspace(
       say("Your current assignments are shown.");
     }
   }
-  const onOffline = () =>
+  const onOffline = () => {
+    if (support) {
+      support.identity.transitionOffline();
+      refresh();
+      return;
+    }
     cancel(
       "Connect to the internet to open assigned materials. Your saved work has been kept.",
     );
-  const onOnline = () => refresh();
+  };
+  const onOnline = () => {
+    support?.identity.connect();
+    refresh();
+  };
   const onFocus = () => {
     if (document.visibilityState === "visible" && !reload.disabled) refresh();
   };
@@ -458,7 +500,7 @@ export function mountLearningWorkspace(
   window.addEventListener("pagehide", onPageHide);
   window.addEventListener("pageshow", onPageShow);
   refresh();
-  return () => {
+  const dispose = () => {
     disposed = true;
     epoch++;
     stopAbort?.();
@@ -472,4 +514,6 @@ export function mountLearningWorkspace(
     window.removeEventListener("pageshow", onPageShow);
     root.replaceChildren();
   };
+  dispose.refresh = refresh;
+  return dispose;
 }
