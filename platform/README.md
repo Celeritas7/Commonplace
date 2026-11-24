@@ -1,5 +1,11 @@
 # Commonplace U1: isolated access foundation
 
+Current checkpoint: [U9 acceptance and recovery](acceptance/README.md) consolidates
+the merged foundation's tests and remaining release gates. See the current
+[readiness assessment](../docs/admin-platform/U9-READINESS.md); live activation
+remains disabled. The U1 description below is historical, followed by each phase's
+implementation notes.
+
 Status: implementation for review, **not deployed or enabled**. Baseline main: `0239b93` (U0 merged in PR #72). No existing application page imports these modules. There is no project URL, key, signup hook, deployed function, real account seed, automatic migration runner or hosting change here.
 
 ## Delivered

@@ -2,6 +2,10 @@
 
 Status: proposal after U0; no migrations or application implementation in this PR.
 
+Current implementation checkpoint: U1–U8 are merged. [U9 acceptance and readiness](U9-READINESS.md)
+records local evidence and outstanding hosted/device gates. The original roadmap
+below is retained for its acceptance criteria; merged code is not live activation.
+
 ## Contracts and proposed data ownership
 
 Use a dedicated Commonplace namespace/prefix; exact SQL comes in U1. Do not copy the entire shared project's schema into a new project.
