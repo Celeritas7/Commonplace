@@ -35,6 +35,21 @@ test("attachment inspection accepts static documents and bounded workbooks, reje
       "utf8",
     ),
   );
+  const exported = JSON.parse(
+    await readFile(
+      new URL("./fixtures/workbook-bytes.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.equal(
+    (
+      await inspectAttachment(
+        new Uint8Array(Buffer.from(exported.base64, "base64")),
+        exported.filename,
+      )
+    ).mime,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
   for (const [ext, base64] of Object.entries(images))
     assert.equal(
       (
@@ -65,6 +80,26 @@ test("attachment inspection accepts static documents and bounded workbooks, reje
   ])
     await assert.rejects(() => inspectAttachment(data, name));
   for (const extra of [
+    {
+      "xl/worksheets/sheet1.xml": strToU8(
+        '<worksheet><f>WEBS<!-- hidden -->ERVICE("x")</f></worksheet>',
+      ),
+    },
+    {
+      "xl/worksheets/sheet1.xml": strToU8(
+        '<worksheet><f>W<![CDATA[EBS]]>ERVICE("x")</f></worksheet>',
+      ),
+    },
+    {
+      "xl/worksheets/sheet1.xml": strToU8(
+        '<worksheet><f>&#87;EBSERVICE("https://bad.invalid")</f></worksheet>',
+      ),
+    },
+    {
+      "xl/workbook.xml": strToU8(
+        '<workbook><definedName name="hidden">EVALUATE("SUM(B2:B4)")</definedName></workbook>',
+      ),
+    },
     { "../escape.xml": strToU8("<x/>") },
     { "xl/vbaProject.bin": bytes },
     {

@@ -175,12 +175,35 @@ function workbook(bytes) {
       image(data, name.split(".").at(-1));
       continue;
     }
-    const xml = decode(data);
+    const source = decode(data);
     if (
-      /<!DOCTYPE|<!ENTITY|&#|macroEnabled|macroSheet|dialogSheet|Auto_Open|Auto_Close|vbaProject|TargetMode\s*=\s*['"]External['"]|\bTarget\s*=\s*['"](?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/|\\)|oleObject|ddeLink/i.test(
+      /<!--|<!\[CDATA\[/i.test(source) ||
+      XMLValidator.validate(source) !== true
+    )
+      fail();
+    // Spreadsheet writers encode international text as numeric XML references.
+    // Decode those for inspection so they also cannot disguise active formulas.
+    const xml = source.replace(/&#(x[0-9a-f]+|[0-9]+);/gi, (_, value) => {
+      const point = /^x/i.test(value)
+        ? parseInt(value.slice(1), 16)
+        : Number(value);
+      if (
+        !(
+          point === 9 ||
+          point === 10 ||
+          point === 13 ||
+          (point >= 0x20 && point <= 0xd7ff) ||
+          (point >= 0xe000 && point <= 0xfffd) ||
+          (point >= 0x10000 && point <= 0x10ffff)
+        )
+      )
+        fail();
+      return String.fromCodePoint(point);
+    });
+    if (
+      /<!DOCTYPE|<!ENTITY|macroEnabled|macroSheet|dialogSheet|Auto_Open|Auto_Close|vbaProject|TargetMode\s*=\s*['"]External['"]|\bTarget\s*=\s*['"](?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/|\\)|oleObject|ddeLink/i.test(
         xml,
-      ) ||
-      XMLValidator.validate(xml) !== true
+      )
     )
       fail();
     // No network/DDE formulas or external-workbook references. Formula text is
@@ -189,7 +212,7 @@ function workbook(bytes) {
       /<(?:[A-Za-z0-9_]+:)?(f|definedName)\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z0-9_]+:)?\1\s*>/g,
     ))
       if (
-        /WEBSERVICE|HYPERLINK|RTD\s*\(|CALL\s*\(|REGISTER|EXEC\s*\(|\[|\]|\||https?:|file:|ftp:/i.test(
+        /WEBSERVICE|HYPERLINK|RTD\s*\(|CALL\s*\(|REGISTER|EXEC\s*\(|EVALUATE\s*\(|\[|\]|\||https?:|file:|ftp:/i.test(
           m[2],
         )
       )
