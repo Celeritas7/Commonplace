@@ -7,6 +7,9 @@ export function createLearnerContext({enabled = false, client, store} = {}) {
   function invalidate() { generation++; store.switchAccount(null); }
   const authOwner = observeAuthOwner(client, invalidate);
   return {
+    // Let a section host cancel pending verification on offline/page lifecycle
+    // transitions without inventing an offline authorization lease.
+    invalidate,
     async refresh() {
       if (disposed) throw Error('Context disposed');
       invalidate(); const request = generation;

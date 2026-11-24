@@ -44,7 +44,7 @@ Keep answer keys in separate `answer_sheet` materials, including separate soluti
 
 Learner visibility requires all of: active membership, section permission, a published version and an effective individual or current profile-group assignment. Explicit learner exclusions override group/individual grants. Answer sheets additionally require `release_answers`. Profile group changes and revocations are evaluated on every protected request; no role or permission is trusted from JSON, localStorage or an editable JWT claim. Learners cannot enumerate other recipients or the admin library.
 
-`cp_learner_materials(section)` lists authorized versions; `cp_read_material(version_id)` returns one authorized payload. `learner.mjs` adds owner/ticket checks and the U4 adapter. Its stable per-version logical assignment keeps progress identities independent of which group supplied the grant. These adapters are not connected to existing Excel lessons yet; U7 does that.
+`cp_learner_materials(section)` lists authorized versions; `cp_read_material(version_id)` returns one authorized payload. `learner.mjs` adds owner/ticket checks and the U4 adapter. Its stable per-version logical assignment keeps progress identities independent of which group supplied the grant. The U7 learner workspace now uses these adapters to render assigned Excel content with the existing Ribbon. The legacy static lesson remains separate and unchanged.
 
 ## Private attachment delivery
 

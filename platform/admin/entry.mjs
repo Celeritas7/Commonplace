@@ -1,4 +1,4 @@
-import {deployment} from './deployment.mjs';
+import {deployment,loadDeploymentClient} from './deployment.mjs';
 import {createAdminAPI} from './api.mjs';
 import {mountAdminStudio} from './studio.mjs';
 const root=document.querySelector('#app');
@@ -7,6 +7,6 @@ if(!deployment){
 }else{
  // Host supplies its reviewed client module, sharing the target login session.
  // No changes to the legacy gate or Google callback implementation are made here.
- try{const {client}=await import(deployment.clientModule);mountAdminStudio(root,createAdminAPI({enabled:true,client}));}
+ try{const client=await loadDeploymentClient();mountAdminStudio(root,createAdminAPI({enabled:true,client}));}
  catch{root.textContent='Admin Studio could not verify access. Reopen it from your signed-in Commonplace account.';}
 }

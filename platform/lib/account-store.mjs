@@ -5,7 +5,7 @@ const KINDS = new Set(['progress', 'bookmark', 'highlight', 'note']);
 function record(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input) ||
       Object.keys(input).sort().join() !== 'id,kind,section,value' ||
-      !SECTION.test(input.section) || typeof input.id !== 'string' ||
+      typeof input.section !== 'string' || !SECTION.test(input.section) || typeof input.id !== 'string' ||
       input.id.length < 1 || input.id.length > 160 || !KINDS.has(input.kind) ||
       !input.value || typeof input.value !== 'object' || Array.isArray(input.value)) throw Error('Invalid study record');
   // Opaque study payload is never interpreted as executable HTML/code or authority.
@@ -14,7 +14,7 @@ function record(input) {
   return {section: input.section, id: input.id, kind: input.kind, value: JSON.parse(serialized)};
 }
 export function createAccountStore(storage, project) {
-  if (!/^[a-z0-9-]{1,80}$/.test(project)) throw Error('Invalid project namespace');
+  if (typeof project !== 'string' || !/^[a-z0-9-]{1,80}$/.test(project)) throw Error('Invalid project namespace');
   let owner = null, generation = 0, controller = new AbortController();
   const prefix = user => `cp:u1:${project}:${user}:`;
   const key = (user, r) => prefix(user) + JSON.stringify([r.section, r.kind, r.id]);
@@ -26,12 +26,19 @@ export function createAccountStore(storage, project) {
     // Caller verifies identity online; session events do not grant access.
     // An offline reopen requires a separate explicit owner/lease flow in U8.
     switchAccount(user) {
-      if (user !== null && !UUID.test(user)) throw Error('Verified UUID required');
+      if (user !== null && (typeof user !== 'string' || !UUID.test(user))) throw Error('Verified UUID required');
       controller.abort(); controller = new AbortController(); generation++;
       owner = user === null ? null : user.toLowerCase();
     },
     ticket() { if (!owner) throw Error('No account'); return Object.freeze({owner, generation, signal: controller.signal}); },
     put(ticket, input) { check(ticket); const r = record(input); storage.setItem(key(owner,r), JSON.stringify(r)); },
+    get(ticket, identity) {
+      check(ticket); const expected=record({...identity,value:{}}), k=key(owner,expected);
+      const text=storage.getItem(k); if(text===null)return null;
+      const saved=record(JSON.parse(text));
+      if(key(owner,saved)!==k)throw Error('Corrupt owned record');
+      return saved;
+    },
     list(ticket) {
       check(ticket); const result = [];
       for (let i = 0; i < storage.length; i++) {

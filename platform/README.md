@@ -88,3 +88,7 @@ The [foundation review corrections](../docs/admin-platform/FOUNDATION-REVIEW-FIX
 ## U6 follow-on
 
 The [central material library](materials/README.md) adds validated imports, draft review, immutable publication, explicit individual/group assignments, answer release, archiving and a private attachment-service implementation. It includes the learner adapter for U7. The live entry remains disabled; real Supabase/Storage/Edge and device acceptance are still required before activation.
+
+## U7 follow-on
+
+The [authorized learner workspace](learn/README.md) now connects Excel to central profiles, published assignments and protected downloads. It reuses the existing Excel Ribbon and supported SUM model, with versioned account-specific local progress, notes and bookmarks. Review `/platform/learn/preview.html`; live activation remains disabled. Existing personal lessons/offline packs are unchanged, and assigned offline study/cloud sync remain U8 work.
