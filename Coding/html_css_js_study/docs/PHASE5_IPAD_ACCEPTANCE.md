@@ -9,7 +9,7 @@ This is a release-acceptance record, not a claim that any physical iPad has pass
 
 ## Release availability gate — check before testing
 
-The newest GitHub `main` commit that merged PR #80 was `5fd7274b62b10307be561e6b1f14727694a263a3`. GitHub's combined status for that commit reported **Vercel: failure — "Deployment rate limited — retry in 24 hours."** This is evidence of a deployment limitation, not evidence that the GitHub Pages endpoint or the existing installed iPad app is current. A later `main` commit may have different deployment status. The source includes a GitHub Pages app link, but **the live GitHub Pages files and installed Home Screen app have not been independently verified during Phase 5**.
+GitHub reported **Vercel: failure — "Deployment rate limited — retry in 24 hours"** on PR #80's merge commit `5fd7274b62b10307be561e6b1f14727694a263a3`. **A newer `main` commit `eb7e3d0cf84eee6975e2730540eb58d30194f694` subsequently reported Vercel: success — "Deployment has completed"** (status timestamp 2026-11-24 15:05 UTC). The earlier rate limit is therefore **not the current main-commit status**. However, this GitHub deployment status does **not** independently confirm that the hosted HTML/assets, GitHub Pages endpoint or existing installed iPad app are on Web Studio v1.7.4. The source includes a GitHub Pages app link, but **its live files and the installed Home Screen app have not been independently verified during Phase 5**.
 
 **Use the existing installed Web Studio icon first.** Never switch hostnames or reinstall as a normal update procedure; Safari, GitHub Pages, Vercel and Home Screen contexts can use different local storage. Do not infer deployment readiness from `main` merely being merged.
 
