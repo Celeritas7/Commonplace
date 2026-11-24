@@ -378,7 +378,18 @@ async function preserved() {
   await require('./sync-browser.cjs')({ context, origin, SECTION, KEY, untouched, engine, setPage: value => { page = value; } });
 })().catch(async error => {
   console.error(error);
-  if (page) { try { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-' + engine + '.png', fullPage: true }); } catch (_) {} }
+  if (page && !page.isClosed()) {
+    try {
+      const startup = await page.evaluate(() => {
+        const panel=document.getElementById('wb-startup-recovery');
+        return {url:location.pathname,state:window.WebStudioStartup?.state,reason:window.WebStudioStartup?.reason,asset:window.WebStudioStartup?.asset,
+         hidden:panel?.hidden,style:panel?getComputedStyle(panel).display:null,gate:document.documentElement.classList.contains('cp-locked'),
+         errors:document.getElementById('wb-startup-message')?.textContent};
+      });
+      console.error('Startup recovery fixture diagnostic:', JSON.stringify(startup));
+    } catch (_) {}
+    try { fs.mkdirSync('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/web-studio-' + engine + '.png', fullPage: true }); } catch (_) {}
+  }
   process.exitCode = 1;
 }).finally(async () => {
   if (browser) await browser.close();
