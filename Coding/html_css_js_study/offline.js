@@ -70,6 +70,12 @@
   if(previous)help.textContent='You can keep studying with the previous verified pack. Resume the new download when connected; do not reload into an incomplete update.';
   else if(ready&&s.reloadRecommended)help.textContent='The new pack is complete. Save your work, then use Reload app in Updates and repair to adopt it.';
   else if(ready)help.textContent='Saved files are verified. Close and reopen this app offline and run a preview before relying on it away from Wi-Fi.';
+  if(!s.checking&&!downloading&&typeof CustomEvent==='function'&&typeof window.dispatchEvent==='function'){
+   window.dispatchEvent(new CustomEvent('web-studio-pack-status',{detail:{
+    ready:s.ready===true,previousReady:s.previousReady===true,updatePending:s.updatePending===true,
+    reloadRecommended:s.reloadRecommended===true,completeReady:s.completeReady===true
+   }}));
+  }
  }
 
  function fail(e){readyAction(false);status.textContent='Downloads need attention';toggle.dataset.ready='false';error.textContent=e.message||'Offline setup failed. Retry while connected.';check.textContent='Retry check';button.textContent=last?.done?'Resume download':'Retry download';}
