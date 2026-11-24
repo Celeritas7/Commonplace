@@ -88,6 +88,9 @@ async function preserved() {
   const ctx = await context(); page = await ctx.newPage(); page.setDefaultTimeout(12000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(origin + SECTION); await page.locator('#wb-title').waitFor({ state: 'visible' });
+  const startup = await page.evaluate(() => ({state: window.WebStudioStartup?.state, reason: window.WebStudioStartup?.reason, asset: window.WebStudioStartup?.asset}));
+  assert.equal(startup.state, 'ready', 'the main app must acknowledge readiness before study interactions: ' + JSON.stringify(startup));
+  assert.equal(await page.locator('#wb-startup-recovery').isVisible(), false, 'healthy startup must never obscure lessons');
   assert.equal(await page.locator('#wb-title').textContent(), 'Give your page meaning.');
   assert.equal(await page.locator('.wb-toc [data-part]').count(), 9);
   await preserved();
