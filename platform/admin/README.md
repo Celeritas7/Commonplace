@@ -63,3 +63,7 @@ The host must wire `learner-navigation.mjs` to protected section adapters and re
 Revocation blocks subsequent protected database requests; it cannot recall disconnected copies or files already downloaded. Admin actions require online authorization. U3 adds professional profiles; U4/U6 add material contracts and publishing; U7 connects Excel. This studio does not add independent Excel administration.
 
 Rollback before activation: revert the UI/code changes. After a pilot, disable the deployment boundary, retain the new records/audit and follow the U1 recovery plan rather than dropping schema or clearing study data.
+
+## U3 follow-on
+
+The **Professional profile** view now adds reusable learning context and administrator-managed profile groups. See [U3 contracts, review steps and security evidence](../PROFILES.md). Profile/group saves are separate from study permission saves; the same disabled live-activation boundary remains in place.

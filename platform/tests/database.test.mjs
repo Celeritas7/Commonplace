@@ -136,6 +136,55 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
   assert.deepEqual((await as(a,'select id from public.cp_sections order by id')).rows.map(r=>r.id),['office','office.excel']);
   await denied(owner,`select public.cp_admin_save('${owner}',0,'Owner','revoked',array[]::text[])`,'22023');
  });
+ await t.test('U3 profile/group RPCs and direct writes reject learners and anonymous users',async()=>{
+  for(const user of [null,a,b]) {
+   await denied(user,`select public.cp_admin_profile('${a}')`);
+   await denied(user,`select public.cp_admin_save_profile('${a}',0,'{}',array[]::uuid[])`);
+   await denied(user,"select public.cp_admin_save_profile_group(null,0,'Sales','')");
+  }
+  await denied(a,`insert into public.cp_learning_profiles(user_id) values('${a}')`);
+  await denied(a,"insert into public.cp_profile_groups(name) values('Escalate')");
+ });
+ let groupId;
+ await t.test('U3 admin creates group and profile without granting new section access',async()=>{
+  groupId=(await as(owner,"select public.cp_admin_save_profile_group(null,0,'Import-export','Sales scenarios') id")).rows[0].id;
+  await as(owner,`select public.cp_admin_save_profile('${a}',0,'{"background":"Sales","difficulty":"beginner","countries_markets":["Japan","Philippines"]}',array['${groupId}']::uuid[])`);
+  await as(owner,`select public.cp_admin_save_profile('${b}',0,'{"occupation":"Other learner"}',array['${groupId}']::uuid[])`);
+  assert.deepEqual((await as(a,'select id from public.cp_sections order by id')).rows.map(r=>r.id),['office','office.excel']);
+  assert.equal(await scalar(b,'select count(*)::int n from public.cp_sections'),0);
+  assert.equal(await scalar(a,'select count(*)::int n from public.cp_profile_groups'),0);
+  assert.equal(await scalar(a,'select count(*)::int n from public.cp_profile_group_members'),0);
+ });
+ await t.test('U3 learners read only their own active profile and cannot modify ownership',async()=>{
+  const rows=(await as(a,'select user_id,profile from public.cp_learning_profiles')).rows;
+  assert.equal(rows.length,1);assert.equal(rows[0].user_id,a);assert.equal(rows[0].profile.background,'Sales');
+  assert.equal((await as(b,'select user_id from public.cp_learning_profiles')).rows[0].user_id,b);
+  await denied(a,`update public.cp_learning_profiles set user_id='${b}'`);
+  await denied(a,"update public.cp_learning_profiles set profile='{}'");
+  await as(owner,`select public.cp_set_learner('${a}','revoked','A')`);
+  assert.equal(await scalar(a,'select count(*)::int n from public.cp_learning_profiles'),0);
+  await as(owner,`select public.cp_set_learner('${a}','active','A')`);
+ });
+ await t.test('U3 schema rejects authority/identity fields, bad types and oversized arrays atomically',async()=>{
+  for(const profile of [{role:'administrator'},{email:'a@example.invalid'},{difficulty:'expert'},{background:7},{scenarios:Array(21).fill('x')},{occupation:'x'.repeat(2001)},{learning_objectives:[null]}]) {
+   await denied(owner,`select public.cp_admin_save_profile('${a}',1,'${JSON.stringify(profile)}',array[]::uuid[])`,'22023');
+  }
+  await denied(owner,`select public.cp_admin_save_profile('${a}',1,'{}',array['99999999-0000-4000-8000-000000000000']::uuid[])`,'22023');
+  const result=(await as(owner,`select public.cp_admin_profile('${a}') data`)).rows[0].data;
+  assert.equal(result.revision,'1');assert.equal(result.profile.background,'Sales');assert.deepEqual(result.group_ids,[groupId]);
+ });
+ await t.test('U3 stale profile/group saves fail; saved profile can remove groups without changing permissions',async()=>{
+  await as(owner,`select public.cp_admin_save_profile('${a}',1,'{"background":"Updated"}',array[]::uuid[])`);
+  await denied(owner,`select public.cp_admin_save_profile('${a}',1,'{}',array[]::uuid[])`,'40001');
+  await as(owner,`select public.cp_admin_save_profile_group('${groupId}',1,'Trade professionals','Reusable group')`);
+  await denied(owner,`select public.cp_admin_save_profile_group('${groupId}',1,'Stale','')`,'40001');
+  await denied(owner,"select public.cp_admin_save_profile_group(null,0,' trade PROFESSIONALS ','')",'23505');
+  const result=(await as(owner,`select public.cp_admin_profile('${a}') data`)).rows[0].data;
+  assert.deepEqual(result.group_ids,[]);assert.equal(result.revision,'2');assert.equal(result.groups[0].revision,'2');
+  assert.deepEqual((await as(a,'select id from public.cp_sections order by id')).rows.map(r=>r.id),['office','office.excel']);
+  const audit=(await as(owner,"select detail from public.cp_audit where action='profile.save'")).rows;
+  assert.ok(audit.every(r=>!JSON.stringify(r.detail).includes('background')));
+ });
  await t.test('audit records actor from session and failed operations leave no successful audit event',async()=>{
   const before=await scalar(owner,'select count(*)::int n from public.cp_audit');
   await denied(a,`select public.cp_set_section_grant('${a}','office.vba','allow')`);
@@ -146,7 +195,7 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
  await t.test('all application tables have RLS; privileged bootstrap has no API execute grant',async()=>{
   await db.exec('reset role');
   const rows=(await db.query("select relname,relrowsecurity from pg_class where relnamespace='public'::regnamespace and relkind='r' and relname like 'cp_%'")).rows;
-  assert.equal(rows.length,5); assert.ok(rows.every(r=>r.relrowsecurity));
+  assert.equal(rows.length,8); assert.ok(rows.every(r=>r.relrowsecurity));
   for(const role of ['anon','authenticated','service_role']) {
    const result=await db.query(`select has_function_privilege('${role}','cp_private.bootstrap_owner(uuid)','EXECUTE') as allowed`);
    assert.equal(result.rows[0].allowed,false);
