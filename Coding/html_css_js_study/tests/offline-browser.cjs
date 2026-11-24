@@ -398,7 +398,7 @@ function revise(files) {
   await page.goto(origin + BASE + 'index.html'); await page.locator('#wb-save-status').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#old-shell').count(), 0);
   assert((await page.evaluate(() => caches.keys())).includes('html-css-js-study-shell-v2'), 'upgrade should not delete the older cache');
-  console.log('PASS ' + engine + ': the new network-first worker replaces a stale cache-first worker without clearing old data');
+  console.log('PASS ' + engine + ': the verified-revision worker replaces a stale cache-first worker without clearing old data');
   await upgrade.close();
   console.log('PASS ' + engine + ': offline acceptance complete; physical iPad/Home Screen testing remains manual');
 })().catch(async error => {
