@@ -53,7 +53,7 @@ test("disposable package keeps migration/shared-module bytes and puts both Edge 
     assert.equal(
       Object.keys(hashes).filter((p) => p.startsWith("supabase/migrations/"))
         .length,
-      5,
+      6,
     );
     for (const [path, hash] of Object.entries(hashes)) {
       const original = await readFile(join(platformRoot, path));

@@ -94,7 +94,9 @@ const data = (r, label) => {
     label +
       " returned an API error" +
       (r.error?.code ? " (" + r.error.code + ")" : "") +
-      (r.error?.message ? ": " + safeDiagnostic(r.error.message, secrets) : "") +
+      (r.error?.message
+        ? ": " + safeDiagnostic(r.error.message, secrets)
+        : "") +
       (r.error?.details ? ": " + safeDiagnostic(r.error.details, secrets) : ""),
   );
   return r.data;

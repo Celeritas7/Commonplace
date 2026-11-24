@@ -8,7 +8,10 @@ export const users = {
   b: "10000000-0000-4000-8000-000000000003",
   fresh: "10000000-0000-4000-8000-000000000004",
 };
-export async function createAcceptanceDatabase({ beforeU8 = false } = {}) {
+export async function createAcceptanceDatabase({
+  beforeU8 = false,
+  beforeU9 = false,
+} = {}) {
   const db = new PGlite();
   await db.exec(`
     create role anon; create role authenticated; create role service_role;
@@ -30,7 +33,11 @@ export async function createAcceptanceDatabase({ beforeU8 = false } = {}) {
   for (const file of (
     await readdir(new URL("../supabase/migrations/", import.meta.url))
   ).sort()) {
-    if (beforeU8 && file.includes("_u8_")) continue;
+    if (
+      (beforeU8 && file.includes("_u8_")) ||
+      (beforeU9 && file.includes("_u9_"))
+    )
+      break;
     await db.exec(
       await readFile(
         new URL("../supabase/migrations/" + file, import.meta.url),

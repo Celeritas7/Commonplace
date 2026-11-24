@@ -63,7 +63,7 @@ review the entire existing project's exposed surface; a prefix is not isolation.
 Do not provision paid resources or modify the shared project as part of merely
 running this repository's tests.
 
-1. Record the target, origin, PostgreSQL version, source SHA, five migration file
+1. Record the target, origin, PostgreSQL version, source SHA, all migration file
    checksums, dependency lock checksum, exposed schemas and reviewed advisors.
    Confirm `cp_private` is not exposed. Verify backup scope and restore evidence
    before applying anything to a database containing valued data.

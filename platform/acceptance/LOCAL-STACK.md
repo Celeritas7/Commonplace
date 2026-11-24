@@ -1,7 +1,7 @@
 # U9 — Disposable Supabase integration
 
 The earlier acceptance suite used PGlite and controlled browser/worker fixtures.
-This checkpoint runs the same five migrations and real Edge handlers through
+This checkpoint runs the migration chain and real Edge handlers through
 Supabase's local Docker services. It exercises actual signed Auth sessions,
 PostgREST authorization and private Storage delivery before choosing a cloud
 staging target. Production activation remains disabled.
@@ -86,3 +86,21 @@ hosted target. Follow [the hosted and device runbook](README.md) before activati
 The connected organization had two existing projects and no selected staging
 project when this checkpoint began. A separate hosted target and its cost/origin
 decision remain open. This PR does not use a shared project as a substitute.
+
+## Regression found by real integration
+
+The initial real Auth sessions succeeded, but `cp_set_learner` failed through
+PostgREST with SQLSTATE `21000`, `UPDATE requires a WHERE clause`. Supabase's
+`safeupdate` guard rejected the unfiltered update of the singleton mutation lock.
+PGlite's minimal fixture did not load that extension, so the earlier SQL tests
+could not detect this service-specific failure.
+
+The sixth migration, `20261124235058_u9_explicit_mutation_lock.sql`, replaces the
+ten affected function definitions with an explicit `where id = true` lock target.
+It retains the existing serialization and does not disable `safeupdate`, change
+permissions or alter records. The original five migrations remain unchanged. An
+upgrade regression compares all platform rows and function metadata, including
+owners, ACLs, signatures and security settings, before and after applying it.
+The HTTP matrix must pass with this migration before the checkpoint is accepted.
+Apply it in sequence only on the selected test target; no hosted migration is
+performed by this PR or workflow.
