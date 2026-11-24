@@ -32,6 +32,34 @@ jobs:
           node Coding/html_css_js_study/tests/backup.cjs
           node Coding/html_css_js_study/tests/sync-merge.cjs
           node Coding/html_css_js_study/tests/sync.cjs
+  https_gate_worker:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned browser test runtime
+        run: npm install --prefix /tmp/web-studio-tests --no-save playwright@1.65.1
+      - name: Combined HTTPS gate and real worker acceptance
+        run: node Coding/html_css_js_study/tests/auth-offline-https.cjs
+        env:
+          NODE_PATH: /tmp/web-studio-tests/node_modules
+          BROWSER: ${{ matrix.browser }}
+      - name: Failure screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-studio-https-${{ matrix.browser }}-failure
+          path: test-results/
+          if-no-files-found: ignore
   browsers:
     runs-on: ubuntu-24.04
     container:
@@ -66,11 +94,6 @@ jobs:
           BROWSER: ${{ matrix.browser }}
       - name: Shared login gate and OAuth return integration
         run: node Coding/html_css_js_study/tests/auth-browser.cjs
-        env:
-          NODE_PATH: /tmp/web-studio-tests/node_modules
-          BROWSER: ${{ matrix.browser }}
-      - name: Real gate and real service worker together on local HTTPS
-        run: node Coding/html_css_js_study/tests/auth-offline-https.cjs
         env:
           NODE_PATH: /tmp/web-studio-tests/node_modules
           BROWSER: ${{ matrix.browser }}
