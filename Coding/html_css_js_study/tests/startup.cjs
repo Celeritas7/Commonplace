@@ -47,7 +47,7 @@ function harness({ locked = false, initialized = false, controller = true } = {}
     },
     document,
     navigator: { serviceWorker: controller ? { controller: { scriptURL: 'worker' } } : null },
-    location: { href: 'https://study.test/Commonplace/Coding/html_css_js_study/index.html', origin: 'https://study.test', reload() { reloads++; } },
+    location: { href: 'https://study.test/Commonplace/Coding/html_css_js_study/index.html', origin: 'https://study.test', pathname: '/Commonplace/Coding/html_css_js_study/index.html', reload() { reloads++; } },
     URL,
     MutationObserver: class {
       constructor(callback) { observer = callback; }
