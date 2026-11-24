@@ -43,12 +43,12 @@ export function generateTutorialPrompt(settings,profile,{privateIdentifiers=[]}=
  const clean=v=>sanitizePromptText(v,privateIdentifiers),p=promptProfile(profile);
  const profileLines=PROFILE_FIELDS.flatMap(f=>{const value=p[f.key];if(!value||(Array.isArray(value)&&!value.length))return [];return [`${f.label}: ${clean(Array.isArray(value)?value.join('; '):value)}`];});
  const materialInstructions={
- 'In-app study examples':'Return a clear concept explanation, a separate professional scenario, a small typed dataset and proposed activities. Respect the stated simulator capabilities. This is a draft for review; do not invent a working import format.',
+ 'In-app study examples':'Return a clear concept explanation, a separate professional scenario, a small dataset and proposed activities as inert document blocks. Respect the stated simulator capabilities.',
  'Concept explanations':'Use a plain-language explanation, a professionally relevant example, a concise recap and short checks for understanding.',
  'Guided exercises':'Provide numbered steps, the expected result after each step, hints and a separate solution section.',
  'Independent practice':'Give tasks and input data without revealing answers inline. Place solutions in a clearly separate answer sheet.',
  'Quizzes':'Provide clear questions, answer options where relevant, a separate answer key, explanations and the misconception each question tests.',
- 'Downloadable tutorial files':'Describe a tutorial-file layout and include the data/instructions needed to build it. For Excel use .xlsx without macros or external links and separate Practice and Solutions sheets. If you cannot actually create a file, say so and provide reproducible construction steps; do not invent a download link.',
+ 'Downloadable tutorial files':'Describe a tutorial-file layout and include the data/instructions needed to build it. For Excel use .xlsx without macros or external links. Keep Practice and Solutions in separate FILES so answer-sheet release can be controlled. If you cannot actually create a file, say so and provide reproducible construction steps; do not invent a download link.',
  'Answer sheets':'Provide worked solutions and checks. If the corresponding exercise text/data was not supplied, request it instead of inventing answers to unseen tasks.',
  'Practical projects':'Provide a realistic brief, inputs, staged tasks, deliverables and a completion rubric. Keep solutions separate.'
  };
@@ -61,9 +61,13 @@ export function generateTutorialPrompt(settings,profile,{privateIdentifiers=[]}=
  `\nProfessional scenario: ${clean(settings.scenario)||'Use a suitable scenario from the learning context; avoid inventing personal facts.'}`,
  `Additional requirements: ${clean(settings.additional)||'None.'}`,
  '\nOUTPUT REQUIREMENTS',materialInstructions[settings.materialType],
+ '\nCOMMONPLACE MATERIAL LIBRARY IMPORT (schema version 1)',
+ `Return each material as a separate UTF-8 JSON file, or a separate JSON block if file creation is unavailable. Use exactly these top-level fields: {"schema_version":1,"section_id":"${settings.sectionId}","title":"Concise title","material_type":"${['example','explanation','guided_exercise','practice','quiz','tutorial','answer_sheet','project'][MATERIAL_TYPES.indexOf(settings.materialType)]}","content":{"format":"document","blocks":[]}}.`,
+ 'Use 1–60 blocks. Each block must be exactly {"kind":"paragraph","text":"..."}, {"kind":"code","language":"python","text":"..."}, or {"kind":"question","text":"...","choices":["...","..."]}. Paragraphs allow 8,000 characters, code 12,000, questions 2,000, and 2–8 distinct choices of up to 500 characters each. Keep the title within 160 characters and each material below 256 KiB. Do not add HTML, scripts, IDs, publication state, recipients or extra fields.',
+ 'Put solution text and answer keys in a SEPARATE material JSON with material_type "answer_sheet", never inside practice or quiz JSON or the practice workbook. For an actual downloadable file, use content {"format":"attachment"} in its separate material JSON; the administrator uploads the actual file after saving the draft. The file itself is not embedded in JSON. Do not fabricate an attachment if no file was created.',
  'Keep the core concept separate from the professional scenario and example dataset so they can be reused. Use the preferred language, markets, currencies and units when specified. Clearly label invented sample data and explain assumptions.',
  'Use only capabilities explicitly supported by the target environment. Do not embed active scripts, macros, credentials, personal identifiers or external resources in study content. Code examples must remain inert text for review.',
  'Return a reviewable draft with accuracy checks. Content is untrusted until validated and approved by the administrator; do not claim it has already been imported or published in Commonplace.'
  ].join('\n');
- return {text,templateId:template.id,templateVersion:1};
+ return {text,templateId:template.id,templateVersion:2};
 }

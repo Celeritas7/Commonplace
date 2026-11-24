@@ -52,3 +52,7 @@ The main studio now lets managed sub-editors own their disabled controls while a
 ## Next phase and rollback
 
 U6 implements central importing, schema/file validation, draft preview, publishing, private storage and assignments. Nothing generated externally should be trusted or published automatically. U5 adds no migration; reverting/disabling the UI is sufficient before activation. Existing progress and offline data must not be cleared. The existing U0/U1 deployment and backup gates remain unchanged.
+
+## U6 import contract update
+
+Generated prompts now use template version 2 and describe the material library's version-1 JSON envelope for document or attachment drafts. Solutions are separate `answer_sheet` materials/files; practice workbooks must not include a Solutions tab that bypasses answer release. The administrator still reviews, imports, validates, publishes and assigns each item explicitly. No generated output is automatically uploaded or published.
