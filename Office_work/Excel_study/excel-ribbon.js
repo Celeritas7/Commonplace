@@ -42,14 +42,20 @@
     const tabButtons=[];
     let activeTab=0;
     let operations=null;
+    function emit(detail){root.dispatchEvent(new CustomEvent('excel-action',{detail}));}
+    function snapshot(address){
+      const c=cells.find(x=>x.dataset.cell===address);if(!c)return null;
+      return {address,value:c.querySelector('input')?.value??c.textContent.trim(),bold:c.classList.contains('excel-bold'),fill:c.classList.contains('excel-fill'),border:c.classList.contains('excel-border')};
+    }
     function describe(group,tool,control){
       ribbon.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===control)));
       path.textContent=catalog[activeTab].tab+' → '+group+' → '+tool[0];
       desc.textContent=tool[2];
       const result=operations?.execute(tool[0],selected);
       note.textContent=result??'Location preview only — this operation is not simulated yet.';
+      emit({type:'tool',tab:catalog[activeTab].tab,group,tool:tool[0],cell:selected?.dataset.cell,result,state:snapshot(selected?.dataset.cell),formula:formula.value});
     }
-    function showTab(index,focus=false){
+    function showTab(index,focus=false,user=false){
       activeTab=index;
       tabButtons.forEach((b,i)=>{b.setAttribute('aria-selected',String(i===index));b.tabIndex=i===index?0:-1;});
       ribbon.setAttribute('aria-labelledby',tabButtons[index].id);
@@ -58,7 +64,7 @@
         const panel=element('div','excel-group');
         const controls=element('div','excel-tools');
         for(const tool of tools){
-          const b=button('excel-tool','');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',tool[0]);if(global.CommonplaceExcelOperations?.supports(tool[0])){b.classList.add('excel-working');b.title='Practice tool — performs an operation';}else{b.title='Location preview only';}b.append(element('span','excel-symbol',tool[1]),element('span','excel-tool-label',tool[0]));
+          const b=button('excel-tool','');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',tool[0]);b.dataset.excelTool=tool[0];b.dataset.excelGroup=group;if(global.CommonplaceExcelOperations?.supports(tool[0])){b.classList.add('excel-working');b.title='Practice tool — performs an operation';}else{b.title='Location preview only';}b.append(element('span','excel-symbol',tool[1]),element('span','excel-tool-label',tool[0]));
           b.addEventListener('click',()=>describe(group,tool,b));controls.append(b);
         }
         panel.append(controls,element('div','excel-group-label',group));ribbon.append(panel);
@@ -67,13 +73,14 @@
       desc.textContent='Select a cell, then use a tool marked Practice; other tools explain their locations.';
       note.textContent='Ribbon layout is simplified from desktop Excel for Windows. Actual icons and placement can vary by version.';
       if(focus)tabButtons[index].focus();
+      if(user)emit({type:'tab',tab:catalog[index].tab});
     }
     catalog.forEach((entry,i)=>{
-      const b=button('excel-tab',entry.tab);b.id=id+'-tab-'+i;b.setAttribute('role','tab');b.setAttribute('aria-controls',ribbon.id);
-      b.addEventListener('click',()=>showTab(i));
+      const b=button('excel-tab',entry.tab);b.id=id+'-tab-'+i;b.dataset.excelTab=entry.tab;b.setAttribute('role','tab');b.setAttribute('aria-controls',ribbon.id);
+      b.addEventListener('click',()=>showTab(i,false,true));
       b.addEventListener('keydown',e=>{
         let n=i;if(e.key==='ArrowRight')n=(i+1)%catalog.length;else if(e.key==='ArrowLeft')n=(i+catalog.length-1)%catalog.length;else if(e.key==='Home')n=0;else if(e.key==='End')n=catalog.length-1;else return;
-        e.preventDefault();showTab(n,true);
+        e.preventDefault();showTab(n,true,true);
       });
       tabButtons.push(b);tabs.append(b);
     });
@@ -90,27 +97,28 @@
       cellValue.value=input?input.value:selected.textContent;
       if(editButton)editButton.hidden=isFormula;
     }
-    function select(address,focus=false){
+    function select(address,focus=false,user=false){
       const cell=cells.find(c=>c.dataset.cell===address);if(!cell)return false;
       selected=cell;
       name.textContent=address;
       cells.forEach(c=>{c.classList.toggle('excel-selected',c===cell);if(c===cell)c.setAttribute('aria-current','true');else c.removeAttribute('aria-current');});
       refresh();
       if(focus)(cell.querySelector('input')||cell).focus();
+      if(user)emit({type:'select',cell:address,state:snapshot(address)});
       return true;
     }
     cells.forEach(cell=>{
       const input=cell.querySelector('input');
       if(!input){cell.tabIndex=0;cell.setAttribute('aria-label',cell.dataset.cell+', '+cell.textContent.trim());}
-      cell.addEventListener('click',()=>select(cell.dataset.cell));
-      cell.addEventListener('focusin',()=>select(cell.dataset.cell));
+      cell.addEventListener('click',()=>select(cell.dataset.cell,false,true));
+      cell.addEventListener('focusin',()=>select(cell.dataset.cell,false,true));
       cell.addEventListener('input',refresh);
       cell.addEventListener('keydown',e=>{
         if(e.target!==cell)return;
         const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];
         if(!d)return;
         const m=cell.dataset.cell.match(/^([A-Z])(\d+)$/);
-        if(m&&select(String.fromCharCode(m[1].charCodeAt(0)+d[0])+(Number(m[2])+d[1]),true))e.preventDefault();
+        if(m&&select(String.fromCharCode(m[1].charCodeAt(0)+d[0])+(Number(m[2])+d[1]),true,true))e.preventDefault();
       });
     });
     operations=global.CommonplaceExcelOperations?.create({cells,formulaCell,formula,refresh,onAutoSum:options.onAutoSum});
@@ -120,7 +128,7 @@
     const footer=element('div','excel-sheet-footer');footer.append(element('span','excel-sheet-tab',options.sheet||'Sheet1'),element('span','excel-sheet-status','Practice worksheet · one sheet'));
     worksheet.after(footer);
     select(formulaCell);
-    return {select,refresh,reset:()=>operations?.reset()};
+    return {select,refresh,showTab:tab=>{const index=catalog.findIndex(x=>x.tab===tab);if(index>=0)showTab(index);},getTab:()=>catalog[activeTab].tab,reset:()=>{operations?.reset();emit({type:'reset'});}};
   }
   global.CommonplaceExcelRibbon={mount};
 })(window);
