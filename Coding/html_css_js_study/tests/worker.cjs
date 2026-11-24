@@ -11,8 +11,8 @@ const PACK = 'cp-web-studio-downloads-v1', META = 'cp-web-studio-offline-v1';
 const sha = body => createHash('sha256').update(body).digest('hex');
 const mime = url => /\.js(?:\?|$)/.test(url) ? 'application/javascript' : /\.css(?:\?|$)/.test(url) ? 'text/css' : /\.json(?:\?|$)/.test(url) ? 'application/json' : 'text/html';
 const reply = (body, url, status = 200) => new Response(body, { status, headers: { 'Content-Type': mime(url) } });
-function harness() {
-  const stores = new Map(), listeners = {}, requests = [], deleted = [];
+function harness(existingStores) {
+  const stores = existingStores || new Map(), listeners = {}, requests = [], deleted = [];
   const files = new Map([['index.html', '<h1>original</h1>'], ['studio.js', 'window.answer=42;'], ['studio.css', 'body{color:green}'], ['../../_lib/gate.js', 'window.gate=true;']]);
   let config = {}, skipped = 0, claimed = 0;
   const manifest = () => {
@@ -140,6 +140,12 @@ const keyFor = (h, file) => new URL(file, BASE).href + '?__cp_sha256=' + h.manif
   assert.equal(await (await h.request(BASE, { navigate: true, resultingClientId: newPage })).text(), '<h1>updated</h1>');
   assert.equal(await (await h.request(BASE + 'studio.css', { clientId: newPage })).text(), 'body{color:purple}');
   assert.equal(await (await h.request(BASE + 'studio.js', { clientId: originalPage })).text(), 'window.answer=42;');
+  // Service workers are short-lived on iPad: losing all in-memory state must
+  // not erase a previously pinned document's revision choice.
+  const restarted = harness(h.stores);
+  restarted.configure({ offline: true });
+  assert.equal(await (await restarted.request(BASE + 'studio.css', { clientId: originalPage })).text(), 'body{color:green}');
+  assert.equal(await (await restarted.request(BASE + 'studio.css', { clientId: newPage })).text(), 'body{color:purple}');
   const oldIndexKey = BASE + 'index.html?__cp_sha256=' + originalManifest.files[0].sha256;
   assert(h.stores.get(PACK).has(oldIndexKey), 'older completed downloads survive updates');
 
