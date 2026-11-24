@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="../../_lib/gate.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel Study — Section 1 | Commonplace</title>
+<style>
+  :root{
+    --bg:#f3eee2; --panel:#fbf9f3; --panel-2:#f1ece0; --ink:#221d14; --muted:#766f5f;
+    --accent:#1d6f42; --accent-2:#1f8a4e; --accent-soft:#1d6f4214; --line:#ddd5c4;
+    --gold:#b27a12; --bad:#c0392b; --good:#1f8a4e;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(29,111,66,.06), transparent),
+    var(--bg);color:var(--ink);line-height:1.6;}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px;}
+  header.hero{display:flex;flex-direction:column;gap:14px;padding:30px 28px;border-radius:var(--radius);
+    background:linear-gradient(135deg,#1d6f42 0%,#0f4429 100%);position:relative;overflow:hidden;}
+  header.hero::after{content:"X";position:absolute;right:14px;top:-46px;font-size:240px;font-weight:800;
+    opacity:.13;color:#fff;font-family:Georgia,serif;line-height:1;pointer-events:none;}
+  .badge{display:inline-block;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;
+    background:#ffffff26;color:#eafdf1;padding:5px 13px;border-radius:999px;width:fit-content;font-weight:700;}
+  h1{margin:0;font-size:30px;line-height:1.2;color:#fff;}
+  .hero p{margin:0;color:#dff3e6;max-width:680px;}
+  .meta{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:#cfeeda;margin-top:4px;}
+  .meta span{display:flex;align-items:center;gap:6px;}
+
+  .progressbar{position:sticky;top:0;z-index:20;background:rgba(243,238,226,.92);backdrop-filter:blur(6px);
+    padding:12px 20px;margin:0 -20px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;}
+  .progressbar .track{flex:1;height:8px;background:#e6dfce;border-radius:999px;overflow:hidden;}
+  .progressbar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent-2),var(--gold));transition:width .4s;}
+  .progressbar b{font-size:13px;color:var(--muted);white-space:nowrap;}
+  .sync-bar{display:flex;align-items:center;gap:7px;font-family:"Cascadia Code",Consolas,monospace;
+    font-size:11.5px;color:var(--muted);white-space:nowrap;flex-wrap:wrap;}
+  .sync-bar .sync-ok{color:var(--accent);font-weight:600;}
+  .sync-bar .sync-who{color:var(--ink);}
+  .sync-bar .sync-note{color:var(--muted);}
+  .sync-btn{font-family:inherit;font-size:11px;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:5px;padding:3px 9px;cursor:pointer;}
+  .sync-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .sync-email{font-family:inherit;font-size:11px;border:1px solid var(--line);border-radius:5px;
+    padding:3px 8px;width:150px;background:#fff;color:var(--ink);}
+  @media(max-width:680px){.sync-email{width:118px;}}
+
+  h2.sec{font-size:18px;margin:34px 4px 14px;display:flex;align-items:center;gap:10px;color:var(--gold);}
+  h2.sec .n{background:var(--accent);color:#fff;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;font-weight:700;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:12px 0;overflow:hidden;box-shadow:0 1px 2px rgba(40,30,15,.04);}
+  .card > button.head{all:unset;cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px 18px;width:100%;}
+  .card > button.head:hover{background:var(--panel-2);}
+  .card .chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);display:grid;place-items:center;flex:none;
+    font-size:13px;color:transparent;transition:.2s;}
+  .card.done .chk{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
+  .card .title{font-weight:600;line-height:1.25;}
+  .card .ti{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .card .sub{font-size:13px;font-weight:400;color:var(--muted);}
+  .card.open .sub{color:var(--accent);}
+  .card .arrow{color:var(--muted);transition:transform .25s;}
+  .card.open .arrow{transform:rotate(90deg);}
+  .card .body{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+  .card.open .body{max-height:1600px;}
+  .card .body-inner{padding:4px 20px 20px 56px;color:var(--ink);}
+  .card .body-inner ul{margin:8px 0;padding-left:18px;}
+  .card .body-inner li{margin:6px 0;}
+  .card .body-inner .key{color:var(--gold);font-weight:600;}
+  code,.kbd{background:#edf3ee;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-family:"Cascadia Code",Consolas,monospace;font-size:.88em;color:#1d6f42;}
+  .tip{background:var(--accent-soft);border-left:3px solid var(--accent-2);padding:10px 14px;border-radius:8px;margin:12px 0;font-size:14px;}
+
+  /* checklist */
+  .check-list{display:grid;gap:10px;}
+  .check-item{display:flex;align-items:flex-start;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px 14px;cursor:pointer;transition:.2s;}
+  .check-item:hover{border-color:var(--accent-2);}
+  .check-item .box{width:20px;height:20px;border-radius:5px;border:2px solid var(--line);flex:none;margin-top:2px;display:grid;place-items:center;color:transparent;font-size:12px;transition:.2s;}
+  .check-item.ticked .box{background:var(--accent-2);border-color:var(--accent-2);color:#fff;}
+  .check-item.ticked .lbl{color:var(--muted);text-decoration:line-through;}
+  .check-item .lbl small{display:block;color:var(--muted);font-size:12px;text-decoration:none;margin-top:2px;}
+
+  /* resources */
+  .res-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+  .res{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;font-size:14px;}
+  .res .ic{font-size:20px;}
+  .res b{display:block;margin:6px 0 3px;}
+  .res span{color:var(--muted);font-size:12.5px;}
+
+  /* quiz */
+  .quiz{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-top:14px;}
+  .q{margin:0 0 22px;}
+  .q:last-of-type{margin-bottom:8px;}
+  .q .qt{font-weight:600;margin-bottom:10px;}
+  .q .qt .qn{color:var(--accent-2);margin-right:6px;}
+  .opt{display:block;border:1px solid var(--line);border-radius:9px;padding:11px 14px;margin:7px 0;cursor:pointer;transition:.15s;font-size:14.5px;}
+  .opt:hover{border-color:var(--muted);}
+  .opt.sel{border-color:var(--accent-2);background:var(--accent-soft);}
+  .opt.correct{border-color:var(--good);background:#3fc38022;}
+  .opt.wrong{border-color:var(--bad);background:#e0556b22;}
+  .opt .mk{font-weight:700;margin-left:6px;}
+  .explain{font-size:13.5px;color:var(--muted);margin-top:8px;padding:9px 12px;border-left:3px solid var(--gold);background:#e3b34115;border-radius:6px;display:none;}
+  .q.answered .explain{display:block;}
+  .btn{background:var(--accent);color:#fff;border:none;padding:12px 22px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;}
+  .btn:hover{background:var(--accent-2);}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .quiz-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px;}
+  #score{font-size:18px;font-weight:700;display:none;}
+  #score.show{display:inline;}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:50px;}
+  a{color:var(--accent-2);}
+
+  
+  .progressbar{margin:0;padding:12px max(20px,calc((100% - 1040px)/2));flex-wrap:wrap}
+  .crumb{margin:0 0 18px;font-size:14px}
+  .card > button.head{box-sizing:border-box}
+  .card .body[hidden]{display:none}
+  .card .body{max-height:none;overflow:visible;transition:none}
+  .card .body-inner{padding:4px 20px 20px 56px}
+  .worksheet{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fff}
+  .sheet-title{background:var(--accent);color:white;padding:10px 16px;font-weight:600}
+  .formula-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#edf3ee;flex-wrap:wrap}
+  .formula-row label{font-weight:600;color:var(--accent)}
+  input[type=text],input[type=number]{font:inherit;border:1px solid #aab9ae;border-radius:5px;padding:8px;min-width:0}
+  #formula{flex:1;min-width:130px;font-family:Consolas,monospace}
+  .sheet-scroll{overflow:auto}
+  .worksheet table{border-collapse:collapse;width:100%;min-width:260px;color:#222}
+  .worksheet th,.worksheet td{border:1px solid #d8e1d8;padding:8px;text-align:left}
+  .worksheet th{background:#e7eee7;text-align:center;color:#405649;font-size:13px}
+  .worksheet input{width:100%;max-width:160px}
+  .result-cell{background:#e7f7ee;outline:2px solid var(--accent);outline-offset:-2px;font-weight:700}
+  .practice-foot{padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  #practice-feedback{margin:0 12px 12px;min-height:1.6em;color:var(--ink)}
+  .opt{display:flex;gap:9px;align-items:baseline}
+  .q{border:0;padding:0;min-width:0}
+  .q legend{padding:0}
+  .check-item input{accent-color:var(--accent);width:18px;height:18px;flex:none}
+  :focus-visible{outline:3px solid #b27a12;outline-offset:3px}
+  @media(max-width:520px){.wrap{padding:18px 14px 50px}.hero{padding:22px 18px!important}.card .body-inner{padding:4px 16px 16px}.quiz{padding:16px}.progressbar{padding:10px 14px}.btn{padding:10px 14px}}
+</style>
+</head>
+<body>
+<div class="progressbar">
+  <b id="ptext">Reading progress 0%</b>
+  <div class="track" role="progressbar" aria-label="Reading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="pfill"></div></div>
+  <span class="sync-note" style="font-size:12px">Saved on this device</span>
+</div>
+<main class="wrap">
+  <nav class="crumb" aria-label="Breadcrumb"><a href="../../index.html">Commonplace</a> / <a href="../index.html">Office Work</a> / Excel Study</nav>
+  <header class="hero">
+    <span class="badge">Section 1 · UI preview</span>
+    <h1>Excel Study</h1>
+    <p>Learn to work with spreadsheets, formulas and data. This short sample is for reviewing the study layout before the full lessons are added.</p>
+    <div class="meta"><span>~5 min</span><span>2 concepts · worksheet · quiz</span></div>
+  </header>
+  <h2 class="sec"><span class="n">A</span> Try it now — worksheet</h2>
+  <p class="pg-intro">Edit the three quantities, then apply the formula to cell B5. This preview supports only the SUM formula shown below; it is not a full Excel engine.</p>
+  <section class="worksheet" aria-label="Sample worksheet">
+    <div class="sheet-title">Practice workbook · Sheet1</div>
+    <form id="practice">
+      <div class="formula-row"><strong>B5</strong><label for="formula">fx</label><input id="formula" type="text" value="=SUM(B2:B4)" spellcheck="false" autocomplete="off" aria-label="Formula for B5"></div>
+      <div class="sheet-scroll"><table aria-label="Office supplies quantities"><thead><tr><th scope="col">Row</th><th scope="col">A</th><th scope="col">B</th></tr></thead><tbody>
+        <tr><th scope="row">1</th><td>Item</td><td>Quantity</td></tr>
+        <tr><th scope="row">2</th><td>Notebooks</td><td><input id="b2" type="number" step="any" value="12" aria-label="B2, Notebooks"></td></tr>
+        <tr><th scope="row">3</th><td>Pens</td><td><input id="b3" type="number" step="any" value="8" aria-label="B3, Pens"></td></tr>
+        <tr><th scope="row">4</th><td>Folders</td><td><input id="b4" type="number" step="any" value="5" aria-label="B4, Folders"></td></tr>
+        <tr><th scope="row">5</th><td>Total</td><td class="result-cell"><output id="b5" aria-label="B5 total">—</output></td></tr>
+      </tbody></table></div>
+      <div class="practice-foot"><button class="btn" type="submit">Apply formula</button><button class="btn ghost" type="button" id="reset-sheet">Reset worksheet</button></div>
+      <p id="practice-feedback" role="status">Try applying the formula. The starting total should be 25.</p>
+    </form>
+  </section>
+  <h2 class="sec"><span class="n">B</span> Study the concepts</h2>
+  <p style="color:var(--muted);margin:0 4px 6px;font-size:14px">Open each card to read it and update your progress.</p>
+  <article class="card" data-track="cells">
+    <button type="button" class="head" aria-expanded="false" aria-controls="concept-cells"><span class="chk" aria-hidden="true">✓</span><span class="ti"><span class="title">1 · Cells and ranges</span><span class="sub">Understand B2 and B2:B4</span></span><span class="arrow" aria-hidden="true">▶</span></button>
+    <div class="body" id="concept-cells" hidden><div class="body-inner">
+      <p>A cell is identified by its column letter and row number. <code>B2</code> means column B, row 2. A colon joins the ends of a continuous range: <code>B2:B4</code> includes B2, B3 and B4.</p>
+      <div class="tip">Find cell B3 in the practice worksheet. Its starting value is 8.</div>
+    </div></div>
+  </article>
+  <article class="card" data-track="sum">
+    <button type="button" class="head" aria-expanded="false" aria-controls="concept-sum"><span class="chk" aria-hidden="true">✓</span><span class="ti"><span class="title">2 · Your first formula: SUM</span><span class="sub">Add values in a range</span></span><span class="arrow" aria-hidden="true">▶</span></button>
+    <div class="body" id="concept-sum" hidden><div class="body-inner">
+      <p>Excel formulas begin with <code>=</code>. Enter <code>=SUM(B2:B4)</code> in B5 to add the numeric values from the three cells.</p>
+      <div class="tip">Change B3 from 8 to 10 and apply the formula. The total becomes 27. Real Excel normally recalculates automatically; this preview uses an Apply button.</div>
+    </div></div>
+  </article>
+  <h2 class="sec"><span class="n">C</span> Practice checklist</h2>
+  <div class="check-list" id="checklist">
+    <label class="check-item"><input type="checkbox" data-task="locate"><span class="lbl">Locate cell B3.</span></label>
+    <label class="check-item"><input type="checkbox" data-task="calculate"><span class="lbl">Apply the SUM formula and change one quantity.</span></label>
+  </div>
+  <h2 class="sec"><span class="n">D</span> Test your knowledge</h2>
+  <form class="quiz" id="quiz">
+    <fieldset class="q" data-answer="b"><legend class="qt">Q1. Which range includes B2, B3 and B4?</legend>
+      <label class="opt"><input type="radio" name="q1" value="a" required> A2:A4</label>
+      <label class="opt"><input type="radio" name="q1" value="b"> B2:B4</label>
+      <label class="opt"><input type="radio" name="q1" value="c"> B2:D2</label>
+      <div class="explain">B2:B4 stays in column B and spans rows 2 to 4.</div>
+    </fieldset>
+    <fieldset class="q" data-answer="a"><legend class="qt">Q2. What is the sum of 12, 8 and 5?</legend>
+      <label class="opt"><input type="radio" name="q2" value="a" required> 25</label>
+      <label class="opt"><input type="radio" name="q2" value="b"> 20</label>
+      <label class="opt"><input type="radio" name="q2" value="c"> 30</label>
+      <div class="explain">12 + 8 + 5 = 25.</div>
+    </fieldset>
+    <div class="quiz-foot"><button class="btn" type="submit">Check answers</button><button class="btn ghost" type="reset">Reset quiz</button><span id="score" role="status"></span></div>
+  </form>
+  <footer>Excel Study · Sample lesson only<br><a href="../index.html">Back to Office Work</a></footer>
+</main>
+<script>
+(() => {
+  'use strict';
+  const key='commonplace_excel_preview_v1';
+  const cards=[...document.querySelectorAll('[data-track]')];
+  const tasks=[...document.querySelectorAll('[data-task]')];
+  let state={read:[],open:[],tasks:[]};
+  try {
+    const saved=JSON.parse(localStorage.getItem(key)||'{}');
+    for(const k of Object.keys(state)) if(Array.isArray(saved[k])) state[k]=saved[k];
+  } catch(e) {}
+  function save(){try{localStorage.setItem(key,JSON.stringify(state));}catch(e){}}
+  function render(){
+    cards.forEach(card=>{
+      const id=card.dataset.track,open=state.open.includes(id);
+      card.classList.toggle('done',state.read.includes(id));
+      card.classList.toggle('open',open);
+      card.querySelector('.head').setAttribute('aria-expanded',String(open));
+      card.querySelector('.body').hidden=!open;
+    });
+    tasks.forEach(t=>{t.checked=state.tasks.includes(t.dataset.task);t.closest('.check-item').classList.toggle('ticked',t.checked);});
+    const pct=Math.round(cards.filter(c=>state.read.includes(c.dataset.track)).length/cards.length*100);
+    document.getElementById('ptext').textContent='Reading progress '+pct+'%';
+    document.getElementById('pfill').style.width=pct+'%';
+    document.querySelector('[role=progressbar]').setAttribute('aria-valuenow',String(pct));
+  }
+  cards.forEach(card=>card.querySelector('.head').addEventListener('click',()=>{
+    const id=card.dataset.track;
+    if(state.open.includes(id)) state.open=state.open.filter(x=>x!==id);
+    else {state.open.push(id);if(!state.read.includes(id))state.read.push(id);}
+    save();render();
+  }));
+  tasks.forEach(t=>t.addEventListener('change',()=>{
+    state.tasks=state.tasks.filter(x=>x!==t.dataset.task);if(t.checked)state.tasks.push(t.dataset.task);save();render();
+  }));
+  render();
+  const practice=document.getElementById('practice'),formula=document.getElementById('formula');
+  const inputs=['b2','b3','b4'].map(id=>document.getElementById(id));
+  const output=document.getElementById('b5'),feedback=document.getElementById('practice-feedback');
+  function invalidate(){output.textContent='—';feedback.textContent='Apply the formula to calculate the current values.';}
+  [formula,...inputs].forEach(el=>el.addEventListener('input',invalidate));
+  practice.addEventListener('submit',e=>{
+    e.preventDefault();
+    if(!/^=SUM\(B2:B4\)$/i.test(formula.value.replace(/\s/g,''))){
+      output.textContent='—';feedback.textContent='This preview supports =SUM(B2:B4) only. Please try that formula.';return;
+    }
+    const values=inputs.map(el=>el.value===''?0:el.valueAsNumber);
+    const total=values.reduce((a,b)=>a+b,0);
+    if(!Number.isFinite(total)){output.textContent='—';feedback.textContent='Please enter valid numeric quantities.';return;}
+    output.textContent=String(Number(total.toPrecision(15)));
+    feedback.textContent='Formula applied to B5: '+output.textContent;
+  });
+  document.getElementById('reset-sheet').addEventListener('click',()=>{practice.reset();output.textContent='—';feedback.textContent='Try applying the formula. The starting total should be 25.';});
+  const quiz=document.getElementById('quiz'),score=document.getElementById('score');
+  const questions=[...quiz.querySelectorAll('.q')];
+  function clearFeedback(){
+    questions.forEach(q=>{q.classList.remove('answered');q.querySelectorAll('.opt').forEach(o=>o.classList.remove('correct','wrong'));});
+    score.textContent='';score.classList.remove('show');
+  }
+  quiz.addEventListener('change',clearFeedback);
+  quiz.addEventListener('submit',e=>{
+    e.preventDefault();clearFeedback();let points=0;
+    questions.forEach(q=>{
+      const pick=q.querySelector('input:checked');if(pick&&pick.value===q.dataset.answer)points++;
+      q.classList.add('answered');
+      q.querySelectorAll('.opt').forEach(o=>{const r=o.querySelector('input');if(r.value===q.dataset.answer)o.classList.add('correct');else if(r.checked)o.classList.add('wrong');});
+    });
+    score.textContent='Score: '+points+' / '+questions.length;score.classList.add('show');
+  });
+  quiz.addEventListener('reset',clearFeedback);
+})();
+</script>
+</body>
+</html>
