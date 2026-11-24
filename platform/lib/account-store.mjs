@@ -22,7 +22,8 @@ export function createAccountStore(storage, project) {
     if (!owner || ticket.owner !== owner || ticket.generation !== generation || ticket.signal !== controller.signal || ticket.signal.aborted) throw Error('Account changed');
   }
   return {
-    // Call on every auth event, including signout. Caller verifies identity online.
+    // Call on ownership invalidation/signout, not same-owner token refreshes.
+    // Caller verifies identity online; session events do not grant access.
     // An offline reopen requires a separate explicit owner/lease flow in U8.
     switchAccount(user) {
       if (user !== null && !UUID.test(user)) throw Error('Verified UUID required');

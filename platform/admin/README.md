@@ -23,6 +23,7 @@ Open `http://localhost:8000/platform/admin/preview.html`. Select **Sample learne
 - Preview only the learner's effective allowed leaves. Inactive learners show none; one leaf indicates direct landing. The reusable `lib/learner-navigation.mjs` accepts fresh U1 context and renders only returned leaves, never locked cards; it invokes the host's section callback directly for a single-leaf learner and never renders an admin button for learners.
 - Confirm changes before saving. A server transaction replaces status/name/grants atomically and logs the change. A revision conflict retains the unsaved draft and blocks resubmission until reload; there is no blind auto-retry.
 - Clear private rows on auth invalidation/offline transition and ignore late responses. Names/emails/section titles are rendered with `textContent`, never interpolated as HTML. No admin directory or edits are persisted in localStorage, service workers or offline queues.
+- Preserve unsaved access/profile edits and generated prompts on same-owner `TOKEN_REFRESHED` or `SIGNED_IN` events. These events do not grant access: each API call still verifies the user and each RPC verifies administrator authority. Signout, missing session identity and a different owner still clear private views and reject late responses. The first matching `INITIAL_SESSION` can arrive during initial verification without forcing a reload.
 
 ## Database contract
 

@@ -4,6 +4,7 @@ import {validateRecord,validateBundle,composeLesson,progressIdentity,safeCSV,par
 import {exampleBundle} from '../content/examples.mjs';
 import {EXCEL_PHASE_A_CAPABILITIES,prepareExcelExercise} from '../content/excel-contract.mjs';
 import {createAssignedContentAdapter} from '../content/assigned-content.mjs';
+import {longLesson} from './fixtures/long-lesson.mjs';
 const assignment=b=>({schema_version:1,kind:'assignment',id:'assignment.sample',version:1,section_id:'office.excel',lesson_ref:{id:b.lesson.id,version:1},status:'assigned'});
 test('one immutable SUM concept supports three professional scenarios and datasets',()=>{
  const samples=['trade','mechanical','finance'].map(exampleBundle);assert.deepEqual(samples[0].concept,samples[1].concept);assert.deepEqual(samples[1].concept,samples[2].concept);
@@ -24,9 +25,24 @@ test('Phase A accepts only the real fixed SUM shape and rejects unmerged Ribbon 
 test('contracts also carry non-Excel explanatory lessons without Excel-specific fields',()=>{
  const b=exampleBundle('trade');b.concept.section_id=b.lesson.section_id='coding.python';b.concept.id=b.lesson.concept_ref.id='python.lists';b.lesson.required_capabilities=['explanation.text.v1'];b.lesson.activities=[{id:'read',type:'explanation',instruction:'Represent each inventory row as a Python list.'}];assert.equal(composeLesson(b,['explanation.text.v1']).lesson.section_id,'coding.python');assert.throws(()=>prepareExcelExercise(b));
 });
-test('progress identity distinguishes versions, scenarios and assignments without migrating old keys',()=>{
- const a=exampleBundle('trade'),b=exampleBundle('mechanical');const first=progressIdentity(assignment(a),a,'sum');assert.notEqual(first,progressIdentity(assignment(b),b,'sum'));
- const next=assignment(a);next.version=2;assert.notEqual(first,progressIdentity(next,a,'sum'));assert.throws(()=>progressIdentity(next,a,'missing'));
+test('progress identity distinguishes versions, scenarios and assignments while preserving short keys',async()=>{
+ const a=exampleBundle('trade'),b=exampleBundle('mechanical');const first=await progressIdentity(assignment(a),a,'sum');assert.notEqual(first,await progressIdentity(assignment(b),b,'sum'));
+ assert.equal(first,'["cp-content-v1","office.excel","assignment.sample",1,"excel.sum.trade",1,"excel.sum",1,"scenario.trade",1,"dataset.trade",1,"sum"]');
+ const next=assignment(a);next.version=2;assert.notEqual(first,await progressIdentity(next,a,'sum'));await assert.rejects(()=>progressIdentity(next,a,'missing'));
+});
+test('progress keys respect the exact storage boundary and maximum-length valid content',async()=>{
+ const bundle=exampleBundle('trade'),a=assignment(bundle);a.id='a'.repeat(46);
+ const boundary=await progressIdentity(a,bundle,'sum');assert.equal(boundary.length,160);assert.ok(boundary.startsWith('['));
+ a.id+='a';assert.match(await progressIdentity(a,bundle,'sum'),/^cp-content-v1:sha256:[0-9a-f]{64}$/);
+ const fixture=longLesson(),key=await progressIdentity(fixture.assignment,fixture.bundle,fixture.activityId);
+ assert.equal(key.length,85);assert.equal(key,await progressIdentity(fixture.assignment,fixture.bundle,fixture.activityId));
+ for(const kind of ['assignment','lesson','concept','scenario','dataset','activity']){
+  const f=longLesson();
+  if(kind==='assignment')f.assignment.version--;
+  else if(kind==='activity'){f.activityId='b'.repeat(100);f.bundle.lesson.activities[0].id=f.activityId;}
+  else{f.bundle[kind].version--;if(kind==='lesson')f.assignment.lesson_ref.version--;else f.bundle.lesson[kind+'_ref'].version--;}
+  assert.notEqual(key,await progressIdentity(f.assignment,f.bundle,f.activityId),kind);
+ }
 });
 test('CSV export quotes cells and neutralizes leading spreadsheet formulas in text cells',()=>{
  const b=exampleBundle('trade');b.dataset.rows[0][0]='\t=HYPERLINK("bad")';b.dataset.rows[1][0]='@SUM(A1:A2)';const csv=safeCSV(b.dataset);assert.ok(csv.includes('"\'\t=HYPERLINK(""bad"")"'));assert.ok(csv.includes('"\'@SUM(A1:A2)"'));assert.ok(csv.includes('"12"'));
