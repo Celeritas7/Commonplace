@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile, readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
+import {storageFixture} from './storage-fixture.mjs';
 import {progressIdentity} from '../content/contracts.mjs';
 import {longLesson} from './fixtures/long-lesson.mjs';
 import {createAccountStore} from '../lib/account-store.mjs';
@@ -17,6 +18,7 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema public,auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated;
  insert into auth.users values('${owner}',now(),'owner@example.invalid'),('${a}',now(),'a@example.invalid'),('${b}',now(),'b@example.invalid'),('${unverified}',null,'unverified@example.invalid');`);
+ await db.exec(storageFixture);
  for (const file of (await readdir(new URL('../supabase/migrations/',import.meta.url))).sort()) await db.exec(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
  const as=async(user,sql)=>{
   await db.exec('reset role');
@@ -212,7 +214,7 @@ test('PostgreSQL authorization matrix (isolated; auth.uid fixture, no hosted cal
  await t.test('all application tables have RLS; privileged bootstrap has no API execute grant',async()=>{
   await db.exec('reset role');
   const rows=(await db.query("select relname,relrowsecurity from pg_class where relnamespace='public'::regnamespace and relkind='r' and relname like 'cp_%'")).rows;
-  assert.equal(rows.length,8); assert.ok(rows.every(r=>r.relrowsecurity));
+  assert.equal(rows.length,11); assert.ok(rows.every(r=>r.relrowsecurity));
   for(const role of ['anon','authenticated','service_role']) {
    const result=await db.query(`select has_function_privilege('${role}','cp_private.bootstrap_owner(uuid)','EXECUTE') as allowed`);
    assert.equal(result.rows[0].allowed,false);

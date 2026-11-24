@@ -72,3 +72,7 @@ The **Professional profile** view now adds reusable learning context and adminis
 ## U5 follow-on
 
 **Tutorial prompts** now combines the selected learner's professional profile with reusable subject guidance, material-specific instructions, preview and reviewed clipboard copy. See [Prompt Studio workflow and privacy limitations](../prompts/README.md). No AI API, automatic publication or persistent prompt history is added.
+
+## U6 follow-on
+
+The main **Material library** workspace provides draft creation/import, safe previews, reviewed publication, versioning, assignments/exclusions and archiving. File uploads use a separate authorized validation service when the backend is deployed. See [U6 workflow, security and deployment gates](../materials/README.md). The public sample preview keeps all changes in memory and does not accept private file uploads.

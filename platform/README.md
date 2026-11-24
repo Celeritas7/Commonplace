@@ -84,3 +84,7 @@ The [AI Tutorial Prompt Studio](prompts/README.md) provides administrator-only l
 ## U0–U5 review corrections
 
 The [foundation review corrections](../docs/admin-platform/FOUNDATION-REVIEW-FIXES.md) preserve same-account drafts during session refresh, bound content progress keys to the existing storage contract, and pin CI to a Playwright-supported runner. The live activation and release gates above remain open.
+
+## U6 follow-on
+
+The [central material library](materials/README.md) adds validated imports, draft review, immutable publication, explicit individual/group assignments, answer release, archiving and a private attachment-service implementation. It includes the learner adapter for U7. The live entry remains disabled; real Supabase/Storage/Edge and device acceptance are still required before activation.

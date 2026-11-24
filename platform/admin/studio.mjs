@@ -1,20 +1,21 @@
 import {mountPromptStudio} from './prompt-studio.mjs';
+import {mountMaterialLibrary} from './material-library.mjs';
 import {mountProfileEditor} from './profile-editor.mjs';
 import {accessPreview,descendants} from './api.mjs';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 export function mountAdminStudio(root,api,{preview=false}={}) {
  let data=null,draft=null,selected=null,busy=false,dirty=false,blocked=false,epoch=0,disposed=false;
- let editorMode='access',profileDirty=false,disposeProfile=null;
+ let editorMode='access',profileDirty=false,disposeProfile=null,workspacePage='people';
  function clearProfile(){const cleanup=disposeProfile;disposeProfile=null;cleanup?.();profileDirty=false;}
  root.innerHTML=`<header class="masthead"><a class="brand" href="../index.html">C<span>COMMONPLACE</span></a><span class="mode"></span></header>
  <main><div class="heading"><div><p class="eyebrow">CENTRAL ADMINISTRATION</p><h1>Admin Studio</h1><p class="intro">Give each learner a focused place to study.</p></div><button id="reload" class="secondary">Reload access</button></div>
- <p id="notice" role="status" aria-live="polite"></p><div id="workspace"></div></main>`;
+ <nav class="profile-toolbar" aria-label="Administration workspace"><button data-workspace-tab="people">People & access</button><button data-workspace-tab="materials" class="secondary">Material library</button></nav><p id="notice" role="status" aria-live="polite"></p><div id="workspace"></div></main>`;
  root.querySelector('.mode').textContent=preview?'PREVIEW · NOTHING IS SAVED':'ADMINISTRATOR · ONLINE ONLY';
  const workspace=root.querySelector('#workspace'),notice=root.querySelector('#notice');
  const message=(text,error=false)=>{notice.textContent=text;notice.className=error?'notice error':'notice';};
  function invalidate(){clearProfile();epoch++;data=null;draft=null;dirty=false;blocked=true;busy=false;root.querySelector('#reload').disabled=false;workspace.replaceChildren();message('Account changed. Reload to verify administrator access.',true);}
  const unsubscribe=api.onInvalidate(invalidate);
- function lock(){for(const panel of workspace.querySelectorAll('[data-managed-editor]'))panel.inert=busy;for(const n of workspace.querySelectorAll('button,input,textarea,select,fieldset'))if(!n.closest('[data-managed-editor]'))n.disabled=busy;root.querySelector('#reload').disabled=busy;const save=workspace.querySelector('#save');if(save)save.disabled=busy||blocked;}
+ function lock(){for(const panel of workspace.querySelectorAll('[data-managed-editor]'))panel.inert=busy;for(const n of workspace.querySelectorAll('button,input,textarea,select,fieldset'))if(!n.closest('[data-managed-editor]'))n.disabled=busy;for(const n of root.querySelectorAll('[data-workspace-tab]'))n.disabled=busy;root.querySelector('#reload').disabled=busy;const save=workspace.querySelector('#save');if(save)save.disabled=busy||blocked;}
  async function load(){
   clearProfile();const request=++epoch;busy=true;lock();workspace.replaceChildren();draft=null;dirty=false;
   message('Verifying administrator access…');
@@ -28,6 +29,8 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
   for(const row of workspace.querySelectorAll('[data-user]'))row.classList.toggle('selected',row.dataset.user===selected);
  }
  function render(){
+  for(const n of root.querySelectorAll('[data-workspace-tab]')){const active=n.dataset.workspaceTab===workspacePage;n.setAttribute('aria-pressed',String(active));n.classList.toggle('secondary',!active);}
+  if(workspacePage==='materials'){clearProfile();workspace.replaceChildren();const panel=el('section',undefined,'panel');panel.dataset.managedEditor='';workspace.append(panel);disposeProfile=mountMaterialLibrary(panel,api,data,{onDirty:value=>{profileDirty=value;},onBusy:value=>{busy=value;lock();},onDenied:invalidate});return;}
   workspace.replaceChildren();const layout=el('div',undefined,'layout'),side=el('aside',undefined,'panel roster');
   const top=el('div',undefined,'panel-title');top.append(el('h2','People'),el('span',String(data.members.length),'count'));side.append(top);
   const search=el('input');search.type='search';search.placeholder='Search name or email';search.setAttribute('aria-label','Search people');side.append(search);
@@ -93,6 +96,7 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
   };lock();
  }
  root.querySelector('#reload').onclick=()=>{if(!(dirty||profileDirty)||window.confirm('Discard unsaved changes and reload saved access?'))load();};
+ for(const n of root.querySelectorAll('[data-workspace-tab]'))n.onclick=()=>{if(busy||!data)return;if((dirty||profileDirty)&&!window.confirm('Discard unsaved changes and switch workspaces?'))return;clearProfile();dirty=false;workspacePage=n.dataset.workspaceTab;render();};
  const beforeUnload=event=>{if(dirty||profileDirty){event.preventDefault();event.returnValue='';}};
  const offline=()=>{invalidate();message('Admin Studio requires an internet connection. Reconnect, then reload.',true);};
  window.addEventListener('beforeunload',beforeUnload);window.addEventListener('offline',offline);
