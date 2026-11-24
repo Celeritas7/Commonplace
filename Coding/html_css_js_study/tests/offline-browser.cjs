@@ -325,6 +325,8 @@ function revise(files) {
   replacements.set(BASE + 'studio.css', nextCSS); replacements.set(BASE + 'studio.js', nextJS);
   manifest = revise({ 'studio.css': nextCSS, 'studio.js': nextJS });
   const outdated = await rpc('offline-status'); assert.equal(outdated.ready, false); assert.equal(outdated.remainingBytes, nextCSS.length + nextJS.length);
+  const oldOnlineCSS = await page.evaluate(async base => (await fetch(base + 'studio.css?release-incomplete-online')).text(), BASE);
+  assert.equal(hash(oldOnlineCSS), hash(oldCSS), 'connected study must not take newer partial deployment files into an old page');
   blockedPath = BASE + 'studio.js';
   const updating = rpc('offline-download'); await until(() => held.size > 0, 'changed JS was not requested');
   assert.equal((await rpc('offline-pause')).paused, true); const updatePartial = await updating; assert.equal(updatePartial.ready, false);
@@ -335,7 +337,14 @@ function revise(files) {
   networkDown = false; await ctx.setOffline(false);
   const updateResumeStart = requests.length; const updated = await rpc('offline-download'); assert.equal(updated.ready, true, updated.error); assert.equal(updated.remainingBytes, 0);
   assert(!requests.slice(updateResumeStart).includes(BASE + 'studio.css'), 'resume re-downloaded the already verified changed CSS');
-  console.log('PASS ' + engine + ': interrupted update keeps the old complete pack coherent, then resumes only missing changed files');
+  const stillOldCSS = await page.evaluate(async base => (await fetch(base + 'studio.css?after-update-before-reload')).text(), BASE);
+  assert.equal(hash(stillOldCSS), hash(oldCSS), 'already-open document must remain pinned to the previous complete revision');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.locator('#wb-save-status').waitFor({ state: 'visible' });
+  await readyController();
+  const switchedCSS = await page.evaluate(async base => (await fetch(base + 'studio.css?after-safe-reload')).text(), BASE);
+  assert.equal(hash(switchedCSS), hash(nextCSS), 'a fresh navigation must select the newly complete revision');
+  console.log('PASS ' + engine + ': interrupted updates preserve old pages; an explicit reload adopts the new verified revision');
 
   const cssEntry = manifest.files.find(file => file.url === 'studio.css');
   await page.evaluate(async ({ pack, base, digest }) => {
