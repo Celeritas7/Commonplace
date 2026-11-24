@@ -64,3 +64,7 @@ Rollback: until activation, revert this code PR without touching live data. Afte
 Excel coordination: #68/#69 are in the baseline; #70 was rechecked on 2026-11-24 and remains open against `feat/excel-study-phase-a`. This PR changes no Excel files, gate, service worker or offline manifests. Excel must consume central context later; it must not create another role system.
 
 References rechecked 2026-11-24: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase changelog](https://supabase.com/changelog). Existing U0 [deployment prerequisites](../docs/admin-platform/IMPLEMENTATION-PLAN.md) still apply.
+
+## U2 follow-on
+
+The [central Admin Studio](admin/README.md) now provides the isolated learner-management UI and reviewed access editor. Its live entry remains disabled; use its explicit synthetic preview to review the workflow. The second migration adds admin-only email lookup/registration, atomic permission saves and revision protection. U1 production acceptance gates above remain open.
