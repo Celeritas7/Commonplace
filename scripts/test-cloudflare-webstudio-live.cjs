@@ -32,7 +32,7 @@ assert(list.some(file => file.path === '/Commonplace/Coding/html_css_js_study/st
 assert(list.some(file => file.path === '/Commonplace/Coding/html_css_js_study/index.html'));
 const corrupt = structuredClone(manifest);
 corrupt.files[0].bytes++;
-assert.throws(() => pilotFiles(corrupt, origin), /bytes|equal/);
+assert.throws(() => pilotFiles(corrupt, origin), /internally consistent|digest|checksum/i);
 const traversal = structuredClone(manifest);
 traversal.files[0].url = '../../../platform/admin/README.md';
 const { createHash } = require('node:crypto');
