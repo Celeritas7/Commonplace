@@ -76,3 +76,7 @@ The [central Admin Studio](admin/README.md) now provides the isolated learner-ma
 ## U4 follow-on
 
 [Flexible content contracts](content/README.md) separate reusable concepts, scenarios, datasets, lesson compositions and assignment descriptors. Review the synthetic three-scenario SUM example at `content/preview.html`. Server publication/private delivery and live Excel integration remain U6/U7 work.
+
+## U5 follow-on
+
+The [AI Tutorial Prompt Studio](prompts/README.md) provides administrator-only learner-context access and locally generated, reviewable prompts for external manual use. The live entry stays disabled; U6 will add material importing and publication.
