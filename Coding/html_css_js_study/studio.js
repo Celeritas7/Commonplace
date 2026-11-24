@@ -167,16 +167,21 @@
   const button=$('#wb-reload');button.disabled=true;
   // Save before checking and again before navigation, so a sync/import
   // operation cannot silently replace an open workspace.
-  if(!persist()){setText('#wb-update-status','Could not save your current work. Export a backup before reloading.');return;}
+  if(!persist()){button.disabled=false;setText('#wb-update-status','Could not save your current work. Export a backup before reloading.');return;}
   setText('#wb-update-status','Verifying the saved update before reload…');
   const state=await checkedUpdateState();
   if(!state||state.ready!==true){updateReloadAvailability(state);return;}
-  if(!persist()){setText('#wb-update-status','Study changes could not be saved. Reload cancelled.');return;}
+  if(!persist()){button.disabled=false;setText('#wb-update-status','Study changes could not be saved. Reload cancelled.');return;}
   location.reload();
  };
  if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{
   $('#wb-reload').hidden=false;$('#wb-reload').disabled=true;
   setText('#wb-update-status','Web Studio offline worker updated. Verify or download the complete pack before reloading.');
+ });
+ window.addEventListener('web-studio-pack-status',event=>{
+  // Completing a resumed download can enable Reload without another update
+  // check; never show the control automatically during ordinary studying.
+  if(!$('#wb-reload').hidden)updateReloadAvailability(event.detail);
  });
  renderReading();renderEditor();resizeText(0);
  if(saved.view==='practice')openPractice('try',true);else if(['notes','library',...(practice?['mistakes']:[]),...(projectUI?['projects']:[])].includes(saved.view))setView(saved.view);else setView('book');
