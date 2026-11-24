@@ -68,3 +68,7 @@ References rechecked 2026-11-24: [Supabase RLS](https://supabase.com/docs/guides
 ## U2 follow-on
 
 The [central Admin Studio](admin/README.md) now provides the isolated learner-management UI and reviewed access editor. Its live entry remains disabled; use its explicit synthetic preview to review the workflow. The second migration adds admin-only email lookup/registration, atomic permission saves and revision protection. U1 production acceptance gates above remain open.
+
+## U3 follow-on
+
+[Professional learning profiles](PROFILES.md) add the central editor, profile groups, strict schema validation and an own-profile section adapter. They do not change section permissions or activate the application. U0/U1 release prerequisites still apply.
