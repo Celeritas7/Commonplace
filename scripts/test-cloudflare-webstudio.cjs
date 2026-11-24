@@ -88,4 +88,6 @@ const headers = fs.readFileSync(path.join(OUT, '_headers'), 'utf8');
 assert(headers.includes('Cache-Control: no-store'));
 assert(headers.includes('X-Content-Type-Options: nosniff'));
 assert(fs.readFileSync(path.join(OUT, 'robots.txt'), 'utf8').includes('Disallow: /'));
+assert(fs.readFileSync(path.join(OUT, '404.html'), 'utf8').includes('This page is not part of the isolated Web Studio staging pilot'),
+  'Cloudflare pilot must include a proper static 404 instead of SPA fallback');
 console.log('PASS admin/backend, Python runtime, tests and developer files excluded from pilot');
