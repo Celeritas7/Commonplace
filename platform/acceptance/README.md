@@ -27,7 +27,7 @@ real emails, a paid service or a production database.
 
 | Evidence | What it establishes | Limit |
 | --- | --- | --- |
-| Final migration catalog and role matrix | All five migrations together retain default-deny, UUID ownership, admin-only writes, private files and CAS synchronization | PGlite uses a minimal Auth/Storage fixture and SQL roles, not real JWTs or HTTP services |
+| Final migration catalog and role matrix | The complete migration chain retains default-deny, UUID ownership, admin-only writes, private files and CAS synchronization | PGlite uses a minimal Auth/Storage fixture and SQL roles, not real JWTs or HTTP services |
 | Deliberate permission drift | The read-only preflight catches missing functions, disabled RLS, anonymous execution and excess table/column grants | A catalog check is not a policy semantics or whole-project audit |
 | U7 → U8 snapshot restore | Synthetic old/new study records, all platform table contents, revisions, audit, grants and RLS survive an isolated PGlite dump/reload; retry stays idempotent | Not a hosted `pg_dump`/Auth/Storage byte restore, disaster recovery certification or migration reversal |
 | Real worker code in controlled failures | Partial application downloads cannot report ready or serve partial shells; failed updates preserve the old shell; unchanged assets are reused; legacy caches and OAuth URLs are preserved | Cache/worker API harness, not an iPad lifecycle test |

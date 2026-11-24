@@ -54,12 +54,13 @@ the CI runner itself is disposable. Do not use the test config to host an app.
 
 ## Required evidence
 
-Nine integration groups must pass. Every negative file test follows a successful
+Ten integration groups must pass. Every negative file test follows a successful
 authorized upload/download, so an absent endpoint cannot produce a false pass.
 
 | Group | Required result |
 | --- | --- |
 | Auth | Four real local identities sign in and `getUser` verifies their signed sessions |
+| Registration and profiles | Email resolves to the verified UUID; registration starts with no access; admin activation and professional profiles save; A cannot read B's profile |
 | Catalog | The final schema passes the read-only preflight in PostgreSQL 17 |
 | Administration | Anonymous and learner operations deny; unregistered users see no sections; direct writes and user-metadata role spoofing cannot promote a learner |
 | Content | A reads its assigned published lesson; B-only content, drafts and unreleased answers deny through RPC/REST; assignment recipients remain private |
@@ -104,3 +105,11 @@ owners, ACLs, signatures and security settings, before and after applying it.
 The HTTP matrix must pass with this migration before the checkpoint is accepted.
 Apply it in sequence only on the selected test target; no hosted migration is
 performed by this PR or workflow.
+
+The failure was reproduced at `b8e2dff556a5bbedb39bd55e0867472b130e4cfa` in
+[CI run 45513076340](https://github.com/Celeritas7/Commonplace/actions/runs/45513076340).
+With the migration, all nine initial real-service groups passed at
+`08c8fed2f538114a861356d64288e04182ad4d2e` in
+[CI run 45513606469](https://github.com/Celeritas7/Commonplace/actions/runs/45513606469).
+The expanded ten-group matrix additionally exercises registration, access saves
+and profile/group writes. Require its final PR-head CI result before merging.

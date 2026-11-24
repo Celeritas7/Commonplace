@@ -189,6 +189,7 @@ async function main() {
       secrets.push(session.access_token, session.refresh_token);
       const actor = {
         id: user.id,
+        email,
         token: session.access_token,
         client: client(session.access_token),
       };
@@ -207,6 +208,27 @@ async function main() {
     data(await actor.client.rpc(name, args), name);
   phase = "synthetic learner setup";
   for (const learner of [a, b]) {
+    requireThat(
+      (await rpc(owner, "cp_admin_register", {
+        login_email: learner.email,
+        learner_name: "Synthetic learner",
+      })) === learner.id,
+      "Registration did not resolve the verified Auth UUID",
+    );
+    requireThat(
+      data(
+        await learner.client.from("cp_sections").select("id"),
+        "New learner access",
+      ).length === 0,
+      "Registration activated access automatically",
+    );
+    await rpc(owner, "cp_admin_save", {
+      target: learner.id,
+      expected_revision: 0,
+      learner_name: "Synthetic learner",
+      new_status: "active",
+      allowed_sections: ["office.excel"],
+    });
     await rpc(owner, "cp_set_learner", {
       target: learner.id,
       new_status: "active",
@@ -218,6 +240,55 @@ async function main() {
       new_decision: "allow",
     });
   }
+  await check(
+    "administrator registration, access and professional profile writes",
+    async () => {
+      const group = await rpc(owner, "cp_admin_save_profile_group", {
+        target: null,
+        expected_revision: 0,
+        new_name: "Synthetic trade profile",
+        new_description: "Local test only",
+      });
+      await rpc(owner, "cp_admin_save_profile", {
+        target: a.id,
+        expected_revision: 0,
+        new_profile: {
+          background: "Synthetic import-export",
+          difficulty: "beginner",
+        },
+        group_ids: [group],
+      });
+      const profile = await rpc(owner, "cp_admin_profile", { target: a.id });
+      requireThat(
+        profile.revision === "1" && profile.group_ids.includes(group),
+        "Profile save did not persist",
+      );
+      requireThat(
+        data(
+          await a.client
+            .from("cp_learning_profiles")
+            .select("profile")
+            .eq("user_id", a.id),
+          "Own profile",
+        ).length === 1,
+        "A cannot read its profile",
+      );
+      requireThat(
+        data(
+          await b.client
+            .from("cp_learning_profiles")
+            .select("profile")
+            .eq("user_id", a.id),
+          "Other profile",
+        ).length === 0,
+        "B read A's profile",
+      );
+      denied(
+        await a.client.rpc("cp_admin_profile", { target: b.id }),
+        "Learner profile administration",
+      );
+    },
+  );
   await check("final schema catalog through PostgreSQL 17", async () => {
     requireThat(
       (await sql(
@@ -574,7 +645,8 @@ async function main() {
         owner: a.id,
       });
       requireThat(
-        lease.materials.some((m) => m.id === attachment) &&
+        lease.profile.background === "Synthetic import-export" &&
+          lease.materials.some((m) => m.id === attachment) &&
           !lease.materials.some((m) =>
             [lessonB, draft, answers].includes(m.id),
           ),
