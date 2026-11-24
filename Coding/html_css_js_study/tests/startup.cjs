@@ -25,6 +25,7 @@ function harness({ locked = false, initialized = false, controller = true } = {}
     'wb-startup-detail': { textContent: '' },
     'wb-startup-title': { focus() { focusCount++; } },
     'wb-startup-retry': {},
+    'web-book': { dataset: { view: initialized ? 'book' : '' } },
     'wb-prose': { textContent: initialized ? 'Lesson loaded' : '' },
     'wb-editor': { oninput: initialized ? () => {} : null },
     'wb-run': { onclick: initialized ? () => {} : null }
