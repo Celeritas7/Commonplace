@@ -93,7 +93,9 @@ const data = (r, label) => {
     !r.error,
     label +
       " returned an API error" +
-      (r.error?.code ? " (" + r.error.code + ")" : ""),
+      (r.error?.code ? " (" + r.error.code + ")" : "") +
+      (r.error?.message ? ": " + safeDiagnostic(r.error.message, secrets) : "") +
+      (r.error?.details ? ": " + safeDiagnostic(r.error.details, secrets) : ""),
   );
   return r.data;
 };
@@ -201,6 +203,7 @@ async function main() {
   await sql(`select cp_private.bootstrap_owner('${owner.id}');`);
   const rpc = async (actor, name, args = {}) =>
     data(await actor.client.rpc(name, args), name);
+  phase = "synthetic learner setup";
   for (const learner of [a, b]) {
     await rpc(owner, "cp_set_learner", {
       target: learner.id,
