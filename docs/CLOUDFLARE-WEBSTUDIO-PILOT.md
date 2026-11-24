@@ -56,6 +56,12 @@ After merging the pilot PR, use the Cloudflare dashboard:
 
 Do not claim the physical iPad issue is resolved until the user reports real-device cold-reopen results. The GitHub build and Web Studio browser tests do not validate live Cloudflare distribution, real Google OAuth configuration or physical iPad storage.
 
+## Next — verify the deployed pilot, not just the build
+
+After connecting the separate Cloudflare Pages project, use the read-only `staging_url` input in the [GitHub pilot workflow](https://github.com/Celeritas7/Commonplace/actions/workflows/cloudflare-webstudio-pilot.yml) to compare the live `pages.dev` files against the verified staging pack. It checks all study asset hashes, actual manifest and worker cache headers, and that excluded admin/Python paths return HTTP 404. No account credentials or deployment tokens are needed.
+
+The exact rollout checklist and unperformed iPad results are in [Cloudflare staging live acceptance](CLOUDFLARE-WEBSTUDIO-LIVE-ACCEPTANCE.md). Packaging success is not proof that Cloudflare deployment, real login, or iPad offline reopening works.
+
 ## Extending from pilot to full Commonplace
 
 This is a **separate future review**, not automatic:
