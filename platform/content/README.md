@@ -74,3 +74,7 @@ Evidence: Node tests cover composition, generic non-Excel records, version/shape
 ## Remaining phases and deployment gates
 
 U5 builds the copyable prompt workflow using these contracts and U3 profiles. U6 adds server ingestion using the same validators, immutable publication, assignments and private assets; it must reject unsupported content before publishing. U7 connects the existing Excel simulator, then other sections. U8 handles owned offline content and progress synchronization. No U0/U1 activation/backup/staging prerequisite is removed by U4. Public fixtures and already public static lessons are not confidential; restricted material must never be bundled into this public repository/build.
+
+## U7 integration
+
+The [learner workspace](../learn/README.md) now composes freshly authorized U6 material bundles and passes their worksheet model to Excel's assigned lesson renderer. It reuses the existing Phase A Ribbon and fixed SUM capability; the legacy static lesson and unmerged PR #70 remain unchanged. Local progress uses the versioned identities described above. The U7 host remains behind the disabled deployment boundary.
