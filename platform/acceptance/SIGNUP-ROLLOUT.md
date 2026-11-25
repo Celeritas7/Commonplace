@@ -44,7 +44,7 @@ findings before issuing a new learner JWT. A private Commonplace schema, paused
 Commonplace signup or a separate website origin does not isolate unrelated APIs.
 The loopback-only acceptance runner must never be pointed at General_apps.
 
-## Shared repairs are not a four-file migration sequence
+## Shared repairs require individual ordering
 
 All paths in this table are under [operations/general-apps](../operations/general-apps/README.md).
 Their numbers do not authorize applying the directory in one batch.
@@ -54,11 +54,12 @@ Their numbers do not authorize applying the directory in one batch.
 | `01_access_foundation.sql` | After shared-project/recovery approval and schema review; before its dependent policy, Roadmap and Edge repairs. Populate only verified owner mappings and explicit grants. It performs no automatic backfill. |
 | `02_legacy_policy_guards.sql` | After 01, verified mappings, all required client cutovers, policy/grant baselines and Eagle membership including a confirmed writer. Unresolved mappings or unrelated-app regressions stop enforcement. |
 | `03_roadmap_session_owner.sql` | After 01, reconciliation of historical task/session ownership, both reviewed RPC fingerprints and owning-client acceptance. It need not precede 02 merely because of a rollout table. |
+| `05_code_sensei_isolation.sql` | After 01 and 02, full verified Code_sensei mappings and client/saved-work acceptance. Covers the remaining data graph, retry receipts and atomic project saves. Prepare and test the companion staging build first; no automatic cutover or legacy queue replay. This shared repair belongs before G0 closes, despite its filename number. |
 | `edge/` | After the foundation, JWT-capable clients, explicit route grants/budgets and the owning app's release review. These are the legacy paid routes, not Commonplace's two file/lease routes. Use mock providers for local testing. |
 | `04_commonplace_signup.sql` | **After all six Commonplace migrations and verified owner setup below.** It changes shared Auth trigger routines and must have its own approved window and legacy-signup regression checks. Install it paused. |
 | `90_containment.sql` | Incident containment, not an installation step. Its separately committed stops affect signup, two legacy Edge routes and Roadmap. Use only the approved incident scope. |
 
-Candidate 04 does not install candidates 01–03 or repair the remaining shared
+Candidate 04 does not install candidates 01–03/05 or repair the remaining shared
 surface. Its SQL foundation checks are distinct from the broader release gates.
 In the older R1–R5 roadmap, defer 04 out of R3 until the six-migration/owner part
 of R4 is complete. Preparing any of these files locally is permitted while hosted

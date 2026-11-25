@@ -42,7 +42,7 @@ rolls back the replacement if a file fails. Private receipts have their own RLS.
 
 ## Owning client and preserved work
 
-The companion Code_sensei change supplies an explicit staging builder and tests;
+[Code_sensei PR #4](https://github.com/Celeritas7/Code_sensei/pull/4) supplies an explicit staging builder and tests;
 its production entry points are unchanged. The generated app uses verified
 Supabase sign-in, caller-only identity resolution, JWTs on private requests and
 Edge entitlements. It removes name lookup and shared AI-secret transmission.

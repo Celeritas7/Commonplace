@@ -139,6 +139,8 @@ test('Code_sensei installer fails atomically on unreviewed data, policies and gr
    ['ownerless notebook',"insert into code_sensei_notebooks(id,title,url) values(90,'unassigned','https://example.invalid')",'delete from code_sensei_notebooks where id=90',/missing owner/],
    ['schema drift','alter table code_sensei_notebooks add column hidden text','alter table code_sensei_notebooks drop column hidden',/schema drift/],
    ['policy drift','create policy unreviewed on code_sensei_notebooks using(true)','drop policy unreviewed on code_sensei_notebooks',/policy drift/],
+   ['constraint drift','alter table code_sensei_notebooks drop constraint code_sensei_notebooks_user_id_fkey','alter table code_sensei_notebooks add constraint code_sensei_notebooks_user_id_fkey foreign key(user_id) references code_sensei_users(id)',/constraint drift/],
+   ['external relationship','create table fixture_external(exercise_id integer references code_sensei_exercises(id) on delete cascade)','drop table fixture_external',/external Code_sensei/],
    ['inherited grants','create role fixture_reader; grant fixture_reader to anon; grant select on code_sensei_notebooks to fixture_reader','drop owned by fixture_reader; drop role fixture_reader',/unexpected effective/],
   ])await t.test(name,async()=>{
    await db.exec(change); await assert.rejects(()=>db.exec(candidate),expected);await db.exec('rollback');
