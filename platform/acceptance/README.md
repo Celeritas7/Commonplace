@@ -12,6 +12,8 @@ isolated client and package builder. General_apps is the selected shared backend
 the separate HTTPS origin and hosted execution remain subject to the release gates.
 Use the [current migration and signup rollout order](SIGNUP-ROLLOUT.md), including
 paused installation of candidate 04 after all six migrations and owner setup.
+The [G0 readiness checkpoint](G0-READINESS.md) records the latest read-only
+reconciliation and unresolved recovery/shared-access gates.
 
 ## Repeat the automated checks
 

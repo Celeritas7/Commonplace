@@ -12,6 +12,11 @@ stage the application, then separately approve controlled signup and acceptance.
 Registering a learner, granting section access and assigning published materials
 remain separate administrator actions.
 
+The [current G0 checkpoint](G0-READINESS.md) keeps deployment on hold and records
+new shared-trigger drift: candidate 04 requires a compatibility review before
+installation. Reuse completed recovery work; merging the checkpoint does not
+clear G0 or authorize advancing to G1.
+
 ## Before any hosted change
 
 Record the selected project, source commit, exact file hashes, current migration
