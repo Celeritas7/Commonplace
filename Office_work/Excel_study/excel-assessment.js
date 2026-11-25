@@ -1,7 +1,7 @@
 /* Independent self-assessment. No identity, network, or device-wide persistence. */
 (function(global){
   'use strict';
-  const section='excel';
+  const section='office.excel';
   const maxAnswerLength=512;
   function bounded(value){
     if(typeof value==='boolean'||value===null)return value;
