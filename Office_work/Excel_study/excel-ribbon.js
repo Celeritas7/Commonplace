@@ -23,13 +23,15 @@
     const name=root.querySelector('[data-excel-name]');
     const formula=root.querySelector('[data-excel-formula]');
     const cellValue=root.querySelector('[data-excel-value]');
+    const editButton=root.querySelector('[data-excel-edit]');
+    const canOperate=!!editButton&&!!global.CommonplaceExcelOperations;
     const cells=worksheet?[...worksheet.querySelectorAll('[data-cell]')]:[];
     if(!worksheet||!name||!formula||!cellValue||!cells.length)return;
     root.dataset.excelMounted='true';
     const id=root.id||'excel-simulator';
     const shell=element('div','excel-shell');
     const title=element('div','excel-title');
-    title.append(element('span','excel-brand','X'),element('strong','',options.workbook||'Book1 — Excel'),element('span','excel-tag','Explore & practice'));
+    title.append(element('span','excel-brand','X'),element('strong','',options.workbook||'Book1 — Excel'),element('span','excel-tag',canOperate?'Explore & practice':'Explore mode'));
     const tabs=element('div','excel-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Excel Ribbon tabs');
     const ribbon=element('div','excel-ribbon');ribbon.id=id+'-ribbon';ribbon.setAttribute('role','tabpanel');ribbon.tabIndex=0;
     const guide=element('div','excel-guide');
@@ -64,13 +66,13 @@
         const panel=element('div','excel-group');
         const controls=element('div','excel-tools');
         for(const tool of tools){
-          const b=button('excel-tool','');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',tool[0]);b.dataset.excelTool=tool[0];b.dataset.excelGroup=group;if(global.CommonplaceExcelOperations?.supports(tool[0])){b.classList.add('excel-working');b.title='Practice tool — performs an operation';}else{b.title='Location preview only';}b.append(element('span','excel-symbol',tool[1]),element('span','excel-tool-label',tool[0]));
+          const b=button('excel-tool','');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',tool[0]);b.dataset.excelTool=tool[0];b.dataset.excelGroup=group;if(canOperate&&global.CommonplaceExcelOperations.supports(tool[0])){b.classList.add('excel-working');b.title='Practice tool — performs an operation';}else{b.title='Location preview only';}b.append(element('span','excel-symbol',tool[1]),element('span','excel-tool-label',tool[0]));
           b.addEventListener('click',()=>describe(group,tool,b));controls.append(b);
         }
         panel.append(controls,element('div','excel-group-label',group));ribbon.append(panel);
       }
       path.textContent=catalog[index].tab+' Ribbon';
-      desc.textContent='Select a cell, then use a tool marked Practice; other tools explain their locations.';
+      desc.textContent=canOperate?'Select a cell, then use a tool marked Practice; other tools explain their locations.':'Select a tool to learn what it does and where to find it.';
       note.textContent='Ribbon layout is simplified from desktop Excel for Windows. Actual icons and placement can vary by version.';
       if(focus)tabButtons[index].focus();
       if(user)emit({type:'tab',tab:catalog[index].tab});
@@ -87,14 +89,14 @@
     showTab(Math.max(0,catalog.findIndex(c=>c.tab===(options.initialTab||'Home'))));
     let selected=null;
     const formulaCell=options.formulaCell||'B5';
-    const editButton=root.querySelector('[data-excel-edit]');
     function refresh(){
       if(!selected)return;
       const isFormula=selected.dataset.cell===formulaCell;
       formula.hidden=!isFormula;
       cellValue.hidden=isFormula;
       const input=selected.querySelector('input');
-      cellValue.value=input?input.value:selected.textContent;
+      const value=input?input.value:selected.textContent;
+      if(editButton)cellValue.value=value;else cellValue.textContent=value;
       if(editButton)editButton.hidden=isFormula;
     }
     function select(address,focus=false,user=false){
@@ -121,7 +123,7 @@
         if(m&&select(String.fromCharCode(m[1].charCodeAt(0)+d[0])+(Number(m[2])+d[1]),true,true))e.preventDefault();
       });
     });
-    operations=global.CommonplaceExcelOperations?.create({cells,formulaCell,formula,refresh,onAutoSum:options.onAutoSum});
+    operations=canOperate?global.CommonplaceExcelOperations.create({cells,formulaCell,formula,refresh,onAutoSum:options.onAutoSum}):null;
     function commitEdit(){if(operations){const result=operations.edit(selected,cellValue.value);path.textContent='Formula bar → Edit cell';desc.textContent=result;note.textContent='Only sample input cells are editable; B5 is reserved for SUM.';}}
     if(editButton)editButton.addEventListener('click',commitEdit);
     cellValue.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commitEdit();}});
