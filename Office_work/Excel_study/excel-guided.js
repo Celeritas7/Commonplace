@@ -26,9 +26,8 @@
     const picker=q('[data-guided-picker]'),start=q('[data-guided-start]'),hint=q('[data-guided-hint]'),exit=q('[data-guided-exit]');
     const context=q('[data-guided-context]'),instruction=q('[data-guided-instruction]'),feedback=q('[data-guided-feedback]'),progress=q('[data-guided-progress]'),count=q('[data-guided-count]');
     let lesson=lessons[0],session=null,active=false;
-    for(const item of lessons){
-      const opt=document.createElement('option');opt.value=item.id;opt.textContent=item.title;picker.append(opt);
-    }
+    function populate(){picker.replaceChildren();for(const item of lessons){const opt=document.createElement('option');opt.value=item.id;opt.textContent=item.title;picker.append(opt);}picker.value=lessons[0].id;}
+    populate();
     function clearHighlights(){root.querySelectorAll('.excel-guided-target').forEach(el=>el.classList.remove('excel-guided-target'));}
     function find(attr,value,within=root){
       return [...within.querySelectorAll('['+attr+']')].find(el=>el.getAttribute(attr)===value);
@@ -109,7 +108,7 @@
       render();
     });
     render();
-    return {get active(){return active;},get session(){return session;}};
+    return {get active(){return active;},get session(){return session;},setLessons(next){if(!next?.length)return;active=false;session=null;lessons=next;lesson=next[0];populate();feedback.textContent='';render();}};
   }
   global.CommonplaceExcelGuided={mount,createSession,matches};
 })(window);
