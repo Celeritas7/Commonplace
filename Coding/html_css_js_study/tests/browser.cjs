@@ -63,8 +63,15 @@ async function textHas(selector, pattern) {
     const el = document.querySelector(selector); return !!el && new RegExp(pattern, flags).test(el.textContent);
   }, { selector, pattern: pattern.source, flags: pattern.flags }, { timeout: 12000 });
 }
-const view = name => page.locator('.wb-app-tabs [data-view="' + name + '"]').click();
-const chapter = name => page.locator('.wb-language-tabs [data-language="' + name + '"]').click();
+const view = async name => {
+  if (name === 'course') await page.locator('.wb-more-menu > summary').click();
+  await page.locator('.wb-app-tabs [data-view="' + name + '"]').click();
+};
+const chapter = async name => {
+  const option = page.locator('.wb-language-tabs [data-language="' + name + '"]');
+  if (!await option.isVisible()) await view('book');
+  await option.click();
+};
 async function part(number) {
   if (!await page.locator('#wb-contents').evaluate(el => el.open)) await page.locator('#wb-contents > summary').click();
   await page.locator('.wb-toc [data-part="' + number + '"]').click();
@@ -93,6 +100,12 @@ async function preserved() {
   assert.equal(await page.locator('#wb-startup-recovery').isVisible(), false, 'healthy startup must never obscure lessons');
   assert.equal(await page.locator('#wb-title').textContent(), 'Give your page meaning.');
   assert.equal(await page.locator('.wb-toc [data-part]').count(), 9);
+  assert.deepEqual(await page.locator('.wb-app-tabs > button[data-view]').evaluateAll(buttons => buttons.map(b => b.textContent.trim())), ['Learn','Practice','Projects','My learning']);
+  assert.equal(await page.locator('#wb-book-view .wb-language-tabs').count(), 1, 'chapter picker is inside Learn');
+  assert.match(await page.locator('#wb-resume-chapter').textContent(), /HTML · Give your page meaning/);
+  assert.match(await page.locator('#wb-resume-part').textContent(), /Part 1 of 8 · Why this matters/);
+  await page.locator('#wb-resume-action').click();
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-part-title', 'Continue focuses the saved reading part');
   await preserved();
 
   // The supplied sample must work before the learner edits any file.
@@ -108,7 +121,8 @@ async function preserved() {
   assert.equal(afterPreviewBoot.hidden, true, 'preview must not open recovery panel: '+JSON.stringify(afterPreviewBoot));
   console.log('PASS ' + engine + ': fresh sample starter renders its card and runs the click counter');
 
-  await part(2); await page.locator('#wb-bookmark').click();
+  await part(2); assert.match(await page.locator('#wb-resume-part').textContent(), /Part 3 of 8 · Walk-through/);
+  await page.locator('#wb-bookmark').click();
   await view('notes'); await page.locator('#wb-note-editor').fill('A note to keep through updates.');
   await view('book'); await part(8);
   const answers = await page.evaluate(() => window.WebStudioLessons.chapters.html.quiz.map(q => q.correct));
@@ -335,6 +349,7 @@ async function preserved() {
   await old.locator('#wb-offline-close').click();
   assert.equal(await old.locator('#wb-offline').isVisible(),false);
   assert.equal(await old.evaluate(() => document.activeElement.id),'wb-part-title','cached markup without Start studying must keep its existing return control usable');
+  await old.locator('.wb-more-menu > summary').click();
   await old.locator('.wb-app-tabs [data-view=course]').click();
   assert(await old.locator('#legacy-course > .crumb').isVisible(),'cached documents retain their original folder links');
   assert.deepEqual(oldErrors,[],'new scripts tolerate cached markup');

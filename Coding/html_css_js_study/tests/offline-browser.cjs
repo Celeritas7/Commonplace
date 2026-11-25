@@ -303,7 +303,7 @@ function revise(files) {
   assert.equal(await preview.locator('.card').evaluate(element => getComputedStyle(element).padding), '32px');
   await preview.locator('#counter').click(); await preview.locator('#counter').click();
   assert.equal(await preview.locator('#counter').textContent(), 'Clicks: 4');
-  await page.locator('.wb-language-tabs [data-language="js"]').click(); await view('practice');
+  await view('book'); await page.locator('.wb-language-tabs [data-language="js"]').click(); await view('practice');
   await page.locator('#wb-check-exercise').click();
   await page.waitForFunction(key => JSON.parse(localStorage.getItem(key)).exercises?.['js-count-twos']?.attempts?.at(-1)?.status === 'passed', KEY);
   assert(await page.locator('#wb-exercise-results .wb-check-row').count() > 0, 'offline exercise feedback is visible');
