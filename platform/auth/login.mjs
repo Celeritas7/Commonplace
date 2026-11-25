@@ -1,4 +1,5 @@
 import { projectNamespace } from "./configuration.mjs";
+import { createSavedOwner } from "../offline/saved-owner.mjs";
 const callbackKeys = [
   "code",
   "sb_flow_id",
@@ -8,13 +9,14 @@ const callbackKeys = [
 ];
 // Process the callback once, before any routing or URL cleanup. Never use a
 // return-to query, email or user-editable role claim as the destination/authority.
-export async function finishLogin(client, { href, replace }) {
+export async function finishLogin(client, { href, replace, savedOwner }) {
   const url = new URL(href),
     code = url.searchParams.get("code");
   const fragment = new URLSearchParams(url.hash.slice(1));
   const callback =
     callbackKeys.some((k) => url.searchParams.has(k)) ||
     ["access_token", "refresh_token", "error"].some((k) => fragment.has(k));
+  if (callback) savedOwner?.lock();
   await client.auth.initialize();
   if (callback) {
     try {
@@ -49,30 +51,33 @@ export async function finishLogin(client, { href, replace }) {
   const session = await client.auth.getSession();
   if (session.error)
     throw Error("Your sign-in could not be checked. Reconnect and retry.");
-  if (!session.data?.session) return { state: "signed-out" };
+  if (!session.data?.session) {
+    savedOwner?.lock();
+    return { state: "signed-out" };
+  }
   const verified = await client.auth.getUser();
   if (verified.error || !verified.data?.user?.id)
     throw Error("Your sign-in could not be verified. Reconnect and retry.");
+  const userId = verified.data.user.id;
+  if (savedOwner && savedOwner.read()?.owner !== userId) savedOwner.lock();
   const member = await client
     .from("cp_memberships")
     .select("role,status")
-    .eq("user_id", verified.data.user.id)
+    .eq("user_id", userId)
     .maybeSingle();
   if (member.error)
     throw Error("Your access could not be checked. Reconnect and retry.");
+  if (member.data?.status === "active" && member.data.role === "learner")
+    return { state: "ready", path: "/platform/learn/index.html" };
+  savedOwner?.lock();
   if (member.data?.status !== "active") return { state: "unassigned" };
   if (member.data.role === "administrator")
     return { state: "ready", path: "/platform/admin/index.html" };
-  if (member.data.role === "learner")
-    return { state: "ready", path: "/platform/learn/index.html" };
   return { state: "unassigned" };
 }
 export async function lockAndSignOut(client, config, storage) {
   // Lock before the network request. Keep all saved lessons, notes and queues.
-  storage.setItem(
-    "cp:u8:" + projectNamespace(config) + ":saved-owner",
-    JSON.stringify({ unlocked: false }),
-  );
+  createSavedOwner(storage, projectNamespace(config)).lock();
   const result = await client.auth.signOut({ scope: "local" });
   if (result.error)
     throw Error("Saved study is locked. Reconnect to finish signing out.");
@@ -88,11 +93,13 @@ export async function mountLogin(
     online = () => navigator.onLine,
   },
 ) {
+  const savedOwner = createSavedOwner(storage, projectNamespace(config));
   root.innerHTML =
-    '<main class="disabled-state panel"><p class="eyebrow">COMMONPLACE · STAGING</p><h1>Sign in to Commonplace</h1><p id="login-status" role="status">Checking your sign-in…</p><p><button id="google-login" type="button">Continue with Google</button> <button id="sign-out" type="button">Sign out</button></p><p><a id="open-workspace" hidden>Continue to your workspace</a></p><p><a href="../learn/index.html">Open saved study</a></p><p>Prepare offline study in the same browser or Home Screen app you will use later.</p></main>';
+    '<main class="disabled-state panel"><p class="eyebrow">COMMONPLACE · STAGING</p><h1>Sign in to Commonplace</h1><p id="login-status" role="status">Checking your sign-in…</p><p><button id="google-login" type="button">Continue with Google</button> <button id="sign-out" type="button">Sign out</button></p><p><a id="open-workspace" hidden>Continue to your workspace</a></p><p><a id="open-saved-study" href="../learn/index.html" hidden>Open saved study</a></p><p>Prepare offline study in the same browser or Home Screen app you will use later.</p></main>';
   const status = root.querySelector("#login-status"),
     google = root.querySelector("#google-login"),
-    out = root.querySelector("#sign-out");
+    out = root.querySelector("#sign-out"),
+    savedStudy = root.querySelector("#open-saved-study");
   google.disabled = true;
   out.disabled = true;
   google.onclick = async () => {
@@ -102,6 +109,8 @@ export async function mountLogin(
         throw Error(
           "You are offline. Open saved study to continue downloaded lessons.",
         );
+      savedStudy.hidden = true;
+      savedOwner.lock();
       status.textContent = "Opening Google…";
       const result = await client.auth.signInWithOAuth({
         provider: "google",
@@ -119,6 +128,7 @@ export async function mountLogin(
   };
   out.onclick = async () => {
     out.disabled = true;
+    savedStudy.hidden = true;
     try {
       await lockAndSignOut(client, config, storage);
       root.querySelector("#open-workspace").hidden = true;
@@ -130,15 +140,29 @@ export async function mountLogin(
   };
   try {
     if (!online()) {
-      status.textContent =
-        "You are offline. Open saved study to continue downloaded lessons.";
+      savedStudy.hidden = !savedOwner.read();
+      status.textContent = savedStudy.hidden
+        ? "Reconnect to verify your account before opening saved study."
+        : "You are offline. Open saved study to continue downloaded lessons.";
       return;
     }
+    client.auth.onAuthStateChange((event, session) => {
+      const previous = savedOwner.read();
+      if (
+        event === "SIGNED_OUT" ||
+        (previous && session?.user?.id && previous.owner !== session.user.id)
+      ) {
+        savedStudy.hidden = true;
+        savedOwner.lock();
+      }
+    });
     const result = await finishLogin(client, {
+      savedOwner,
       href: location.href,
       replace: (path) => history.replaceState(null, "", path),
     });
     if (result.state === "ready") {
+      savedStudy.hidden = !savedOwner.read();
       if (!new URL(location.href).searchParams.has("account")) {
         location.replace(config.origin + result.path);
         return;
@@ -156,6 +180,7 @@ export async function mountLogin(
         : "Use your authorized Google account to continue.";
     out.disabled = result.state !== "unassigned";
   } catch (error) {
+    savedOwner.lock();
     status.textContent = error.message;
     out.disabled = false;
   } finally {

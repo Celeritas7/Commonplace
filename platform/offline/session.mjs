@@ -1,4 +1,5 @@
 import { createLearnerContext } from "../lib/learner-context.mjs";
+import { createSavedOwner } from "./saved-owner.mjs";
 export function createOfflineSession({
   store,
   storage,
@@ -8,7 +9,7 @@ export function createOfflineSession({
   online = () => navigator.onLine,
   notify = () => {},
 }) {
-  const markerKey = "cp:u8:" + namespace + ":saved-owner";
+  const savedOwner = createSavedOwner(storage, namespace);
   let client,
     clientPromise,
     identity,
@@ -18,18 +19,11 @@ export function createOfflineSession({
     disposed = false,
     offlineMode = false,
     expiry;
-  const marker = () => {
-    try {
-      const m = JSON.parse(storage.getItem(markerKey));
-      return m?.unlocked === true && typeof m.owner === "string" ? m : null;
-    } catch {
-      return null;
-    }
-  };
+  const marker = savedOwner.read;
   let observedOwner = marker()?.owner;
   const lock = () => {
     try {
-      storage.setItem(markerKey, JSON.stringify({ unlocked: false }));
+      savedOwner.lock();
     } finally {
       observedOwner = undefined;
       offlineMode = false;
@@ -68,7 +62,10 @@ export function createOfflineSession({
             if (event === "INITIAL_SESSION" && !current) {
               // Retire the previous saved selector, while U1 verifies this initial
               // identity with getUser. No private view/ticket has been opened yet.
-              storage.setItem(markerKey, JSON.stringify({ unlocked: false }));
+              storage.setItem(
+                savedOwner.key,
+                JSON.stringify({ unlocked: false }),
+              );
               observedOwner = undefined;
               offlineMode = false;
               notify();
@@ -126,35 +123,40 @@ export function createOfflineSession({
       throw Error(
         "Choose Resume saved study to open your downloaded materials.",
       );
+    const verifiedUnder = savedOwner.lockId();
     try {
       const source = await getClient();
       if (disposed || request !== generation) throw Error("Account changed");
       const c = await identity.refresh();
       if (disposed || request !== generation || c.ticket.signal.aborted)
         throw Error("Account changed");
-      storage.setItem(
-        markerKey,
-        JSON.stringify({ owner: c.userId, unlocked: true }),
-      );
+      savedOwner.select(c.userId, verifiedUnder);
       observedOwner = c.userId;
       c.client = source;
       c.offline = false;
       current = c;
       return c;
     } catch (e) {
-      if (request === generation && online()) {
+      if (
+        request === generation &&
+        online() &&
+        verifiedUnder === savedOwner.lockId()
+      ) {
         const m = marker();
         try {
-          if (m) await packs.block(m.owner);
-        } finally {
           lock();
+        } finally {
+          if (m) await packs.block(m.owner);
         }
       }
       throw e;
     }
   }
   function changed(event) {
-    if (event.key === markerKey && marker()?.owner !== observedOwner) {
+    if (
+      (event.key === savedOwner.key || event.key === savedOwner.lockKey) &&
+      marker()?.owner !== observedOwner
+    ) {
       observedOwner = marker()?.owner;
       offlineMode = false;
       invalidate();
@@ -182,11 +184,9 @@ export function createOfflineSession({
     async deny() {
       const m = marker();
       try {
-        if (m) await packs.block(m.owner);
-      } catch {
-        /* Still lock the selector and active view. */
-      } finally {
         lock();
+      } finally {
+        if (m) await packs.block(m.owner).catch(() => {});
       }
     },
     dispose() {

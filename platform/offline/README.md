@@ -23,6 +23,7 @@ For an activated installation, use `/platform/learn/index.html` (or `/platform/l
 | Signed lease | Exact material versions, SHA-256 hashes, file metadata, issued time and expiry; never an API bearer token or administrator permission |
 | IndexedDB `commonplace-u8:<namespace>` | Private bodies, file Blobs, pack receipts and transactional study/outbox/conflict records, keyed by verified owner UUID |
 | `cp:u8:<namespace>:saved-owner` | Last verified saved-account selector and lock state; neither a grant nor a token |
+| `cp:u8:<namespace>:saved-owner:lock` | Lock ID shared by the login and learner pages. Account changes invalidate earlier verifications. Existing selectors remain readable until the first lock. |
 | `cp-u8-shell-<digest>` CacheStorage | Reviewed, hash-checked public application assets only; no profiles, private lessons, file-service responses or authentication |
 
 The signer requires an explicit lease interval from **1 to 168 hours**. The preview uses seven days. This is a proposed maximum, **not an approved production policy**; choose the actual interval before activation. The client pins the reviewed public key and validates signature, owner, namespace, origin, expiry, clock rollback, material bounds and cached hashes. A cold offline reopen requires an explicit saved-study action. Going offline during an already verified study session can reuse its complete pack automatically. Offline context is always learner-only, including for an administrator's saved study.
