@@ -1,5 +1,12 @@
 -- Synthetic reduced legacy shapes. Only the reviewed definitions are exact.
-alter table auth.users add column if not exists raw_user_meta_data jsonb default '{}';
+-- PGlite's reduced Auth fixture needs this column. Real Supabase already has it
+-- and postgres does not own auth.users: do not issue ALTER there, even IF NOT EXISTS.
+do $$ begin
+ if not exists(select 1 from pg_attribute where attrelid='auth.users'::regclass
+  and attname='raw_user_meta_data' and not attisdropped) then
+  alter table auth.users add column raw_user_meta_data jsonb default '{}';
+ end if;
+end $$;
 create table public.authentication_mode_user_roles(id integer primary key,email text unique not null,role text not null default 'viewer',name text,auth_user_id uuid unique,updated_at timestamptz default now());
 create table public.chatak_profiles(id uuid primary key,email text);
 create table public.alarm_settings(user_id uuid primary key);
