@@ -219,7 +219,7 @@ export async function buildStagingPackage({
   );
   // These are operator review inputs, never browser/offline assets. Accepting a
   // target configuration does not attest the shared project's access rules.
-  for (const name of ["shared-project-catalog.sql", "GENERAL-APPS-TARGET.md"])
+  for (const name of ["shared-project-catalog.sql", "GENERAL-APPS-TARGET.md", "GENERAL-APPS-REVIEW.md"])
     await write(
       "server/preflight/" + name,
       await readFile(join(repositoryRoot, "platform/acceptance", name)),
