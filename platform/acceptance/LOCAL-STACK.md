@@ -6,10 +6,19 @@ Supabase's local Docker services. It exercises actual signed Auth sessions,
 PostgREST authorization and private Storage delivery before choosing a cloud
 staging target. Production activation remains disabled.
 
+Eight additional groups cover the review candidates, including ownership
+cutover under contention, signed legacy reads and writes, Roadmap retries,
+verified signup and containment. The runner also exercises the candidate paid
+routes with real local Auth, PostgREST reservations and mock provider transport.
+Their synthetic credentials and transport are mounted only inside this
+disposable stack. Mailpit handles the synthetic confirmation locally.
+The normal staging package still contains only the six existing CP migrations;
+see the [review-candidate runbook](../operations/general-apps/README.md).
+
 ## Run
 
 Use Node 22, Docker Engine and **Supabase CLI 3.3.0** on a development machine or
-an isolated CI runner. Ports 54321 and 54322 must be available. The pinned
+an isolated CI runner. Ports 54321, 54322 and 54324 must be available. The pinned
 `Admin platform local Supabase` workflow installs these prerequisites on Ubuntu.
 From the repository root:
 
@@ -54,7 +63,7 @@ the CI runner itself is disposable. Do not use the test config to host an app.
 
 ## Required evidence
 
-Ten integration groups must pass. Every negative file test follows a successful
+The ten foundation groups below and eight candidate groups must pass. Every negative file test follows a successful
 authorized upload/download, so an absent endpoint cannot produce a false pass.
 
 | Group | Required result |
@@ -84,9 +93,9 @@ an actual Auth/Storage backup restore, or production rollout/rollback. The local
 stack's pinned CLI and upstream service versions can also differ from the eventual
 hosted target. Follow [the hosted and device runbook](README.md) before activation.
 
-The connected organization had two existing projects and no selected staging
-project when this checkpoint began. A separate hosted target and its cost/origin
-decision remain open. This PR does not use a shared project as a substitute.
+The selected hosted backend is General_apps. This disposable test uses its own
+synthetic local services. The separate HTTPS staging origin and shared-project
+acceptance gates are recorded in [the hosted runbook](HOSTED-STAGING.md).
 
 ## Regression found by real integration
 

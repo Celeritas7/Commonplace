@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { verifyLease } from "../offline/lease.mjs";
+import { sharedAccessAcceptance } from "./shared-access-local.mjs";
 import {
   assertLocalStatus,
   safeDiagnostic,
@@ -131,7 +132,7 @@ async function main() {
     "--workdir",
     work,
     "--exclude",
-    "realtime,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor",
+    "realtime,imgproxy,postgres-meta,studio,logflare,vector,supavisor",
   ]);
   const status = JSON.parse(
     await run(cli, ["status", "--workdir", work, "--output", "json"]),
@@ -475,7 +476,7 @@ async function main() {
   const envFile = join(work, "edge.env");
   await writeFile(
     envFile,
-    `COMMONPLACE_APP_ORIGIN=${origin}\nCOMMONPLACE_PROJECT_NAMESPACE=${namespace}\nCOMMONPLACE_OFFLINE_HOURS=1\nCOMMONPLACE_OFFLINE_PRIVATE_JWK=${privateJwk}\n`,
+    `ANTHROPIC_API_KEY=synthetic-local-only\nJUDGE0_RAPIDAPI_KEY=synthetic-local-only\nCOMMONPLACE_APP_ORIGIN=${origin}\nCOMMONPLACE_PROJECT_NAMESPACE=${namespace}\nCOMMONPLACE_OFFLINE_HOURS=1\nCOMMONPLACE_OFFLINE_PRIVATE_JWK=${privateJwk}\n`,
     { mode: 0o600 },
   );
   server = spawn(
@@ -721,6 +722,20 @@ async function main() {
       );
     },
   );
+  await sharedAccessAcceptance({
+    edge,
+    a, b, unregistered,
+    sql,
+    check,
+    client,
+    owner,
+    rpc,
+    data,
+    denied,
+    requireThat,
+    pause,
+    secrets,
+  });
   console.log(
     `PASS ${passed} local Supabase integration groups; hosted/device approval remains pending.`,
   );

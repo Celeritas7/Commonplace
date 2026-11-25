@@ -142,6 +142,14 @@ preserve that evidence and resolve its provenance before extending recovery test
 Auth/RLS/private-file restore and physical-device acceptance remain pending.
 Follow the linked R1–R5 sequence. Both source activation configs remain `null`.
 
+The next [R1/R2 preparation package](../../platform/operations/general-apps/README.md)
+contains explicit identity mappings, guarded legacy policies, the session owner
+repair, closed-by-default CP signup admission, Edge entitlement checks and
+containment instructions. It tests these as isolated candidates, including real
+local Auth signup. The six normal migrations and live project remain unchanged.
+R1 source identity/runtime restore, affected client cutovers and the rest of the
+shared authorization review still block activation; this is not a completed R3.
+
 References rechecked: [Supabase changelog](https://supabase.com/changelog.md),
 [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security),
 [Storage authorization](https://supabase.com/docs/guides/storage/security/access-control).

@@ -18,7 +18,7 @@ export function createAdminAPI({client, enabled=false, online=()=>navigator.onLi
   async function call(name,args={}) {
     const result=await operation(()=>client.rpc(name,args));
     if(result.error) {
-      const messages={'40001':'This record changed in another tab. Reload before saving.','42501':'Administrator access is required.','23505':name==='cp_admin_save_profile_group'?'A group with this name already exists.':'This account is already registered. Select it in the learner list.','22023':name.includes('material')?'Check the material schema, saved state and selected recipients.':name.includes('profile')?'Check the profile fields, learner and selected groups.':'Check the verified login email and selected study sections.'};
+      const messages={'CP001':'Open Signup requests to complete the verified account reservation.','40001':'This record changed in another tab. Reload before saving.','42501':'Administrator access is required.','23505':name==='cp_admin_save_profile_group'?'A group with this name already exists.':'This account is already registered. Select it in the learner list.','22023':name.includes('material')?'Check the material schema, saved state and selected recipients.':name.includes('profile')?'Check the profile fields, learner and selected groups.':'Check the verified login email and selected study sections.'};
       const error=Error(messages[result.error.code] || 'The request failed. Reload to confirm the current saved state before retrying.');
       error.code=result.error.code; throw error;
     }
@@ -37,6 +37,10 @@ export function createAdminAPI({client, enabled=false, online=()=>navigator.onLi
     profile:target=>call('cp_admin_profile',{target}),
     saveProfile:(target,revision,profile,groups)=>call('cp_admin_save_profile',{target,expected_revision:revision,new_profile:profile,group_ids:groups}),
     saveGroup:group=>call('cp_admin_save_profile_group',{target:group.id||null,expected_revision:group.revision||'0',new_name:group.name,new_description:group.description}),
+    signups:()=>call('cp_admin_signup_directory'),
+    prepareSignup:email=>call('cp_admin_prepare_signup',{login_email:email}),
+    reviewSignup:(row,decision)=>call('cp_admin_review_signup',{admission:row.id,expected_revision:row.revision,decision}),
+    completeSignup:(row,name)=>call('cp_admin_complete_signup',{admission:row.id,expected_revision:row.revision,learner_name:name}),
     register:(email,name)=>call('cp_admin_register',{login_email:email,learner_name:name}),
     save:(draft)=>call('cp_admin_save',{target:draft.user_id,expected_revision:draft.revision,learner_name:draft.display_name,new_status:draft.status,allowed_sections:draft.allowed}),
     onInvalidate(fn){listeners.add(fn);return ()=>listeners.delete(fn);},

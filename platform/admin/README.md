@@ -16,6 +16,8 @@ Open `http://localhost:8000/platform/admin/preview.html`. Select **Sample learne
 
 ## Delivered behavior
 
+An optional **Signup requests** workspace handles new Commonplace-only admissions when the General_apps signup candidate is installed. It supports withdrawal, same-UUID recovery and verified registration. The existing-account form remains available for other confirmed accounts. See the [signup workflow and prerequisites](../operations/general-apps/README.md#signup-behavior-and-containment).
+
 - Search registered people by display name or login email; view role and status.
 - Register an **existing confirmed login** by email. The server resolves its verified UUID, rejects ambiguous/unconfirmed/unknown matches and rejects already-registered accounts. Registration starts suspended with no grants. It does not send invitations or create auth identities; those need the chosen target's reviewed invitation/sign-up flow.
 - Edit learner display name, activate, suspend or revoke access. The designated administrator is read-only; no promotion/owner-transfer control exists.

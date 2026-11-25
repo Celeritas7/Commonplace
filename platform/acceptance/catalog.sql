@@ -6,7 +6,7 @@ with expected_tables(name) as (values
  ('cp_audit'),('cp_learning_profiles'),('cp_profile_groups'),
  ('cp_profile_group_members'),('cp_materials'),('cp_material_versions'),
  ('cp_material_assignments')
-), expected_functions(signature) as (values
+), core_functions(signature) as (values
  ('public.cp_set_learner(uuid,text,text)'),
  ('public.cp_set_section_grant(uuid,text,text)'),
  ('public.cp_admin_directory()'),('public.cp_admin_register(text,text)'),
@@ -25,6 +25,14 @@ with expected_tables(name) as (values
  ('public.cp_sync_read(uuid,uuid,text,text,text)'),
  ('public.cp_sync_write(uuid,uuid,text,text,text,bigint,uuid,jsonb)'),
  ('public.cp_offline_snapshot(text)')
+), expected_functions(signature) as (
+ select signature from core_functions
+ union all select signature from (values
+  ('public.cp_admin_prepare_signup(text,integer)'),
+  ('public.cp_admin_review_signup(uuid,integer,text,integer)'),
+  ('public.cp_admin_complete_signup(uuid,integer,text)'),
+  ('public.cp_admin_signup_directory()')) signup(signature)
+ where to_regclass('cp_private.signup_control') is not null
 ), tables as (
  select c.*, n.nspname from pg_class c join pg_namespace n on n.oid=c.relnamespace
  where (n.nspname='public' and left(c.relname,3)='cp_') or n.nspname='cp_private'

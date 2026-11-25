@@ -80,6 +80,34 @@ export async function prepareLocalStack(target, id) {
       .digest("hex");
   }
   Object.assign(hashes, await copyEdgeSources(target));
+  // The loopback-only runner mounts the original entrypoints behind a
+  // provider transport fixture. The normal staging packager never calls this.
+  const paid = "operations/general-apps/edge/";
+  for (const file of [
+    "handler.mjs",
+    "authorize.mjs",
+    "claude-proxy/index.ts",
+    "claude-proxy/route.mjs",
+    "code-exec/index.ts",
+    "code-exec/route.mjs",
+  ]) {
+    const source = await readFile(join(platformRoot, paid, file));
+    await write("supabase/functions/_shared/" + paid + file, source);
+    hashes[paid + file] = createHash("sha256").update(source).digest("hex");
+  }
+  await write(
+    "supabase/functions/_shared/mock-paid-provider.mjs",
+    await readFile(join(platformRoot, "acceptance/mock-paid-provider.mjs")),
+  );
+  for (const name of ["claude-proxy", "code-exec"]) {
+    await write(
+      "supabase/functions/" + name + "/index.ts",
+      'import "../_shared/mock-paid-provider.mjs";\nimport "../_shared/' +
+        paid +
+        name +
+        '/index.ts";\n',
+    );
+  }
   await write("source-checksums.json", JSON.stringify(hashes, null, 2) + "\n");
   return hashes;
 }

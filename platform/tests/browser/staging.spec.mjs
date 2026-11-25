@@ -7,17 +7,20 @@ import {
   projectNamespace,
   stagingClientOptions,
 } from "../../auth/configuration.mjs";
+import { createSampleClient } from "../../learn/sample-client.mjs";
+import { materialBytes, digest, signLease } from "../../offline/lease.mjs";
 const origin = "https://commonplace-staging.example.invalid";
 const project = "abcdefghijklmnopqrst";
 const api = `https://${project}.supabase.co`;
 const owner = "10000000-0000-4000-8000-000000000002";
-let output, config;
+let output, config, signingKey;
 test.beforeAll(async () => {
   const keys = await crypto.subtle.generateKey(
     { name: "ECDSA", namedCurve: "P-256" },
     true,
     ["sign", "verify"],
   );
+  signingKey = keys.privateKey;
   config = {
     version: 1,
     environment: "staging",
@@ -38,10 +41,11 @@ test.afterAll(async () => {
   await rm(output, { recursive: true, force: true });
 });
 
-async function harness(context) {
+async function harness(context, study) {
   const requests = [],
     unexpected = [],
     errors = [];
+  const membership = { role: "learner", status: "active" };
   const user = {
     id: owner,
     aud: "authenticated",
@@ -55,11 +59,11 @@ async function harness(context) {
   const encode = (data) =>
     Buffer.from(JSON.stringify(data)).toString("base64url");
   const now = Math.floor(Date.now() / 1000);
-  const token =
+  const token = () =>
     encode({ alg: "HS256", typ: "JWT" }) +
     "." +
     encode({
-      sub: owner,
+      sub: user.id,
       role: "authenticated",
       aud: "authenticated",
       iat: now,
@@ -123,17 +127,55 @@ async function harness(context) {
       const json = (body) => route.fulfill({ json: body, headers });
       if (url.pathname === "/auth/v1/token")
         return json({
-          access_token: token,
+          access_token: token(),
           token_type: "bearer",
           expires_in: 3600,
           refresh_token: "synthetic-refresh",
           user,
         });
+      if (request.headers().authorization !== "Bearer " + token())
+        return route.fulfill({
+          status: 401,
+          headers,
+          json: { message: "Fixture session expired" },
+        });
       if (url.pathname === "/auth/v1/user") return json(user);
       if (url.pathname === "/auth/v1/logout")
         return route.fulfill({ status: 204, headers });
       if (url.pathname === "/rest/v1/cp_memberships")
-        return json([{ role: "learner", status: "active" }]);
+        return json(
+          user.id === owner ? [{ user_id: owner, ...membership }] : [],
+        );
+      if (study && user.id === owner) {
+        if (url.pathname === "/functions/v1/offline-lease")
+          return json(study.token);
+        if (url.pathname === "/rest/v1/cp_sections")
+          return json(study.sample.state.sections);
+        if (url.pathname === "/rest/v1/cp_learning_profiles")
+          return json([{ profile: study.sample.state.profile }]);
+        if (url.pathname === "/rest/v1/rpc/cp_sync_read")
+          return json({ revision: "0", value: null });
+        if (url.pathname === "/rest/v1/rpc/cp_sync_write") {
+          // Keep edits queued on the test device throughout the account round trip.
+          return route.fulfill({
+            status: 503,
+            headers,
+            json: { code: "fixture_offline" },
+          });
+        }
+        if (
+          [
+            "/rest/v1/rpc/cp_read_material",
+            "/rest/v1/rpc/cp_learner_materials",
+          ].includes(url.pathname)
+        ) {
+          const r = await study.sample.client.rpc(
+            url.pathname.split("/").pop(),
+            request.postDataJSON(),
+          );
+          return json(r.data);
+        }
+      }
       // The destination workspace has separate acceptance coverage. Return no
       // assignments, never use fixture errors to infer a security boundary.
       if (url.pathname.startsWith("/rest/v1/")) return json([]);
@@ -152,10 +194,9 @@ async function harness(context) {
   context.on("page", (page) =>
     page.on("pageerror", (error) => errors.push(error.message)),
   );
-  return { requests, unexpected, errors };
+  return { requests, unexpected, errors, user, membership };
 }
-async function login(page) {
-  await page.goto(origin + "/platform/auth/index.html");
+async function googleHandoff(page) {
   await page.getByRole("button", { name: "Continue with Google" }).click();
   await expect(
     page.getByRole("heading", { name: "Simulated Google handoff" }),
@@ -170,7 +211,11 @@ async function login(page) {
   );
   callback.searchParams.set("code", "synthetic-code");
   callback.searchParams.set("next", "https://untrusted.invalid/admin");
-  await page.goto(callback.href);
+  return callback.href;
+}
+async function login(page) {
+  await page.goto(origin + "/platform/auth/index.html");
+  await page.goto(await googleHandoff(page));
   await expect(page).toHaveURL(origin + "/platform/learn/index.html");
 }
 test("checked-in login stays inactive and never contacts a backend", async ({
@@ -240,12 +285,11 @@ test("account page allows signout while retaining saved work and locking offline
 }) => {
   await harness(context);
   await login(page);
-  await page.evaluate(
-    ({ key, owner }) => {
-      localStorage.setItem("legacy-note", "Keep this study note");
-      localStorage.setItem(key, JSON.stringify({ owner, unlocked: true }));
-    },
-    { key: "cp:u8:" + projectNamespace(config) + ":saved-owner", owner },
+  await expect(
+    page.getByRole("button", { name: "Resume saved study", exact: true }),
+  ).toBeEnabled();
+  await page.evaluate(() =>
+    localStorage.setItem("legacy-note", "Keep this study note"),
   );
   await page.goto(origin + "/platform/auth/index.html?account");
   await expect(
@@ -269,4 +313,204 @@ test("account page allows signout while retaining saved work and locking offline
   expect(saved.marker.unlocked).toBe(false);
   expect(saved.note).toBe("Keep this study note");
   expect(saved.session).toBeNull();
+});
+
+for (const [scenario, membership, previous] of [
+  ["suspended learner", { role: "learner", status: "suspended" }, owner],
+  [
+    "administrator with a previous learner selector",
+    { role: "administrator", status: "active" },
+    "10000000-0000-4000-8000-000000000003",
+  ],
+]) {
+  test(
+    "account verification locks offline resume · " + scenario,
+    async ({ page, context }) => {
+      const state = await harness(context);
+      await login(page);
+      await expect(
+        page.getByRole("button", { name: "Resume saved study", exact: true }),
+      ).toBeEnabled();
+      const key = "cp:u8:" + projectNamespace(config) + ":saved-owner";
+      await page.evaluate(
+        ({ key, previous }) => {
+          const selector = JSON.parse(localStorage.getItem(key));
+          localStorage.setItem(
+            key,
+            JSON.stringify({ ...selector, owner: previous }),
+          );
+        },
+        { key, previous },
+      );
+      await page.close();
+      Object.assign(state.membership, membership);
+      const account = await context.newPage();
+      await account.goto(origin + "/platform/auth/index.html?account");
+      await expect(account.getByRole("status")).toContainText(
+        membership.role === "administrator"
+          ? "authorized workspace"
+          : "needs to activate",
+      );
+      await expect(
+        account.getByRole("link", { name: "Open saved study" }),
+      ).toBeHidden();
+      expect(
+        await account.evaluate(
+          (key) => JSON.parse(localStorage.getItem(key)).unlocked,
+          key,
+        ),
+      ).toBe(false);
+      await account.close();
+      await context.setOffline(true);
+      const cold = await context.newPage();
+      await cold.goto(origin + "/platform/learn/index.html");
+      await expect(
+        cold.getByRole("button", { name: "Resume saved study", exact: true }),
+      ).toBeDisabled();
+    },
+  );
+}
+
+test("closing the learner tab and changing Google accounts locks a cold offline reopen and preserves the original pack", async ({
+  page,
+  context,
+}) => {
+  const namespace = projectNamespace(config);
+  const sample = await createSampleClient();
+  const material = {
+    ...sample.state.items.get(sample.state.ids.quiz),
+    owner_id: owner,
+  };
+  sample.state.allowed = new Set([material.id]);
+  const body = materialBytes(material, owner, "office.excel");
+  const hash = await digest(body);
+  const issued = Date.now();
+  const token = await signLease(
+    {
+      version: 1,
+      namespace,
+      origin,
+      owner,
+      section: "office.excel",
+      display_name: "Synthetic learner",
+      profile: sample.state.profile,
+      issued_at: issued,
+      expires_at: issued + 3600000,
+      materials: [
+        {
+          id: material.id,
+          version: material.version,
+          title: material.payload.title,
+          material_type: material.payload.material_type,
+          body_sha256: hash,
+          body_bytes: Buffer.byteLength(body),
+          asset: null,
+        },
+      ],
+    },
+    signingKey,
+  );
+  const state = await harness(context, { sample, token });
+  await login(page);
+  await expect(page.getByLabel("Your notes", { exact: true })).toBeVisible();
+  // Model an existing installation. Use the actual signed pack format and
+  // persistent browser stores; the staged learner host reads and validates them.
+  await page.evaluate(
+    async ({ namespace, owner, token, hash, body, issued }) => {
+      const { openOwnedDatabase, ownedKey } = await import(
+        "/platform/offline/database.mjs"
+      );
+      const db = await openOwnedDatabase(namespace);
+      await db.put("documents", ownedKey(owner, hash), body);
+      await db.put("packs", ownedKey(owner, "office.excel"), {
+        token,
+        phase: "ready",
+        last_seen: issued,
+      });
+      db.close();
+    },
+    { namespace, owner, token, hash, body, issued },
+  );
+  await context.setOffline(true);
+  await expect(page.getByText(/Studying saved assignments/)).toBeVisible();
+  await page
+    .getByLabel("Your notes", { exact: true })
+    .fill("Original offline note");
+  await page.getByRole("button", { name: "Bookmark", exact: true }).click();
+  await expect(page.locator(".learn-save-status")).toContainText(
+    "Saved on this device",
+  );
+  await expect(
+    page.getByRole("button", { name: "Bookmarked", exact: true }),
+  ).toBeVisible();
+  await page.close();
+  await context.setOffline(false);
+
+  const account = await context.newPage();
+  await account.goto(origin + "/platform/auth/index.html?account");
+  await expect(
+    account.getByRole("link", { name: "Continue to your workspace" }),
+  ).toBeVisible();
+  const callback = await googleHandoff(account);
+  // Same-origin storage is inspected from a separate blank static document
+  // while the account picker is open, before any callback can perform a lock.
+  const observer = await context.newPage();
+  await observer.goto(origin + "/icons/icon-192.png");
+  const markerKey = "cp:u8:" + namespace + ":saved-owner";
+  expect(
+    await observer.evaluate(
+      (key) => JSON.parse(localStorage.getItem(key)).unlocked,
+      markerKey,
+    ),
+  ).toBe(false);
+  await observer.close();
+  state.user.id = "10000000-0000-4000-8000-000000000003";
+  await account.goto(callback);
+  await expect(account.getByRole("status")).toContainText("needs to activate");
+  await expect(
+    account.getByRole("link", { name: "Open saved study" }),
+  ).toBeHidden();
+  await account.close();
+
+  await context.setOffline(true);
+  const cold = await context.newPage();
+  const before = state.requests.filter((r) => r.url.startsWith(api)).length;
+  await cold.goto(origin + "/platform/learn/index.html");
+  await expect(
+    cold.getByRole("button", { name: "Resume saved study", exact: true }),
+  ).toBeDisabled();
+  await expect(cold.locator("[data-private]")).toBeEmpty();
+  expect(state.requests.filter((r) => r.url.startsWith(api))).toHaveLength(
+    before,
+  );
+  await cold.close();
+
+  await context.setOffline(false);
+  const returning = await context.newPage();
+  await returning.goto(origin + "/platform/auth/index.html?account");
+  await expect(returning.getByRole("status")).toContainText(
+    "needs to activate",
+  );
+  const back = await googleHandoff(returning);
+  state.user.id = owner;
+  await returning.goto(back);
+  await expect(returning.getByLabel("Your notes", { exact: true })).toHaveValue(
+    "Original offline note",
+  );
+  await returning.close();
+
+  await context.setOffline(true);
+  const reopened = await context.newPage();
+  await reopened.goto(origin + "/platform/learn/index.html");
+  await reopened
+    .getByRole("button", { name: "Resume saved study", exact: true })
+    .click();
+  await expect(reopened.getByLabel("Your notes", { exact: true })).toHaveValue(
+    "Original offline note",
+  );
+  await expect(
+    reopened.getByRole("button", { name: "Bookmarked", exact: true }),
+  ).toBeVisible();
+  await expect(reopened.getByText(/change\(s\) waiting to sync/)).toBeVisible();
+  expect(state.errors).toEqual([]);
 });

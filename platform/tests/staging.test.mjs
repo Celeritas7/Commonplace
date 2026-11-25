@@ -9,6 +9,8 @@ import {
   projectNamespace,
   stagingClientOptions,
 } from "../auth/configuration.mjs";
+import { createSavedOwner } from "../offline/saved-owner.mjs";
+import { memoryStorage } from "../learn/progress.mjs";
 import { finishLogin, lockAndSignOut } from "../auth/login.mjs";
 import {
   buildStagingPackage,
@@ -207,6 +209,72 @@ test("inactive, unregistered and unverifiable identities do not get a workspace 
     { state: "signed-out" },
   );
 });
+test("login retains only the same active learner and never selects a new offline owner", async () => {
+  const configKey = projectNamespace(config);
+  for (const [owner, options, retained] of [
+    ["verified-uuid", {}, true],
+    ["other-uuid", {}, false],
+    ["other-uuid", { member: null }, false],
+    [
+      "other-uuid",
+      { member: { role: "administrator", status: "active" } },
+      false,
+    ],
+    [
+      "verified-uuid",
+      { member: { role: "learner", status: "suspended" } },
+      false,
+    ],
+    ["verified-uuid", { session: false }, false],
+  ]) {
+    const storage = memoryStorage();
+    const savedOwner = createSavedOwner(storage, configKey);
+    // Existing installations have no lock ID on their selector.
+    storage.setItem(savedOwner.key, JSON.stringify({ owner, unlocked: true }));
+    storage.setItem("personal-note", "keep");
+    await finishLogin(fixture(options).client, {
+      href: config.origin,
+      savedOwner,
+    });
+    assert.equal(savedOwner.read()?.owner ?? null, retained ? owner : null);
+    assert.equal(storage.getItem("personal-note"), "keep");
+  }
+});
+
+test("verification started before an account lock cannot reselect its offline owner", () => {
+  const storage = memoryStorage();
+  const learner = createSavedOwner(storage, projectNamespace(config));
+  const account = createSavedOwner(storage, projectNamespace(config));
+  const before = learner.lockId();
+  learner.select("original-owner", before);
+  account.lock();
+  assert.throws(
+    () => learner.select("original-owner", before),
+    /Account changed/,
+  );
+  // A cross-tab write may interleave between checking the ID and writing.
+  storage.setItem(
+    learner.key,
+    JSON.stringify({ owner: "original-owner", unlocked: true, lockId: before }),
+  );
+  assert.equal(learner.read(), null);
+  learner.select("original-owner", learner.lockId());
+  assert.equal(learner.read().owner, "original-owner");
+});
+test("a single failed storage write during locking still disables the previous selection", () => {
+  for (const failed of ["key", "lockKey"]) {
+    const storage = memoryStorage();
+    const selector = createSavedOwner(storage, projectNamespace(config));
+    selector.select("original-owner", selector.lockId());
+    const setItem = storage.setItem;
+    storage.setItem = (key, value) => {
+      if (key === selector[failed]) throw Error("Storage unavailable");
+      setItem(key, value);
+    };
+    assert.throws(() => selector.lock(), /Storage unavailable/);
+    assert.equal(selector.read(), null);
+  }
+});
 test("signout locks only this staging owner before a failed request and preserves progress", async () => {
   const { client } = fixture();
   const saved = new Map([
@@ -349,15 +417,27 @@ test("General_apps review package preserves separate auth storage and marks the 
       stagingClientOptions(generalApps).auth.storageKey,
       "cp:commonplace-staging-wylxvmkcrexwfpjpbhyy:auth",
     );
-    for (const name of ["shared-project-catalog.sql", "GENERAL-APPS-TARGET.md", "GENERAL-APPS-REVIEW.md"])
+    for (const name of [
+      "shared-project-catalog.sql",
+      "GENERAL-APPS-TARGET.md",
+      "GENERAL-APPS-REVIEW.md",
+    ])
       assert.ok(review.files["server/preflight/" + name]);
     assert.ok(
+      !Object.keys(review.files).some((path) =>
+        /general-apps\/|shared-access-fixture|capture-recovery/.test(path),
+      ),
+    );
+    assert.ok(
       !Object.keys(review.files).some(
-        (path) => path.startsWith("public/") && /preflight|GENERAL-APPS-(TARGET|REVIEW)/.test(path),
+        (path) =>
+          path.startsWith("public/") &&
+          /preflight|GENERAL-APPS-(TARGET|REVIEW)/.test(path),
       ),
     );
     const source = await readFile(
-      join(repositoryRoot, "platform/auth/config.mjs"), "utf8",
+      join(repositoryRoot, "platform/auth/config.mjs"),
+      "utf8",
     );
     assert.match(source, /export const authConfiguration = null;/);
   } finally {
