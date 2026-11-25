@@ -1,10 +1,12 @@
 // Called only by full-stack.mjs after its loopback/container/environment guards.
 // All identities, records and attestations below belong to that disposable stack.
 import { readFile } from "node:fs/promises";
-import { randomBytes } from "node:crypto";
+import assert from "node:assert/strict";
+import { randomUUID, randomBytes } from "node:crypto";
 import { legacyFixture } from "../tests/shared-access-fixture.mjs";
 
 export async function sharedAccessAcceptance({
+  a, b, unregistered,
   sql,
   check,
   client,
@@ -27,20 +29,66 @@ export async function sharedAccessAcceptance({
   secrets.push(email, password);
   let actor, admission;
   const signupRow = async id => (await rpc(owner, "cp_admin_signup_directory")).find(row => row.id === id);
+  const legacyA = randomUUID(), legacyB = randomUUID(), task = randomUUID(), unit = randomUUID();
+  // Keep both connections alive until PostgreSQL confirms the expected blocker.
+  async function withBlockedWriter(lockId, holding, waiting, expectedError) {
+    const name = "cp_part2_waiter_" + lockId;
+    const holder = sql(`begin; ${holding};
+      select pg_advisory_xact_lock(7398,${lockId});
+      do $$ begin
+        for attempt in 1..300 loop
+          perform pg_stat_clear_snapshot();
+          exit when exists(select from pg_stat_activity where application_name='${name}'
+            and pg_backend_pid()=any(pg_blocking_pids(pid)));
+          if attempt=300 then raise exception 'expected waiter never blocked'; end if;
+          perform pg_sleep(0.05);
+        end loop;
+      end $$; commit;`);
+    const waiter = async () => {
+      let locked = false;
+      for (let attempt=0; attempt<60 && !locked; attempt++) {
+        locked = await sql(`select exists(select from pg_locks where locktype='advisory'
+          and classid=7398 and objid=${lockId} and granted)`) === "t";
+        if (!locked) await pause(50);
+      }
+      requireThat(locked,"Concurrent test did not acquire its lock");
+      await assert.rejects(() => sql(`set application_name='${name}'; ${waiting}`),expectedError);
+    };
+    const results = await Promise.allSettled([holder,waiter()]);
+    for (const result of results) if (result.status === "rejected") throw result.reason;
+  }
+
+  await check("ownership cutover observes committed mapping changes and preserves records on refusal", async () => {
+    await sql(legacyFixture);
+    for (const name of ["01_access_foundation.sql","03_roadmap_session_owner.sql","04_commonplace_signup.sql"])
+      await sql(await candidate(name));
+    await sql(`insert into public.code_sensei_users(id) values('${legacyA}'),('${legacyB}');
+      insert into public.code_sensei_user_notes(user_id,note_text) values('${legacyA}','A'),('${legacyB}','B');
+      insert into public.healthlog_visits_old(user_id,notes) values('archive-a','A'),('archive-b','B');
+      insert into public.authentication_mode_user_roles(id,email,role,auth_user_id)
+       select n,u.email,r,u.id from (values(81,'viewer','${a.id}'::uuid),(82,'operator','${b.id}'),
+        (83,'admin','${owner.id}'),(84,'admin','${unregistered.id}')) s(n,r,id) join auth.users u using(id);
+      insert into ga_private.eagle_members values('${a.id}'),('${b.id}'),('${owner.id}');
+      insert into public.eagle_units(id) values('${unit}');
+      insert into public.eagle_unit_progress(unit_id,notes) values('${unit}','saved');
+      insert into public.roadmap_tasks(id,user_id) values('${task}','${a.id}');
+      insert into ga_private.owner_links(app,legacy_id,auth_user_id) values
+       ('code-sensei','${legacyA}','${a.id}'),('code-sensei','${legacyB}','${b.id}'),
+       ('healthlog-archive','archive-a','${a.id}'),('healthlog-archive','archive-b','${b.id}');
+      insert into ga_private.client_cutovers values('code-sensei','synthetic fixture only',now()),
+       ('healthlog-archive','synthetic fixture only',now()),('eagle','synthetic fixture only',now());`);
+    const installPolicies = await candidate("02_legacy_policy_guards.sql");
+    await withBlockedWriter(1,
+      "delete from ga_private.owner_links where legacy_id='archive-a'",
+      installPolicies,/verified owner mapping required/);
+    assert.equal(await sql("select count(*) from pg_policies where policyname='ga_owner_guard'"),"0");
+    assert.equal(await sql("select count(*) from public.code_sensei_user_notes"),"2");
+    await sql(`insert into ga_private.owner_links(app,legacy_id,auth_user_id) values('healthlog-archive','archive-a','${a.id}')`);
+    await sql(installPolicies);
+  });
   await check(
     "review candidates reject closed real Auth signup and enforce administrator preparation",
     async () => {
-      await sql(legacyFixture);
-      for (const name of [
-        "01_access_foundation.sql",
-        "03_roadmap_session_owner.sql",
-        "04_commonplace_signup.sql",
-      ])
-        await sql(await candidate(name));
-      await sql(
-        "insert into ga_private.client_cutovers values('code-sensei','synthetic fixture only',now()),('healthlog-archive','synthetic fixture only',now()),('eagle','synthetic fixture only',now());",
-      );
-      await sql(await candidate("02_legacy_policy_guards.sql"));
       await sql("notify pgrst,'reload schema';");
       let visible = false;
       for (let i = 0; i < 30; i++) {
@@ -73,6 +121,37 @@ export async function sharedAccessAcceptance({
       );
     },
   );
+  await check("signed clients retain their own notes, archive entries and Eagle workspace roles", async () => {
+    for (const [user,legacy,marker] of [[a,legacyA,"A"],[b,legacyB,"B"]]) {
+      assert.equal(await rpc(user,"code_sensei_current_user_id"),legacy);
+      assert.deepEqual(data(await user.client.from("code_sensei_user_notes").select("note_text"),"Owner note"),[{note_text:marker}]);
+      assert.deepEqual(data(await user.client.from("healthlog_visits_old").select("notes"),"Owner archive"),[{notes:marker}]);
+    }
+    assert.deepEqual(data(await a.client.from("code_sensei_user_notes").update({note_text:"wrong"}).eq("user_id",legacyB).select("id"),"Foreign update"),[]);
+    denied(await a.client.from("code_sensei_user_notes").update({user_id:legacyB}).eq("user_id",legacyA),"Owner reassignment");
+    assert.deepEqual(data(await b.client.from("code_sensei_user_notes").update({note_text:"B edited"}).eq("user_id",legacyB).select("note_text"),"Owner edit"),[{note_text:"B edited"}]);
+    assert.equal(data(await a.client.from("eagle_unit_progress").select("id"),"Viewer read").length,1);
+    assert.deepEqual(data(await a.client.from("eagle_units").delete().eq("id",unit).select("id"),"Viewer delete"),[]);
+    assert.deepEqual(data(await unregistered.client.from("eagle_unit_progress").select("id"),"Unlisted shared admin"),[]);
+    assert.equal(data(await b.client.from("eagle_unit_progress").update({notes:"edited"}).eq("unit_id",unit).select("id"),"Operator edit").length,1);
+    assert.equal(data(await owner.client.from("eagle_unit_progress").select("id"),"Eagle admin read").length,1);
+  });
+  await check("signed Roadmap start, completion and undo preserve ownership through contention", async () => {
+    const start = {p_task_id:task,p_day_key:"synthetic",p_source:"roadmap"};
+    const [x,y] = await Promise.all([rpc(a,"roadmap_start_session",start),rpc(a,"roadmap_complete_session",start)]);
+    assert.ok(x);
+    assert.equal(y,x);
+    denied(await b.client.rpc("roadmap_complete_session",start),"Foreign completion");
+    denied(await b.client.from("roadmap_study_sessions").insert({task_id:task,day_key:"other",source:"roadmap"}),"Foreign task link","23503");
+    assert.deepEqual(data(await a.client.from("roadmap_study_sessions").update({completed_at:null,verification:"manual"}).eq("id",x).select("id"),"Direct undo"),[{id:x}]);
+    const moving = randomUUID();
+    await sql(`insert into public.roadmap_tasks(id,user_id) values('${moving}','${a.id}')`);
+    await withBlockedWriter(2,
+      `update public.roadmap_tasks set user_id='${b.id}' where id='${moving}'`,
+      `begin; set local role authenticated; select set_config('request.jwt.claim.sub','${a.id}',true);
+       select public.roadmap_complete_session('${moving}','roadmap'); commit;`,/session access denied/);
+    assert.equal(await sql(`select count(*) from public.roadmap_study_sessions where task_id='${moving}'`),"0");
+  });
   await check(
     "real Auth binds CP-only identity without legacy roles and preserves legacy viewer signup",
     async () => {
@@ -298,6 +377,8 @@ export async function sharedAccessAcceptance({
         "Admission not bound once",
       );
       await sql(await candidate("90_containment.sql"));
+      denied(await a.client.rpc("roadmap_complete_session",{p_task_id:task,p_source:"roadmap"}),"Contained completion");
+      assert.equal(await sql(`select count(*) from public.roadmap_study_sessions where task_id='${task}'`),"1");
       requireThat(
         (await sql(
           "select enabled from cp_private.signup_control where id=true;",

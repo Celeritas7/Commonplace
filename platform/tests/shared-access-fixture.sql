@@ -14,16 +14,22 @@ create table public.code_sensei_users(id uuid primary key,name text not null def
 create table public.code_sensei_user_notes(id uuid primary key default gen_random_uuid(),user_id uuid references public.code_sensei_users,note_text text not null);
 create table public.code_sensei_progress(id uuid primary key default gen_random_uuid(),user_id uuid references public.code_sensei_users,topic_id text,status text);
 create table public.healthlog_visits_old(id uuid primary key default gen_random_uuid(),user_id text not null,notes text);
-create table public.eagle_unit_progress(id uuid primary key default gen_random_uuid(),unit_id uuid,node_id uuid,status text not null default 'todo',notes text);
-create table public.roadmap_tasks(id uuid primary key,user_id uuid not null default auth.uid(),title text);
-create table public.roadmap_study_sessions(id uuid primary key default gen_random_uuid(),user_id uuid not null default auth.uid(),task_id uuid references public.roadmap_tasks,day_key text not null,source text not null,started_at timestamptz,unique(task_id,day_key));
-grant all on public.authentication_mode_user_roles,public.code_sensei_users,public.code_sensei_user_notes,public.code_sensei_progress,public.healthlog_visits_old,public.eagle_unit_progress,public.roadmap_tasks,public.roadmap_study_sessions to anon,authenticated,service_role;
+create table public.logi_projects(id uuid primary key);
+create table public.logi_assemblies(id uuid primary key,project_id uuid references public.logi_projects on delete cascade);
+create table public.logi_versions(id uuid primary key,assembly_id uuid references public.logi_assemblies on delete cascade);
+create table public.eagle_units(id uuid primary key,assembly_id uuid references public.logi_assemblies on delete cascade,version_id uuid references public.logi_versions on delete set null);
+create table public.eagle_unit_progress(id uuid primary key default gen_random_uuid(),unit_id uuid references public.eagle_units on delete cascade,node_id uuid,status text not null default 'todo',notes text);
+create table public.roadmap_tasks(id uuid primary key,user_id uuid not null default auth.uid(),title text,parent_id uuid references public.roadmap_tasks on delete cascade);
+create table public.roadmap_study_sessions(id uuid primary key default gen_random_uuid(),user_id uuid not null default auth.uid(),task_id uuid references public.roadmap_tasks on delete cascade,day_key text not null,source text not null,started_at timestamptz,
+ completed_at timestamptz,duration_min integer,feedback jsonb not null default '{}',verification text default 'app',unique(task_id,day_key));
+grant all on public.authentication_mode_user_roles,public.code_sensei_users,public.code_sensei_user_notes,public.code_sensei_progress,public.healthlog_visits_old,public.eagle_unit_progress,public.eagle_units,public.logi_assemblies,public.logi_projects,public.logi_versions,public.roadmap_tasks,public.roadmap_study_sessions to anon,authenticated,service_role;
 alter table public.authentication_mode_user_roles enable row level security;
 create policy own_role on public.authentication_mode_user_roles for select using(auth.uid()=auth_user_id);
 alter table public.code_sensei_users enable row level security;
 alter table public.code_sensei_user_notes enable row level security;
 alter table public.code_sensei_progress enable row level security;
 alter table public.healthlog_visits_old enable row level security;
+alter table public.eagle_units enable row level security;
 alter table public.eagle_unit_progress enable row level security;
 alter table public.roadmap_tasks enable row level security;
 alter table public.roadmap_study_sessions enable row level security;
@@ -31,9 +37,10 @@ create policy allow_all on public.code_sensei_users for all using(true) with che
 create policy allow_all on public.code_sensei_user_notes for all using(true) with check(true);
 create policy allow_all on public.code_sensei_progress for all using(true) with check(true);
 create policy "all visits" on public.healthlog_visits_old for all using(true) with check(true);
+create policy eagle_units_authenticated_all on public.eagle_units for all to authenticated using(true) with check(true);
 create policy eagle_unit_progress_authenticated_all on public.eagle_unit_progress for all to authenticated using(true) with check(true);
-create policy own on public.roadmap_tasks for all using(auth.uid()=user_id) with check(auth.uid()=user_id);
-create policy own on public.roadmap_study_sessions for all using(auth.uid()=user_id) with check(auth.uid()=user_id);
+create policy roadmap_tasks_owner on public.roadmap_tasks for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
+create policy roadmap_study_sessions_owner on public.roadmap_study_sessions for all to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());
 CREATE OR REPLACE FUNCTION public.chatak_enforce_allowlist()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -128,3 +135,32 @@ create trigger chatak_allowlist_gate before insert on auth.users for each row ex
 create trigger chatak_link_auth_user after insert on auth.users for each row execute function public.chatak_link_auth_user();
 create trigger chatak_on_auth_user_created after insert on auth.users for each row execute function public.chatak_handle_new_user();
 create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+CREATE OR REPLACE FUNCTION public.roadmap_complete_session(p_task_id uuid, p_source text, p_day_key text DEFAULT NULL::text, p_duration integer DEFAULT NULL::integer, p_feedback jsonb DEFAULT '{}'::jsonb, p_verification text DEFAULT 'app'::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_uid uuid := auth.uid();
+  v_day text := coalesce(p_day_key, to_char(now() - interval '4 hours', 'YYYY-MM-DD'));
+  v_id uuid;
+begin
+  if v_uid is null then raise exception using errcode = '42501', message = 'roadmap_complete_session: sign-in required'; end if;
+  if p_verification not in ('app','api','manual') then raise exception 'bad verification: %', p_verification; end if;
+  if not exists (select 1 from roadmap_tasks t where t.id = p_task_id and t.user_id = v_uid) then
+    raise exception using errcode = '42501', message = 'roadmap_complete_session: not your task';
+  end if;
+  insert into roadmap_study_sessions (user_id, task_id, day_key, source, completed_at, duration_min, feedback, verification)
+  values (v_uid, p_task_id, v_day, p_source, now(), p_duration, p_feedback, p_verification)
+  on conflict (task_id, day_key) do update
+    set user_id      = v_uid,
+        completed_at = now(),
+        duration_min = coalesce(excluded.duration_min, roadmap_study_sessions.duration_min),
+        feedback     = roadmap_study_sessions.feedback || excluded.feedback,
+        source       = excluded.source,
+        verification = excluded.verification
+    where roadmap_study_sessions.user_id = v_uid or roadmap_study_sessions.user_id is null
+  returning id into v_id;
+  return v_id;
+end $function$;

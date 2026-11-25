@@ -723,6 +723,7 @@ async function main() {
     },
   );
   await sharedAccessAcceptance({
+    a, b, unregistered,
     sql,
     check,
     client,
