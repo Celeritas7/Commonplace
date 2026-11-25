@@ -4,6 +4,7 @@
   const scenarios=[
     {id:'general-office',version:1,title:'General office',context:'Count supplies in a small office warehouse.',heading:'Item',quantity:'Quantity',unit:'items',labels:['Notebooks','Pens','Folders'],values:[12,8,5],revised:10},
     {id:'jp-ph-trade',version:1,title:'Japan–Philippines second-hand trading',context:'Prepare a stock count for used goods in Japan awaiting shipment to Manila, Philippines.',heading:'Product',quantity:'Quantity',unit:'items',labels:['Used office chairs','Used rice cookers','Used electric fans'],values:[6,4,9],revised:7},
+    {id:'ph-customer-quote',version:1,title:'Philippines customer quotation',context:'Prepare a fictional quotation for a Cebu buyer purchasing used Japanese household goods. The three values are line totals in Philippine pesos, not exchange rates.',heading:'Product',quantity:'Line total (PHP)',unit:'PHP',labels:['Used bookshelf','Used dining table','Used electric fan'],values:[1800,3200,950],revised:3500},
     {id:'mechanical-engineering',version:1,title:'Mechanical engineering',context:'Count components for a mechanical assembly bill of materials.',heading:'Component',quantity:'Quantity',unit:'pieces',labels:['M8 bolts','Bearings','Spacers'],values:[24,4,14],revised:8},
     {id:'monthly-expenses',version:1,title:'Finance and expenses',context:'Prepare a fictional monthly office expense summary in Japanese yen.',heading:'Expense',quantity:'Cost (JPY)',unit:'JPY',labels:['Rent','Electricity','Transport'],values:[50000,8000,12000],revised:10000}
   ];
