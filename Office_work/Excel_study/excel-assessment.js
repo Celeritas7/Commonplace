@@ -57,6 +57,7 @@
     const result=grade(lesson,state);
     return {schema_version:1,section,assessment_id:lesson.id,assessment_version:lesson.version,
       attempt_id:attemptId,started_at:startedAt,submitted_at:submittedAt,
+      ...(lesson.scenario_id?{scenario_id:lesson.scenario_id,scenario_version:lesson.scenario_version,scenario_title:lesson.scenario_title}:{}),
       grading:'client-self-assessment',...result};
   }
   function mount({root,panel,simulator,lessons,resetWorksheet,prepare,onSubmitted}){
@@ -67,8 +68,10 @@
     const scenario=q('scenario'),task=q('task'),status=q('status'),results=q('results'),history=q('history');
     let lesson=lessons[0],active=false,attempt=null,last=null;
     const records=[];
+    const attemptTitles=new Map();
     const add=(parent,tag,text,cls)=>{const el=document.createElement(tag);el.textContent=text;if(cls)el.className=cls;parent.append(el);return el;};
-    for(const item of lessons){const opt=add(picker,'option',item.title);opt.value=item.id;}
+    function populate(){picker.replaceChildren();for(const item of lessons){const opt=add(picker,'option',item.title);opt.value=item.id;}picker.value=lessons[0].id;}
+    populate();
     function render(){
       scenario.textContent=lesson.scenario;task.textContent=lesson.task;
       picker.disabled=active;start.hidden=active;start.textContent=last?'Try again':'Start assessment';
@@ -84,7 +87,7 @@
       if(records.length){
         add(history,'strong','This session — '+records.length+' submitted attempt'+(records.length===1?'':'s'));
         const list=add(history,'ol','');
-        records.slice().reverse().forEach(r=>add(list,'li',(lessons.find(x=>x.id===r.assessment_id)?.title||r.assessment_id)+' — '+r.score+'/'+r.max_score));
+        records.slice().reverse().forEach(r=>add(list,'li',(r.scenario_title?r.scenario_title+' · ':'')+(attemptTitles.get(r.attempt_id)||r.assessment_id)+' — '+r.score+'/'+r.max_score));
       }
     }
     function begin(){
@@ -106,7 +109,7 @@
     submit.addEventListener('click',()=>{
       if(!active||!attempt)return;
       const record=makeRecord(lesson,snapshot(root),{...attempt,submittedAt:new Date().toISOString()});
-      active=false;attempt=null;last=record;records.push(record);
+      active=false;attempt=null;last=record;records.push(record);attemptTitles.set(record.attempt_id,lesson.title);
       status.textContent='Assessment submitted. Results are held for this session only; not saved to the database.';
       render();
       // Host may later supply an authorized account/material-scoped sink. Never attach identity here.
@@ -122,7 +125,7 @@
       }
     });
     render();
-    return {get active(){return active;},get records(){return JSON.parse(JSON.stringify(records));}};
+    return {get active(){return active;},get records(){return JSON.parse(JSON.stringify(records));},setLessons(next){if(!next?.length)return;active=false;attempt=null;last=null;lessons=next;lesson=next[0];populate();status.textContent='';render();}};
   }
   global.CommonplaceExcelAssessment={mount,grade,makeRecord,snapshot};
 })(window);
