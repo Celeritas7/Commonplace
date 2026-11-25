@@ -96,6 +96,15 @@ offline UI testing can begin with the explicitly synthetic sample, but real Goog
 login, permissions and cross-device sync require staging. After hosted/device and
 recovery evidence passes, prepare a separate concrete activation change for review.
 
+PR #92 is now merged with all ten local Supabase integration groups passing,
+alongside 113 Node/PGlite, 48 browser and nine Deno checks. The next
+[hosted staging preparation](../../platform/acceptance/HOSTED-STAGING.md) adds an
+inactive Google login/client and an explicit package builder. Its browser fixtures
+exercise the real bundled SDK with simulated Auth responses. They are not hosted
+Google, cloud-security or physical-device acceptance. The organization selection
+required to obtain a provisioning quote remains pending; no cloud resource or
+production activation is part of this preparation.
+
 Public legacy HTML/repository files stay public. No frontend gate retroactively
 protects those bytes. Disconnected/exported tutorial copies cannot be recalled.
 

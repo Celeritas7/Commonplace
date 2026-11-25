@@ -7,6 +7,9 @@ the other. The live entry remains `deployment = null`. See the current
 The next U9 checkpoint adds [disposable full Supabase integration](LOCAL-STACK.md)
 with real local Auth, PostgreSQL, REST, Storage and Edge services. It does not
 provision a hosted staging project or replace the hosted/device gates below.
+The [hosted staging preparation](HOSTED-STAGING.md) now provides the Google login,
+isolated client and package builder. It still requires a selected organization,
+project and HTTPS origin before hosted execution.
 
 ## Repeat the automated checks
 
