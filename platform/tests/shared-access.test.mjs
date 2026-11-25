@@ -753,3 +753,82 @@ test("review candidates preserve legacy data and deny unauthorized identities", 
     await db.close();
   }
 });
+
+test("containment preserves grants and commits independent stops on Roadmap drift", async () => {
+  const db = await createAcceptanceDatabase();
+  const stop = await candidate("90_containment.sql");
+  const rows = async (q) => (await db.query(q)).rows;
+  try {
+    await db.exec(legacyFixture);
+    for (const f of [
+      "01_access_foundation.sql",
+      "03_roadmap_session_owner.sql",
+      "04_commonplace_signup.sql",
+    ])
+      await db.exec(await candidate(f));
+    await db.exec(`insert into ga_private.edge_grants values('code-exec','${users.a}',now()+interval '1 day',false),
+      ('code-exec','${users.b}',now()+interval '1 day',true);
+      alter function public.roadmap_complete_session(uuid,text,text,integer,jsonb,text) rename to legacy_completion;
+      create role inherited_roadmap; grant inherited_roadmap to authenticated;
+      grant execute on function public.roadmap_start_session(uuid,text,text) to inherited_roadmap;
+      update cp_private.signup_control set enabled=true;`);
+    await db.exec(
+      `insert into roadmap_tasks(id,user_id,title) values('${taskA}','${users.a}','Fixture')`,
+    );
+    const { as } = access(db);
+    assert.ok(
+      (await as(users.a, "select roadmap_start_session($1,'test') id", [taskA]))
+        .rows[0].id,
+    );
+    await db.exec("reset role");
+    const before = await rows(
+      "select * from ga_private.edge_grants order by auth_user_id",
+    );
+    await assert.rejects(() => db.exec(stop), /Containment incomplete/);
+    await db.exec("rollback");
+    assert.deepEqual(
+      await rows("select enabled from cp_private.signup_control"),
+      [{ enabled: false }],
+    );
+    assert.deepEqual(
+      await rows("select distinct paused from ga_private.edge_routes"),
+      [{ paused: true }],
+    );
+    assert.deepEqual(
+      await rows("select * from ga_private.edge_grants order by auth_user_id"),
+      before,
+    );
+    assert.deepEqual(
+      await rows("select paused from ga_private.roadmap_control"),
+      [{ paused: true }],
+    );
+    assert.equal(
+      (
+        await rows(
+          "select has_function_privilege('authenticated','public.roadmap_start_session(uuid,text,text)','execute') inherited",
+        )
+      )[0].inherited,
+      true,
+    );
+    assert.equal(
+      (await as(users.a, "select ga_can_call_edge('code-exec') ok")).rows[0].ok,
+      false,
+    );
+    await denied(() =>
+      as(users.a, "select roadmap_start_session($1,'test')", [taskA]),
+    );
+    await db.exec(
+      "reset role; update ga_private.edge_routes set paused=false where function_name='code-exec'",
+    );
+    assert.equal(
+      (await as(users.a, "select ga_can_call_edge('code-exec') ok")).rows[0].ok,
+      true,
+    );
+    assert.equal(
+      (await as(users.b, "select ga_can_call_edge('code-exec') ok")).rows[0].ok,
+      false,
+    );
+  } finally {
+    await db.close();
+  }
+});

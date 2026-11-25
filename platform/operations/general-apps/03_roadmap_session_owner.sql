@@ -39,11 +39,18 @@ alter table public.roadmap_tasks add constraint ga_parent_owner
  foreign key(parent_id,user_id) references public.roadmap_tasks(id,user_id) on delete cascade;
 alter table public.roadmap_study_sessions add constraint ga_session_task_owner
  foreign key(task_id,user_id) references public.roadmap_tasks(id,user_id) on delete cascade;
+create table ga_private.roadmap_control (
+ id boolean primary key check(id), paused boolean not null
+);
+insert into ga_private.roadmap_control values(true,false);
+alter table ga_private.roadmap_control enable row level security;
+revoke all on ga_private.roadmap_control from public,anon,authenticated,service_role;
 create or replace function public.roadmap_start_session(p_task_id uuid,p_day_key text,p_source text default 'roadmap')
 returns uuid language plpgsql security definer set search_path='' as $$
 declare actor uuid:=auth.uid(); result uuid;
 begin
- if actor is null then raise exception 'session access denied' using errcode='42501'; end if;
+ perform from ga_private.roadmap_control where id and not paused for share;
+ if not found or actor is null then raise exception 'session access denied' using errcode='42501'; end if;
  -- Hold the task row so ownership cannot change between this check and insert.
  perform 1 from public.roadmap_tasks where id=p_task_id and user_id=actor for update;
  if not found then raise exception 'session access denied' using errcode='42501'; end if;
@@ -63,7 +70,8 @@ returns uuid language plpgsql security definer set search_path='' as $$
 declare actor uuid:=auth.uid(); result uuid;
  day_value text:=coalesce(p_day_key,to_char(now()-interval '4 hours','YYYY-MM-DD'));
 begin
- if actor is null then raise exception 'session access denied' using errcode='42501'; end if;
+ perform from ga_private.roadmap_control where id and not paused for share;
+ if not found or actor is null then raise exception 'session access denied' using errcode='42501'; end if;
  if p_verification not in ('app','api','manual') then raise exception 'bad verification: %',p_verification; end if;
  perform 1 from public.roadmap_tasks where id=p_task_id and user_id=actor for update;
  if not found then raise exception 'session access denied' using errcode='42501'; end if;

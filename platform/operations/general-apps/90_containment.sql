@@ -1,10 +1,62 @@
--- REVIEW CANDIDATE: stop rollout without deleting accounts, study work or maps.
--- Requires 01, 03 and 04. Do not undo security fixes by restoring broad policies.
+-- Full shared incident only. Execute standalone in one session, without a wrapper
+-- transaction. Each section commits independently and can be run separately.
+create temporary table if not exists ga_containment_result(component text primary key,outcome text not null);
+truncate pg_temp.ga_containment_result;
+
 begin;
-update cp_private.signup_control set enabled=false where id=true;
-update ga_private.edge_grants set revoked=true where revoked=false;
-revoke execute on function public.roadmap_start_session(uuid,text,text),
- public.roadmap_complete_session(uuid,text,text,integer,jsonb,text) from public,anon,authenticated,service_role;
+do $$ begin
+ update cp_private.signup_control set enabled=false where id;
+ if not found then raise exception 'missing signup control'; end if;
+ insert into pg_temp.ga_containment_result values('signup','stopped');
+exception when others then
+ insert into pg_temp.ga_containment_result values('signup','check required: '||sqlstate);
+end $$;
 commit;
--- Existing CP membership is separate: use cp_set_learner for targeted access
--- revocation. This does not recall exported files or disconnected copies.
+
+begin;
+do $$ declare route text; begin
+ foreach route in array array['claude-proxy','code-exec'] loop
+  begin
+   update ga_private.edge_routes set paused=true where function_name=route;
+   if not found then raise exception 'missing route'; end if;
+   insert into pg_temp.ga_containment_result values(route,'stopped');
+  exception when others then
+   insert into pg_temp.ga_containment_result values(route,'check required: '||sqlstate);
+  end;
+ end loop;
+end $$;
+commit;
+
+begin;
+do $$ declare signature text; routine regprocedure; role_name text;
+begin
+ update ga_private.roadmap_control set paused=true where id;
+ if not found then raise exception 'missing Roadmap control'; end if;
+ foreach signature in array array['public.roadmap_start_session(uuid,text,text)',
+  'public.roadmap_complete_session(uuid,text,text,integer,jsonb,text)'] loop
+  begin
+   routine:=to_regprocedure(signature);
+   if routine is null then raise exception 'missing routine'; end if;
+   execute format('revoke execute on function %s from public,anon,authenticated,service_role',routine);
+   foreach role_name in array array['anon','authenticated','service_role'] loop
+    if has_function_privilege(role_name,routine,'execute') then
+     insert into pg_temp.ga_containment_result values(signature,'paused; inherited execution requires review');
+     exit;
+    end if;
+   end loop;
+   insert into pg_temp.ga_containment_result values(signature,'stopped') on conflict do nothing;
+  exception when others then
+   insert into pg_temp.ga_containment_result values(signature,'check required: '||sqlstate);
+  end;
+ end loop;
+exception when others then
+ insert into pg_temp.ga_containment_result values('roadmap','check required: '||sqlstate);
+end $$;
+commit;
+
+select component,outcome from pg_temp.ga_containment_result order by component;
+do $$ declare incomplete text; begin
+ select string_agg(component||' ('||outcome||')',', ' order by component) into incomplete
+ from pg_temp.ga_containment_result where outcome<>'stopped';
+ if incomplete is not null then raise exception 'Containment incomplete: %',incomplete; end if;
+end $$;

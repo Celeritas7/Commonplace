@@ -6,11 +6,12 @@ Supabase's local Docker services. It exercises actual signed Auth sessions,
 PostgREST authorization and private Storage delivery before choosing a cloud
 staging target. Production activation remains disabled.
 
-The R1/R2 follow-up adds four groups after the original ten: reviewed shared
-access candidates are installed only inside this fresh stack; real Auth exercises
-closed admission, a CP-only UUID, legacy viewer signup, expiry across a database lock, concurrent claims and
-containment. The runner receives the synthetic confirmation in its isolated
-Mailpit inbox and verifies it through Auth. This configuration must never be pushed to a hosted project.
+Eight additional groups cover the review candidates, including ownership
+cutover under contention, signed legacy reads and writes, Roadmap retries,
+verified signup and containment. The runner also exercises the candidate paid
+routes with real local Auth, PostgREST reservations and mock provider transport.
+Their synthetic credentials and transport are mounted only inside this
+disposable stack. Mailpit handles the synthetic confirmation locally.
 The normal staging package still contains only the six existing CP migrations;
 see the [review-candidate runbook](../operations/general-apps/README.md).
 
@@ -62,7 +63,7 @@ the CI runner itself is disposable. Do not use the test config to host an app.
 
 ## Required evidence
 
-Ten integration groups must pass. Every negative file test follows a successful
+The ten foundation groups below and eight candidate groups must pass. Every negative file test follows a successful
 authorized upload/download, so an absent endpoint cannot produce a false pass.
 
 | Group | Required result |

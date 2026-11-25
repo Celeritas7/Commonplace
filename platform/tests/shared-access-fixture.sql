@@ -164,3 +164,19 @@ begin
   returning id into v_id;
   return v_id;
 end $function$;
+
+-- Disposable equivalent of the shared Tokyo-day budget contract. Both the
+-- service reservation and counter run in a real database transaction.
+create table public.akatsuki_fn_budget(fn text,day date,n integer not null,primary key(fn,day));
+revoke all on public.akatsuki_fn_budget from public,anon,authenticated;
+create function public.akatsuki_fn_budget_take(p_fn text,p_cap integer) returns integer
+language plpgsql security definer set search_path='' as $$
+declare used integer;
+begin
+ insert into public.akatsuki_fn_budget as b values(p_fn,(now() at time zone 'Asia/Tokyo')::date,1)
+ on conflict(fn,day) do update set n=b.n+1 returning n into used;
+ if used>p_cap then raise exception 'daily limit' using errcode='AK210'; end if;
+ return used;
+end; $$;
+revoke all on function public.akatsuki_fn_budget_take(text,integer) from public,anon,authenticated;
+grant execute on function public.akatsuki_fn_budget_take(text,integer) to service_role;

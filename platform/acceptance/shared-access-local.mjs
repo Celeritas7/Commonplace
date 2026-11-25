@@ -6,6 +6,7 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { legacyFixture } from "../tests/shared-access-fixture.mjs";
 
 export async function sharedAccessAcceptance({
+  edge,
   a, b, unregistered,
   sql,
   check,
@@ -118,6 +119,82 @@ export async function sharedAccessAcceptance({
           "select count(*) from cp_private.signup_admissions where claimed_user_id is not null;",
         )) === "0",
         "Closed signup consumed admission",
+      );
+    },
+  );
+  await check(
+    "signed candidate Edge handlers reserve shared quota and honor route pauses with fake providers",
+    async () => {
+      const run = (actor, route, body) =>
+        edge(
+          actor,
+          route,
+          { "content-type": "application/json" },
+          JSON.stringify(body),
+        );
+      const cpp = { source_code: "int main(){}" },
+        ai = { messages: [{ role: "user", content: "fixture" }] };
+      await sql(`update ga_private.edge_routes set daily_limit=3,user_daily_limit=2 where function_name='code-exec';
+      insert into ga_private.edge_grants values('code-exec','${a.id}',now()+interval '1 day',false),
+       ('code-exec','${b.id}',now()+interval '1 day',false),('claude-proxy','${a.id}',now()+interval '1 day',false);`);
+      const outcomes = await Promise.all(
+        Array.from({ length: 3 }, () => run(a, "code-exec", cpp)),
+      );
+      assert.deepEqual(outcomes.map((r) => r.status).sort(), [200, 200, 429]);
+      assert.equal(
+        (await outcomes.find((r) => r.ok).json()).stdout,
+        "synthetic output",
+      );
+      assert.equal((await run(b, "code-exec", cpp)).status, 200);
+      assert.equal((await run(b, "code-exec", cpp)).status, 429);
+      assert.equal(
+        await sql(
+          `select used from ga_private.edge_user_usage where auth_user_id='${b.id}' and function_name='code-exec'`,
+        ),
+        "1",
+      );
+      assert.equal((await run(b, "claude-proxy", ai)).status, 403);
+      denied(
+        await a.client.rpc("ga_reserve_edge", {
+          requested_function: "claude-proxy",
+          verified_user: b.id,
+        }),
+        "Client reservation",
+      );
+      assert.equal(
+        (await run(a, "claude-proxy", { messages: [] })).status,
+        400,
+      );
+      assert.equal(
+        (await (await run(a, "claude-proxy", ai)).json()).content[0].text,
+        "synthetic answer",
+      );
+      await sql(
+        "update ga_private.edge_routes set paused=true where function_name='claude-proxy'",
+      );
+      assert.equal((await run(a, "claude-proxy", ai)).status, 403);
+      assert.equal(
+        await sql(
+          "select n from public.akatsuki_fn_budget where fn='claude-proxy'",
+        ),
+        "1",
+      );
+      await sql(
+        "update ga_private.edge_routes set paused=false where function_name='claude-proxy'",
+      );
+      assert.equal((await run(a, "claude-proxy", ai)).status, 200);
+      // Change a grant under lock while the server reservation is waiting.
+      await withBlockedWriter(
+        3,
+        `update ga_private.edge_grants set revoked=true where function_name='claude-proxy' and auth_user_id='${a.id}'`,
+        `set role service_role; select public.ga_reserve_edge('claude-proxy','${a.id}')`,
+        /grant unavailable/,
+      );
+      assert.equal(
+        await sql(
+          "select n from public.akatsuki_fn_budget where fn='claude-proxy'",
+        ),
+        "2",
       );
     },
   );

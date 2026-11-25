@@ -1,5 +1,5 @@
 // Read-only local inputs. No database/network connection or raw row export.
-import { open, readFile, stat, writeFile } from "node:fs/promises";
+import { open, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -10,11 +10,17 @@ async function fingerprint(path, archive = false) {
     const before = await file.stat();
     if (!before.isFile()) throw Error("A regular input file is required.");
     const sha = createHash("sha256");
+    const chunks = [];
     let bytes = 0,
       header = Buffer.alloc(0);
     for await (const chunk of file.createReadStream({ autoClose: false })) {
-      sha.update(chunk);
       bytes += chunk.length;
+      if (!archive) {
+        if (bytes > 1024 * 1024)
+          throw Error("CP3 report exceeds the 1 MiB limit.");
+        chunks.push(chunk);
+      }
+      sha.update(chunk);
       if (header.length < 5)
         header = Buffer.concat([header, chunk.subarray(0, 5 - header.length)]);
     }
@@ -25,13 +31,13 @@ async function fingerprint(path, archive = false) {
       bytes !== before.size
     )
       throw Error("Input changed while hashing; retry with a stable file.");
-    if (archive && header.toString("ascii") !== "PGDMP")
+    if (archive && !header.equals(Buffer.from("PGDMP")))
       throw Error("Expected a PostgreSQL custom-format dump.");
     return {
       name: basename(path),
       bytes,
       sha256: sha.digest("hex"),
-      ...(archive ? { header: "PGDMP" } : {}),
+      ...(archive ? { header: "PGDMP" } : { contents: Buffer.concat(chunks) }),
     };
   } finally {
     await file.close();
@@ -46,27 +52,29 @@ export function parseRestoreReport(text) {
     matching_tables: "Matching table fingerprints",
     table_differences: "Table differences",
   };
+  const lines = text.split(/\r\n|\n|\r/);
   const metrics = {};
   for (const [key, label] of Object.entries(names)) {
-    const matches = [
-      ...text.matchAll(new RegExp("^" + label + ":\\s*(\\d+)\\s*$", "gm")),
-    ];
-    if (matches.length !== 1)
+    const declared = lines.filter((line) => line.startsWith(label + ":"));
+    if (declared.length !== 1)
       throw Error("Expected exactly one CP3 metric: " + label);
-    const value = Number(matches[0][1]);
-    if (!Number.isSafeInteger(value)) throw Error("Invalid CP3 count.");
-    metrics[key] = value;
+    const raw = declared[0].slice(label.length + 1).trim();
+    if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw)))
+      throw Error("Invalid CP3 count.");
+    metrics[key] = Number(raw);
   }
-  const sourceHashes = [
-    ...text.matchAll(
-      /^Source (?:dump|archive) SHA-?256:\s*([a-fA-F0-9]{64})\s*$/gm,
-    ),
-  ];
-  if (sourceHashes.length > 1)
+  const hashLabel = /^Source (?:dump|archive) SHA-?256\s*:/i;
+  const declarations = lines
+    .map((line) => line.trim())
+    .filter((line) => hashLabel.test(line));
+  if (declarations.length > 1)
     throw Error("Ambiguous source archive hashes in report.");
+  const embedded = declarations[0]?.replace(hashLabel, "").trim().toLowerCase();
+  if (embedded !== undefined && !/^[a-f0-9]{64}$/.test(embedded))
+    throw Error("Malformed source hash.");
   return {
     metrics,
-    embedded_archive_sha256: sourceHashes[0]?.[1].toLowerCase() || null,
+    embedded_archive_sha256: embedded ?? null,
     reported_public_data_match:
       metrics.source_tables > 0 &&
       metrics.source_tables === metrics.restored_tables &&
@@ -83,17 +91,12 @@ export async function captureRecoveryIdentity({
 }) {
   if (expectedArchiveSha256 && !/^[a-fA-F0-9]{64}$/.test(expectedArchiveSha256))
     throw Error("Invalid expected SHA-256.");
-  if ((await stat(reportPath)).size > 1024 * 1024)
-    throw Error("CP3 report exceeds the 1 MiB limit.");
-  const archive = await fingerprint(archivePath, true),
-    report = await fingerprint(reportPath);
-  const bytes = await readFile(reportPath);
-  if (createHash("sha256").update(bytes).digest("hex") !== report.sha256)
-    throw Error("Report changed while reading.");
+  const archive = await fingerprint(archivePath, true);
+  const { contents, ...report } = await fingerprint(reportPath);
+  const encoding =
+    contents[0] === 0xff && contents[1] === 0xfe ? "utf-16le" : "utf-8";
   const parsed = parseRestoreReport(
-    new TextDecoder("utf-8", { fatal: true })
-      .decode(bytes)
-      .replace(/^\uFEFF/, ""),
+    new TextDecoder(encoding, { fatal: true }).decode(contents),
   );
   const embedded = parsed.embedded_archive_sha256;
   const relationship = embedded
@@ -104,7 +107,8 @@ export async function captureRecoveryIdentity({
       ? "operator-asserted-input"
       : "unverified-input";
   return {
-    version: 1,
+    version: 2,
+    expected_archive_sha256: expectedArchiveSha256?.toLowerCase() || null,
     captured_at: new Date().toISOString(),
     archive,
     restore_report: { ...report, ...parsed },
@@ -119,6 +123,7 @@ export async function captureRecoveryIdentity({
       auth: "not-established",
       rls: "not-established",
       private_storage: "not-established",
+      server_configuration: "not-established",
     },
     deployment_ready: false,
   };
@@ -158,11 +163,28 @@ async function main() {
     mode: 0o600,
   });
   console.log("Saved private metadata evidence: " + resolve(options.out));
+  const countsMatch = result.restore_report.reported_public_data_match;
+  console.log("Archive vs reference:", result.archive_vs_expected);
   console.log(
-    "Input relationship: " +
-      result.restore_input_relationship +
-      "; hosted recovery remains unverified.",
+    "Report-to-input relationship:",
+    result.restore_input_relationship,
   );
+  console.log(
+    "Reported public data comparison:",
+    countsMatch ? "matched" : "different or incomplete",
+  );
+  console.log("Runtime recovery remains unverified.");
+  if (
+    !countsMatch ||
+    result.archive_vs_expected === "different" ||
+    result.restore_input_relationship === "embedded-hash-mismatch"
+  )
+    process.exitCode = 2;
+  else if (
+    result.archive_vs_expected !== "matches" ||
+    result.restore_input_relationship !== "embedded-hash-match"
+  )
+    process.exitCode = 3;
 }
 if (
   process.argv[1] &&

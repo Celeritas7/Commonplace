@@ -64,6 +64,23 @@ create table ga_private.edge_grants (
  revoked boolean not null default false,
  primary key(function_name,auth_user_id)
 );
+-- A route pause preserves individual grants. The owning service must choose
+-- execution limits before its first reservation. Keep Claude's existing counter.
+create table ga_private.edge_routes (
+ function_name text primary key check(function_name in ('code-exec','claude-proxy')),
+ paused boolean not null default false,
+ daily_limit integer check(daily_limit>0),
+ user_daily_limit integer check(user_daily_limit>0 and user_daily_limit<=daily_limit),
+ check(function_name<>'claude-proxy' or daily_limit is not distinct from 200)
+);
+insert into ga_private.edge_routes(function_name,daily_limit) values('claude-proxy',200),('code-exec',null);
+create table ga_private.edge_user_usage (
+ function_name text not null references ga_private.edge_routes, usage_day date not null,
+ auth_user_id uuid not null, used integer not null check(used>0),
+ primary key(function_name,usage_day,auth_user_id)
+);
+alter table ga_private.edge_routes enable row level security;
+alter table ga_private.edge_user_usage enable row level security;
 -- Evidence references only: never store secrets or raw recovery data here.
 -- These entries are operator attestations, not automatically detected readiness.
 create table ga_private.client_cutovers (
@@ -143,10 +160,48 @@ end; $$;
 create function public.ga_can_call_edge(requested_function text) returns boolean
 language sql stable security definer set search_path='' as $$
  select auth.uid() is not null and exists(
-  select 1 from ga_private.edge_grants g where g.function_name=requested_function
+  select 1 from ga_private.edge_grants g join ga_private.edge_routes r using(function_name)
+  where not r.paused and g.function_name=requested_function
   and g.auth_user_id=auth.uid() and not g.revoked and g.expires_at>now());
 $$;
 revoke all on function public.code_sensei_current_user_id(),public.ga_can_call_edge(text)
  from public,anon,authenticated,service_role;
 grant execute on function public.code_sensei_current_user_id(),public.ga_can_call_edge(text) to authenticated;
+-- Only the server that verified the JWT may reserve a paid call. Serialize the
+-- route with pauses and other reservations, then lock the grant through commit.
+create function public.ga_reserve_edge(requested_function text, verified_user uuid) returns boolean
+language plpgsql security definer set search_path='' as $$
+declare route ga_private.edge_routes; deadline timestamptz; today date; global_used integer;
+begin
+ select * into route from ga_private.edge_routes where function_name=requested_function for update;
+ if not found or route.paused then raise exception 'route unavailable' using errcode='42501'; end if;
+ select expires_at into deadline from ga_private.edge_grants where function_name=requested_function
+  and auth_user_id=verified_user and not revoked for share;
+ if not found or deadline<=clock_timestamp() then raise exception 'grant unavailable' using errcode='42501'; end if;
+ if route.daily_limit is null or (requested_function='code-exec' and route.user_daily_limit is null) then
+  raise exception 'route limits unconfigured' using errcode='GA503';
+ end if;
+ today:=(clock_timestamp() at time zone 'Asia/Tokyo')::date;
+ -- The existing global budget uses transaction time. Retry across a Tokyo day boundary.
+ if today<>(now() at time zone 'Asia/Tokyo')::date then
+  raise exception 'budget day changed' using errcode='GA503';
+ end if;
+ if route.user_daily_limit is not null then
+  insert into ga_private.edge_user_usage as u values(requested_function,today,verified_user,1)
+   on conflict(function_name,usage_day,auth_user_id) do update set used=u.used+1
+    where u.used<route.user_daily_limit;
+  if not found then raise exception 'daily limit reached' using errcode='AK210'; end if;
+ end if;
+ select public.akatsuki_fn_budget_take(requested_function,route.daily_limit) into global_used;
+ if global_used is null or global_used not between 1 and route.daily_limit then
+  raise exception 'budget unavailable' using errcode='GA503';
+ end if;
+ if today<>(clock_timestamp() at time zone 'Asia/Tokyo')::date then
+  raise exception 'budget day changed' using errcode='GA503';
+ end if;
+ if deadline<=clock_timestamp() then raise exception 'grant expired' using errcode='42501'; end if;
+ return true;
+end; $$;
+revoke all on function public.ga_reserve_edge(text,uuid) from public,anon,authenticated,service_role;
+grant execute on function public.ga_reserve_edge(text,uuid) to service_role;
 commit;

@@ -21,7 +21,7 @@ Supabase configuration, downloaded packs and live records have not changed.
 | `03_roadmap_session_owner.sql` | Enforce matching owners for tasks, child tasks and sessions. Start and complete retain their signatures and return a saved session ID | Candidate 01, both reviewed RPC fingerprints, consistent historical ownership, caller regression and recovery checkpoint |
 | `04_commonplace_signup.sql` | Administrator-managed admission, revision-checked recovery, atomic UUID reservation and verified completion | Six CP migrations, verified CP administrator, reviewed foundation fingerprints and four ordinary nondeferred legacy triggers; installed **disabled** |
 | `edge/` | Candidate `claude-proxy` and `code-exec` handlers require a verified non-anonymous user and a current explicit function grant | JWT-capable clients, per-user grants, source drift review and each owning app's deployment review |
-| `90_containment.sql` | Close new CP admission, revoke Edge grants and disable both Roadmap session RPCs, retaining identities and data | Apply only if 01/03/04 are present; follow selective rollback guidance below |
+| `90_containment.sql` | Close new admission, pause both Edge routes, pause Roadmap routines and revoke their browser execution permissions | Full shared incident only. Review the per-component results and retain individual entitlements |
 
 The SQL runs in transactions. Session/trigger definition drift aborts the relevant
 candidate before replacement. Normalized definition hashes ignore line-ending
@@ -67,15 +67,23 @@ Candidate 03 validates the owner relationships against existing rows in the same
 transaction as the RPC replacements. An inconsistent historical link aborts the
 installation. Preserve the affected records and obtain the owner's reconciliation
 decision. Successful start and complete calls return the session UUID, including
-on retry. A suppressed write produces an API error. Containment revokes both
-RPCs while retaining the session ledger.
+on retry. A suppressed write produces an API error. Both RPCs also check a private pause flag. Containment retains the session ledger.
 
 `ga_can_call_edge(name)` accepts no user ID and checks the current JWT subject.
-Grant rows default to absent, can expire, and can be revoked without deleting
-study work. The Edge handlers use a publishable-key client carrying the user JWT
-for this RPC, not their privileged backend client. The AI handler retains its
-daily budget/response limits and drops the public-client shared-secret gate.
-There is no new paid AI integration for Commonplace's prompt generator.
+The verified caller's client checks that grant before input processing. After
+validation, the service client calls `ga_reserve_edge` with the UUID returned
+by Auth. Its committed transaction authorizes one outbound attempt. It locks
+the route and grant, checks expiry against the clock, and reserves quota.
+Withdrawal stops subsequent reservations. A provider failure after reservation
+still counts. Neither the browser nor a shared client secret can reserve a call.
+
+The AI route retains the existing shared limit of 200 attempts per Tokyo day.
+Execution starts with both limits unset and refuses all submissions until the
+service owner approves positive shared and per-user daily caps. Confirm the
+existing global budget function, both owning clients and their intended user
+rosters first. Coordinate both release handlers with the canonical Akatsuki
+repository. This review does not release a provider function. Use mocked
+providers throughout acceptance. Commonplace's prompt generator needs no paid call.
 
 ## Signup behavior and containment
 
@@ -108,16 +116,29 @@ Legacy signup requires one preapproved role. It binds an empty UUID or accepts
 the same UUID. Conflicting or ambiguous identities abort the Auth insert.
 Existing legacy role helpers and other shared policies remain deployment dependencies.
 
-For rollback, first close new CP signup and pause the affected feature. Keep
-restrictive policies and identity mappings in place. Candidate 90 provides
-containment after the entire candidate set is installed; apply its relevant
-statements selectively for a partial rollout. It deliberately does not restore
-an insecure conflict path or anonymous access. Suspend pilot memberships through
-the existing audited administrator API if needed. Preserve rows, queues and
-downloaded packs. Fix forward, retest, then explicitly regrant only intended
-capabilities. An earlier backup or older browser build must not silently reopen
-the old access rules. A full database restore is an isolated recovery operation,
-not the default rollback for a client error.
+For an incident affecting one component, record the approved scope and time.
+Close new admission by setting the singleton signup control to disabled. Pause
+a single Edge route by setting `ga_private.edge_routes.paused` for its exact
+function name. Check that one row changed, that its previously entitled fixture
+is denied, and that the unaffected route still works with a mock provider.
+Pause Roadmap through its singleton and review both routine ACLs. Preserve the
+underlying grants, identities, saved work, queues and packs. Existing admissions
+and memberships can be withdrawn or suspended individually through Admin Studio.
+
+For a full incident, execute candidate 90 standalone in one database session
+with no outer transaction. Each component reports its outcome. If a control,
+routine or privilege has drifted, the runner reports incomplete containment
+after committing successful stops. Capture the component results and final error
+in the private incident record. Verify effective access with representative
+roles. Inherited routine privileges need review even when the runtime pause
+blocks the caller. For a pre-candidate function still serving traffic, use the
+owning application's approved stop procedure and verify that endpoint separately.
+
+Before resuming, check the repair and the current roster, expirations and prior
+withdrawals. Unpause only the approved Edge route. For Roadmap, verify both
+routine definitions and ACLs, restore the intended authenticated EXECUTE grants,
+then release its pause. Verify retained sessions and allowed and denied fixtures.
+Keep the same study origin and namespace. Never bulk regrant user entitlements.
 
 ## R1: connect the existing restore result to its input
 
@@ -143,6 +164,13 @@ Only a source hash already embedded in the report establishes that limited
 hash association, and even that does not prove the report's authenticity or
 Auth/RLS/Storage recovery. Every output keeps `deployment_ready: false`.
 
+The collector accepts UTF-8 and BOM-marked UTF-16LE Windows reports. Preserve
+the original report bytes. After writing private evidence, exit 0 means the
+reference hash, embedded source hash and reported counts agree. Exit 2 flags a
+mismatch, and exit 3 flags incomplete linkage. Exit 1 means the input or capture
+failed. An operator assertion alone still yields incomplete linkage. None of
+these results establishes service recovery.
+
 For an initial Windows check without Node, `Get-FileHash -LiteralPath` with
 `-Algorithm SHA256` is sufficient to identify the candidate dump. The operator
 must still confirm it is the one actually used for CP3. Do not upload the raw
@@ -151,7 +179,7 @@ database, role export or user records to the public repository.
 After identifying the input, finish the existing isolated restore checks:
 Auth identities/FKs, effective grants/function ownership, A/B RLS execution,
 private Storage bytes/download authorization and server-secret/config recovery.
-The reported 302 matching public tables alone does not establish these gates.
+Keep the completed 302-table, 20,889-row Windows comparison. Associate the exact input SHA-256 when available. Auth, RLS, private Storage and server configuration each require independent restore evidence.
 
 ## Coverage and remaining gates
 

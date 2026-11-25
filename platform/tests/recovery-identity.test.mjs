@@ -94,3 +94,82 @@ test("recovery report parser refuses missing or ambiguous metrics and retains re
     false,
   );
 });
+
+test("CLI preserves original Windows bytes and distinguishes incomplete, conflicting and aligned evidence", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+  const script = fileURLToPath(
+    new URL(
+      "../operations/general-apps/capture-recovery-identity.mjs",
+      import.meta.url,
+    ),
+  );
+  const dir = await mkdtemp(join(tmpdir(), "cp-recovery-cli-"));
+  try {
+    const archive = join(dir, "source"),
+      report = join(dir, "report");
+    const bytes = Buffer.from("PGDMPfixture");
+    const hash = createHash("sha256").update(bytes).digest("hex");
+    await writeFile(archive, bytes);
+    for (const [i, [text, expected, status]] of [
+      [summary, hash, 3],
+      [summary + "Source dump SHA256: " + hash, hash, 0],
+      [summary + "Source dump SHA256: " + hash, "f".repeat(64), 2],
+      [summary.replace("differences: 0", "differences: 1"), hash, 2],
+    ].entries()) {
+      const raw = Buffer.concat([
+        Buffer.from([255, 254]),
+        Buffer.from(text, "utf16le"),
+      ]);
+      await writeFile(report, raw);
+      const out = join(dir, "out" + i);
+      const result = spawnSync(
+        process.execPath,
+        [
+          script,
+          "--archive",
+          archive,
+          "--report",
+          report,
+          "--out",
+          out,
+          "--expected-sha256",
+          expected,
+        ],
+        { encoding: "utf8" },
+      );
+      assert.equal(result.status, status, result.stderr);
+      const e = JSON.parse(await readFile(out));
+      assert.equal(
+        e.restore_report.sha256,
+        createHash("sha256").update(raw).digest("hex"),
+      );
+      assert.equal(e.deployment_ready, false);
+      assert.ok(result.stdout.includes(e.archive_vs_expected));
+    }
+    for (const value of [
+      "",
+      "invalid",
+      "invalid\nSource archive SHA256: " + hash,
+    ]) {
+      assert.throws(
+        () => parseRestoreReport(summary + "Source dump SHA256: " + value),
+        /hash/i,
+      );
+    }
+    assert.throws(
+      () => parseRestoreReport(summary + "R2 total rows: invalid"),
+      /exactly one/,
+    );
+    const read = () =>
+      captureRecoveryIdentity({ archivePath: archive, reportPath: report });
+    await writeFile(report, summary.padEnd(1024 * 1024));
+    await read();
+    await writeFile(report, summary.padEnd(1024 * 1024 + 1));
+    await assert.rejects(read, /1 MiB/);
+    await writeFile(archive, Buffer.from([208, 199, 196, 205, 208]));
+    await assert.rejects(read, /custom-format/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

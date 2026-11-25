@@ -476,7 +476,7 @@ async function main() {
   const envFile = join(work, "edge.env");
   await writeFile(
     envFile,
-    `COMMONPLACE_APP_ORIGIN=${origin}\nCOMMONPLACE_PROJECT_NAMESPACE=${namespace}\nCOMMONPLACE_OFFLINE_HOURS=1\nCOMMONPLACE_OFFLINE_PRIVATE_JWK=${privateJwk}\n`,
+    `ANTHROPIC_API_KEY=synthetic-local-only\nJUDGE0_RAPIDAPI_KEY=synthetic-local-only\nCOMMONPLACE_APP_ORIGIN=${origin}\nCOMMONPLACE_PROJECT_NAMESPACE=${namespace}\nCOMMONPLACE_OFFLINE_HOURS=1\nCOMMONPLACE_OFFLINE_PRIVATE_JWK=${privateJwk}\n`,
     { mode: 0o600 },
   );
   server = spawn(
@@ -723,6 +723,7 @@ async function main() {
     },
   );
   await sharedAccessAcceptance({
+    edge,
     a, b, unregistered,
     sql,
     check,
