@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, relative, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { isWithinDirectory } from "./path-containment.mjs";
 const platformRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Same source package for runner-local verification and reviewed hosted staging.
 export async function copyEdgeSources(target) {
@@ -16,7 +17,7 @@ export async function copyEdgeSources(target) {
   const seen = new Set();
   async function dependency(path) {
     path = resolve(path);
-    if (!path.startsWith(platformRoot + "/") || !path.endsWith(".mjs"))
+    if (!isWithinDirectory(platformRoot, path) || !path.endsWith(".mjs"))
       throw Error("Unexpected Edge dependency");
     if (seen.has(path)) return;
     seen.add(path);

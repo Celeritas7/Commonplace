@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
@@ -310,6 +310,7 @@ test("staging package contains complete hashed public dependencies, separate Edg
       configuration: config,
       sourceCommit: "1".repeat(40),
     });
+    assert.ok(Object.keys(review.files).every((path) => !path.includes("\\")));
     assert.equal(review.deployed, false);
     assert.equal(review.migrations_applied, false);
     assert.equal(review.backend_scope, "unverified");
@@ -359,8 +360,10 @@ test("staging package contains complete hashed public dependencies, separate Edg
     )
       .split("self.CP_SHELL=")[1]
       .slice(0, -2);
-    for (const asset of JSON.parse(manifest).assets)
+    for (const asset of JSON.parse(manifest).assets) {
+      assert.ok(!asset.path.includes("\\"));
       assert.equal(review.files["public/" + asset.path].sha256, asset.sha256);
+    }
     assert.ok(
       !JSON.parse(manifest).assets.some(
         (a) => a.path === "platform/admin/index.html",
@@ -397,6 +400,34 @@ test("staging package contains complete hashed public dependencies, separate Edg
     );
   } finally {
     await rm(output, { recursive: true, force: true });
+  }
+});
+
+test("staging refuses empty output inside the repository, including a symlink or Windows junction", async () => {
+  const inside = await mkdtemp(join(repositoryRoot, "cp-staging-inside-"));
+  const external = await mkdtemp(join(tmpdir(), "cp-staging-link-"));
+  try {
+    const link = join(external, "linked output");
+    await symlink(
+      inside,
+      link,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    for (const output of [repositoryRoot, inside, link]) {
+      await assert.rejects(
+        () =>
+          buildStagingPackage({
+            output,
+            configuration: config,
+            sourceCommit: "1".repeat(40),
+          }),
+        /empty output directory outside the repository/,
+      );
+      assert.deepEqual(await readdir(inside), []);
+    }
+  } finally {
+    await rm(external, { recursive: true, force: true });
+    await rm(inside, { recursive: true, force: true });
   }
 });
 test("General_apps review package preserves separate auth storage and marks the backend shared without certifying readiness", async () => {

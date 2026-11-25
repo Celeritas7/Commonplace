@@ -43,6 +43,21 @@ npm ci --prefix platform --ignore-scripts
 npm run prepare:staging --prefix platform -- /private/staging-config.json /tmp/commonplace-staging-review
 ```
 
+On Windows, run from the clean repository root in PowerShell and quote both
+paths. The output must be a new or empty folder **outside** the checkout:
+
+```powershell
+npm.cmd ci --prefix platform --ignore-scripts
+npm.cmd run prepare:staging --prefix platform -- "C:\Commonplace Review\staging-config.json" "C:\Commonplace Review\package-01"
+```
+
+Spaces and Unicode folder names are supported. Repository subfolders and
+symlinks/junctions pointing into the repository are refused; an existing nonempty
+package is never overwritten. Native filesystem paths are checked separately
+from the forward-slash paths in `review.json`, browser URLs and Edge imports.
+`npm run test:staging --prefix platform` runs the synthetic packaging and CLI
+checks on Windows and Linux without contacting a hosted backend.
+
 Start from [staging-config.example.json](staging-config.example.json). Its
 remaining placeholders deliberately fail validation. General_apps’ project reference
 is already set. Fill its **publishable** key, the exact HTTPS origin, offline interval and
@@ -54,7 +69,8 @@ generated automatically by the preparation command.
 
 The command accepts General_apps but rejects Technical and the existing
 Commonplace GitHub Pages/Vercel origins, non-HTTPS/path-bearing origins, secret/JWT keys, private signing-key fields,
-unrecognized settings, a dirty checkout and an existing/nonempty output directory.
+unrecognized settings, a dirty checkout, a nonempty output directory or an output
+directory inside the checkout.
 It makes no network requests and runs no deployment or database commands.
 Acceptance by this offline builder is configuration validation, not approval of
 General_apps’ existing shared API. `review.json` marks General_apps as `shared-existing`

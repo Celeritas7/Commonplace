@@ -13,6 +13,7 @@ import {
   projectNamespace,
 } from "../auth/configuration.mjs";
 import { copyEdgeSources } from "./edge-package.mjs";
+import { isWithinDirectory } from "./path-containment.mjs";
 
 export const repositoryRoot = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -44,8 +45,7 @@ export async function buildStagingPackage({
   const actualTarget = await realpath(target),
     actualRoot = await realpath(repositoryRoot);
   if (
-    actualTarget === actualRoot ||
-    actualTarget.startsWith(actualRoot + "/") ||
+    isWithinDirectory(actualRoot, actualTarget) ||
     (await readdir(target)).length
   )
     throw Error("Choose an empty output directory outside the repository.");
@@ -122,7 +122,7 @@ export async function buildStagingPackage({
   const seen = new Set();
   async function add(name) {
     const full = resolve(repositoryRoot, name);
-    if (!full.startsWith(repositoryRoot + "/"))
+    if (!isWithinDirectory(repositoryRoot, full))
       throw Error("Public dependency escaped repository.");
     name = relative(repositoryRoot, full).replaceAll("\\", "/");
     if (
