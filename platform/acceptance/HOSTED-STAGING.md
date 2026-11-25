@@ -6,31 +6,31 @@ a project, apply migrations, configure Google, publish a website or complete hos
 acceptance.** The checked-in deployment and authentication configurations remain
 `null`. Existing Commonplace login, progress and service workers are unchanged.
 
-## Decisions before provisioning
+## Selected backend and remaining inputs
 
-The connected inventory was rechecked on 2026-11-25 (Japan): **Celeritas7's Org** is
-on Free and contains General_apps and Technical. Neither is a selected staging
-target. The next required user decision is the organization for a separate
-Commonplace staging project. Supabase's project/cost tools require this organization
-selection before quoting or provisioning. Quote any cost for the selected
-organization and obtain agreement to a nonzero charge before creating anything.
-Do not pause/delete either existing project to make room.
+On 2026-11-25 (Japan), after PR #94 merged, the user selected **Celeritas7's Org →
+Technical**, `ulgrfumbwjovbjzjiems`. Use that existing project. The previous proposal
+to provision a separate project is superseded; no organization or purchase
+decision is pending. Technical is a shared live backend, not a disposable staging
+database. The [Technical checkpoint](TECHNICAL-TARGET.md) records the read-only
+audit, existing backup evidence and remaining shared-access issues.
 
-Proposed review inputs, pending that choice:
+The seven legacy `commonplace_*` tables are in **General_apps**, not Technical.
+Keep their login, progress, offline storage and deployed clients in place.
 
 | Input | Proposed / required choice |
 | --- | --- |
-| Project | A new isolated `Commonplace-staging`, synthetic data only |
-| Region | Tokyo (`ap-northeast-1`) for this Japan-based test; confirm availability |
+| Project | Selected: Technical, `ulgrfumbwjovbjzjiems`; shared-project isolation and recovery review still required |
+| Region | Existing Mumbai (`ap-south-1`); no project relocation |
 | Website | A separate HTTPS origin serving only the generated `public/` directory |
 | Offline interval | One hour for expiry testing; this does not approve a production interval |
-| Administrator | The user's verified identity in the new project, confirmed by a trusted operator before bootstrap |
-| Learners | Synthetic A/B for the matrix; the actual learner email remains unspecified |
-| Google OAuth | Staging-only provider/client configuration with exact callback URLs |
+| Administrator | The user's verified Technical identity, confirmed by a trusted operator before bootstrap |
+| Learners | Tracked test A/B for the hosted matrix after signup side effects are reviewed; the actual learner email remains unspecified |
+| Google OAuth | Review existing shared provider settings; preserve current apps and add only the exact staging redirect |
 
 No origin, private key, administrator UUID or learner email is inferred from a
-query string, imported document or existing project's identity. A new project's
-Auth UUIDs and token storage must remain separate from the legacy installation.
+query string, imported document or email match. Technical's Auth identities and
+the new browser token storage remain separate from legacy General_apps.
 
 ## Prepare a reviewable package
 
@@ -42,18 +42,22 @@ npm run prepare:staging --prefix platform -- /private/staging-config.json /tmp/c
 ```
 
 Start from [staging-config.example.json](staging-config.example.json). Its
-placeholders deliberately fail validation. Fill the selected isolated project
-reference, its **publishable** key, the exact HTTPS origin, offline interval and
+remaining placeholders deliberately fail validation. Technical's project reference
+is already set. Fill its **publishable** key, the exact HTTPS origin, offline interval and
 only the public half of a separately generated P-256 offline-signing key. The
 private half goes to the target's Edge secret store through a trusted operator;
 never put it in this JSON, the repository, chat, a browser or a public artifact.
 Preserve it securely for the later restore/rotation rehearsal. No real key is
 generated automatically by the preparation command.
 
-The command rejects the two existing shared projects, the legacy GitHub Pages
+The command accepts the selected Technical backend but rejects General_apps and the legacy GitHub Pages
 origin, non-HTTPS/path-bearing origins, secret/JWT keys, private signing-key fields,
 unrecognized settings, a dirty checkout and an existing/nonempty output directory.
 It makes no network requests and runs no deployment or database commands.
+Acceptance by this offline builder is configuration validation, not approval of
+Technical's existing shared API. `review.json` marks Technical as `shared-existing`
+and always reports hosted readiness as unassessed. Unknown project references are
+`unverified`, never assumed isolated.
 
 | Output | Purpose |
 | --- | --- |
@@ -62,7 +66,8 @@ It makes no network requests and runs no deployment or database commands.
 | `public/_headers` | Static-host response rules: no-store, no-referrer, nosniff and a CSP restricted to the selected backend; ensure the chosen provider actually applies these rules |
 | `server/` | Six unchanged migration files and the actual Edge dependency graphs; **never upload this directory as website content** |
 | `server/edge.env.example` | Names of required server settings; private signing-key value is a deliberate placeholder |
-| `review.json` | Source commit, SDK version, dependency-lock hash, origin/namespace/interval and SHA-256 for generated/copied files |
+| `server/preflight/` | Read-only shared-project catalog and Technical review notes; private operator inputs, excluded from browser/offline assets |
+| `review.json` | Source commit, target scope/readiness, SDK version, dependency-lock hash, origin/namespace/interval and SHA-256 for generated/copied files |
 
 The builder reuses the Edge source packager tested by the disposable Supabase
 workflow. It relocates only the entries' relative imports and leaves shared module
@@ -103,24 +108,26 @@ For the selected target, review these distinct URLs:
 | --- | --- |
 | Google authorized JavaScript origin | Selected staging HTTPS origin |
 | Google authorized redirect URI | `https://<selected-ref>.supabase.co/auth/v1/callback` |
-| Supabase Auth Site URL | Selected staging HTTPS origin |
+| Supabase Auth Site URL | Preserve the shared project's existing value; explicit staging `redirectTo` uses the exact allowlisted URL below |
 | Supabase Auth redirect allowlist / client redirectTo | `<selected-origin>/platform/auth/index.html` |
 
-Configure the staging OAuth audience/test accounts and only the required scopes.
-Keep Google client secrets server-side. Do not reuse or broaden the legacy app's
-callback rules. Confirm the provider's exact redirect matching behavior with the
+Review the existing Google audience/test accounts and only the required scopes.
+Keep Google client secrets server-side. Preserve all existing apps' callback rules
+and add only the exact staging redirect; do not introduce wildcards or replace the
+shared Site URL/provider configuration. Confirm exact redirect matching with the
 SDK's PKCE flow identifier. Browser fixtures validate ordering and URL handling;
 they do not establish a real Google consent/return success.
 
 ## Hosted execution after selection
 
-1. Confirm the newly selected project is healthy and inspect tables, Auth settings,
-   exposed schemas, Storage, functions and advisors. For any valued data, first
-   verify its recoverable database/Auth/Storage backup and isolated restore scope.
-   A fresh synthetic project still needs the later restore rehearsal before pilot
-   activation. General_apps backup evidence is not this new project's evidence.
-2. Apply all six migrations in filename order only to that target and run
-   `catalog.sql`. Confirm `cp_private` is not exposed. Verify the designated owner
+1. Recheck Technical's health and run `shared-project-catalog.sql`. Reconcile actual
+   exposed schemas, shared Auth settings, Storage, functions and advisors. Resolve
+   the [recorded shared-access findings](TECHNICAL-TARGET.md) with affected app
+   regression tests and verify recoverable Technical database/Auth/Storage backup
+   and isolated restore evidence. Do not use the empty local fixture runner on it.
+2. After those prerequisites, apply all six migrations in filename order only to
+   Technical, preserving unrelated migration history, and run `catalog.sql` plus
+   the shared inventory. Confirm `cp_private` is not exposed. Verify the designated owner
    identity and bootstrap its UUID once using the operator-only function.
 3. Set target-specific Edge settings and private signing key. Deploy only
    `material-files` and `offline-lease` from the reviewed `server/` package.

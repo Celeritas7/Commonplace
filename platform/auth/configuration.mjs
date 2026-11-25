@@ -26,10 +26,10 @@ export function validateStagingConfiguration(value) {
     url.password ||
     url.hostname === "celeritas7.github.io" ||
     !/^[a-z]{20}$/.test(value.project_ref) ||
-    ["wylxvmkcrexwfpjpbhyy", "ulgrfumbwjovbjzjiems"].includes(value.project_ref)
+    value.project_ref === "wylxvmkcrexwfpjpbhyy"
   )
     throw Error(
-      "Use a separate HTTPS staging origin and isolated Supabase project.",
+      "Use a separate HTTPS staging origin and the selected Technical project or a separate staging project; General_apps remains the legacy backend.",
     );
   if (!/^sb_publishable_[A-Za-z0-9_-]{10,200}$/.test(value.publishable_key))
     throw Error("Only a publishable browser key is accepted.");

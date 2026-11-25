@@ -59,8 +59,8 @@ fix. Revoked online access blocks the saved pack while retaining its bytes/work.
 | Synthetic restore | Local PASS | PGlite dump/reload after U7→U8; all platform table rows, catalog rules, old/new work and CAS retry preserved; B/revoked access still denied |
 | Worker failure recovery | Local PASS | Real worker code with deterministic Cache/network fixtures; failed updates keep the old shell and legacy caches |
 | Browser regression suite | Local PASS; exact-head CI required | 48 cases: existing 45 plus three U9 recovery/revalidation cases; record the exact PR head and check results |
-| Backend and canonical origin | BLOCKED | Choose an isolated staging target/origin or approve a complete shared-project isolation review; no provisioning/cost decision made |
-| Hosted Auth/REST/RPC/Storage/Edge | BLOCKED | Deploy to the selected disposable target, run catalog/advisors and real JWT/direct-URL/concurrency matrix |
+| Backend and canonical origin | Technical selected; origin PENDING | User selected Technical after PR #94. Shared API review found unresolved access issues; see the Technical checkpoint below. No new project required. |
+| Hosted Auth/REST/RPC/Storage/Edge | BLOCKED | Resolve shared-access and recovery prerequisites, deploy explicitly to Technical, then run catalog/advisors and real JWT/direct-URL/concurrency matrix |
 | Actual backup and restore | PENDING | Reconcile existing private backup evidence with the chosen target; verify required Auth and private file restoration; local snapshot test is not this gate |
 | iPad/Safari/Home Screen and Android | PENDING | Real preparation, airplane-mode cold reopen, saved work, Google return, downloads, expiry, switching and recovery |
 | Legacy personal-study regression | PENDING on devices | Existing installed Python/SQL/C++/BAT/Web Studio notes and packs remain usable; no clearing website data |
@@ -89,9 +89,9 @@ A sixth migration explicitly targets that lock row in ten existing functions;
 it preserves function authority and data, and does not disable the guard. See the
 linked checkpoint for the regression and exact CI evidence requirements.
 
-After that, select the disposable hosted staging backend and canonical origin,
-then complete the hosted matrix and backup scope together. The separate-project direction remains
-the U0 recommendation; no project purchase is authorized by this report. Physical
+The earlier direction was to select a disposable hosted backend and canonical
+origin, then complete the hosted matrix and backup scope together. The user's
+later selection of Technical supersedes that backend recommendation; see below. Physical
 offline UI testing can begin with the explicitly synthetic sample, but real Google
 login, permissions and cross-device sync require staging. After hosted/device and
 recovery evidence passes, prepare a separate concrete activation change for review.
@@ -101,9 +101,28 @@ alongside 113 Node/PGlite, 48 browser and nine Deno checks. The next
 [hosted staging preparation](../../platform/acceptance/HOSTED-STAGING.md) adds an
 inactive Google login/client and an explicit package builder. Its browser fixtures
 exercise the real bundled SDK with simulated Auth responses. They are not hosted
-Google, cloud-security or physical-device acceptance. The organization selection
-required to obtain a provisioning quote remains pending; no cloud resource or
-production activation is part of this preparation.
+Google, cloud-security or physical-device acceptance. That preparation originally
+left an organization choice pending; the user has now selected the existing
+Technical project, so no provisioning quote is required.
+
+## Selected Technical checkpoint — 2026-11-25
+
+PR #94 is merged. **Celeritas7's Org → Technical** (`ulgrfumbwjovbjzjiems`) is now
+the selected platform backend. The builder accepts it, preserves a separate HTTPS
+origin and browser storage namespace, and includes a read-only shared catalog.
+It marks the target `shared-existing` and hosted readiness unassessed. Both
+checked-in activation configurations remain `null`.
+
+The [Technical checkpoint](../../platform/acceptance/TECHNICAL-TARGET.md) records
+the audit and revised sequence. Technical has no Commonplace objects yet; the
+seven existing `commonplace_*` tables remain in General_apps. Existing study
+progress and offline installations have not been moved. Broad existing browser
+access to other applications' user-state surfaces needs targeted review before
+Commonplace learners join the shared project. The November 16 Technical recovery
+runbook provides evidence of a November 15 archive and a selective restore, not
+full Auth/RLS/Storage recovery. Reconcile that evidence against the current target
+before applying the six migrations. Shared Auth settings and signup side effects
+also require compatible treatment; the disposable local runner remains local-only.
 
 Public legacy HTML/repository files stay public. No frontend gate retroactively
 protects those bytes. Disconnected/exported tutorial copies cannot be recalled.
