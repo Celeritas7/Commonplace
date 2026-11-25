@@ -102,10 +102,18 @@ export async function sharedAccessAcceptance({
         await pause(250);
       }
       requireThat(visible, "Candidate RPC schema did not refresh");
+      assert.deepEqual(await rpc(owner, "cp_admin_signup_status"), { status: "paused" });
+      denied(await client().rpc("cp_admin_signup_status"), "Anonymous signup status");
+      for (const learner of [a, b, unregistered])
+        denied(await learner.client.rpc("cp_admin_signup_status"), "Learner signup status");
+      await sql("delete from cp_private.signup_control where id=true;");
+      assert.deepEqual(await rpc(owner, "cp_admin_signup_status"), { status: "unavailable" });
+      await sql("insert into cp_private.signup_control values(true,false);");
       admission = await rpc(owner, "cp_admin_prepare_signup", {
         login_email: email,
         valid_hours: 1,
       });
+      assert.deepEqual(await rpc(owner, "cp_admin_signup_status"), { status: "paused" });
       const refused = await client().auth.signUp({ email, password });
       requireThat(!!refused.error, "Closed admission permitted signup");
       requireThat(
@@ -235,6 +243,7 @@ export async function sharedAccessAcceptance({
       await sql(
         "update cp_private.signup_control set enabled=true where id=true;",
       );
+      assert.deepEqual(await rpc(owner, "cp_admin_signup_status"), { status: "enabled" });
       const result = data(
         await client().auth.signUp({
           email,
@@ -454,6 +463,7 @@ export async function sharedAccessAcceptance({
         "Admission not bound once",
       );
       await sql(await candidate("90_containment.sql"));
+      assert.deepEqual(await rpc(owner, "cp_admin_signup_status"), { status: "paused" });
       denied(await a.client.rpc("roadmap_complete_session",{p_task_id:task,p_source:"roadmap"}),"Contained completion");
       assert.equal(await sql(`select count(*) from public.roadmap_study_sessions where task_id='${task}'`),"1");
       requireThat(

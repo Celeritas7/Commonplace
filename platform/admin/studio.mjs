@@ -33,7 +33,7 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
  function render(){
   for(const n of root.querySelectorAll('[data-workspace-tab]')){const active=n.dataset.workspaceTab===workspacePage;n.setAttribute('aria-pressed',String(active));n.classList.toggle('secondary',!active);}
   if(workspacePage==='signups'){
-   clearProfile();workspace.replaceChildren();const panel=el('section',undefined,'panel');panel.dataset.managedEditor='';workspace.append(panel);
+   clearProfile();workspace.replaceChildren();const panel=el('section',undefined,'panel');workspace.append(panel);
    disposeProfile=mountSignupRequests(panel,api,{onBusy:value=>{busy=value;lock();},onDenied:invalidate});
    return;
   }

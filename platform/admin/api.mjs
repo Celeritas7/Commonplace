@@ -38,6 +38,11 @@ export function createAdminAPI({client, enabled=false, online=()=>navigator.onLi
     saveProfile:(target,revision,profile,groups)=>call('cp_admin_save_profile',{target,expected_revision:revision,new_profile:profile,group_ids:groups}),
     saveGroup:group=>call('cp_admin_save_profile_group',{target:group.id||null,expected_revision:group.revision||'0',new_name:group.name,new_description:group.description}),
     signups:()=>call('cp_admin_signup_directory'),
+    async signupStatus(){
+      const result=await call('cp_admin_signup_status');
+      if(!['enabled','paused','unavailable'].includes(result?.status))throw Error('Signup status is unavailable.');
+      return result.status;
+    },
     prepareSignup:email=>call('cp_admin_prepare_signup',{login_email:email}),
     reviewSignup:(row,decision)=>call('cp_admin_review_signup',{admission:row.id,expected_revision:row.revision,decision}),
     completeSignup:(row,name)=>call('cp_admin_complete_signup',{admission:row.id,expected_revision:row.revision,learner_name:name}),

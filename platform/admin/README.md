@@ -18,6 +18,8 @@ Open `http://localhost:8000/platform/admin/preview.html`. Select **Sample learne
 
 An optional **Signup requests** workspace handles new Commonplace-only admissions when the General_apps signup candidate is installed. It supports withdrawal, same-UUID recovery and verified registration. The existing-account form remains available for other confirmed accounts. See the [signup workflow and prerequisites](../operations/general-apps/README.md#signup-behavior-and-containment).
 
+The workspace shows **Signup enabled**, **Signup paused** or **Signup status unavailable**. It checks on opening, after request actions and with **Reload signup requests**. Preparing a request does not enable signup. Enabled means only that the Commonplace admission gate permits approved, unexpired requests; it does not verify Auth provider configuration or grant learning access. A missing control row, missing status RPC, invalid response or failed check shows unavailable. A permission denial clears the private workspace. This is read-only: there is no browser control to open signup, and live activation remains disabled.
+
 - Search registered people by display name or login email; view role and status.
 - Register an **existing confirmed login** by email. The server resolves its verified UUID, rejects ambiguous/unconfirmed/unknown matches and rejects already-registered accounts. Registration starts suspended with no grants. It does not send invitations or create auth identities; those need the chosen target's reviewed invitation/sign-up flow.
 - Edit learner display name, activate, suspend or revoke access. The designated administrator is read-only; no promotion/owner-transfer control exists.
@@ -34,6 +36,7 @@ Apply both migrations in order only to the approved isolated test target initial
 | RPC | Input | Boundary |
 | --- | --- | --- |
 | `cp_admin_directory()` | None | Active administrator only; returns memberships with current auth email, string revision, explicit allowed leaves and section catalogue |
+| `cp_admin_signup_status()` (candidate 04) | None | Active administrator only; reads the private signup flag and returns `{status: "enabled" \| "paused" \| "unavailable"}`; no identities, write or toggle |
 | `cp_admin_register(login_email, learner_name)` | Exact normalized login email and display name | Admin check before lookup; verified UUID association; no reactivation or auth-account creation |
 | `cp_admin_save(target, expected_revision, learner_name, new_status, allowed_sections)` | UUID, revision string, display name, status, explicit leaf list | Admin check after serialized mutation lock; learner-only target; reject stale revision/invalid leaves; atomic status+grant replacement and audit |
 
