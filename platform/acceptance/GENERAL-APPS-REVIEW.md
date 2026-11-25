@@ -5,6 +5,10 @@ Baseline: `eb194164e321437b68462df88d2af107f05fad3e` (PR #95 merged).
 General_apps is the confirmed backend. This checkpoint does not select a new
 project, apply the six migrations or activate the platform.
 
+This is the historical baseline. See the [later G0 checkpoint](G0-READINESS.md)
+for current shared-registry hardening, signup-candidate drift and recovery
+reconciliation. Preserve the original evidence and its limits below.
+
 ## Scope and evidence
 
 Reviewed the live public/Storage catalog, effective browser grants, policy modes,
