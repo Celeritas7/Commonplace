@@ -8,8 +8,10 @@ The next U9 checkpoint adds [disposable full Supabase integration](LOCAL-STACK.m
 with real local Auth, PostgreSQL, REST, Storage and Edge services. It does not
 provision a hosted staging project or replace the hosted/device gates below.
 The [hosted staging preparation](HOSTED-STAGING.md) now provides the Google login,
-isolated client and package builder. It still requires a selected organization,
-project and HTTPS origin before hosted execution.
+isolated client and package builder. General_apps is the selected shared backend;
+the separate HTTPS origin and hosted execution remain subject to the release gates.
+Use the [current migration and signup rollout order](SIGNUP-ROLLOUT.md), including
+paused installation of candidate 04 after all six migrations and owner setup.
 
 ## Repeat the automated checks
 
@@ -43,8 +45,10 @@ manifest is refreshed; the worker scope and legacy application files are unchang
 
 ## Read-only target preflight
 
-Run [catalog.sql](catalog.sql) as a trusted database operator against the proposed
-target. The file contains one SELECT statement with catalog/Storage metadata reads.
+Before installation, use [shared-project-catalog.sql](shared-project-catalog.sql)
+and the rollout guide's prerequisites. After the six migrations, and again after
+signup candidate 04, run [catalog.sql](catalog.sql) as a trusted database operator.
+The file contains one SELECT statement with catalog/Storage metadata reads.
 It creates or changes nothing and returns no user records or secrets. Retain the
 project reference, source commit, run time and returned findings in private release
 evidence. Zero rows means only these structural checks passed. Missing roles or
@@ -58,11 +62,12 @@ policy expressions or encryption. Run hosted advisors and the matrix below too.
 Do not make a failing check green by adding broad grants or by using service-role
 credentials for learner tests.
 
-## Hosted acceptance — pending until a target is selected
+## Hosted acceptance — pending approval
 
-Use a disposable, approved Supabase staging target with an approved HTTPS origin.
-Keep the legacy installation running. Choose a separate project or explicitly
-review the entire existing project's exposed surface; a prefix is not isolation.
+Use the selected General_apps backend only after its shared-project prerequisites
+and the separate HTTPS origin are approved. Keep the legacy installation running.
+General_apps is not disposable; review its entire exposed surface because a
+prefix is not isolation. The local fixture runner stays on its own loopback stack.
 Do not provision paid resources or modify the shared project as part of merely
 running this repository's tests.
 
@@ -70,17 +75,19 @@ running this repository's tests.
    checksums, dependency lock checksum, exposed schemas and reviewed advisors.
    Confirm `cp_private` is not exposed. Verify backup scope and restore evidence
    before applying anything to a database containing valued data.
-2. Apply the existing migrations in filename order to that isolated target. Use
-   verified synthetic staging identities: one designated owner, learners A/B and
-   an unregistered user. Bootstrap the owner using the operator-only function.
-   Keep identity mappings and all tokens outside Git, screenshots and public logs.
+2. Follow the [rollout guide](SIGNUP-ROLLOUT.md): all six migrations, verified
+   owner bootstrap, then candidate 04 installed paused. New tracked test Auth
+   identities require the later G4 signup approval/window; never create them
+   early as a shortcut. Keep mappings and tokens outside Git and public evidence.
 3. Configure the reviewed client, Google callback allowlist and Edge services on
    staging only. Supply the service credential only to `material-files` and the
    separate private signing key only to `offline-lease`. Choose an explicit offline
    interval; the seven-day sample setting does not approve a production interval.
    Verify the gateway with the target's actual key/JWT configuration.
-4. Create a synthetic published Excel lesson/file for A, a B-only lesson, a draft,
-   an unreleased answer sheet and a profile-group assignment. Verify the following
+4. After the approved signup window and verified registration, separately review
+   learner A/B access and assignments. Create a synthetic published Excel lesson/file
+   for A, a B-only lesson, a draft, an unreleased answer sheet and a profile-group
+   assignment. Verify the following
    with real signed user sessions and public client credentials. A database owner
    or service token is never evidence of a learner boundary.
 

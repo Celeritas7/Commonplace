@@ -31,7 +31,11 @@ The workspace shows **Signup enabled**, **Signup paused** or **Signup status una
 
 ## Database contract
 
-Apply both migrations in order only to the approved isolated test target initially. No hosted migration was performed during implementation.
+The original U2 increment used the first two migrations. The current platform
+requires the [complete six-migration chain and rollout checkpoints](../acceptance/SIGNUP-ROLLOUT.md),
+with signup candidate 04 installed afterward and paused. Do not deploy
+the current studio from the historical two-migration instructions. Hosted changes
+and learner enrollment remain on hold.
 
 | RPC | Input | Boundary |
 | --- | --- | --- |
