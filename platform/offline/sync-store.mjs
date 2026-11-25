@@ -1,6 +1,11 @@
 import { canonical, digest } from "./lease.mjs";
 import { ownedKey } from "./database.mjs";
 import {
+  assertStudyBackupBytes,
+  assertStudyBackupRecords,
+  studyBackupCopies,
+} from "./backup.mjs";
+import {
   initialAttempt,
   validateAttempt,
   studyIdentity,
@@ -328,17 +333,22 @@ export function createSyncStore({
       notify();
     },
     async backup(c) {
-      return JSON.stringify(
+      const records = (await list(c)).map((r) => r.data);
+      assertStudyBackupRecords(records);
+      const text = JSON.stringify(
         {
           format: "commonplace-u8-study",
           version: 1,
           namespace,
           owner: c.userId,
-          records: (await list(c)).map((r) => r.data),
+          records,
         },
         null,
         2,
       );
+      assertStudyBackupBytes(new TextEncoder().encode(text).length);
+      check(c);
+      return text;
     },
     async restore(c, text, client) {
       check(c);
@@ -346,11 +356,8 @@ export function createSyncStore({
         throw Error(
           "Connect and verify your account before restoring a backup.",
         );
-      if (
-        typeof text !== "string" ||
-        new TextEncoder().encode(text).length > 8388608
-      )
-        throw Error("Study backup exceeds 8 MiB.");
+      if (typeof text !== "string") throw Error("Invalid study backup.");
+      assertStudyBackupBytes(new TextEncoder().encode(text).length);
       const b = JSON.parse(text);
       if (
         !b ||
@@ -358,12 +365,12 @@ export function createSyncStore({
         b.version !== 1 ||
         b.namespace !== namespace ||
         b.owner !== c.userId ||
-        !Array.isArray(b.records) ||
-        b.records.length > 1000
+        !Array.isArray(b.records)
       )
         throw Error(
           "Backup belongs to another account/project or has an unsupported format.",
         );
+      assertStudyBackupRecords(b.records);
       const source = await digest(text),
         seen = new Set(),
         prepared = [],
@@ -404,19 +411,9 @@ export function createSyncStore({
         if (seen.has(k)) throw Error("Duplicate backup record");
         seen.add(k);
         const value = valueFor(identity.kind, r.value, m),
-          copies = [];
-        for (const copy of r.conflicts || []) {
-          if (copy.value !== null)
-            copies.push(valueFor(identity.kind, copy.value, m));
-        }
-        for (const h of r.history || []) {
-          copies.push(valueFor(identity.kind, h.value, m));
-          for (const copy of h.conflicts || [])
-            if (copy.value !== null)
-              copies.push(valueFor(identity.kind, copy.value, m));
-        }
-        if (copies.length > 1000)
-          throw Error("Backup contains too many alternative versions");
+          copies = studyBackupCopies(r).map((copy) =>
+            valueFor(identity.kind, copy, m),
+          );
         prepared.push({ k, identity, material: m.id, value, copies });
       }
       let restored = 0;
