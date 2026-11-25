@@ -106,6 +106,11 @@ async function preserved() {
   assert.match(await page.locator('#wb-resume-part').textContent(), /Part 1 of 8 · Why this matters/);
   await page.locator('#wb-resume-action').click();
   assert.equal(await page.evaluate(() => document.activeElement.id), 'wb-part-title', 'Continue focuses the saved reading part');
+  await page.locator('.wb-more-menu > summary').click();
+  assert.equal(await page.locator('.wb-more-menu').evaluate(menu => menu.open), true, 'More opens on demand');
+  await page.locator('.wb-app-tabs > button[data-view="practice"]').click();
+  assert.equal(await page.locator('.wb-more-menu').evaluate(menu => menu.open), false, 'switching views closes More');
+  await page.locator('.wb-app-tabs > button[data-view="book"]').click();
   await preserved();
 
   // The supplied sample must work before the learner edits any file.
