@@ -49,7 +49,11 @@ test("shared-project inventory works before CP migrations and retains restrictiv
     assert.ok(row("relation", "public.invoker_view").options.includes("security_invoker=true"));
     assert.equal(row("function", "public.callable(uuid)").anon_execute, true);
     assert.equal(row("function", "public.callable(uuid)").security_definer, true);
+    assert.equal(row("function", "public.callable(uuid)").trigger_function, false);
+    assert.equal(row("function", "public.on_signup()").trigger_function, true);
+    assert.equal(row("function", "public.on_signup()").return_type, "trigger");
     assert.equal(row("auth_trigger", "auth.users:signup").function, "public.on_signup()");
+    assert.match(row("auth_trigger", "auth.users:signup").definition, /AFTER INSERT ON auth.users/);
     assert.equal(row("bucket", "existing-assets").public, true);
     assert.deepEqual(row("schema_access", "other_api:authenticated"), {
       usage: true, create: false, included_in_review: false,

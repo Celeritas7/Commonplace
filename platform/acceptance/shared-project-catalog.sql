@@ -65,6 +65,8 @@ relations as (
   select 'function', format('%I.%I(%s)', nspname, proname, oidvectortypes(proargtypes)),
     jsonb_build_object(
       'security_definer', prosecdef, 'owner', pg_get_userbyid(proowner),
+      'return_type', pg_get_function_result(oid),
+      'trigger_function', prorettype in ('trigger'::regtype, 'event_trigger'::regtype),
       'configuration', coalesce(proconfig, '{}'),
       'anon_execute', has_function_privilege('anon', oid, 'EXECUTE'),
       'authenticated_execute', has_function_privilege('authenticated', oid, 'EXECUTE'),
@@ -73,7 +75,7 @@ relations as (
   from functions
   union all
   select 'auth_trigger', format('%I.%I:%I', n.nspname, c.relname, t.tgname),
-    jsonb_build_object('enabled', t.tgenabled,
+    jsonb_build_object('enabled', t.tgenabled, 'definition', pg_get_triggerdef(t.oid),
       'function', format('%I.%I(%s)', fn.nspname, p.proname, oidvectortypes(p.proargtypes)))
   from pg_trigger t join pg_class c on c.oid = t.tgrelid
     join pg_namespace n on n.oid = c.relnamespace
