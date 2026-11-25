@@ -61,6 +61,7 @@ export async function sharedAccessAcceptance({
 
   await check("hardened legacy Auth rejects anonymous signup and retains the approved viewer role", async () => {
     await sql(legacyFixture);
+    await sql(await readFile(new URL('../tests/code-sensei-fixture.sql', import.meta.url), 'utf8'));
     const address=`legacy-baseline-${tag}@example.invalid`;
     secrets.push(address);
     await sql(`insert into public.authentication_mode_user_roles(id,email,role) values(70,'${address}','viewer')`);
@@ -84,7 +85,7 @@ export async function sharedAccessAcceptance({
     assert.equal(await sql(`select count(*) from public.chatak_profiles where id='${baselineLegacy}'`),"1");
     assert.equal(await sql(`select count(*) from public.alarm_settings where user_id='${baselineLegacy}'`),"1");
     await sql(`insert into public.code_sensei_users(id) values('${legacyA}'),('${legacyB}');
-      insert into public.code_sensei_user_notes(user_id,note_text) values('${legacyA}','A'),('${legacyB}','B');
+      insert into public.code_sensei_user_notes(user_id,topic_id,note_text) values('${legacyA}','fixture','A'),('${legacyB}','fixture','B');
       insert into public.healthlog_visits_old(user_id,notes) values('archive-a','A'),('archive-b','B');
       insert into public.authentication_mode_user_roles(id,email,role,auth_user_id)
        select n,u.email,r,u.id from (values(81,'viewer','${a.id}'::uuid),(82,'operator','${b.id}'),
@@ -106,6 +107,7 @@ export async function sharedAccessAcceptance({
     assert.equal(await sql("select count(*) from public.code_sensei_user_notes"),"2");
     await sql(`insert into ga_private.owner_links(app,legacy_id,auth_user_id) values('healthlog-archive','archive-a','${a.id}')`);
     await sql(installPolicies);
+    await sql(await candidate('05_code_sensei_isolation.sql'));
   });
   await check(
     "review candidates reject closed real Auth signup and enforce administrator preparation",
@@ -240,6 +242,54 @@ export async function sharedAccessAcceptance({
     assert.deepEqual(data(await unregistered.client.from("eagle_unit_progress").select("id"),"Unlisted shared admin"),[]);
     assert.equal(data(await b.client.from("eagle_unit_progress").update({notes:"edited"}).eq("unit_id",unit).select("id"),"Operator edit").length,1);
     assert.equal(data(await owner.client.from("eagle_unit_progress").select("id"),"Eagle admin read").length,1);
+  });
+  await check('Code_sensei private records and their children reject another account and an unregistered JWT', async () => {
+    const created = {};
+    const own = async (table, payload) => data(await a.client.from(table).insert(payload).select('*').single(), table);
+    for (const [table, payload] of [
+      ['code_sensei_progress',{roadmap_section:'practice',topic_id:'fixture',status:'done'}],
+      ['code_sensei_chat_history',{topic_id:'fixture',role:'user',message:'Retained chat'}],
+      ['code_sensei_revisions',{project_name:'fixture',revision_name:'one'}],
+      ['code_sensei_streaks',{study_date:'2026-11-26'}],
+      ['code_sensei_py_projects',{project_name:'fixture',view_mode:'single'}],
+      ['code_sensei_notebooks',{title:'fixture',url:'https://example.invalid/notebook'}],
+      ['code_sensei_exercises',{title:'fixture',category:'compose',language:'python'}],
+      ['code_sensei_player',{xp:42}],['code_sensei_daily',{day:'2026-11-26'}],
+      ['code_sensei_wrong_answers',{challenge_id:'fixture',topic_id:'fixture',question:'Q',correct_answer:'A'}],
+    ]) created[table] = await own(table,{...payload,user_id:legacyA});
+    created.code_sensei_attempts=await own('code_sensei_attempts',{exercise_id:created.code_sensei_exercises.id,attempt_number:1,code:'retained'});
+    created.code_sensei_mistakes=await own('code_sensei_mistakes',{exercise_id:created.code_sensei_exercises.id,attempt_id:created.code_sensei_attempts.id,language:'python',title:'retained'});
+    created.code_sensei_py_files=await own('code_sensei_py_files',{project_id:created.code_sensei_py_projects.id,filename:'main.py',code_content:'retained'});
+    created.code_sensei_revision_files=await own('code_sensei_revision_files',{revision_id:created.code_sensei_revisions.id,filename:'main.py',language:'python',file_content:'retained'});
+    for (const [table, row] of Object.entries(created)) {
+      for (const outsider of [b,unregistered]) {
+        assert.deepEqual(data(await outsider.client.from(table).select('id').eq('id',row.id),'Foreign read'),[]);
+        // Some retained source tables intentionally have no DELETE policy.
+        const deletion=await outsider.client.from(table).delete().eq('id',row.id).select('id');
+        if(deletion.error) denied(deletion,'Foreign deletion'); else assert.deepEqual(deletion.data,[]);
+      }
+      assert.equal(data(await a.client.from(table).select('id').eq('id',row.id),'Retained row').length,1);
+      denied(await client().from(table).select('id'),'Anonymous read');
+    }
+    for(const table of ['code_sensei_users','code_sensei_user_notes'])assert.deepEqual(data(await unregistered.client.from(table).select('id'),'Unmapped identity'),[]);
+    for(const table of ['code_sensei_challenges','code_sensei_course_days','code_sensei_diff_explanations','code_sensei_ecosystems','code_sensei_lesson_steps','code_sensei_lessons','code_sensei_line_explanations']) {
+      assert.deepEqual(data(await unregistered.client.from(table).select('*'),'Unmapped curriculum'),[]);
+      denied(await client().from(table).select('id'),'Anonymous curriculum');
+    }
+  });
+  await check('Code_sensei concurrent retries save once and failed project replacement keeps old files', async () => {
+    const exercise=data(await a.client.from('code_sensei_exercises').select('id').single(),'Saved exercise').id;
+    const operation={operation_id:randomUUID(),payload:{table:'code_sensei_attempts',action:'post',data:{exercise_id:exercise,attempt_number:2,code:'retry-safe'}}};
+    const [first,again]=await Promise.all([rpc(a,'code_sensei_apply_offline',operation),rpc(a,'code_sensei_apply_offline',operation)]);
+    assert.deepEqual(first,again);
+    assert.equal(data(await a.client.from('code_sensei_attempts').select('id').eq('attempt_number',2),'Single attempt').length,1);
+    const original=[{filename:'atomic.py',code_content:'retained bytes'}];
+    const save={project_id:null,project_name:'Atomic',view_mode:'single',files:original};
+    const project=await rpc(a,'code_sensei_save_project',save);
+    const failed=await a.client.rpc('code_sensei_save_project',{...save,project_id:project,files:[...original,{filename:null,code_content:'bad'}]});
+    requireThat(!!failed.error,'Invalid project replacement unexpectedly succeeded');
+    denied(await b.client.rpc('code_sensei_save_project',{...save,project_id:project}),'Foreign project replacement');
+    assert.deepEqual(data(await a.client.from('code_sensei_py_files').select('filename,code_content').eq('project_id',project),'Retained files'),original);
   });
   await check("signed Roadmap start, completion and undo preserve ownership through contention", async () => {
     const start = {p_task_id:task,p_day_key:"synthetic",p_source:"roadmap"};

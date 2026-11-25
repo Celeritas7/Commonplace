@@ -12,6 +12,12 @@ has deferred remaining restoration work while code development continues, and a
 private resume note preserves the latest local checkpoint. G0 remains uncleared;
 the observations below retain their original review date.
 
+**Code preparation update — 2026-11-26:** the
+[Code_sensei candidate](CODE-SENSEI-ISOLATION.md) covers all 23 observed tables
+with a companion opt-in client staging build and synthetic tests. It is unapplied.
+Verified ownership, old offline queues, client/device acceptance and the remaining
+shared-app gates still need closure. This does not clear G0.
+
 This checkpoint updates the earlier [General_apps review](GENERAL-APPS-REVIEW.md)
 without replacing its historical evidence. Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
