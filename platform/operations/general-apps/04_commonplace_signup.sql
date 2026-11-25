@@ -195,6 +195,17 @@ begin
  return target;
 end; $$;
 
+-- Read only: request preparation never opens this private admission gate.
+create function public.cp_admin_signup_status() returns jsonb
+language plpgsql stable security definer set search_path='' as $$
+declare signup_enabled boolean;
+begin
+ if not cp_private.is_admin() then raise exception 'administrator required' using errcode='42501'; end if;
+ select enabled into signup_enabled from cp_private.signup_control where id=true;
+ return jsonb_build_object('status',case when signup_enabled then 'enabled'
+  when signup_enabled=false then 'paused' else 'unavailable' end);
+end; $$;
+
 create function public.cp_admin_signup_directory() returns jsonb
 language plpgsql stable security definer set search_path='' as $$
 begin
@@ -212,9 +223,9 @@ language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function cp_private.is_commonplace_signup(uuid),cp_private.lock_signup(uuid,integer) from public,anon,authenticated,service_role;
 revoke all on function public.cp_admin_prepare_signup(text,integer),public.cp_admin_review_signup(uuid,integer,text,integer),
- public.cp_admin_complete_signup(uuid,integer,text),public.cp_admin_signup_directory() from public,anon,authenticated,service_role;
+ public.cp_admin_complete_signup(uuid,integer,text),public.cp_admin_signup_directory(),public.cp_admin_signup_status() from public,anon,authenticated,service_role;
 grant execute on function public.cp_admin_prepare_signup(text,integer),public.cp_admin_review_signup(uuid,integer,text,integer),
- public.cp_admin_complete_signup(uuid,integer,text),public.cp_admin_signup_directory() to authenticated;
+ public.cp_admin_complete_signup(uuid,integer,text),public.cp_admin_signup_directory(),public.cp_admin_signup_status() to authenticated;
 
 -- Lock the exact preapproval in the BEFORE gate. The Auth FK can be written
 -- only after insertion. Recheck uniqueness there before linking the same row.

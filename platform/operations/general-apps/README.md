@@ -97,6 +97,17 @@ In an enabled Admin Studio, open **Signup requests**. Preparing a normalized
 email creates a 24-hour request. Existing verified accounts without a reservation
 still use **Register a learner**. The new controls require the candidate RPCs.
 
+The read-only `cp_admin_signup_status()` RPC reports the private control as
+enabled or paused; a missing row reports unavailable. Only a verified active
+Commonplace administrator may read it. **Signup requests** displays that status
+on entry, after request actions and on manual reload. An older installation
+without the RPC, a failed read or an invalid response displays unavailable;
+an administrator permission denial clears the workspace. Preparing a request
+never opens signup, and this interface supplies no enable switch. The status
+describes this admission gate only, not provider readiness. These changes update
+the unapplied candidate; they do not apply it or authorize rerunning it against
+an existing installation.
+
 | Action | Effect |
 | --- | --- |
 | Prepare | Creates the first request for the address. A duplicate cannot renew or reopen an earlier decision. |

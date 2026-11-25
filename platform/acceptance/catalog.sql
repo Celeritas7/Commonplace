@@ -31,7 +31,8 @@ with expected_tables(name) as (values
   ('public.cp_admin_prepare_signup(text,integer)'),
   ('public.cp_admin_review_signup(uuid,integer,text,integer)'),
   ('public.cp_admin_complete_signup(uuid,integer,text)'),
-  ('public.cp_admin_signup_directory()')) signup(signature)
+  ('public.cp_admin_signup_directory()'),
+  ('public.cp_admin_signup_status()')) signup(signature)
  where to_regclass('cp_private.signup_control') is not null
 ), tables as (
  select c.*, n.nspname from pg_class c join pg_namespace n on n.oid=c.relnamespace

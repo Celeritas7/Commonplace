@@ -72,6 +72,7 @@ test("signup completion uses the displayed admission revision and clears stale o
       async rpc(name,args) {
         if(name==="cp_admin_directory")return {data:{members:[],sections:[]}};
         if(name==="cp_admin_signup_directory")return {data:[{...row}]};
+        if(name==="cp_admin_signup_status")return {data:{status:"paused"}};
         if(name==="cp_admin_complete_signup"){
           state.calls.push(args);
           row.revision++;
