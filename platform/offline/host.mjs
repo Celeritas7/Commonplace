@@ -3,6 +3,7 @@ import { importPublicKey } from "./lease.mjs";
 import { createPackManager } from "./packs.mjs";
 import { createOfflineSession } from "./session.mjs";
 import { createSyncStore } from "./sync-store.mjs";
+import { assertStudyBackupBytes } from "./backup.mjs";
 import { saveOfflineShell } from "./shell.mjs";
 import { mountLearningWorkspace } from "../learn/workspace.mjs";
 const el = (tag, text) => {
@@ -308,7 +309,7 @@ export async function mountOfflineLearning(
       file.value = "";
       if (!c || !chosen) return;
       try {
-        if (chosen.size > 8388608) throw Error("Study backup exceeds 8 MiB.");
+        assertStudyBackupBytes(chosen.size);
         const count = await sync.restore(c, await chosen.text(), c.client);
         session.check(c);
         await view.refresh();

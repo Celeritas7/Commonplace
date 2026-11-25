@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 test("offline sample saves a pack, cold-reopens without network, restores work and synchronizes on reconnect", async ({
   page,
   context,
@@ -350,6 +351,228 @@ test("backup restore keeps newer notes, is repeatable, and rejects another owner
     "Newer note",
   );
 });
+test("the downloaded 1,002-record backup above 8 MiB imports through the picker and preserves saved packs", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await fixture(page);
+  await pack(page);
+  await page
+    .getByLabel("Your notes", { exact: true })
+    .fill("Note before backup");
+  await page.getByRole("button", { name: "Bookmark", exact: true }).click();
+  await page.getByLabel("Formula for B5", { exact: true }).fill("=SUM(B2:B4)");
+  await page
+    .getByRole("button", { name: "Apply formula", exact: true })
+    .click();
+  await expect(
+    page.getByText("No changes waiting to sync.", { exact: true }),
+  ).toBeVisible();
+  const before = await page.evaluate(async () => {
+    const { ownedKey } = await import("/platform/offline/database.mjs");
+    const { initialAttempt, studyIdentity } = await import(
+      "/platform/learn/progress.mjs"
+    );
+    const existing = await u8.db.owned("study", u8.state.userId);
+    const note = existing.find((r) => r.data.identity.kind === "note");
+    await u8.db.update("study", note.key, (r) => {
+      r.history = Array.from({ length: 1001 }, (_, i) => ({
+        value: { version: 1, text: i + ":" + "界".repeat(3995) },
+        conflicts: [],
+      }));
+      return r;
+    });
+    const template = u8.state.items.get(u8.state.ids.quiz);
+    u8.backupExtraKeys = [];
+    for (let i = 1; i <= 333; i++) {
+      const m = {
+        ...structuredClone(template),
+        id: "40000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+      };
+      u8.state.items.set(m.id, m);
+      u8.state.allowed.add(m.id);
+      for (const kind of ["progress", "note", "bookmark"]) {
+        const identity = {
+          section: "office.excel",
+          kind,
+          id: await studyIdentity(m, null),
+        };
+        const value =
+          kind === "note"
+            ? { version: 1, text: "Synthetic saved note " + i }
+            : kind === "bookmark"
+              ? { version: 1, bookmarked: true }
+              : { ...initialAttempt(m), completed: true, responses: [0] };
+        const key = ownedKey(
+          u8.state.userId,
+          identity.section,
+          kind,
+          identity.id,
+        );
+        await u8.db.put("study", key, {
+          owner: u8.state.userId,
+          identity,
+          material: m.id,
+          value,
+          local_version: 1,
+          base_revision: "0",
+          base_value: null,
+          dirty: true,
+          pending: null,
+          conflicts: [],
+          history: [],
+        });
+        u8.backupExtraKeys.push(key);
+      }
+    }
+    return {
+      files: await Promise.all(
+        (await u8.db.all("files")).map(async (r) => ({
+          key: r.key,
+          bytes: Array.from(new Uint8Array(await r.data.arrayBuffer())),
+        })),
+      ),
+      documents: await u8.db.all("documents"),
+      packKeys: (await u8.db.all("packs")).map((r) => r.key),
+      downloads: u8.state.calls.filter((n) => n === "material-files").length,
+    };
+  });
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export study backup" }).click();
+  const file = await download,
+    bytes = await readFile(await file.path());
+  expect(file.suggestedFilename()).toBe("Commonplace-study-backup.json");
+  expect(bytes.length).toBeGreaterThan(8 * 1024 * 1024);
+  const backup = JSON.parse(bytes.toString("utf8"));
+  expect(backup.version).toBe(1);
+  expect(backup.records).toHaveLength(1002);
+  await page
+    .getByLabel("Your notes", { exact: true })
+    .fill("Newer note on this device");
+  await expect(page.locator(".learn-save-status")).toContainText(
+    "Saved on this device",
+  );
+  // Remove only synthetic extra study rows; retain packs and current lesson work.
+  await page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const open = indexedDB.open("commonplace-u8:" + u8.namespace);
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result,
+            tx = db.transaction("study", "readwrite");
+          for (const key of u8.backupExtraKeys)
+            tx.objectStore("study").delete(key);
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      }),
+  );
+  const input = page.locator("input[type=file]");
+  await input.setInputFiles({
+    name: file.suggestedFilename(),
+    mimeType: "application/json",
+    buffer: bytes,
+  });
+  await expect(page.getByText(/Restored 1002 study record/)).toBeVisible({
+    timeout: 20000,
+  });
+  await expect(page.getByLabel("Your notes", { exact: true })).toHaveValue(
+    "Newer note on this device",
+  );
+  await expect(
+    page.getByRole("button", { name: "Bookmarked", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("B5 total", { exact: true })).toHaveText("25");
+  const after = await page.evaluate(async () => {
+    const rows = await u8.db.owned("study", u8.state.userId);
+    const note = rows.find(
+      (r) =>
+        r.data.identity.kind === "note" && !u8.backupExtraKeys.includes(r.key),
+    ).data;
+    return {
+      rows: rows.map((r) => ({
+        identity: r.data.identity,
+        value: r.data.value,
+      })),
+      keptConflict: note.conflicts.some(
+        (c) => c.source === "backup" && c.value.text === "Note before backup",
+      ),
+      keptHistory: note.history.some(
+        (h) => h.value.text === "1000:" + "界".repeat(3995),
+      ),
+      files: await Promise.all(
+        (await u8.db.all("files")).map(async (r) => ({
+          key: r.key,
+          bytes: Array.from(new Uint8Array(await r.data.arrayBuffer())),
+        })),
+      ),
+      documents: await u8.db.all("documents"),
+      packKeys: (await u8.db.all("packs")).map((r) => r.key),
+      downloads: u8.state.calls.filter((n) => n === "material-files").length,
+    };
+  });
+  expect(after.rows).toHaveLength(1002);
+  const recovered = new Map(
+    after.rows.map((r) => [JSON.stringify(r.identity), r.value]),
+  );
+  for (const row of backup.records.filter((r) =>
+    r.material.startsWith("40000000-"),
+  ))
+    expect(recovered.get(JSON.stringify(row.identity))).toEqual(row.value);
+  expect(after.keptConflict).toBe(true);
+  expect(after.keptHistory).toBe(true);
+  for (const key of ["files", "documents", "packKeys", "downloads"])
+    expect(after[key]).toEqual(before[key]);
+  await input.setInputFiles({
+    name: file.suggestedFilename(),
+    mimeType: "application/json",
+    buffer: bytes,
+  });
+  await expect(page.getByText(/Restored 0 study record/)).toBeVisible({
+    timeout: 20000,
+  });
+});
+
+test("the file picker rejects oversized backups before reading or changing saved study", async ({
+  page,
+}) => {
+  await fixture(page);
+  const before = await page.evaluate(async () => {
+    u8.backupReads = 0;
+    const original = File.prototype.text;
+    File.prototype.text = function () {
+      u8.backupReads++;
+      return original.call(this);
+    };
+    return (await u8.db.all("study")).map((r) => ({
+      key: r.key,
+      value: r.data.value,
+    }));
+  });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "too-large.json",
+    mimeType: "application/json",
+    buffer: Buffer.alloc(32 * 1024 * 1024 + 1, 32),
+  });
+  await expect(page.getByText(/Study backup exceeds 32 MiB/)).toBeVisible();
+  expect(await page.evaluate(() => u8.backupReads)).toBe(0);
+  expect(
+    await page.evaluate(async () =>
+      (await u8.db.all("study")).map((r) => ({
+        key: r.key,
+        value: r.data.value,
+      })),
+    ),
+  ).toEqual(before);
+});
+
 test("saved status waits for queued worksheet and note writes to become durable", async ({
   page,
 }) => {
