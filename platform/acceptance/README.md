@@ -4,6 +4,9 @@ U9 has two kinds of evidence: repeatable tests of this repository, and acceptanc
 of the actual hosted deployment and physical devices. Passing one does not imply
 the other. The live entry remains `deployment = null`. See the current
 [readiness assessment](../../docs/admin-platform/U9-READINESS.md).
+The next U9 checkpoint adds [disposable full Supabase integration](LOCAL-STACK.md)
+with real local Auth, PostgreSQL, REST, Storage and Edge services. It does not
+provision a hosted staging project or replace the hosted/device gates below.
 
 ## Repeat the automated checks
 
@@ -24,7 +27,7 @@ real emails, a paid service or a production database.
 
 | Evidence | What it establishes | Limit |
 | --- | --- | --- |
-| Final migration catalog and role matrix | All five migrations together retain default-deny, UUID ownership, admin-only writes, private files and CAS synchronization | PGlite uses a minimal Auth/Storage fixture and SQL roles, not real JWTs or HTTP services |
+| Final migration catalog and role matrix | The complete migration chain retains default-deny, UUID ownership, admin-only writes, private files and CAS synchronization | PGlite uses a minimal Auth/Storage fixture and SQL roles, not real JWTs or HTTP services |
 | Deliberate permission drift | The read-only preflight catches missing functions, disabled RLS, anonymous execution and excess table/column grants | A catalog check is not a policy semantics or whole-project audit |
 | U7 → U8 snapshot restore | Synthetic old/new study records, all platform table contents, revisions, audit, grants and RLS survive an isolated PGlite dump/reload; retry stays idempotent | Not a hosted `pg_dump`/Auth/Storage byte restore, disaster recovery certification or migration reversal |
 | Real worker code in controlled failures | Partial application downloads cannot report ready or serve partial shells; failed updates preserve the old shell; unchanged assets are reused; legacy caches and OAuth URLs are preserved | Cache/worker API harness, not an iPad lifecycle test |
@@ -60,7 +63,7 @@ review the entire existing project's exposed surface; a prefix is not isolation.
 Do not provision paid resources or modify the shared project as part of merely
 running this repository's tests.
 
-1. Record the target, origin, PostgreSQL version, source SHA, five migration file
+1. Record the target, origin, PostgreSQL version, source SHA, all migration file
    checksums, dependency lock checksum, exposed schemas and reviewed advisors.
    Confirm `cp_private` is not exposed. Verify backup scope and restore evidence
    before applying anything to a database containing valued data.
@@ -95,8 +98,9 @@ running this repository's tests.
 
 Record request class, role label, expected/actual outcome and time. Never record
 Authorization headers, JWTs, learner emails, personal notes or signing keys in
-public reports. Store private evidence separately. No blanket migration, owner
-creation, test account creation or hosted request runner is triggered by CI.
+public reports. Store private evidence separately. CI creates synthetic users and
+applies migrations only inside its fresh disposable local stack. It never applies
+migrations, creates owners/users or sends acceptance requests to a hosted project.
 
 ## Physical iPad / Android acceptance
 

@@ -213,6 +213,54 @@ test("U9 final migrated catalog and authorization boundaries", async (t) => {
   }
 });
 
+test("U9 forward lock migration preserves all data and function authority", async () => {
+  const db = await createAcceptanceDatabase({ beforeU9: true });
+  try {
+    await seedAcceptance(db);
+    const rowsBefore = await snapshot(db);
+    const lockBefore = (
+      await db.query("select * from cp_private.mutation_lock")
+    ).rows;
+    const catalog = `select to_jsonb(p) properties from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='cp_private' or (n.nspname='public' and left(p.proname,3)='cp_') order by p.oid`;
+    const before = (await db.query(catalog)).rows;
+    const file = (
+      await readdir(new URL("../supabase/migrations/", import.meta.url))
+    ).find((f) => f.includes("_u9_"));
+    await db.exec(
+      await readFile(
+        new URL("../supabase/migrations/" + file, import.meta.url),
+        "utf8",
+      ),
+    );
+    const after = (await db.query(catalog)).rows;
+    let replaced = 0;
+    for (const row of before) {
+      const body = row.properties.prosrc;
+      if (!body.includes("update cp_private.mutation_lock")) continue;
+      replaced++;
+      row.properties.prosrc = body.replace(
+        /(update cp_private\.mutation_lock set revision\s*=\s*revision\s*\+\s*1);/,
+        "$1 where id = true;",
+      );
+    }
+    assert.equal(replaced, 10);
+    assert.deepEqual(
+      after,
+      before,
+      "Only the lock predicate may change; preserve owner/ACL/search_path/definer/signature/OID",
+    );
+    assert.deepEqual(await snapshot(db), rowsBefore);
+    assert.deepEqual(
+      (await db.query("select * from cp_private.mutation_lock")).rows,
+      lockBefore,
+    );
+    assert.deepEqual((await db.query(preflight)).rows, []);
+  } finally {
+    await db.close();
+  }
+});
+
 test("U9 isolated snapshot restore preserves data, revisions, ACLs and denial after U7 to U8 upgrade", async () => {
   const db = await createAcceptanceDatabase({ beforeU8: true });
   let restored;
