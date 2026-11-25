@@ -29,16 +29,23 @@ const config = {
   offline_hours: 1,
   offline_public_jwk: await crypto.subtle.exportKey("jwk", keys.publicKey),
 };
-test("staging configuration refuses shared projects, secret keys, private signing keys and origin/path overrides", () => {
+test("staging configuration accepts selected General_apps but refuses Technical, secret keys and unsafe overrides", () => {
   assert.equal(
     validateStagingConfiguration(config).project_ref,
     config.project_ref,
   );
+  assert.equal(
+    validateStagingConfiguration({
+      ...config,
+      project_ref: "wylxvmkcrexwfpjpbhyy",
+    }).project_ref,
+    "wylxvmkcrexwfpjpbhyy",
+  );
   for (const patch of [
     { environment: "production" },
-    { project_ref: "wylxvmkcrexwfpjpbhyy" },
     { project_ref: "ulgrfumbwjovbjzjiems" },
     { origin: "https://celeritas7.github.io" },
+    { origin: "https://commonplace-gamma.vercel.app" },
     { origin: "http://example.invalid" },
     { origin: config.origin + "/path" },
     { origin: "https://user@example.invalid" },
@@ -237,6 +244,8 @@ test("staging package contains complete hashed public dependencies, separate Edg
     });
     assert.equal(review.deployed, false);
     assert.equal(review.migrations_applied, false);
+    assert.equal(review.backend_scope, "unverified");
+    assert.equal(review.hosted_readiness, "not-assessed-by-package-builder");
     assert.equal(
       Object.keys(review.files).filter((p) =>
         p.startsWith("server/supabase/migrations/"),
@@ -255,11 +264,22 @@ test("staging package contains complete hashed public dependencies, separate Edg
         createHash("sha256").update(bytes).digest("hex"),
         meta.sha256,
       );
-      if (path.endsWith(".sql"))
+      if (path.startsWith("server/supabase/migrations/"))
         assert.deepEqual(
           bytes,
           await readFile(
             join(repositoryRoot, "platform", path.slice("server/".length)),
+          ),
+        );
+      if (path.startsWith("server/preflight/"))
+        assert.deepEqual(
+          bytes,
+          await readFile(
+            join(
+              repositoryRoot,
+              "platform/acceptance",
+              path.slice("server/preflight/".length),
+            ),
           ),
         );
     }
@@ -307,6 +327,39 @@ test("staging package contains complete hashed public dependencies, separate Edg
         }),
       /empty output/,
     );
+  } finally {
+    await rm(output, { recursive: true, force: true });
+  }
+});
+test("General_apps review package preserves separate auth storage and marks the backend shared without certifying readiness", async () => {
+  const output = await mkdtemp(join(tmpdir(), "cp-general-apps-test-"));
+  try {
+    const generalApps = { ...config, project_ref: "wylxvmkcrexwfpjpbhyy" };
+    const review = await buildStagingPackage({
+      output,
+      configuration: generalApps,
+      sourceCommit: "2".repeat(40),
+    });
+    assert.equal(review.project_ref, generalApps.project_ref);
+    assert.equal(review.backend_scope, "shared-existing");
+    assert.equal(review.hosted_readiness, "not-assessed-by-package-builder");
+    assert.equal(review.deployed, false);
+    assert.equal(review.migrations_applied, false);
+    assert.equal(
+      stagingClientOptions(generalApps).auth.storageKey,
+      "cp:commonplace-staging-wylxvmkcrexwfpjpbhyy:auth",
+    );
+    for (const name of ["shared-project-catalog.sql", "GENERAL-APPS-TARGET.md"])
+      assert.ok(review.files["server/preflight/" + name]);
+    assert.ok(
+      !Object.keys(review.files).some(
+        (path) => path.startsWith("public/") && /preflight|GENERAL-APPS-TARGET/.test(path),
+      ),
+    );
+    const source = await readFile(
+      join(repositoryRoot, "platform/auth/config.mjs"), "utf8",
+    );
+    assert.match(source, /export const authConfiguration = null;/);
   } finally {
     await rm(output, { recursive: true, force: true });
   }
