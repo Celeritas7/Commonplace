@@ -12,11 +12,16 @@ begin
   ('public.cp_admin_profile(uuid)','487cfe9b66d84716c36c63660b81f826'),
   ('public.cp_read_material(uuid)','b417100e57d42e31d1286a4df8d5d152'),
   ('public.cp_offline_snapshot(text)','7986bad4cc5fb7b57ae0847151ffc231'),
-  ('public.cp_admin_register(text,text)','dfc8462dcce068f277e062c2322e08d2')
+  ('public.cp_admin_register(text,text)','dfc8462dcce068f277e062c2322e08d2'),
+  ('cp_private.material_admin_lock()','f659c1b74df8f62b0ddb04cbe663a3cb'),
+  ('public.cp_set_learner(uuid,text,text)','8ac4e5f4dd14d55c463f8611a0dc21b9')
  ) foundation(signature,body_hash) where not exists(
   select 1 from pg_proc p where p.oid=to_regprocedure(foundation.signature)
+  and pg_get_userbyid(p.proowner)='postgres' and p.proconfig @> array['search_path=""']
+  and p.prosecdef=(foundation.signature not in ('cp_private.bump_member_revision()','public.cp_offline_snapshot(text)'))
   and md5(replace(p.prosrc,E'\r\n',E'\n'))=foundation.body_hash
  )) then raise exception 'complete reviewed U1 through U9 foundation required'; end if;
+ if not exists(select 1 from cp_private.mutation_lock where id=true) then raise exception 'administrator mutation lock required'; end if;
  for expected in select * from (values
   ('chatak_enforce_allowlist()','8422957d42e1adb8cebab426a677377e'),
   ('chatak_handle_new_user()','48f98a54655222bd7289a2aa25785848'),
@@ -211,6 +216,20 @@ revoke all on function public.cp_admin_prepare_signup(text,integer),public.cp_ad
 grant execute on function public.cp_admin_prepare_signup(text,integer),public.cp_admin_review_signup(uuid,integer,text,integer),
  public.cp_admin_complete_signup(uuid,integer,text),public.cp_admin_signup_directory() to authenticated;
 
+-- Lock the exact preapproval in the BEFORE gate. The Auth FK can be written
+-- only after insertion. Recheck uniqueness there before linking the same row.
+create function cp_private.legacy_signup_approval(login_email text,identity_id uuid) returns public.authentication_mode_user_roles.id%type
+language plpgsql security definer set search_path='' as $$
+declare approved public.authentication_mode_user_roles;
+begin
+ select * into strict approved from public.authentication_mode_user_roles
+  where lower(email)=lower(login_email) for update;
+ if approved.auth_user_id is not null and approved.auth_user_id<>identity_id then raise exception 'not_allowed'; end if;
+ return approved.id;
+exception when no_data_found or too_many_rows then raise exception 'not_allowed';
+end; $$;
+revoke all on function cp_private.legacy_signup_approval(text,uuid) from public,anon,authenticated,service_role;
+
 create or replace function public.chatak_enforce_allowlist() returns trigger
 language plpgsql security definer set search_path='' as $$
 declare s cp_private.signup_admissions; claim_time timestamptz;
@@ -225,24 +244,18 @@ begin
   update cp_private.signup_admissions set claimed_user_id=new.id,claimed_at=claim_time,revision=revision+1 where id=s.id;
   return new;
  end if;
- -- Legacy admission is checked again when the Auth row can satisfy its FK.
- if not exists(select 1 from public.authentication_mode_user_roles where lower(email)=lower(new.email)) then raise exception 'not_allowed'; end if;
+ perform cp_private.legacy_signup_approval(new.email,new.id);
  return new;
 end; $$;
 
 create or replace function public.chatak_link_auth_user() returns trigger
 language plpgsql security definer set search_path='' as $$
-declare approved public.authentication_mode_user_roles;
+declare approval_id public.authentication_mode_user_roles.id%type;
 begin
  if cp_private.is_commonplace_signup(new.id) then return new; end if;
- begin
-  select * into strict approved from public.authentication_mode_user_roles where lower(email)=lower(new.email) for update;
- exception when no_data_found or too_many_rows then raise exception 'not_allowed';
- end;
- if approved.auth_user_id is null then
-  update public.authentication_mode_user_roles set auth_user_id=new.id,updated_at=now() where id=approved.id;
- elsif approved.auth_user_id<>new.id then raise exception 'not_allowed';
- end if;
+ approval_id:=cp_private.legacy_signup_approval(new.email,new.id);
+ update public.authentication_mode_user_roles set auth_user_id=new.id,updated_at=now()
+  where id=approval_id and auth_user_id is null;
  return new;
 end; $$;
 
