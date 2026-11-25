@@ -349,15 +349,27 @@ test("General_apps review package preserves separate auth storage and marks the 
       stagingClientOptions(generalApps).auth.storageKey,
       "cp:commonplace-staging-wylxvmkcrexwfpjpbhyy:auth",
     );
-    for (const name of ["shared-project-catalog.sql", "GENERAL-APPS-TARGET.md", "GENERAL-APPS-REVIEW.md"])
+    for (const name of [
+      "shared-project-catalog.sql",
+      "GENERAL-APPS-TARGET.md",
+      "GENERAL-APPS-REVIEW.md",
+    ])
       assert.ok(review.files["server/preflight/" + name]);
     assert.ok(
+      !Object.keys(review.files).some((path) =>
+        /general-apps\/|shared-access-fixture|capture-recovery/.test(path),
+      ),
+    );
+    assert.ok(
       !Object.keys(review.files).some(
-        (path) => path.startsWith("public/") && /preflight|GENERAL-APPS-(TARGET|REVIEW)/.test(path),
+        (path) =>
+          path.startsWith("public/") &&
+          /preflight|GENERAL-APPS-(TARGET|REVIEW)/.test(path),
       ),
     );
     const source = await readFile(
-      join(repositoryRoot, "platform/auth/config.mjs"), "utf8",
+      join(repositoryRoot, "platform/auth/config.mjs"),
+      "utf8",
     );
     assert.match(source, /export const authConfiguration = null;/);
   } finally {

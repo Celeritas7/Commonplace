@@ -106,6 +106,13 @@ unspecified. No cross-project identity or progress transfer is required.
 
 ## Reproducible local evidence
 
+The follow-up [R1/R2 preparation package](../operations/general-apps/README.md)
+now contains guarded SQL/Edge candidates, local recovery identity capture and
+regression checks. R1 still needs the exact Windows restore-input identity.
+R2 client cutovers, live mappings and the remaining shared-app surface are open;
+no candidate was applied to General_apps. The package remains outside automatic
+migration discovery and normal staging artifacts.
+
 `tests/shared-project-review.test.mjs` uses synthetic identities, names and records
 in isolated PostgreSQL to reproduce owner-versus-unrestricted policy behavior,
 signup-trigger dependencies and a privileged UPSERT conflict path. Passing these

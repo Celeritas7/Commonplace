@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { verifyLease } from "../offline/lease.mjs";
+import { sharedAccessAcceptance } from "./shared-access-local.mjs";
 import {
   assertLocalStatus,
   safeDiagnostic,
@@ -721,6 +722,18 @@ async function main() {
       );
     },
   );
+  await sharedAccessAcceptance({
+    sql,
+    check,
+    client,
+    owner,
+    rpc,
+    data,
+    denied,
+    requireThat,
+    pause,
+    secrets,
+  });
   console.log(
     `PASS ${passed} local Supabase integration groups; hosted/device approval remains pending.`,
   );
