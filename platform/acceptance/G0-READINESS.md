@@ -5,6 +5,13 @@ Reviewed Commonplace `main` at `fca5040a467ea928b1f8b5e4c5cae6622c42af97`
 (merged PR #103). General_apps remains the selected backend. Hosted changes,
 learner enrollment and advancement to G1 remain on hold.
 
+**Preparation update — 2026-11-26:** the
+[signup compatibility change](SIGNUP-COMPATIBILITY.md) reconciles the candidate
+with the hardened baseline described below; it has not been installed. The user
+has deferred remaining restoration work while code development continues, and a
+private resume note preserves the latest local checkpoint. G0 remains uncleared;
+the observations below retain their original review date.
+
 This checkpoint updates the earlier [General_apps review](GENERAL-APPS-REVIEW.md)
 without replacing its historical evidence. Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged

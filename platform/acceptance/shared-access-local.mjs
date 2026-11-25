@@ -28,7 +28,7 @@ export async function sharedAccessAcceptance({
   const email = `cp-admission-${tag}@example.invalid`,
     password = randomBytes(24).toString("base64url");
   secrets.push(email, password);
-  let actor, admission;
+  let actor, admission, baselineLegacy;
   const signupRow = async id => (await rpc(owner, "cp_admin_signup_directory")).find(row => row.id === id);
   const legacyA = randomUUID(), legacyB = randomUUID(), task = randomUUID(), unit = randomUUID();
   // Keep both connections alive until PostgreSQL confirms the expected blocker.
@@ -59,10 +59,30 @@ export async function sharedAccessAcceptance({
     for (const result of results) if (result.status === "rejected") throw result.reason;
   }
 
-  await check("ownership cutover observes committed mapping changes and preserves records on refusal", async () => {
+  await check("hardened legacy Auth rejects anonymous signup and retains the approved viewer role", async () => {
     await sql(legacyFixture);
+    const address=`legacy-baseline-${tag}@example.invalid`;
+    secrets.push(address);
+    await sql(`insert into public.authentication_mode_user_roles(id,email,role) values(70,'${address}','viewer')`);
+    await assert.rejects(() => sql(`insert into auth.users(id,email,is_anonymous)
+      values('${randomUUID()}','${address}',true)`), /not_allowed/);
+    const result=data(await client().auth.signUp({email:address,password,options:{data:{role:"admin"}}}),"Hardened baseline signup");
+    requireThat(result.user && /^[a-f0-9-]{36}$/.test(result.user.id),"Missing baseline identity");
+    baselineLegacy=result.user.id;
+    if(result.session) secrets.push(result.session.access_token,result.session.refresh_token);
+    assert.equal(await sql(`select role from public.authentication_mode_user_roles where auth_user_id='${baselineLegacy}'`),"viewer");
+    assert.equal(await sql(`select count(*) from public.chatak_profiles where id='${baselineLegacy}'`),"1");
+    assert.equal(await sql(`select count(*) from public.alarm_settings where user_id='${baselineLegacy}'`),"1");
+  });
+
+  await check("ownership cutover observes committed mapping changes and preserves records on refusal", async () => {
+    const roleHelper=await sql("select pg_get_functiondef('public.chatak_role()'::regprocedure)");
     for (const name of ["01_access_foundation.sql","03_roadmap_session_owner.sql","04_commonplace_signup.sql"])
       await sql(await candidate(name));
+    assert.equal(await sql("select pg_get_functiondef('public.chatak_role()'::regprocedure)"),roleHelper);
+    assert.equal(await sql(`select role from public.authentication_mode_user_roles where auth_user_id='${baselineLegacy}'`),"viewer");
+    assert.equal(await sql(`select count(*) from public.chatak_profiles where id='${baselineLegacy}'`),"1");
+    assert.equal(await sql(`select count(*) from public.alarm_settings where user_id='${baselineLegacy}'`),"1");
     await sql(`insert into public.code_sensei_users(id) values('${legacyA}'),('${legacyB}');
       insert into public.code_sensei_user_notes(user_id,note_text) values('${legacyA}','A'),('${legacyB}','B');
       insert into public.healthlog_visits_old(user_id,notes) values('archive-a','A'),('archive-b','B');
@@ -244,6 +264,12 @@ export async function sharedAccessAcceptance({
         "update cp_private.signup_control set enabled=true where id=true;",
       );
       assert.deepEqual(await rpc(owner, "cp_admin_signup_status"), { status: "enabled" });
+      for (const flag of ["true","null"]) {
+        await assert.rejects(() => sql(`insert into auth.users(id,email,is_anonymous)
+          values('${randomUUID()}','${email}',${flag})`),/not_allowed/);
+        requireThat((await signupRow(admission)).claimed_user_id === null,
+          "Invalid identity consumed a Commonplace admission");
+      }
       const result = data(
         await client().auth.signUp({
           email,

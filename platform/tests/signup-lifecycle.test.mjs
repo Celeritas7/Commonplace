@@ -49,7 +49,7 @@ test("signup decisions preserve identity and are scoped to one administrator rev
     await t.test("conflicting or ambiguous legacy approval never moves a role or creates downstream records",async()=>{
       const old=users.a, fresh=randomUUID(), address="old-address@example.invalid";
       await system("insert into authentication_mode_user_roles(id,email,role,auth_user_id) values(11,$1,'viewer',$2)",[address,old]);
-      await assert.rejects(()=>insert(fresh,address),/not_allowed/);
+      await assert.rejects(()=>insert(fresh,address),code("42501"));
       const original=(await system("select auth_user_id,role from authentication_mode_user_roles where id=11")).rows[0];
       assert.deepEqual(original,{auth_user_id:old,role:"viewer"});
       await system("insert into authentication_mode_user_roles(id,email,role) values(12,'two@example.invalid','viewer'),(13,'Two@example.invalid','operator')");
