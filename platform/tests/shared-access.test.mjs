@@ -832,3 +832,25 @@ test("containment preserves grants and commits independent stops on Roadmap drif
     await db.close();
   }
 });
+
+test("a missing Roadmap control still allows both routine ACLs to be closed", async () => {
+  const db = await createAcceptanceDatabase();
+  const signatures = [
+    "public.roadmap_start_session(uuid,text,text)",
+    "public.roadmap_complete_session(uuid,text,text,integer,jsonb,text)",
+  ];
+  const executable = async signature => (await db.query(
+    "select has_function_privilege('authenticated',$1::text,'execute') ok", [signature],
+  )).rows[0].ok;
+  try {
+    await db.exec(legacyFixture);
+    await db.exec(await candidate("01_access_foundation.sql"));
+    await db.exec(await candidate("03_roadmap_session_owner.sql"));
+    for (const signature of signatures) assert.ok(await executable(signature));
+    await db.exec("delete from ga_private.roadmap_control where id");
+    const stop=await candidate("90_containment.sql");
+    await assert.rejects(() => db.exec(stop), /Containment incomplete:.*roadmap pause/);
+    await db.exec("rollback");
+    for (const signature of signatures) assert.equal(await executable(signature), false);
+  } finally { await db.close(); }
+});

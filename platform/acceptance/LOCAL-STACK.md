@@ -93,9 +93,9 @@ an actual Auth/Storage backup restore, or production rollout/rollback. The local
 stack's pinned CLI and upstream service versions can also differ from the eventual
 hosted target. Follow [the hosted and device runbook](README.md) before activation.
 
-The connected organization had two existing projects and no selected staging
-project when this checkpoint began. A separate hosted target and its cost/origin
-decision remain open. This PR does not use a shared project as a substitute.
+The selected hosted backend is General_apps. This disposable test uses its own
+synthetic local services. The separate HTTPS staging origin and shared-project
+acceptance gates are recorded in [the hosted runbook](HOSTED-STAGING.md).
 
 ## Regression found by real integration
 

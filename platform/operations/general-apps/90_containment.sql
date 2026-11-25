@@ -28,10 +28,18 @@ end $$;
 commit;
 
 begin;
-do $$ declare signature text; routine regprocedure; role_name text;
-begin
+do $$ begin
  update ga_private.roadmap_control set paused=true where id;
  if not found then raise exception 'missing Roadmap control'; end if;
+ insert into pg_temp.ga_containment_result values('roadmap pause','stopped');
+exception when others then
+ insert into pg_temp.ga_containment_result values('roadmap pause','check required: '||sqlstate);
+end $$;
+commit;
+
+begin;
+do $$ declare signature text; routine regprocedure; role_name text;
+begin
  foreach signature in array array['public.roadmap_start_session(uuid,text,text)',
   'public.roadmap_complete_session(uuid,text,text,integer,jsonb,text)'] loop
   begin
@@ -40,7 +48,7 @@ begin
    execute format('revoke execute on function %s from public,anon,authenticated,service_role',routine);
    foreach role_name in array array['anon','authenticated','service_role'] loop
     if has_function_privilege(role_name,routine,'execute') then
-     insert into pg_temp.ga_containment_result values(signature,'paused; inherited execution requires review');
+     insert into pg_temp.ga_containment_result values(signature,'inherited execution requires review');
      exit;
     end if;
    end loop;
@@ -49,8 +57,6 @@ begin
    insert into pg_temp.ga_containment_result values(signature,'check required: '||sqlstate);
   end;
  end loop;
-exception when others then
- insert into pg_temp.ga_containment_result values('roadmap','check required: '||sqlstate);
 end $$;
 commit;
 
