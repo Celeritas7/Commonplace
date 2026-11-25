@@ -13,9 +13,14 @@ Registering a learner, granting section access and assigning published materials
 remain separate administrator actions.
 
 The [current G0 checkpoint](G0-READINESS.md) keeps deployment on hold and records
-new shared-trigger drift: candidate 04 requires a compatibility review before
-installation. Reuse completed recovery work; merging the checkpoint does not
+new shared-trigger drift: the [compatibility preparation](SIGNUP-COMPATIBILITY.md)
+updates candidate 04, with hosted acceptance still pending. Reuse completed
+recovery work; merging the checkpoint does not
 clear G0 or authorize advancing to G1.
+
+Remaining restoration verification is deferred at the user's request while code
+development and synthetic tests continue. Retain the private resume checkpoint;
+complete recovery before live database/Auth changes or learner release.
 
 ## Before any hosted change
 

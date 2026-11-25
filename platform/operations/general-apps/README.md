@@ -12,6 +12,12 @@ before execution. Candidate 04 depends on all six CP migrations and follows owne
 verification/bootstrap; it is not an early shared repair to apply before that
 foundation. Installing it leaves new Commonplace signup paused.
 
+Candidate 04's [2026-11-26 compatibility update](../../acceptance/SIGNUP-COMPATIBILITY.md)
+requires the current hardened Auth baseline and preserves its identity, link and
+settings checks. It is still unapplied and is not a replayable upgrade. Remaining
+restoration verification is deferred while code work continues; it remains a
+live-rollout prerequisite, with the resume details retained privately.
+
 This is the first concrete repair package from the
 [General_apps review](../../acceptance/GENERAL-APPS-REVIEW.md). It does not close
 every shared-app finding or prove recovery. The existing personal study system,

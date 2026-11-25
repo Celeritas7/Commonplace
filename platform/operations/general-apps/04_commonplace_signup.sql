@@ -1,5 +1,6 @@
 -- REVIEW CANDIDATE ONLY; requires the six CP migrations and reviewed legacy
--- trigger definitions. The new signup path is installed CLOSED.
+-- hardened trigger definitions. The new signup path is installed CLOSED.
+-- Preparation only: not an upgrade/replay script for an installed candidate.
 begin;
 do $$
 declare expected record;
@@ -22,14 +23,21 @@ begin
   and md5(replace(p.prosrc,E'\r\n',E'\n'))=foundation.body_hash
  )) then raise exception 'complete reviewed U1 through U9 foundation required'; end if;
  if not exists(select 1 from cp_private.mutation_lock where id=true) then raise exception 'administrator mutation lock required'; end if;
+ if not exists(select 1 from pg_attribute where attrelid='auth.users'::regclass
+  and attname='is_anonymous' and atttypid='boolean'::regtype and not attisdropped) then
+  raise exception 'reviewed Auth identity shape required';
+ end if;
+ -- Reviewed hardened baseline; neither the old permissive routines nor a
+ -- changed execution configuration may be silently accepted.
  for expected in select * from (values
-  ('chatak_enforce_allowlist()','8422957d42e1adb8cebab426a677377e'),
-  ('chatak_handle_new_user()','48f98a54655222bd7289a2aa25785848'),
-  ('chatak_link_auth_user()','f2af9f153b6d887b3f496572c32a588c'),
-  ('handle_new_user()','ac6e1b4921b4fbe5fa393246e0234e74')) reviewed(signature,body_hash)
+  ('chatak_enforce_allowlist()','9648e02701ec0e1a252555a440332974','search_path=""'),
+  ('chatak_handle_new_user()','48f98a54655222bd7289a2aa25785848','search_path=public'),
+  ('chatak_link_auth_user()','bf25dc2ff8f698fd694a97801478da3c','search_path=""'),
+  ('handle_new_user()','84adae8817ca5b4e889da3632fba57e8','search_path=""')) reviewed(signature,body_hash,configuration)
  loop
   if not exists(select 1 from pg_proc p where p.oid=to_regprocedure('public.'||expected.signature)
    and p.prosecdef and p.prorettype='trigger'::regtype and pg_get_userbyid(p.proowner)='postgres'
+   and p.proconfig=array[expected.configuration]
    and md5(replace(p.prosrc,E'\r\n',E'\n'))=expected.body_hash) then
    raise exception 'signup definition changed since review';
   end if;
@@ -229,14 +237,17 @@ grant execute on function public.cp_admin_prepare_signup(text,integer),public.cp
 
 -- Lock the exact preapproval in the BEFORE gate. The Auth FK can be written
 -- only after insertion. Recheck uniqueness there before linking the same row.
-create function cp_private.legacy_signup_approval(login_email text,identity_id uuid) returns public.authentication_mode_user_roles.id%type
+create function cp_private.legacy_signup_approval(login_email text,identity_id uuid) returns public.authentication_mode_user_roles
 language plpgsql security definer set search_path='' as $$
 declare approved public.authentication_mode_user_roles;
 begin
+ if identity_id is null or login_email is null or btrim(login_email)='' then raise exception 'not_allowed'; end if;
  select * into strict approved from public.authentication_mode_user_roles
   where lower(email)=lower(login_email) for update;
- if approved.auth_user_id is not null and approved.auth_user_id<>identity_id then raise exception 'not_allowed'; end if;
- return approved.id;
+ if approved.auth_user_id is not null and approved.auth_user_id is distinct from identity_id then
+  raise exception using errcode='42501',message='registry_link_conflict';
+ end if;
+ return approved;
 exception when no_data_found or too_many_rows then raise exception 'not_allowed';
 end; $$;
 revoke all on function cp_private.legacy_signup_approval(text,uuid) from public,anon,authenticated,service_role;
@@ -245,6 +256,10 @@ create or replace function public.chatak_enforce_allowlist() returns trigger
 language plpgsql security definer set search_path='' as $$
 declare s cp_private.signup_admissions; claim_time timestamptz;
 begin
+ -- Apply the hardened identity gate to both legacy and CP-only admissions,
+ -- before a request can reserve a UUID or change its revision.
+ if new.id is null or new.is_anonymous is distinct from false
+  or new.email is null or btrim(new.email)='' then raise exception 'not_allowed'; end if;
  select * into s from cp_private.signup_admissions where email=lower(new.email) for update;
  if found and s.released_at is null then
   if exists(select 1 from public.authentication_mode_user_roles where lower(email)=s.email) then raise exception 'not_allowed'; end if;
@@ -261,12 +276,17 @@ end; $$;
 
 create or replace function public.chatak_link_auth_user() returns trigger
 language plpgsql security definer set search_path='' as $$
-declare approval_id public.authentication_mode_user_roles.id%type;
+declare approved public.authentication_mode_user_roles;
 begin
+ if new.id is null or new.is_anonymous is distinct from false
+  or new.email is null or btrim(new.email)='' then raise exception 'not_allowed'; end if;
  if cp_private.is_commonplace_signup(new.id) then return new; end if;
- approval_id:=cp_private.legacy_signup_approval(new.email,new.id);
- update public.authentication_mode_user_roles set auth_user_id=new.id,updated_at=now()
-  where id=approval_id and auth_user_id is null;
+ approved:=cp_private.legacy_signup_approval(new.email,new.id);
+ if approved.auth_user_id is null then
+  update public.authentication_mode_user_roles set auth_user_id=new.id,updated_at=now()
+   where id=approved.id and auth_user_id is null;
+  if not found then raise exception using errcode='42501',message='registry_link_conflict'; end if;
+ end if;
  return new;
 end; $$;
 
@@ -281,7 +301,12 @@ create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
  if cp_private.is_commonplace_signup(new.id) then return new; end if;
- -- The preceding link trigger preserved the preapproved role. No default role is needed.
+ -- Retain the hardened postcondition even if a later trigger suppresses or
+ -- changes a link. Never create settings for a legacy identity left unlinked.
+ if not exists(select 1 from public.authentication_mode_user_roles r
+  where r.auth_user_id=new.id and lower(r.email)=lower(new.email)) then
+  raise exception using errcode='42501',message='registry_link_required';
+ end if;
  insert into public.alarm_settings(user_id) values(new.id) on conflict(user_id) do nothing;
  return new;
 end; $$;
