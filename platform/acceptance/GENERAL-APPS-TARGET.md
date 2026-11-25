@@ -6,6 +6,12 @@ learner activation pending**. The user confirmed **Celeritas7's Org → General_
 existing Commonplace backend. Technical is not a target for this application.
 No new project or organization selection is needed.
 
+The [read-only readiness review](GENERAL-APPS-REVIEW.md) is now complete against
+merged PR #95. It found shared onboarding/API prerequisites that block learner
+activation. Existing backup integrity passed within the documented scope;
+exact restore provenance and Auth/Storage runtime recovery remain open. Use that
+review's ordered R1–R5 follow-up instead of repeating target selection.
+
 ## Verified backend mapping
 
 General_apps is healthy, in Mumbai (`ap-south-1`), on PostgreSQL 17.6. The existing
@@ -56,11 +62,11 @@ expressions may contain identifiers and should stay private. The separate
 
 ## Remaining hosted prerequisites
 
-1. Complete General_apps' own shared API, Auth-trigger, Storage and advisor review.
-   Earlier Technical findings do not establish this project's security state.
-   The previous General_apps audit also noted function search-path and callable
-   definer advisories; review actual grants and helper checks before any fix.
-   Use targeted changes and regression tests for affected applications.
+1. Resolve the General_apps shared onboarding/API findings recorded in the
+   [completed review](GENERAL-APPS-REVIEW.md). Prepare targeted changes and
+   regression tests in the affected applications, preserving existing users.
+   Attest the remaining gateway/Auth configuration; the SQL inventory alone
+   cannot establish those settings.
 2. Reconcile the existing **General_apps** backup and restore evidence with the
    current migration baseline. Confirm ownership/grants, Auth identities and
    dependencies, RLS runtime behavior, Storage bytes and server-secret recovery.

@@ -107,7 +107,7 @@ General_apps project, so no provisioning quote is required.
 
 ## Selected General_apps checkpoint — 2026-11-25
 
-PR #94 is merged. **Celeritas7's Org → General_apps** (`wylxvmkcrexwfpjpbhyy`) is
+PR #95 is merged. **Celeritas7's Org → General_apps** (`wylxvmkcrexwfpjpbhyy`) is
 confirmed as the platform backend after the user corrected the earlier Technical
 selection. The builder accepts General_apps, rejects Technical, preserves a
 separate HTTPS origin/browser storage namespace, and includes a read-only shared
@@ -125,6 +125,22 @@ and recovery review before hosted changes; the disposable runner remains local-o
 
 Public legacy HTML/repository files stay public. No frontend gate retroactively
 protects those bytes. Disconnected/exported tutorial copies cannot be recalled.
+
+## Completed General_apps review — 2026-11-25
+
+The [read-only security/recovery review](../../platform/acceptance/GENERAL-APPS-REVIEW.md)
+now records actual General_apps findings against merged PR #95. The seven legacy
+Commonplace tables have owner-based policies; all 302 public tables have RLS and
+all 37 public views use security invoker. Shared signup coupling, unrelated broad
+policies, a privileged conflict path and shared Edge entitlement still block
+learner activation. No hosted fix or migration was applied.
+
+The existing database/roles/Storage archives match their checksum sidecars and
+all 409 archived Storage objects match their manifest. The earlier successful
+public-table restore comparison is not yet tied to this exact database archive;
+preserve that evidence and resolve its provenance before extending recovery tests.
+Auth/RLS/private-file restore and physical-device acceptance remain pending.
+Follow the linked R1–R5 sequence. Both source activation configs remain `null`.
 
 References rechecked: [Supabase changelog](https://supabase.com/changelog.md),
 [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security),
