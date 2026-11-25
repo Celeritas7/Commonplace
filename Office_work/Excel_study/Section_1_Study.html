@@ -153,6 +153,15 @@
     <p>Learn to work with spreadsheets, formulas and data. This short sample is for reviewing the study layout before the full lessons are added.</p>
     <div class="meta"><span>~8 min</span><span>Guided &amp; independent practice · worksheet · quiz</span></div>
   </header>
+  <section class="excel-guided-panel" aria-labelledby="scenario-title">
+    <div class="excel-guided-heading"><h3 id="scenario-title">Professional example</h3><span>Fictional preview</span></div>
+    <label for="scenario-picker">Choose a work context</label>
+    <select id="scenario-picker"></select>
+    <p id="scenario-context"></p>
+    <button type="button" class="btn" id="scenario-apply">Apply example (reset worksheet)</button>
+    <p id="scenario-status" role="status"></p>
+    <small>Changes the sample data, guide, independent assignments and quiz; retains reading progress and submitted attempts for this session. This preview does not change a learner profile or assignment.</small>
+  </section>
   <h2 class="sec"><span class="n">A</span> Explore Excel — Ribbon &amp; worksheet</h2>
   <p class="pg-intro">Select a cell, then try the Home Ribbon tools marked Practice. Edit cell contents in the formula bar and press Set cell. Copy, Cut and Paste work within this worksheet only. Select B5 and use AutoSum to calculate the fixed sample range. Other tools remain location previews. Reset worksheet restores the original data and formatting.</p>
   <section class="excel-guided-panel" id="excel-guided" aria-labelledby="excel-guided-title">
@@ -198,20 +207,20 @@
     <button type="button" class="head" aria-expanded="false" aria-controls="concept-cells"><span class="chk" aria-hidden="true">✓</span><span class="ti"><span class="title">1 · Cells and ranges</span><span class="sub">Understand B2 and B2:B4</span></span><span class="arrow" aria-hidden="true">▶</span></button>
     <div class="body" id="concept-cells" hidden><div class="body-inner">
       <p>A cell is identified by its column letter and row number. <code>B2</code> means column B, row 2. A colon joins the ends of a continuous range: <code>B2:B4</code> includes B2, B3 and B4.</p>
-      <div class="tip">Find cell B3 in the practice worksheet. Its starting value is 8.</div>
+      <div class="tip" id="scenario-cell-tip">Find cell B3 in the practice worksheet. Its starting value is 8.</div>
     </div></div>
   </article>
   <article class="card" data-track="sum">
     <button type="button" class="head" aria-expanded="false" aria-controls="concept-sum"><span class="chk" aria-hidden="true">✓</span><span class="ti"><span class="title">2 · Your first formula: SUM</span><span class="sub">Add values in a range</span></span><span class="arrow" aria-hidden="true">▶</span></button>
     <div class="body" id="concept-sum" hidden><div class="body-inner">
       <p>Excel formulas begin with <code>=</code>. Enter <code>=SUM(B2:B4)</code> in B5 to add the numeric values from the three cells.</p>
-      <div class="tip">Change B3 from 8 to 10 and apply the formula. The total becomes 27. Real Excel normally recalculates automatically; this preview uses an Apply button.</div>
+      <div class="tip" id="scenario-sum-tip">Change B3 from 8 to 10 and apply the formula. The total becomes 27. Real Excel normally recalculates automatically; this preview uses an Apply button.</div>
     </div></div>
   </article>
   <h2 class="sec"><span class="n">C</span> Practice checklist</h2>
   <div class="check-list" id="checklist">
     <label class="check-item"><input type="checkbox" data-task="locate"><span class="lbl">Locate cell B3.</span></label>
-    <label class="check-item"><input type="checkbox" data-task="calculate"><span class="lbl">Apply the SUM formula and change one quantity.</span></label>
+    <label class="check-item"><input type="checkbox" data-task="calculate"><span class="lbl">Apply the SUM formula and change one numeric value.</span></label>
     <label class="check-item"><input type="checkbox" data-task="format"><span class="lbl">Select A1 and use Home → Font → Bold and Fill Color.</span></label>
     <label class="check-item"><input type="checkbox" data-task="clipboard"><span class="lbl">Copy B2 to B3, then reset the worksheet.</span></label>
   </div>
@@ -223,10 +232,10 @@
       <label class="opt"><input type="radio" name="q1" value="c"> B2:D2</label>
       <div class="explain">B2:B4 stays in column B and spans rows 2 to 4.</div>
     </fieldset>
-    <fieldset class="q" data-answer="a"><legend class="qt">Q2. What is the sum of 12, 8 and 5?</legend>
-      <label class="opt"><input type="radio" name="q2" value="a" required> 25</label>
-      <label class="opt"><input type="radio" name="q2" value="b"> 20</label>
-      <label class="opt"><input type="radio" name="q2" value="c"> 30</label>
+    <fieldset class="q" data-answer="a" id="scenario-quiz"><legend class="qt">Q2. What is the sum of 12, 8 and 5?</legend>
+      <label class="opt"><input type="radio" name="q2" value="a" required> <span data-scenario-option="a">25</span></label>
+      <label class="opt"><input type="radio" name="q2" value="b"> <span data-scenario-option="b">20</span></label>
+      <label class="opt"><input type="radio" name="q2" value="c"> <span data-scenario-option="c">30</span></label>
       <div class="explain">12 + 8 + 5 = 25.</div>
     </fieldset>
     <div class="quiz-foot"><button class="btn" type="submit">Check answers</button><button class="btn ghost" type="reset">Reset quiz</button><span id="score" role="status"></span></div>
@@ -239,6 +248,7 @@
 <script src="excel-guided.js"></script>
 <script src="excel-assessment-lessons.js"></script>
 <script src="excel-assessment.js"></script>
+<script src="excel-scenarios.js"></script>
 <script>
 (() => {
   'use strict';
@@ -278,6 +288,35 @@
   const practice=document.getElementById('practice'),formula=document.getElementById('formula');
   const inputs=['b2','b3','b4'].map(id=>document.getElementById(id));
   const output=document.getElementById('b5'),feedback=document.getElementById('practice-feedback');
+  const examples=window.CommonplaceExcelScenarios;
+  let scenario=examples.select('general-office');
+  const picker=document.getElementById('scenario-picker'),scenarioStatus=document.getElementById('scenario-status');
+  for(const s of examples.list()){const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.title;picker.append(opt);}
+  picker.value=scenario.id;
+  const cell=id=>document.querySelector('[data-cell="'+id+'"]');
+  function applyWorksheet(){
+    const model=examples.worksheet(scenario);
+    for(const [id,value] of [['A1',model.heading],['B1',model.quantity],['A2',model.rows[0][0]],['A3',model.rows[1][0]],['A4',model.rows[2][0]]]){
+      const el=cell(id);el.textContent=value;el.setAttribute('aria-label',id+', '+value);
+    }
+    inputs.forEach((el,i)=>{el.defaultValue=String(model.rows[i][1]);el.value=el.defaultValue;el.setAttribute('aria-label','B'+(i+2)+', '+model.rows[i][0]);});
+    document.querySelector('[data-excel-sheet] table').setAttribute('aria-label',model.title);
+    formula.value='=SUM(B2:B4)';output.textContent='—';
+    feedback.textContent='Try applying the formula. The starting total should be '+model.total+' '+model.unit+'.';
+  }
+  function renderScenarioText(){
+    const [a,b,c]=scenario.values,total=examples.total(scenario);
+    document.getElementById('scenario-context').textContent=scenario.context;
+    document.getElementById('scenario-cell-tip').textContent='Find B3 ('+scenario.labels[1]+'). Its starting value is '+b+'.';
+    document.getElementById('scenario-sum-tip').textContent='Change B3 from '+b+' to '+scenario.revised+' and apply the formula. The total becomes '+examples.revisedTotal(scenario)+' '+scenario.unit+'. Real Excel normally recalculates automatically; this preview uses an Apply button.';
+    const question=document.getElementById('scenario-quiz');
+    question.querySelector('legend').textContent='Q2. What is the sum of '+a+', '+b+' and '+c+'?';
+    question.querySelector('[data-scenario-option="a"]').textContent=String(total);
+    question.querySelector('[data-scenario-option="b"]').textContent=String(total-c);
+    question.querySelector('[data-scenario-option="c"]').textContent=String(total+c);
+    question.querySelector('.explain').textContent=a+' + '+b+' + '+c+' = '+total+' '+scenario.unit+'.';
+  }
+  applyWorksheet();renderScenarioText();
   const simulator=window.CommonplaceExcelRibbon?.mount(document.getElementById('excel-preview'),{workbook:'Practice workbook — Excel',sheet:'Sheet1',formulaCell:'B5',onAutoSum:()=>{formula.value='=SUM(B2:B4)';practice.requestSubmit();}});
   function invalidate(){output.textContent='—';feedback.textContent='Apply the formula to calculate the current values.';}
   [formula,...inputs].forEach(el=>el.addEventListener('input',invalidate));
@@ -291,14 +330,14 @@
     const total=values.reduce((a,b)=>a+b,0);
     if(!Number.isFinite(total)){output.textContent='—';feedback.textContent='Please enter valid numeric quantities.';return;}
     output.textContent=String(Number(total.toPrecision(15)));
-    feedback.textContent='Formula applied to B5: '+output.textContent;
+    feedback.textContent='Formula applied to B5: '+output.textContent+' '+scenario.unit+'.';
   });
-  function resetWorksheet(){practice.reset();simulator?.reset();simulator?.select('B5');output.textContent='—';feedback.textContent='Try applying the formula. The starting total should be 25.';}
+  function resetWorksheet(){practice.reset();simulator?.reset();applyWorksheet();simulator?.select('B5');}
   document.getElementById('reset-sheet').addEventListener('click',resetWorksheet);
-  window.CommonplaceExcelGuided?.mount({root:document.getElementById('excel-preview'),panel:document.getElementById('excel-guided'),simulator,lessons:window.CommonplaceExcelGuidedLessons,resetWorksheet});
-  window.CommonplaceExcelAssessment?.mount({
+  const guided=window.CommonplaceExcelGuided?.mount({root:document.getElementById('excel-preview'),panel:document.getElementById('excel-guided'),simulator,lessons:examples.guided(scenario,window.CommonplaceExcelGuidedLessons),resetWorksheet});
+  const assessment=window.CommonplaceExcelAssessment?.mount({
     root:document.getElementById('excel-preview'),panel:document.getElementById('excel-assessment'),simulator,
-    lessons:window.CommonplaceExcelAssessments,resetWorksheet,
+    lessons:examples.assessments(scenario,window.CommonplaceExcelAssessments),resetWorksheet,
     prepare:lesson=>{if(lesson.blankFormula)formula.value='';output.textContent='—';feedback.textContent='Work on the assignment above, then submit the worksheet.';}
   });
   const quiz=document.getElementById('quiz'),score=document.getElementById('score');
@@ -318,6 +357,15 @@
     score.textContent='Score: '+points+' / '+questions.length;score.classList.add('show');
   });
   quiz.addEventListener('reset',clearFeedback);
+  document.getElementById('scenario-apply').addEventListener('click',()=>{
+    if(picker.value===scenario.id){scenarioStatus.textContent='This example is already active.';return;}
+    if(guided?.active||assessment?.active){scenarioStatus.textContent='Finish or exit the active exercise before switching examples.';return;}
+    scenario=examples.select(picker.value);picker.value=scenario.id;
+    resetWorksheet();renderScenarioText();quiz.reset();clearFeedback();
+    guided?.setLessons(examples.guided(scenario,window.CommonplaceExcelGuidedLessons));
+    assessment?.setLessons(examples.assessments(scenario,window.CommonplaceExcelAssessments));
+    scenarioStatus.textContent='Now using '+scenario.title+'. Earlier submitted attempts remain in the session history.';
+  });
 })();
 </script>
 </body>
