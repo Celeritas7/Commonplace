@@ -2,11 +2,12 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { isWithinDirectory } from "./path-containment.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../.."),
   seen = new Set();
 async function add(path) {
   path = resolve(path);
-  if (!path.startsWith(root + "/"))
+  if (!isWithinDirectory(root, path))
     throw Error("Shell asset escaped repository");
   if (seen.has(path)) return;
   seen.add(path);
