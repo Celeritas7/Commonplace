@@ -9,28 +9,30 @@ acceptance.** The checked-in deployment and authentication configurations remain
 ## Selected backend and remaining inputs
 
 On 2026-11-25 (Japan), after PR #94 merged, the user selected **Celeritas7's Org →
-Technical**, `ulgrfumbwjovbjzjiems`. Use that existing project. The previous proposal
+General_apps**, `wylxvmkcrexwfpjpbhyy`, correcting the earlier Technical selection.
+Use that existing Commonplace backend. The previous proposal
 to provision a separate project is superseded; no organization or purchase
-decision is pending. Technical is a shared live backend, not a disposable staging
-database. The [Technical checkpoint](TECHNICAL-TARGET.md) records the read-only
-audit, existing backup evidence and remaining shared-access issues.
+decision is pending. General_apps is a shared live backend, not a disposable staging
+database. The [General_apps checkpoint](GENERAL-APPS-TARGET.md) records the verified
+backend mapping and remaining shared-project prerequisites.
 
-The seven legacy `commonplace_*` tables are in **General_apps**, not Technical.
-Keep their login, progress, offline storage and deployed clients in place.
+The seven existing `commonplace_*` tables and Commonplace authentication are
+already in **General_apps**. Preserve their login, progress, offline storage and
+deployed clients; no cross-project migration is needed.
 
 | Input | Proposed / required choice |
 | --- | --- |
-| Project | Selected: Technical, `ulgrfumbwjovbjzjiems`; shared-project isolation and recovery review still required |
+| Project | Selected: General_apps, `wylxvmkcrexwfpjpbhyy`; shared-project isolation and recovery review still required |
 | Region | Existing Mumbai (`ap-south-1`); no project relocation |
 | Website | A separate HTTPS origin serving only the generated `public/` directory |
 | Offline interval | One hour for expiry testing; this does not approve a production interval |
-| Administrator | The user's verified Technical identity, confirmed by a trusted operator before bootstrap |
+| Administrator | The user's verified General_apps identity, confirmed by a trusted operator before bootstrap |
 | Learners | Tracked test A/B for the hosted matrix after signup side effects are reviewed; the actual learner email remains unspecified |
 | Google OAuth | Review existing shared provider settings; preserve current apps and add only the exact staging redirect |
 
 No origin, private key, administrator UUID or learner email is inferred from a
-query string, imported document or email match. Technical's Auth identities and
-the new browser token storage remain separate from legacy General_apps.
+query string, imported document or email match. Existing General_apps identities
+are retained; the new browser session uses a separate token storage namespace.
 
 ## Prepare a reviewable package
 
@@ -42,7 +44,7 @@ npm run prepare:staging --prefix platform -- /private/staging-config.json /tmp/c
 ```
 
 Start from [staging-config.example.json](staging-config.example.json). Its
-remaining placeholders deliberately fail validation. Technical's project reference
+remaining placeholders deliberately fail validation. General_apps’ project reference
 is already set. Fill its **publishable** key, the exact HTTPS origin, offline interval and
 only the public half of a separately generated P-256 offline-signing key. The
 private half goes to the target's Edge secret store through a trusted operator;
@@ -50,12 +52,12 @@ never put it in this JSON, the repository, chat, a browser or a public artifact.
 Preserve it securely for the later restore/rotation rehearsal. No real key is
 generated automatically by the preparation command.
 
-The command accepts the selected Technical backend but rejects General_apps and the legacy GitHub Pages
-origin, non-HTTPS/path-bearing origins, secret/JWT keys, private signing-key fields,
+The command accepts General_apps but rejects Technical and the existing
+Commonplace GitHub Pages/Vercel origins, non-HTTPS/path-bearing origins, secret/JWT keys, private signing-key fields,
 unrecognized settings, a dirty checkout and an existing/nonempty output directory.
 It makes no network requests and runs no deployment or database commands.
 Acceptance by this offline builder is configuration validation, not approval of
-Technical's existing shared API. `review.json` marks Technical as `shared-existing`
+General_apps’ existing shared API. `review.json` marks General_apps as `shared-existing`
 and always reports hosted readiness as unassessed. Unknown project references are
 `unverified`, never assumed isolated.
 
@@ -66,7 +68,7 @@ and always reports hosted readiness as unassessed. Unknown project references ar
 | `public/_headers` | Static-host response rules: no-store, no-referrer, nosniff and a CSP restricted to the selected backend; ensure the chosen provider actually applies these rules |
 | `server/` | Six unchanged migration files and the actual Edge dependency graphs; **never upload this directory as website content** |
 | `server/edge.env.example` | Names of required server settings; private signing-key value is a deliberate placeholder |
-| `server/preflight/` | Read-only shared-project catalog and Technical review notes; private operator inputs, excluded from browser/offline assets |
+| `server/preflight/` | Read-only shared-project catalog and General_apps review notes; private operator inputs, excluded from browser/offline assets |
 | `review.json` | Source commit, target scope/readiness, SDK version, dependency-lock hash, origin/namespace/interval and SHA-256 for generated/copied files |
 
 The builder reuses the Edge source packager tested by the disposable Supabase
@@ -120,13 +122,13 @@ they do not establish a real Google consent/return success.
 
 ## Hosted execution after selection
 
-1. Recheck Technical's health and run `shared-project-catalog.sql`. Reconcile actual
+1. Recheck General_apps’ health and run `shared-project-catalog.sql`. Reconcile actual
    exposed schemas, shared Auth settings, Storage, functions and advisors. Resolve
-   the [recorded shared-access findings](TECHNICAL-TARGET.md) with affected app
-   regression tests and verify recoverable Technical database/Auth/Storage backup
+   the [General_apps shared-project review](GENERAL-APPS-TARGET.md) with affected app
+   regression tests and verify recoverable General_apps database/Auth/Storage backup
    and isolated restore evidence. Do not use the empty local fixture runner on it.
 2. After those prerequisites, apply all six migrations in filename order only to
-   Technical, preserving unrelated migration history, and run `catalog.sql` plus
+   General_apps, preserving unrelated migration history, and run `catalog.sql` plus
    the shared inventory. Confirm `cp_private` is not exposed. Verify the designated owner
    identity and bootstrap its UUID once using the operator-only function.
 3. Set target-specific Edge settings and private signing key. Deploy only

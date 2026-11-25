@@ -24,12 +24,12 @@ export function validateStagingConfiguration(value) {
     url.origin !== value.origin ||
     url.username ||
     url.password ||
-    url.hostname === "celeritas7.github.io" ||
+    ["celeritas7.github.io", "commonplace-gamma.vercel.app"].includes(url.hostname) ||
     !/^[a-z]{20}$/.test(value.project_ref) ||
-    value.project_ref === "wylxvmkcrexwfpjpbhyy"
+    value.project_ref === "ulgrfumbwjovbjzjiems"
   )
     throw Error(
-      "Use a separate HTTPS staging origin and the selected Technical project or a separate staging project; General_apps remains the legacy backend.",
+      "Use a separate HTTPS staging origin and the selected General_apps project or a separate staging project; Technical is not selected.",
     );
   if (!/^sb_publishable_[A-Za-z0-9_-]{10,200}$/.test(value.publishable_key))
     throw Error("Only a publishable browser key is accepted.");

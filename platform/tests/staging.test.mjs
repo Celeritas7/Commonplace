@@ -29,7 +29,7 @@ const config = {
   offline_hours: 1,
   offline_public_jwk: await crypto.subtle.exportKey("jwk", keys.publicKey),
 };
-test("staging configuration accepts selected Technical but refuses legacy General_apps, secret keys and unsafe overrides", () => {
+test("staging configuration accepts selected General_apps but refuses Technical, secret keys and unsafe overrides", () => {
   assert.equal(
     validateStagingConfiguration(config).project_ref,
     config.project_ref,
@@ -37,14 +37,15 @@ test("staging configuration accepts selected Technical but refuses legacy Genera
   assert.equal(
     validateStagingConfiguration({
       ...config,
-      project_ref: "ulgrfumbwjovbjzjiems",
+      project_ref: "wylxvmkcrexwfpjpbhyy",
     }).project_ref,
-    "ulgrfumbwjovbjzjiems",
+    "wylxvmkcrexwfpjpbhyy",
   );
   for (const patch of [
     { environment: "production" },
-    { project_ref: "wylxvmkcrexwfpjpbhyy" },
+    { project_ref: "ulgrfumbwjovbjzjiems" },
     { origin: "https://celeritas7.github.io" },
+    { origin: "https://commonplace-gamma.vercel.app" },
     { origin: "http://example.invalid" },
     { origin: config.origin + "/path" },
     { origin: "https://user@example.invalid" },
@@ -330,29 +331,29 @@ test("staging package contains complete hashed public dependencies, separate Edg
     await rm(output, { recursive: true, force: true });
   }
 });
-test("Technical review package preserves separate auth storage and marks the backend shared without certifying readiness", async () => {
-  const output = await mkdtemp(join(tmpdir(), "cp-technical-test-"));
+test("General_apps review package preserves separate auth storage and marks the backend shared without certifying readiness", async () => {
+  const output = await mkdtemp(join(tmpdir(), "cp-general-apps-test-"));
   try {
-    const technical = { ...config, project_ref: "ulgrfumbwjovbjzjiems" };
+    const generalApps = { ...config, project_ref: "wylxvmkcrexwfpjpbhyy" };
     const review = await buildStagingPackage({
       output,
-      configuration: technical,
+      configuration: generalApps,
       sourceCommit: "2".repeat(40),
     });
-    assert.equal(review.project_ref, technical.project_ref);
+    assert.equal(review.project_ref, generalApps.project_ref);
     assert.equal(review.backend_scope, "shared-existing");
     assert.equal(review.hosted_readiness, "not-assessed-by-package-builder");
     assert.equal(review.deployed, false);
     assert.equal(review.migrations_applied, false);
     assert.equal(
-      stagingClientOptions(technical).auth.storageKey,
-      "cp:commonplace-staging-ulgrfumbwjovbjzjiems:auth",
+      stagingClientOptions(generalApps).auth.storageKey,
+      "cp:commonplace-staging-wylxvmkcrexwfpjpbhyy:auth",
     );
-    for (const name of ["shared-project-catalog.sql", "TECHNICAL-TARGET.md"])
+    for (const name of ["shared-project-catalog.sql", "GENERAL-APPS-TARGET.md"])
       assert.ok(review.files["server/preflight/" + name]);
     assert.ok(
       !Object.keys(review.files).some(
-        (path) => path.startsWith("public/") && /preflight|TECHNICAL-TARGET/.test(path),
+        (path) => path.startsWith("public/") && /preflight|GENERAL-APPS-TARGET/.test(path),
       ),
     );
     const source = await readFile(

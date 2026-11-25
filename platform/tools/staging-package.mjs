@@ -219,7 +219,7 @@ export async function buildStagingPackage({
   );
   // These are operator review inputs, never browser/offline assets. Accepting a
   // target configuration does not attest the shared project's access rules.
-  for (const name of ["shared-project-catalog.sql", "TECHNICAL-TARGET.md"])
+  for (const name of ["shared-project-catalog.sql", "GENERAL-APPS-TARGET.md"])
     await write(
       "server/preflight/" + name,
       await readFile(join(repositoryRoot, "platform/acceptance", name)),
@@ -245,7 +245,7 @@ export async function buildStagingPackage({
     origin: config.origin,
     project_ref: config.project_ref,
     backend_scope:
-      config.project_ref === "ulgrfumbwjovbjzjiems"
+      config.project_ref === "wylxvmkcrexwfpjpbhyy"
         ? "shared-existing"
         : "unverified",
     hosted_readiness: "not-assessed-by-package-builder",
@@ -266,7 +266,7 @@ export async function buildStagingPackage({
   );
   await writeFile(
     join(target, "README.txt"),
-    "STAGING PREPARATION ONLY — not deployed or approved for learner use.\nPublish only public/ to the reviewed HTTPS origin. Never publish server/.\nUse the repository platform/acceptance/HOSTED-STAGING.md runbook.\nReview server/preflight before hosted writes. Technical is a shared live project, not a disposable fixture.\nVerify review.json checksums before every deployment. No private signing key is included.\n",
+    "STAGING PREPARATION ONLY — not deployed or approved for learner use.\nPublish only public/ to the reviewed HTTPS origin. Never publish server/.\nUse the repository platform/acceptance/HOSTED-STAGING.md runbook.\nReview server/preflight before hosted writes. General_apps is a shared live project, not a disposable fixture.\nVerify review.json checksums before every deployment. No private signing key is included.\n",
   );
   return review;
 }
