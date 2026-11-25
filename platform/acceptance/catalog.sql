@@ -29,7 +29,8 @@ with expected_tables(name) as (values
  select signature from core_functions
  union all select signature from (values
   ('public.cp_admin_prepare_signup(text,integer)'),
-  ('public.cp_admin_revoke_signup(uuid)'),
+  ('public.cp_admin_review_signup(uuid,integer,text,integer)'),
+  ('public.cp_admin_complete_signup(uuid,integer,text)'),
   ('public.cp_admin_signup_directory()')) signup(signature)
  where to_regclass('cp_private.signup_control') is not null
 ), tables as (

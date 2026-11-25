@@ -25,7 +25,8 @@ export async function sharedAccessAcceptance({
   const email = `cp-admission-${tag}@example.invalid`,
     password = randomBytes(24).toString("base64url");
   secrets.push(email, password);
-  let actor;
+  let actor, admission;
+  const signupRow = async id => (await rpc(owner, "cp_admin_signup_directory")).find(row => row.id === id);
   await check(
     "review candidates reject closed real Auth signup and enforce administrator preparation",
     async () => {
@@ -52,7 +53,7 @@ export async function sharedAccessAcceptance({
         await pause(250);
       }
       requireThat(visible, "Candidate RPC schema did not refresh");
-      await rpc(owner, "cp_admin_prepare_signup", {
+      admission = await rpc(owner, "cp_admin_prepare_signup", {
         login_email: email,
         valid_hours: 1,
       });
@@ -86,14 +87,39 @@ export async function sharedAccessAcceptance({
         }),
         "CP-only local signup",
       );
-      requireThat(
-        result.user && result.session,
-        "Local signup must return a session; local email confirmation is disabled",
-      );
-      secrets.push(result.session.access_token, result.session.refresh_token);
-      const identity = result.user.id;
+      requireThat(result.user && !result.session, "Signup must wait for mailbox confirmation");
+      const pending = await signupRow(admission);
+      requireThat(pending.state === "awaiting_confirmation", "Expected an unverified reservation");
+      denied(await owner.client.rpc("cp_admin_complete_signup", {
+        admission, expected_revision: pending.revision, learner_name: "Synthetic learner",
+      }), "Unverified completion", "22023");
+
+      // Only the disposable Mailpit inbox receives this synthetic confirmation.
+      const options = {redirect:"error", signal:AbortSignal.timeout(5000)};
+      const inbox = "http://127.0.0.1:54324/api/v1";
+      let messageId;
+      for (let attempt=0; attempt<40 && !messageId; attempt++) {
+        const response = await fetch(inbox + "/messages", options);
+        requireThat(response.ok, "Local confirmation inbox unavailable");
+        const page = await response.json();
+        messageId = page.messages.find(m => m.To.some(recipient => recipient.Address === email))?.ID;
+        if (!messageId) await pause(100);
+      }
+      requireThat(!!messageId, "Synthetic confirmation was not delivered");
+      const message = await (await fetch(inbox + "/message/" + encodeURIComponent(messageId), {
+        redirect:"error", signal:AbortSignal.timeout(5000),
+      })).json();
+      const href = message.HTML.match(/href=["']([^"']*\/verify\?[^"']+)["']/i)?.[1];
+      requireThat(!!href, "Missing confirmation link in local message");
+      const token = new URL(href.replaceAll("&amp;", "&")).searchParams.get("token");
+      requireThat(!!token, "Missing local confirmation token");
+      secrets.push(token);
+      const verified = data(await client().auth.verifyOtp({token_hash:token,type:"signup"}), "Mailbox confirmation");
+      requireThat(verified.session && verified.user.id === result.user.id, "Confirmation changed reserved identity");
+      secrets.push(verified.session.access_token, verified.session.refresh_token);
+      const identity = verified.user.id;
       requireThat(/^[a-f0-9-]{36}$/.test(identity), "Invalid fixture UUID");
-      actor = { id: identity, client: client(result.session.access_token) };
+      actor = { id: identity, client: client(verified.session.access_token) };
       requireThat(
         data(await actor.client.auth.getUser(), "new identity verification")
           .user.id === identity,
@@ -141,9 +167,13 @@ export async function sharedAccessAcceptance({
         ) === false,
         "New learner gained execution entitlement",
       );
+      denied(await owner.client.rpc("cp_admin_register", {login_email:email,learner_name:"Synthetic learner"}),
+        "Email-only completion", "CP001");
+      const ready = await signupRow(admission);
+      requireThat(ready.state === "verified", "Confirmation was not reflected in the directory");
       requireThat(
-        (await rpc(owner, "cp_admin_register", {
-          login_email: email,
+        (await rpc(owner, "cp_admin_complete_signup", {
+          admission, expected_revision:ready.revision,
           learner_name: "Synthetic learner",
         })) === identity,
         "Registration lost UUID binding",
@@ -194,6 +224,44 @@ export async function sharedAccessAcceptance({
       );
     },
   );
+  await check("a signup waiting across the expiry deadline leaves the reservation unused", async () => {
+    const address = `wait-${tag}@example.invalid`;
+    const id = await rpc(owner,"cp_admin_prepare_signup",{login_email:address});
+    requireThat(/^[0-9a-f-]{36}$/.test(id), "Invalid admission ID");
+    secrets.push(address);
+    // A signal in pg_locks proves the holder has the row. It changes the deadline
+    // only after a second backend is demonstrably blocked on that same transaction.
+    const holder = sql(`begin;
+      select id from cp_private.signup_admissions where id='${id}' for update;
+      select pg_advisory_xact_lock(7397,1);
+      do $$ begin
+        for attempt in 1..200 loop
+          perform pg_stat_clear_snapshot();
+          exit when exists(select from pg_stat_activity where application_name='cp_expiry_waiter'
+            and pg_backend_pid()=any(pg_blocking_pids(pid)));
+          if attempt=200 then raise exception 'expiry waiter never blocked'; end if;
+          perform pg_sleep(0.05);
+        end loop;
+      end $$;
+      update cp_private.signup_admissions set expires_at=clock_timestamp() where id='${id}';
+      commit;`);
+    const waiter = async () => {
+      let locked = false;
+      for (let attempt=0;attempt<40 && !locked;attempt++) {
+        locked = await sql("select exists(select from pg_locks where locktype='advisory' and classid=7397 and objid=1 and granted)") === "t";
+        if (!locked) await pause(50);
+      }
+      requireThat(locked, "Expiry fixture did not acquire the row");
+      let refused = false;
+      try {
+        await sql(`begin; set local application_name='cp_expiry_waiter';
+          insert into auth.users(id,email) values(gen_random_uuid(),'${address}'); commit;`);
+      } catch(error) { if (!error.message.includes("not_allowed")) throw error; refused=true; }
+      requireThat(refused, "Waiting signup ignored elapsed expiry");
+    };
+    await Promise.all([holder,waiter()]);
+    requireThat((await signupRow(id)).claimed_user_id === null, "Expired claim persisted");
+  });
   await check(
     "concurrent real signups claim one admission and containment retains identities and work",
     async () => {

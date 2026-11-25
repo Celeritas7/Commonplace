@@ -56,3 +56,47 @@ test('learner navigation has no admin tools or denied links and single leaf land
   return {opened,text:root.textContent,links:root.querySelectorAll('a,button').length};
  });expect(result).toEqual({opened:['office.excel'],text:'',links:0});
 });
+
+test("signup completion uses the displayed admission revision and clears stale or signed-out views", async ({page}) => {
+  await page.goto("/platform/");
+  await page.evaluate(async () => {
+    const {mountAdminStudio} = await import("/platform/admin/studio.mjs");
+    const {createAdminAPI} = await import("/platform/admin/api.mjs");
+    const row = {id:"fixture-admission",revision:2,email:"learner@example.invalid",claimed_user_id:"fixture-reservation",state:"verified",expires_at:"2027-01-01T00:00:00Z"};
+    const state = window.signupTest = {calls:[],stale:true};
+    const client = {
+      auth: {
+        getUser:async()=>({data:{user:{id:"admin"}}}),
+        onAuthStateChange(fn){state.event=fn;return {data:{subscription:{unsubscribe(){}}}};},
+      },
+      async rpc(name,args) {
+        if(name==="cp_admin_directory")return {data:{members:[],sections:[]}};
+        if(name==="cp_admin_signup_directory")return {data:[{...row}]};
+        if(name==="cp_admin_complete_signup"){
+          state.calls.push(args);
+          row.revision++;
+          if(state.stale){state.stale=false;return {error:{code:"40001"}};}
+          row.state="completed";return {data:row.claimed_user_id};
+        }
+        throw Error("Unexpected RPC");
+      },
+    };
+    const root=document.createElement("main");document.body.replaceChildren(root);
+    mountAdminStudio(root,createAdminAPI({client,enabled:true,online:()=>true}));
+  });
+  await page.getByRole("button",{name:"Signup requests",exact:true}).click();
+  await expect(page.getByText("Reserved Auth ID: fixture-reservation")).toBeVisible();
+  await page.getByLabel("Learner display name").fill("Fixture");
+  await page.getByRole("button",{name:"Register suspended learner"}).click();
+  await expect(page.getByText("This record changed in another tab.",{exact:false})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Register suspended learner"})).toHaveCount(0);
+  await page.getByRole("button",{name:"Reload signup requests"}).click();
+  await page.getByLabel("Learner display name").fill("Fixture");
+  await page.getByRole("button",{name:"Register suspended learner"}).click();
+  await expect(page.getByText("Registered",{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>window.signupTest.calls)).toEqual([2,3].map(expected_revision=>({
+    admission:"fixture-admission",expected_revision,learner_name:"Fixture",
+  })));
+  await page.evaluate(()=>window.signupTest.event("SIGNED_OUT",null));
+  await expect(page.locator("#workspace")).toBeEmpty();
+});

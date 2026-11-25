@@ -1,3 +1,4 @@
+import {mountSignupRequests} from './signup-requests.mjs';
 import {mountPromptStudio} from './prompt-studio.mjs';
 import {mountMaterialLibrary} from './material-library.mjs';
 import {mountProfileEditor} from './profile-editor.mjs';
@@ -9,8 +10,9 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
  function clearProfile(){const cleanup=disposeProfile;disposeProfile=null;cleanup?.();profileDirty=false;}
  root.innerHTML=`<header class="masthead"><a class="brand" href="../index.html">C<span>COMMONPLACE</span></a><span class="mode"></span></header>
  <main><div class="heading"><div><p class="eyebrow">CENTRAL ADMINISTRATION</p><h1>Admin Studio</h1><p class="intro">Give each learner a focused place to study.</p></div><button id="reload" class="secondary">Reload access</button></div>
- <nav class="profile-toolbar" aria-label="Administration workspace"><button data-workspace-tab="people">People & access</button><button data-workspace-tab="materials" class="secondary">Material library</button></nav><p id="notice" role="status" aria-live="polite"></p><div id="workspace"></div></main>`;
+ <nav class="profile-toolbar" aria-label="Administration workspace"><button data-workspace-tab="people">People & access</button><button data-workspace-tab="signups" class="secondary">Signup requests</button><button data-workspace-tab="materials" class="secondary">Material library</button></nav><p id="notice" role="status" aria-live="polite"></p><div id="workspace"></div></main>`;
  root.querySelector('.mode').textContent=preview?'PREVIEW · NOTHING IS SAVED':'ADMINISTRATOR · ONLINE ONLY';
+ if(!api.signups)root.querySelector('[data-workspace-tab="signups"]').remove();
  const workspace=root.querySelector('#workspace'),notice=root.querySelector('#notice');
  const message=(text,error=false)=>{notice.textContent=text;notice.className=error?'notice error':'notice';};
  function invalidate(){clearProfile();epoch++;data=null;draft=null;dirty=false;blocked=true;busy=false;root.querySelector('#reload').disabled=false;workspace.replaceChildren();message('Account changed. Reload to verify administrator access.',true);}
@@ -30,6 +32,11 @@ export function mountAdminStudio(root,api,{preview=false}={}) {
  }
  function render(){
   for(const n of root.querySelectorAll('[data-workspace-tab]')){const active=n.dataset.workspaceTab===workspacePage;n.setAttribute('aria-pressed',String(active));n.classList.toggle('secondary',!active);}
+  if(workspacePage==='signups'){
+   clearProfile();workspace.replaceChildren();const panel=el('section',undefined,'panel');panel.dataset.managedEditor='';workspace.append(panel);
+   disposeProfile=mountSignupRequests(panel,api,{onBusy:value=>{busy=value;lock();},onDenied:invalidate});
+   return;
+  }
   if(workspacePage==='materials'){clearProfile();workspace.replaceChildren();const panel=el('section',undefined,'panel');panel.dataset.managedEditor='';workspace.append(panel);disposeProfile=mountMaterialLibrary(panel,api,data,{onDirty:value=>{profileDirty=value;},onBusy:value=>{busy=value;lock();},onDenied:invalidate});return;}
   workspace.replaceChildren();const layout=el('div',undefined,'layout'),side=el('aside',undefined,'panel roster');
   const top=el('div',undefined,'panel-title');top.append(el('h2','People'),el('span',String(data.members.length),'count'));side.append(top);

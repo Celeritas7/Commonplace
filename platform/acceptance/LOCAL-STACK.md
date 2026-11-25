@@ -6,18 +6,18 @@ Supabase's local Docker services. It exercises actual signed Auth sessions,
 PostgREST authorization and private Storage delivery before choosing a cloud
 staging target. Production activation remains disabled.
 
-The R1/R2 follow-up adds three groups after the original ten: reviewed shared
+The R1/R2 follow-up adds four groups after the original ten: reviewed shared
 access candidates are installed only inside this fresh stack; real Auth exercises
-closed admission, a CP-only UUID, legacy viewer signup, concurrent claims and
-containment. Synthetic signup is enabled locally with email confirmation disabled
-so no email is sent. This configuration must never be pushed to a hosted project.
+closed admission, a CP-only UUID, legacy viewer signup, expiry across a database lock, concurrent claims and
+containment. The runner receives the synthetic confirmation in its isolated
+Mailpit inbox and verifies it through Auth. This configuration must never be pushed to a hosted project.
 The normal staging package still contains only the six existing CP migrations;
 see the [review-candidate runbook](../operations/general-apps/README.md).
 
 ## Run
 
 Use Node 22, Docker Engine and **Supabase CLI 3.3.0** on a development machine or
-an isolated CI runner. Ports 54321 and 54322 must be available. The pinned
+an isolated CI runner. Ports 54321, 54322 and 54324 must be available. The pinned
 `Admin platform local Supabase` workflow installs these prerequisites on Ubuntu.
 From the repository root:
 

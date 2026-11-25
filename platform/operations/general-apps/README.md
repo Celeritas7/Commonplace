@@ -19,7 +19,7 @@ Supabase configuration, downloaded packs and live records have not changed.
 | `01_access_foundation.sql` | Protected legacy-to-Auth identity mappings, expiring Edge grants and caller-only identity/entitlement RPCs; no automatic backfill | Confirm target, backup and compatible schemas; keep `ga_private` outside exposed API schemas |
 | `02_legacy_policy_guards.sql` | Restrictive guards on five reviewed legacy tables; retain all record IDs/data | Verified identity mappings and recorded client cutover evidence; refuses missing mappings, null owners and unverified mapped Auth identities |
 | `03_roadmap_session_owner.sql` | Verify task owner, lock task and validate the conflicting session owner; preserve RPC signature/retry behavior | Exact reviewed function fingerprint, caller regression and recovery checkpoint |
-| `04_commonplace_signup.sql` | Administrator-only pending admission, expiry/revocation, atomic UUID claim and suppression of legacy signup side effects | Six CP migrations, verified CP administrator, exact four legacy trigger definitions/timings; installed **disabled** |
+| `04_commonplace_signup.sql` | Administrator-managed admission, revision-checked recovery, atomic UUID reservation and verified completion | Six CP migrations, verified CP administrator, reviewed foundation fingerprints and four ordinary nondeferred legacy triggers; installed **disabled** |
 | `edge/` | Candidate `claude-proxy` and `code-exec` handlers require a verified non-anonymous user and a current explicit function grant | JWT-capable clients, per-user grants, source drift review and each owning app's deployment review |
 | `90_containment.sql` | Close new CP admission, revoke Edge grants and disable the session RPC, retaining identities and data | Apply only if 01/03/04 are present; follow selective rollback guidance below |
 
@@ -55,26 +55,34 @@ There is no new paid AI integration for Commonplace's prompt generator.
 
 ## Signup behavior and containment
 
-After the six CP migrations and candidate 04, the verified CP administrator may
-prepare a pending email with `cp_admin_prepare_signup(email, valid_hours)` and
-inspect/revoke requests through the matching administrator RPCs. These server
-operations are prepared here; Admin Studio invitation controls still need their
-own integration before a learner-facing rollout.
+After the six migrations, candidate 04 checks a reviewed function fingerprint
+from each migration, including U9 registration, and the four shared triggers'
+bodies, bindings and firing schedule. The private signup control starts disabled.
+Enabling it requires separate rollout approval and the existing shared-project
+and recovery checks. Verify the hosted provider's mailbox-ownership guarantee.
 
-Preparation refuses an existing Auth account (use verified registration) or a
-legacy application admission (review separately). The trusted rollout operator
-must explicitly enable the private control only after **all** shared-access and
-recovery gates pass. A missing/disabled control, expired/revoked/consumed request,
-unlisted email or conflicting legacy admission denies new CP signup. The Auth
-insert and request claim are atomic; a failed insert releases the claim. Editable
-user metadata cannot choose a role. Confirmed Auth identity and explicit CP
-registration are still required before an administrator can assign sections.
+In an enabled Admin Studio, open **Signup requests**. Preparing a normalized
+email creates a 24-hour request. Existing verified accounts without a reservation
+still use **Register a learner**. The new controls require the candidate RPCs.
 
-Admission revocation stops an unused request. It does not revoke an already
-registered learner; use the existing membership revocation for that. Retain
-consumed admission records so later operations cannot confuse CP-only identity
-with legacy signup. Existing legacy role helpers and their policies are not
-rewritten by this package.
+| Action | Effect |
+| --- | --- |
+| Prepare | Creates the first request for the address. A duplicate cannot renew or reopen an earlier decision. |
+| Signup | Reserves the Auth UUID in the same transaction as the Auth insert. A failed insert releases the reservation. A missing or disabled control, expired or withdrawn request, or conflicting legacy approval denies signup. |
+| Confirm and register | The learner confirms the original account. Reload requests, check the reserved Auth ID and select **Register suspended learner**. The server checks the verified address and reserved UUID. Membership starts suspended with zero section grants. |
+| Withdraw | Stops completion even after later confirmation. The Auth identity and saved work are retained. Manage completed learners through membership controls. |
+| Renew or resume | After withdrawal or expiry, extends the request. A reserved account keeps its UUID and resumes confirmation through its original Auth method. An identity mismatch requires review. |
+| Release for legacy approval | Releases only an unused, withdrawn or expired reservation. The history remains and the owning app must approve the address independently. Bound identities cannot be transferred. |
+
+The completion RPC accepts an admission ID, expected revision and display name.
+Other review actions also require the displayed revision. Reload after a conflict.
+The signup trigger locks the control row through commit, then uses wall-clock time
+for the expiry decision. Completion checks expiry again. Closing the control
+stops new reservations. Withdraw an outstanding request to cancel its completion.
+
+Legacy signup requires one preapproved role. It binds an empty UUID or accepts
+the same UUID. Conflicting or ambiguous identities abort the Auth insert.
+Existing legacy role helpers and other shared policies remain deployment dependencies.
 
 For rollback, first close new CP signup and pause the affected feature. Keep
 restrictive policies and identity mappings in place. Candidate 90 provides
@@ -134,7 +142,7 @@ Tests execute the actual candidate SQL in isolated PostgreSQL and the actual
 candidate Edge handlers with fake provider I/O. The local Supabase runner also
 installs them only in its disposable loopback stack, exercises real Auth signup
 and concurrent request claims, and then contains the rollout. Its local config
-allows synthetic signup without email delivery; it is not hosted Auth guidance.
+requires confirmation through the isolated Mailpit inbox. Hosted provider acceptance remains separate.
 The normal staging builder does not copy these candidates or fixtures.
 
 Merge records preparation. It does not enable admission, run SQL, deploy either

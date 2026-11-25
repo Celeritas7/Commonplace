@@ -469,12 +469,10 @@ test("review candidates preserve legacy data and deny unauthorized identities", 
           "insert into auth.users(id,email,raw_user_meta_data) values($1,'new@example.invalid','{\"role\":\"admin\"}')",
           [id(10)],
         );
-        const claimed = (
-          await db.query(
-            "select claimed_user_id from cp_private.signup_admissions where email='new@example.invalid'",
-          )
-        ).rows[0].claimed_user_id;
-        assert.equal(claimed, id(10));
+        const admission = (await db.query(
+          "select id,revision,claimed_user_id from cp_private.signup_admissions where email='new@example.invalid'",
+        )).rows[0];
+        assert.equal(admission.claimed_user_id, id(10));
         for (const [table, column] of [
           ["authentication_mode_user_roles", "auth_user_id"],
           ["chatak_profiles", "id"],
@@ -502,7 +500,7 @@ test("review candidates preserve legacy data and deny unauthorized identities", 
           () =>
             as(
               users.admin,
-              "select cp_admin_register('new@example.invalid','New learner')",
+              "select cp_admin_complete_signup($1,$2,'New learner')", [admission.id,admission.revision],
             ),
           /verified/i,
         );
@@ -515,7 +513,7 @@ test("review candidates preserve legacy data and deny unauthorized identities", 
           (
             await as(
               users.admin,
-              "select cp_admin_register('new@example.invalid','New learner') id",
+              "select cp_admin_complete_signup($1,$2,'New learner') id", [admission.id,admission.revision],
             )
           ).rows[0].id,
           id(10),
@@ -599,8 +597,8 @@ test("review candidates preserve legacy data and deny unauthorized identities", 
         const revoked = (
           await as(users.admin, "select cp_admin_signup_directory() data")
         ).rows[0].data.find((x) => x.email === "revoked@example.invalid");
-        await as(users.admin, "select cp_admin_revoke_signup($1)", [
-          revoked.id,
+        await as(users.admin, "select cp_admin_review_signup($1,$2,'withdraw')", [
+          revoked.id, revoked.revision,
         ]);
         await db.exec(
           "reset role; update cp_private.signup_admissions set expires_at=now()-interval '1 hour' where email='expired@example.invalid'",

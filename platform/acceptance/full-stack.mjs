@@ -132,7 +132,7 @@ async function main() {
     "--workdir",
     work,
     "--exclude",
-    "realtime,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor",
+    "realtime,imgproxy,postgres-meta,studio,logflare,vector,supavisor",
   ]);
   const status = JSON.parse(
     await run(cli, ["status", "--workdir", work, "--output", "json"]),
