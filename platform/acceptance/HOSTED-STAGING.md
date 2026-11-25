@@ -6,6 +6,10 @@ a project, apply migrations, configure Google, publish a website or complete hos
 acceptance.** The checked-in deployment and authentication configurations remain
 `null`. Existing Commonplace login, progress and service workers are unchanged.
 
+For execution order, use the [migration and signup rollout guide](SIGNUP-ROLLOUT.md).
+It separates shared repairs, the six migrations, paused signup installation and
+the later approved signup window. Hosted writes and enrollment remain on hold.
+
 ## Selected backend and remaining inputs
 
 On 2026-11-25 (Japan), after PR #94 merged, the user selected **Celeritas7's Org →
@@ -147,19 +151,28 @@ they do not establish a real Google consent/return success.
    General_apps, preserving unrelated migration history, and run `catalog.sql` plus
    the shared inventory. Confirm `cp_private` is not exposed. Verify the designated owner
    identity and bootstrap its UUID once using the operator-only function.
-3. Set target-specific Edge settings and private signing key. Deploy only
+3. Only after that complete foundation and owner checkpoint, install the separately
+   reviewed signup candidate 04 **paused**. It is outside the six migrations and
+   is not copied by the builder. Verify the shared trigger contracts, fresh admin
+   status and legacy regressions using [G2](SIGNUP-ROLLOUT.md#execution-checkpoints-and-stopping-criteria).
+   Never replay the earlier migrations over this signup contract.
+4. Set target-specific Edge settings and private signing key. Deploy only
    `material-files` and `offline-lease` from the reviewed `server/` package.
    Keep `verify_jwt = true` and test the actual target's user JWTs. Current provider
    documentation supports both legacy and asymmetric user JWTs at this gateway;
    publishable keys belong in `apikey`, not in the bearer-token header.
-4. Publish only `public/` at the selected origin. Confirm headers, literal file
+5. Publish only `public/` at the selected origin. Confirm headers, literal file
    routes, callback behavior, worker scope and manifest hashes from the hosted
    responses. Do not enable the existing production route or migrate its storage.
-5. Run the [hosted matrix, backup/restore and device procedure](README.md), including
+6. Follow the rollout guide's G4 controlled signup window before creating any new
+   test Auth identity. Preparing a request does not open signup. Complete confirmed
+   reservations as suspended learners, then separately review access and assignments.
+   Close admission when the approved window ends. Run the
+   [hosted matrix, backup/restore and device procedure](README.md), including
    A/B/admin/unregistered, raw URLs, revocation races, group changes, concurrent
    updates, Google return and iPad airplane-mode cold reopen. Record PASS/FAIL/BLOCKED
    against the exact project/origin/build. Complete Android and legacy-app checks.
-6. Rehearse disabling/re-enabling this staging route with server data and device
+7. Rehearse disabling/re-enabling this staging route with server data and device
    queues retained. Prepare a separate reviewed production activation change only
    after all release gates pass. Downloaded/exported copies cannot be recalled.
 

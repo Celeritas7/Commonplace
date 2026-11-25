@@ -6,6 +6,11 @@ the merged foundation's tests and remaining release gates. See the current
 remains disabled. The U1 description below is historical, followed by each phase's
 implementation notes.
 
+For the current General_apps execution sequence, use the
+[migration and signup rollout guide](acceptance/SIGNUP-ROLLOUT.md). All six
+migrations precede signup candidate 04; installing it paused does not authorize
+opening signup, enrolling learners or activating the deployed application.
+
 Status: implementation for review, **not deployed or enabled**. Baseline main: `0239b93` (U0 merged in PR #72). No existing application page imports these modules. There is no project URL, key, signup hook, deployed function, real account seed, automatic migration runner or hosting change here.
 
 ## Delivered

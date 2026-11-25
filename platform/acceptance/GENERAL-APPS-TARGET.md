@@ -10,7 +10,9 @@ The [read-only readiness review](GENERAL-APPS-REVIEW.md) is now complete against
 merged PR #95. It found shared onboarding/API prerequisites that block learner
 activation. Existing backup integrity passed within the documented scope;
 exact restore provenance and Auth/Storage runtime recovery remain open. Use that
-review's ordered R1–R5 follow-up instead of repeating target selection.
+review's R1–R5 work areas instead of repeating target selection. The current
+[migration and signup rollout guide](SIGNUP-ROLLOUT.md) refines their execution
+order: signup candidate 04 follows all six migrations, never precedes them.
 
 ## Verified backend mapping
 
@@ -77,12 +79,16 @@ expressions may contain identifiers and should stay private. The separate
    server secret store. The actual learner email remains unspecified.
 4. Apply the six migrations explicitly in order after the preceding checks,
    preserving unrelated objects and migration history. Run both catalog checks,
-   confirm `cp_private` is not exposed, bootstrap the verified owner and deploy
-   only the two Commonplace Edge routes.
+   confirm `cp_private` is not exposed and bootstrap the verified owner. Only then
+   install the separately reviewed signup candidate 04 with admission **paused**;
+   verify its status and shared-trigger regressions. Follow the rollout guide's
+   G1–G3 checkpoints before deploying the two Commonplace Edge routes.
 5. Publish only the reviewed package's `public/` directory. Complete hosted
    Google/JWT/Storage/Edge, learner A/B, revocation, device/offline/account-switch
-   and rollback acceptance with tracked fixtures. The loopback-only local runner
-   must never be repointed at this shared live project.
+   and rollback acceptance with tracked fixtures. New test Auth identities need
+   the separate G4 approval/window; request preparation, verified registration,
+   section permissions and material assignments are distinct operations. The
+   loopback-only local runner must never be repointed at this shared live project.
 
 No hosted migration, account, policy, Auth setting or deployed application was
 changed during target selection or correction. The staged source and local

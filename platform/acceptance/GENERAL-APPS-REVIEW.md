@@ -96,13 +96,18 @@ No restore was performed in this checkpoint.
 | --- | --- | --- |
 | R1 — Pin recovery evidence | Connect the previous restore report to an exact database SHA; identify recoverable Auth/config/Storage state | Exact archive provenance recorded; isolated recovery proves Auth/FKs, ownership/grants, A/B RLS and private downloads; no raw secrets in reports |
 | R2 — Prepare shared access repairs | In each owning app, define owner/application policy boundaries, scope onboarding, fix identified definer paths and Edge entitlement | Reviewable migrations with local fixtures for anonymous/unregistered/A/B/admin, spoofed metadata, conflict paths and existing-user regression; explicit rollback and dependency plan |
-| R3 — Apply reviewed prerequisites | Take a fresh recovery checkpoint, then apply only the approved targeted changes | Hosted catalog/advisors reconciled; intended shared/public data still works; unrelated app and scheduler tests pass |
-| R4 — Stage Commonplace | Verify owner UUID, separate HTTPS origin/redirect, signing keys and exposed-schema settings; apply six migrations and two routes in order | Default-deny learner; verified admin; `cp_private` unexposed; private material access and audit logging verified; production study still works |
+| R3 — Apply reviewed prerequisites | Take a fresh recovery checkpoint, then apply only the approved targeted shared repairs; defer CP-dependent signup candidate 04 to R4 | Hosted catalog/advisors reconciled; intended shared/public data still works; unrelated app and scheduler tests pass |
+| R4 — Stage Commonplace | Verify owner UUID, origin/redirect, keys and exposed schemas; install all six migrations and owner first, candidate 04 paused next, then the two CP routes and staged website | Catalog and legacy regressions pass; verified admin; private schemas unexposed; signup reports paused. New test identities require the separate controlled signup window before the hosted learner matrix |
 | R5 — Hosted/device pilot | Execute the existing U9 matrix with tracked learner fixtures and real devices | A/B isolation, direct URLs, publication, revocation, Google return, iPad/Android offline reopen and safe switching pass; rollback demonstrated |
 
 R1 and preparation for R2 can proceed together. Production changes and learner
 enrollment remain separate from this review. The learner's real email is still
 unspecified. No cross-project identity or progress transfer is required.
+
+Use [the current rollout order](SIGNUP-ROLLOUT.md) for the exact six filenames,
+candidate dependencies, stopping criteria and controlled signup/registration
+sequence. This ordering clarification does not change the historical findings
+above or claim that their hosted prerequisites have since passed.
 
 ## Reproducible local evidence
 

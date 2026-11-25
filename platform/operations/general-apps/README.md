@@ -7,6 +7,11 @@ against merged PR #96 (`41feea4e3d6ff1fb8dc7e87f6cbd4af5f609fdbb`) on
 Do not run a directory glob, database reset or automated deployment against the
 shared project. The six existing platform migrations remain unchanged.
 
+Use the [current migration and signup rollout order](../../acceptance/SIGNUP-ROLLOUT.md)
+before execution. Candidate 04 depends on all six CP migrations and follows owner
+verification/bootstrap; it is not an early shared repair to apply before that
+foundation. Installing it leaves new Commonplace signup paused.
+
 This is the first concrete repair package from the
 [General_apps review](../../acceptance/GENERAL-APPS-REVIEW.md). It does not close
 every shared-app finding or prove recovery. The existing personal study system,
