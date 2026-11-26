@@ -1,5 +1,5 @@
 import { prepareExcelExercise } from "../../platform/content/excel-contract.mjs";
-import { sumResult, appendCalculation, validateCalculationHistory, CALCULATION_HISTORY_LIMIT, validatePracticeMode, practiceCriteria, practiceHistory } from "./calculation-history.mjs";
+import { sumResult, appendCalculation, validateCalculationHistory, CALCULATION_HISTORY_LIMIT, validatePracticeMode, practiceCriteria, practiceHistory, emptyToolState, validateToolState } from "./calculation-history.mjs";
 export { sumResult } from "./calculation-history.mjs";
 const el = (tag, text) => {
   const n = document.createElement(tag);
@@ -21,6 +21,10 @@ export function mountAssignedExcel(
   let history = validateCalculationHistory(state.attempts ?? []);
   let mode = validatePracticeMode(state.practice_mode ?? "free");
   let appliedNow = state.applied;
+  let tools = validateToolState(state.tool_state ?? emptyToolState());
+  // Clipboard content is deliberately session-only and scoped to this mount.
+  let copied = null;
+  const formatMode = "independent-format-v1", copyMode = "independent-copy-v1";
   root.replaceChildren();
   root.append(
     el("h3", bundle.concept.title),
@@ -33,7 +37,7 @@ export function mountAssignedExcel(
     root.append(el("p", activity.instruction));
   const hint = el(
     "p",
-    "Practise the SUM formula in B5. The Ribbon tools explain their location and purpose.",
+    "Practise SUM in B5. Home Ribbon tools marked Practice support formatting A1 and copying B2 to B3. Other tools explain their location and purpose.",
   );
   hint.className = "learn-muted";
   root.append(hint);
@@ -53,8 +57,10 @@ export function mountAssignedExcel(
   };
   const guided = modeButton("Start guided SUM (reset worksheet)");
   const independent = modeButton("Start independent revision (reset worksheet)");
+  const format = modeButton("Start heading formatting (reset worksheet)");
+  const copy = modeButton("Start clipboard practice (reset worksheet)");
   const leave = modeButton("Leave practice mode");
-  modeActions.append(guided, independent, leave);
+  modeActions.append(guided, independent, format, copy, leave);
   const practiceResults = el("div");
   practice.append(practiceTitle, practiceMode, modeActions, practiceInstruction, practiceStatus, practiceResults);
   root.append(practice);
@@ -116,7 +122,7 @@ export function mountAssignedExcel(
     body.append(r);
     return r;
   };
-  row(1, worksheet.headers);
+  const heading = row(1, worksheet.headers).children[1];
   const inputs = worksheet.rows.map((r, i) => {
     const input = el("input");
     input.type = "number";
@@ -141,7 +147,9 @@ export function mountAssignedExcel(
   const reset = el("button", "Reset worksheet");
   reset.type = "button";
   reset.className = "learn-secondary";
-  actions.append(apply, reset);
+  const submitFormat = modeButton("Submit formatting");
+  submitFormat.hidden = true;
+  actions.append(apply, submitFormat, reset);
   form.append(actions);
   const feedback = el(
     "p",
@@ -160,13 +168,18 @@ export function mountAssignedExcel(
   root.append(historyPanel);
   function renderHistory() {
     historyTitle.textContent = "Calculation history (" + history.length + "/" + CALCULATION_HISTORY_LIMIT + ")";
-    historyHint.textContent = "The latest five submissions are shown. All recorded submissions are retained with this assigned lesson. This is practice feedback, not an exam score." +
+    historyHint.textContent = "The latest five submissions are shown, including formatting and clipboard practice. All recorded submissions are retained with this assigned lesson. This is practice feedback, not an exam score." +
       (history.length === CALCULATION_HISTORY_LIMIT ? " History is full; further calculations update the worksheet but are not added to history." : "");
     historyList.replaceChildren();
     for (const a of history.slice(-5).reverse()) {
-      historyList.append(el("li", (a.formula || "(empty formula)") + " · " +
-        a.values.join(", ") + " · " + (a.accepted ? "Result: " + a.result : "Formula or values not accepted") +
-        (a.activity ? " · " + (a.activity === "guided-sum-v1" ? "Guided" : "Independent") : "")));
+      if (a.activity === formatMode) {
+        const grade = practiceCriteria(formatMode, worksheet.rows, a.values, a.formula, a.tool_state);
+        historyList.append(el("li", "Heading formatting · " + grade.score + "/" + grade.maxScore));
+      } else {
+        historyList.append(el("li", (a.formula || "(empty formula)") + " · " +
+          a.values.join(", ") + " · " + (a.accepted ? "Result: " + a.result : "Formula or values not accepted") +
+          (a.activity ? " · " + (a.activity === "guided-sum-v1" ? "Guided" : a.activity === copyMode ? "Clipboard" : "Independent") : "")));
+      }
     }
   }
   renderHistory();
@@ -174,6 +187,8 @@ export function mountAssignedExcel(
     workbook: bundle.lesson.title,
     sheet: bundle.dataset.title,
     formulaCell: "B5",
+    practiceTools: ["Bold", "Fill Color", "Borders", "Copy", "Paste"],
+    onPracticeTool: performTool,
   });
   if (!ribbon) throw Error("Excel simulator could not start.");
   const snapshot = (applied) => ({
@@ -182,23 +197,71 @@ export function mountAssignedExcel(
     applied,
     ...(history.length ? { attempts: structuredClone(history) } : {}),
     ...(mode !== "free" ? { practice_mode: mode } : {}),
+    ...(Object.values(tools).some(Boolean) ? { tool_state: { ...tools } } : {}),
   });
+  function renderTools() {
+    heading.setAttribute("data-practice-bold", String(tools.bold));
+    heading.setAttribute("data-practice-fill", String(tools.fill));
+    heading.setAttribute("data-practice-border", String(tools.border));
+  }
+  function performTool(tool, address) {
+    if (disposed) return "This worksheet is closed.";
+    const key = { Bold: "bold", "Fill Color": "fill", Borders: "border" }[tool];
+    if (key && ["bold", "fill", "border"].includes(key)) {
+      if (address !== "A1") return "Select A1 to practise this heading tool.";
+      tools[key] = !tools[key];
+      renderTools();
+      renderPractice();
+      onChange(snapshot(appliedNow));
+      return tool + (tools[key] ? " applied to A1." : " removed from A1.");
+    }
+    if (tool === "Copy") {
+      if (address !== "B2") return "Select B2 to copy its value.";
+      const value = inputs[0].value;
+      if (!value.trim() || value.length > 40 || !Number.isFinite(Number(value)) || Math.abs(Number(value)) > 1e12)
+        return "Enter a valid numeric value in B2 first.";
+      copied = value;
+      return "B2 copied. Select B3 and choose Paste.";
+    }
+    if (tool === "Paste") {
+      if (address !== "B3") return "Select B3 to paste the copied value.";
+      if (copied === null) return "Copy B2 first. Clipboard contents are not restored after reopening.";
+      inputs[1].value = copied;
+      tools.copy_used = true;
+      ribbon.refresh();
+      changed();
+      return "B2 value pasted into B3.";
+    }
+    return "Location preview only.";
+  }
   function renderPractice() {
     const values = inputs.map(n => n.value);
     const active = mode !== "free";
     const guide = practiceHistory(history, worksheet.rows, "guided-sum-v1");
     const assessments = practiceHistory(history, worksheet.rows, "independent-match-v1");
+    const formats = practiceHistory(history, worksheet.rows, formatMode);
+    const copies = practiceHistory(history, worksheet.rows, copyMode);
     const full = history.length >= CALCULATION_HISTORY_LIMIT;
     practiceMode.textContent = mode === "guided-sum-v1" ? "Mode: Guided SUM" :
-      mode === "independent-match-v1" ? "Mode: Independent revision" : "Mode: Free practice";
+      mode === "independent-match-v1" ? "Mode: Independent revision" :
+      mode === formatMode ? "Mode: Heading formatting" : mode === copyMode ? "Mode: Clipboard practice" : "Mode: Free practice";
     guided.disabled = full || mode === "guided-sum-v1";
     independent.disabled = full || mode === "independent-match-v1";
+    format.disabled = full || mode === formatMode;
+    copy.disabled = full || mode === copyMode;
     leave.hidden = !active;
+    apply.hidden = mode === formatMode;
+    submitFormat.hidden = mode !== formatMode;
+    submitFormat.disabled = full;
     practiceInstruction.textContent = mode === "guided-sum-v1"
       ? "Keep the original three values. Select B5, enter =SUM(B2:B4), then press Apply formula."
       : mode === "independent-match-v1"
         ? "Change B3 so it matches the original B2. Keep B2 and B4 unchanged. Calculate the total in B5."
-        : "Choose a practice mode to work with this assigned dataset. Starting a mode resets the current worksheet, not its saved history.";
+        : mode === formatMode
+          ? "Select A1. On Home → Font, use Bold, Fill Color (yellow), and Borders. Keep the three original values unchanged. Submit formatting when finished."
+          : mode === copyMode
+            ? "Select B2, use Home → Clipboard → Copy, select B3 and use Paste. Keep B2 and B4 unchanged. Select B5, enter SUM and apply the formula."
+            : "Choose a practice mode to work with this assigned dataset. Starting a mode resets the current worksheet, not its saved history.";
     if (full) practiceInstruction.textContent += " The shared 40-submission history is full; new scored submissions are unavailable.";
     practiceStatus.textContent = "";
     if (mode === "guided-sum-v1") {
@@ -216,11 +279,20 @@ export function mountAssignedExcel(
     practiceResults.replaceChildren();
     practiceResults.append(el("p", "Guided: " + guide.filter(a=>a.grade.passed).length + " passed / " + guide.length +
       " submitted · Independent: " + assessments.filter(a=>a.grade.passed).length + " passed / " + assessments.length + " submitted"));
+    practiceResults.append(el("p", "Formatting: " + formats.filter(a=>a.grade.passed).length + " passed / " + formats.length + " submitted · Clipboard: " + copies.filter(a=>a.grade.passed).length + " passed / " + copies.length + " submitted"));
     const last = assessments.at(-1);
     if (last) {
       practiceResults.append(el("strong", "Last independent submission: " + last.grade.score + " / " + last.grade.maxScore));
       const list = el("ul");
       for (const c of last.grade.criteria) list.append(el("li", (c.passed ? "Correct: " : "Review: ") + c.label));
+      practiceResults.append(list);
+    }
+    for (const [title, group] of [["Last formatting submission", formats], ["Last clipboard submission", copies]]) {
+      const latest = group.at(-1);
+      if (!latest) continue;
+      practiceResults.append(el("strong", title + ": " + latest.grade.score + " / " + latest.grade.maxScore));
+      const list = el("ul");
+      for (const c of latest.grade.criteria) list.append(el("li", (c.passed ? "Correct: " : "Review: ") + c.label));
       practiceResults.append(list);
     }
     practiceResults.append(el("p", "Scores describe saved self-practice submissions, not a certified exam. Worksheet completion remains separate."));
@@ -233,7 +305,12 @@ export function mountAssignedExcel(
     renderPractice();
     onChange(snapshot(false));
   }
-  for (const n of [...inputs, formula]) n.addEventListener("input", changed);
+  inputs.forEach((n,i)=>n.addEventListener("input", ()=>{
+    if (i === 0 || i === 1) tools.copy_used = false;
+    if (i === 0) copied = null;
+    changed();
+  }));
+  formula.addEventListener("input", changed);
   function calculate() {
     const total = sumResult(
       inputs.map((n) => n.value),
@@ -252,6 +329,10 @@ export function mountAssignedExcel(
   form.onsubmit = (event) => {
     event.preventDefault();
     if (disposed) return;
+    if (mode === formatMode) {
+      feedback.textContent = "Use Submit formatting to record this exercise.";
+      return;
+    }
     ribbon.select("B5");
     let applied = false;
     try {
@@ -266,6 +347,7 @@ export function mountAssignedExcel(
         id: crypto.randomUUID(),
         submittedAt: new Date().toISOString(),
         activity: mode,
+        ...(mode === copyMode ? { toolState: tools } : {}),
       });
       if (next) {
         history = next;
@@ -278,10 +360,30 @@ export function mountAssignedExcel(
     renderPractice();
     onChange(snapshot(applied));
   };
+  submitFormat.onclick = () => {
+    if (disposed || mode !== formatMode || history.length >= CALCULATION_HISTORY_LIMIT) return;
+    try {
+      const next = appendCalculation(history, inputs.map(n=>n.value), formula.value, {
+        id: crypto.randomUUID(), submittedAt: new Date().toISOString(),
+        activity: formatMode, toolState: tools,
+      });
+      if (!next) return;
+      history = next;
+      renderHistory();
+      renderPractice();
+      feedback.textContent = "Formatting submitted. Review the four criteria above.";
+      onChange(snapshot(appliedNow));
+    } catch {
+      feedback.textContent = "Formatting could not be recorded. Earlier submissions were kept.";
+    }
+  };
   function resetDraft() {
     if (disposed) return;
     inputs.forEach((n, i) => (n.value = String(worksheet.rows[i][1])));
     formula.value = "";
+    copied = null;
+    tools = emptyToolState();
+    renderTools();
     ribbon.select("B5");
     changed();
   }
@@ -293,15 +395,20 @@ export function mountAssignedExcel(
   }
   guided.onclick = () => startMode("guided-sum-v1");
   independent.onclick = () => startMode("independent-match-v1");
+  format.onclick = () => startMode(formatMode);
+  copy.onclick = () => startMode(copyMode);
   leave.onclick = () => {
     if (disposed || mode === "free") return;
     mode = "free";
+    copied = null;
     renderPractice();
     onChange(snapshot(appliedNow));
   };
+  renderTools();
   renderPractice();
   return () => {
     disposed = true;
+    copied = null;
     root.replaceChildren();
   };
 }
