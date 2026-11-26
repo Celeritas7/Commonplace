@@ -57,6 +57,11 @@ account-owned staging retries. It leaves the original importer available until
 its separate caller cutover; remaining editor, hub, provider and recovery gates
 still prevent G0 clearance.
 
+The [daily-reset preparation](ROADMAP-RESET-READINESS.md) now adds an atomic,
+version-checked reset with account-owned retry recovery, preserving streaks and
+study-session history. General editor/caller, provider and recovery gates remain
+open. This is another bounded G0 work group, not permission to activate sharing.
+
 Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
 preparation PR or passing synthetic tests do not clear those gates.

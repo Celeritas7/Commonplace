@@ -101,7 +101,9 @@ console importers need explicit target/item IDs and verified-user context; do no
 fake a JWT or add a user-ID override. Their original API remains available and is
 not contained by these new RPC pause checks.
 
-The next G0 owning-app work remains Roadmap editor/daily-reset failure handling,
+The subsequent [daily-reset preparation](ROADMAP-RESET-READINESS.md) adds atomic
+reset/retry without changing this import contract.
+The next G0 owning-app work remains Roadmap task/log editor failure handling,
 suggestion/hub delivery and caller/account-scoped state acceptance, followed by
 remaining shared-app/Edge entitlements and API/Auth/provider evidence. This bounded
 import preparation does not certify all of Roadmap or create an app-admission
