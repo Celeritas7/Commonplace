@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { eagleCandidate,eagleSeed,eagleTables,eagleId as id } from '../tests/eagle-workspace-fixture.mjs';
 export async function eagleWorkspaceAcceptance({a,b,unregistered,owner,sql,check,client,data,denied,withBlockedWriter,pause}) {
+ const rejectsCode=(result,code,label)=>assert.equal(result.error?.code,code,label);
  const claim=user=>`set local role authenticated;select set_config('request.jwt.claim.sub','${user.id}',true);
   select set_config('request.jwt.claims','{"sub":"${user.id}","role":"authenticated","is_anonymous":false}',true);`;
  const snapshot=async()=>Object.fromEntries(await Promise.all(eagleTables.map(async table=>[table,
@@ -33,8 +34,8 @@ export async function eagleWorkspaceAcceptance({a,b,unregistered,owner,sql,check
    denied(await actor.client.from('logi_nodes').update({name:'forbidden'}).eq('id',id(9)),'Indirect node write');
    denied(await actor.client.rpc('ga_eagle_delete_project',{target_id:id(1)}),'Atomic project denial');
   }
-  denied(await b.client.from('eagle_unit_progress').update({node_id:id(10)}).eq('id',id(17)),'Wrong assembly');
-  denied(await b.client.from('eagle_units').update({version_id:id(7)}).eq('id',id(15)),'Wrong version');
+  rejectsCode(await b.client.from('eagle_unit_progress').update({node_id:id(10)}).eq('id',id(17)),'23514','Wrong assembly');
+  rejectsCode(await b.client.from('eagle_units').update({version_id:id(7)}).eq('id',id(15)),'23514','Wrong version');
   assert.deepEqual(await snapshot(),before);
   assert.equal(data(await b.client.from('eagle_unit_progress').update({notes:'Authorized edit'}).eq('id',id(17)).select('*'),'Operator edit')[0].actual_min,42);
  });
@@ -51,13 +52,13 @@ export async function eagleWorkspaceAcceptance({a,b,unregistered,owner,sql,check
  await check('Eagle atomic deletion and node archival preserve records on any refused step',async()=>{
   const before=await snapshot();
   await sql(`create table fixture_eagle_hold(assembly_id uuid references logi_assemblies);insert into fixture_eagle_hold values('${id(3)}')`);
-  denied(await b.client.rpc('ga_eagle_delete_project',{target_id:id(1)}),'Parent FK refusal');
+  rejectsCode(await b.client.rpc('ga_eagle_delete_project',{target_id:id(1)}),'23503','Parent FK refusal');
   assert.deepEqual(await snapshot(),before);
   await sql('drop table fixture_eagle_hold');
   // A failed second step must restore the links removed by the first step.
   await sql(`create function fixture_refuse_node() returns trigger language plpgsql as $$begin raise exception 'fixture refusal';end;$$;
    create trigger fixture_refuse_node before update on logi_nodes for each row execute function fixture_refuse_node()`);
-  denied(await b.client.rpc('ga_eagle_archive_node',{target_id:id(9)}),'Node refusal');
+  rejectsCode(await b.client.rpc('ga_eagle_archive_node',{target_id:id(9)}),'P0001','Node refusal');
   assert.deepEqual(await snapshot(),before);
   await sql('drop trigger fixture_refuse_node on logi_nodes;drop function fixture_refuse_node()');
   assert.equal(data(await b.client.rpc('ga_eagle_archive_node',{target_id:id(9)}),'Node archive'),id(9));
