@@ -80,9 +80,12 @@ Before a real installation/cutover:
    The six Commonplace migrations, signup and learner enrollment remain on hold.
 
 This bounded work does **not** certify the entire Roadmap application. Metadata
-also shows eleven other Roadmap tables with owner policies, several task/child
-links lacking composite owner constraints, and excess browser grants. Their
-caller review and corrections remain in G0's shared-app group. The comparison
+also showed eleven other Roadmap tables with owner policies, several task/child
+links lacking composite owner constraints, and excess browser grants. The
+subsequent [record-ownership candidate 09](ROADMAP-RECORD-READINESS.md) prepares
+those link/grant corrections without changing the comparison invoker API.
+Historical ownership and actual caller acceptance remain required before use.
+The comparison
 RPC, suggestion/hub flows, daily-reset behavior and other editors also retain
 their own acceptance requirements. No broad revocation, data remapping or
 unreviewed replacement of those workflows is included. Continue those remaining

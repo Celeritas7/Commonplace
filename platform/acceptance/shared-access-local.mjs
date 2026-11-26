@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { randomUUID, randomBytes } from "node:crypto";
 import { roadmapDailyAcceptance } from "./roadmap-daily-local.mjs";
+import { roadmapRecordsAcceptance } from "./roadmap-records-local.mjs";
 import { legacyFixture } from "../tests/shared-access-fixture.mjs";
 import { eagleWorkspaceAcceptance } from "./eagle-workspace-local.mjs";
 import { eagleFixture } from "../tests/eagle-workspace-fixture.mjs";
@@ -67,6 +68,7 @@ export async function sharedAccessAcceptance({
     await sql(legacyFixture);
     await sql(eagleFixture);
     await sql(await readFile(new URL("../tests/roadmap-session-fixture.sql",import.meta.url),"utf8"));
+    await sql(await readFile(new URL("../tests/roadmap-records-fixture.sql",import.meta.url),"utf8"));
     await sql(await readFile(new URL('../tests/code-sensei-fixture.sql', import.meta.url), 'utf8'));
     await sql(await readFile(new URL('../tests/healthlog-archive-fixture.sql', import.meta.url), 'utf8'));
     const address=`legacy-baseline-${tag}@example.invalid`;
@@ -319,6 +321,7 @@ export async function sharedAccessAcceptance({
     assert.equal(await sql(`select count(*) from public.roadmap_study_sessions where task_id='${moving}'`),"0");
   });
   await roadmapDailyAcceptance({a,b,owner,sql,check,client,data,denied,withBlockedWriter,pause});
+  await roadmapRecordsAcceptance({a,b,unregistered,sql,check,client,data,denied,withBlockedWriter});
   await check(
     "real Auth binds CP-only identity without legacy roles and preserves legacy viewer signup",
     async () => {
