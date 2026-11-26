@@ -187,3 +187,8 @@ migrations or authorize hosted installation, signup or learner enrollment.
 [Daily-reset preparation](ROADMAP-RESET-READINESS.md) adds the separate daily
 path 01 → 03 → 08 → 12. It changes neither the six CP migrations nor any
 hosted/signup/enrollment gate.
+
+[Task metadata preparation](ROADMAP-TASK-EDIT-READINESS.md) adds the independent
+01 → 03 → 13 path. The integrated preview also uses 08/12 for daily actions and
+resets and 09/10/11 for comparisons. It adds no Commonplace migration and does
+not authorize installation, client cutover or learner enrollment.
