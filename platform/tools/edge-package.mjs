@@ -4,6 +4,14 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { isWithinDirectory } from "./path-containment.mjs";
 const platformRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repositoryRoot = resolve(platformRoot, "..");
+// R3's pure curriculum is shared with classic personal-study pages. Keep this
+// exception exact: do not package arbitrary Office pages or browser controllers.
+const curriculumSources = new Set([
+  "curriculum.mjs",
+  "excel-curriculum.js",
+  "formula-syntax.js",
+].map(name => join(repositoryRoot, "Office_work/Excel_study", name)));
 // Same source package for runner-local verification and reviewed hosted staging.
 export async function copyEdgeSources(target) {
   const hashes = {};
@@ -12,18 +20,21 @@ export async function copyEdgeSources(target) {
     await mkdir(dirname(full), { recursive: true });
     await writeFile(full, body);
   };
-  // Both function entries and their actual shared dependency graph are packaged
-  // below functions/. This is compatible with the local Edge runtime mount.
+  // Keep the repository-relative graph below functions/_shared/. This preserves
+  // source bytes and relative imports across platform/ and the reviewed core,
+  // while all dependencies remain inside the local Edge runtime's mount.
   const seen = new Set();
   async function dependency(path) {
     path = resolve(path);
-    if (!isWithinDirectory(platformRoot, path) || !path.endsWith(".mjs"))
+    if (!(isWithinDirectory(platformRoot, path) && path.endsWith(".mjs")) &&
+        !curriculumSources.has(path))
       throw Error("Unexpected Edge dependency");
     if (seen.has(path)) return;
     seen.add(path);
     const source = await readFile(path, "utf8"),
       name = relative(platformRoot, path).replaceAll("\\", "/");
-    await write("supabase/functions/_shared/" + name, source);
+    await write("supabase/functions/_shared/" +
+      relative(repositoryRoot, path).replaceAll("\\", "/"), source);
     hashes[name] = createHash("sha256").update(source).digest("hex");
     for (const m of source.matchAll(
       /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)['"](\.[^'"]+)['"]/g,
@@ -43,7 +54,7 @@ export async function copyEdgeSources(target) {
       await dependency(path);
       output = output.replace(
         m[1],
-        "../_shared/" + relative(platformRoot, path).replaceAll("\\", "/"),
+        "../_shared/" + relative(repositoryRoot, path).replaceAll("\\", "/"),
       );
     }
     await write(`supabase/functions/${name}/index.ts`, output);

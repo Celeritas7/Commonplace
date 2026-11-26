@@ -1,4 +1,7 @@
 import {PROFILE_FIELDS,promptProfile} from '../lib/learning-profile.mjs';
+import {curriculum} from '../../Office_work/Excel_study/curriculum.mjs';
+const excelRuntime=curriculum.resolveRuntime({id:'assigned-sum',version:1});
+const excelCapability=excelRuntime.capabilities.map(curriculum.resolveCapability).find(capability=>capability.kind==='formula');
 export const MATERIAL_TYPES=Object.freeze(['In-app study examples','Concept explanations','Guided exercises','Independent practice','Quizzes','Downloadable tutorial files','Answer sheets','Practical projects']);
 export const PROMPT_TEMPLATES=Object.freeze([
  {id:'teach-practise',label:'Explain → demonstrate → practise',instructions:'Explain the concept in plain language, demonstrate one worked example, then provide the requested exercises with progressively reduced guidance.'},
@@ -6,7 +9,7 @@ export const PROMPT_TEMPLATES=Object.freeze([
  {id:'diagnose',label:'Common mistakes and correction',instructions:'Include realistic mistakes, show why they fail, and guide the learner to diagnose and correct them before independent practice.'}
 ]);
 const SUBJECTS={
- 'office.excel':{label:'Excel Study',guidance:'Use cell references, ranges and formulas accurately. The current Commonplace Phase A simulator supports only manual =SUM(B2:B4) in B5 with three numeric inputs. Ribbon operations including AutoSum are location previews. Do not claim unsupported operations work in-app. For other topics provide explanations or clearly labeled desktop-Excel work, not simulated steps.'},
+ 'office.excel':{label:'Excel Study',guidance:`Use cell references, ranges and formulas accurately. The central assigned worksheet supports ${excelCapability.worksheet.formula} in ${excelCapability.worksheet.outputCell} with three required numeric inputs. Its guided SUM, quantity revision, heading formatting and numeric Copy/Paste practice use that assigned dataset. Bold, yellow Fill Color, Borders, Copy and Paste work within those bounded practice controls; AutoSum and other unsupported Ribbon operations remain location previews. The publishable capabilities are ${excelRuntime.capabilities.join(', ')}. Personal-study formula lessons do not expand the central publication contract. For other topics provide explanations or clearly labeled desktop-Excel work, not simulated steps. Do not claim unsupported operations work in-app.`},
  'office.vba':{label:'VBA and Macros',guidance:'Explain the Excel object model and each macro step. Use harmless sample workbook data. Never auto-run macros, access private files, call network services or alter security settings.'},
  'coding.python':{label:'Python',guidance:'Use small self-contained Python examples with expected output. Separate the learning concept from professional sample data; avoid package installation or network dependencies unless explicitly requested.'},
  'coding.sql':{label:'SQL',guidance:'Declare the SQL dialect, show table definitions and small sample rows, and provide expected query results. Use a disposable practice dataset, not production mutations.'},

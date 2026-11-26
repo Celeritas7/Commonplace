@@ -1,6 +1,6 @@
 # U7 — Authorized Excel learning integration
 
-Status: implemented behind the existing **disabled** deployment boundary. No hosted authentication, migration, permissions, files or assignments were changed. This is the first section integration; other sections remain on their existing paths. Private offline delivery and cloud synchronization are U8 work.
+Status: implemented behind the existing **disabled** deployment boundary. No hosted authentication, migration, permissions, files or assignments were changed. This is the first section integration; other sections remain on their existing paths. The later [U8 adapter](../offline/README.md) supplies owned offline delivery and synchronization when explicitly enabled; the public offline preview uses fictional data.
 
 ## Review the learner experience
 
@@ -18,14 +18,16 @@ Serve the repository and open `/platform/learn/preview.html`, or choose **Previe
 | --- | --- |
 | Central learner host | Verified account context, active membership, allowed navigation, professional profile, published assignments, authorized downloads and owned study records |
 | U6 material service | RLS/publication/assignment checks on every protected request; private file integrity and delivery |
-| Excel section | Shared Phase A Ribbon and cell navigation, dynamic worksheet from the assigned scenario/dataset, fixed SUM validation and practice feedback |
+| Excel section | Existing Ribbon and cell navigation, dynamic worksheet from the assigned scenario/dataset, shared versioned evaluation and practice feedback |
 | Administrator | Review and assign profession-relevant versions and answer sheets; profile changes do not silently replace an assigned lesson |
 
 `Office_work/Excel_study/assigned-lesson.mjs` renders the authorized U4 model using the existing `excel-ribbon.js` and its CSS, without modifying them or the legacy lesson. The same SUM concept can receive different product labels, quantities, currency/units and scenarios. Profile goals/preferences are shown by the central host; this does not automatically translate content or infer new permissions/assignments from a job title.
 
-Only `explanation.text.v1` and `excel.sum.b2-b4.v1` are supported. SUM accepts the explicit B2:B4 expression, bounded finite numeric cells and no arbitrary expressions/evaluation. Ribbon operations remain orientation previews. PR #70 is still open against `feat/excel-study-phase-a` at this checkpoint; none of its unmerged operations are claimed or changed. Review the eventual merged capability changes before extending the adapter. The current static Section 1 lesson, its quiz and `commonplace_excel_preview_v1` remain intact.
+The central publication capabilities remain `explanation.text.v1` and `excel.sum.b2-b4.v1`. R3 binds the latter to shared `sum@1` lesson metadata and `assigned-sum@1` evaluation; the runtime still requires three bounded numeric values. Current guided/revision/formatting/clipboard criteria use the shared `assigned-practice@1` rubric. Unknown curriculum versions fail rather than selecting a newer lesson. These internal bindings do not alter the authorized material, progress identity or published schema, and personal F1 support does not advertise additional central capabilities.
 
-The shared reader also displays assigned explanations, inert code, datasets, question blocks, answer sheets and attachments. Quiz responses are saved, not automatically scored: the U6 document contract intentionally has no embedded answer key. An administrator-released answer sheet supplies the comparison. This is not the future full Phase C/D guided engine or independent-practice expansion.
+SUM accepts the supported equivalent B2:B4 expressions using the R2 syntax checks. E2/E2B modes provide guided SUM, quantity revision, heading formatting and bounded numeric Copy/Paste; other Ribbon tools remain orientation previews. Existing Section 1, its quiz and `commonplace_excel_preview_v1` remain intact. New central activity types need their own reviewed contract and acceptance work.
+
+The shared reader also displays assigned explanations, inert code, datasets, question blocks, answer sheets and attachments. Quiz responses are saved, not automatically scored: the U6 document contract intentionally has no embedded answer key. An administrator-released answer sheet supplies the comparison. Shared curriculum evaluation does not bypass those release rules or create another administration interface.
 
 ## Authorization and lifecycle
 
@@ -41,17 +43,17 @@ Imported content is rendered with text nodes. No lesson-provided HTML, scripts, 
 
 ## Progress and preservation
 
-Live study records use the U1 fixed project namespace and verified account UUID. Bundle progress uses the U4 content-version identity; document/file records use the immutable material-version UUID and version. Individual/group assignment paths do not change progress identity. A new published version starts separate progress. Worksheet drafts/completion, quiz responses, notes and bookmarks save on interaction under that identity. Reset affects only the selected worksheet attempt.
+Live study records use the U1 fixed project namespace and verified account UUID. Bundle progress uses the U4 content-version identity; document/file records use the immutable material-version UUID and version. Individual/group assignment paths do not change progress identity. A new published version starts separate progress. Worksheet drafts/completion, quiz responses, notes and bookmarks save on interaction under that identity. Reset affects the current worksheet draft and preserves recorded submissions.
 
 `account-store.get()` reads one owned record with ticket and identity checks; unrelated invalid records are not enumerated. Restored records are validated before use. An unreadable existing record is kept and disables new saves for that material, with a visible message. Quota/storage failures leave the current UI available and report that changes were not saved. No legacy state is adopted, rewritten, deleted or silently uploaded. The existing U1 backup contract continues to include these owned records.
 
-These records are local study state, **not server-certified completion or cloud progress**. There are no writes to `cp_study_state` yet; its conflict protocol belongs to U8. Local storage namespaces prevent accidental cross-account display, not deliberate inspection by another person using developer tools on the same device. Existing offline coding/language PWAs are unchanged. This new assigned workspace requires online authorization and does not register a service worker, cache private materials or implement an offline lease. Do not clear website data to install or test it.
+These records are client-side study evidence, **not server-certified completion**. The U8 path can queue and synchronize owned records through its existing conflict protocol, while the deployment boundary remains disabled. Local storage namespaces prevent accidental cross-account display, not deliberate inspection by another person using developer tools on the same device. Existing offline coding/language PWAs are unchanged. The original U7 preview requires online access; the U8 host adds verified public shells and signed private offline packs. Do not clear website data to install or test either path.
 
 ## Acceptance and deployment gates
 
 Automated coverage includes strict catalogue/file manifests, SUM capability boundaries, versioned progress, same-owner refresh, A/B isolation and stale results, quiz responses/answer visibility, authorized download handoff, revoked/direct-URL/offline failures, callback preservation, inert text and narrow layouts. Existing platform SQL tests and the legacy Excel regression still run. Browser fixtures model a server and do not prove hosted Supabase behavior.
 
-Before activation, retain the U0/U1/U6 backup/restore and isolated-backend/origin gates. Test this exact client with real A/B/admin/revoked JWTs and the private Storage service, including permissions changed in another tab, downloads interrupted by revocation, expired sessions, account switching and iPad Home Screen Google callbacks. Verify the configured deployment namespace stays stable. Test actual XLSX/PDF downloads and foreground/back-forward lifecycle on physical iPad/Safari and Android. U8 must implement and validate owned offline packs, cross-tab coordination and conflict-safe cloud sync before offering assigned study offline.
+Before activation, retain the U0/U1/U6 backup/restore and isolated-backend/origin gates. Test this exact client with real A/B/admin/revoked JWTs and the private Storage service, including permissions changed in another tab, downloads interrupted by revocation, expired sessions, account switching and iPad Home Screen Google callbacks. Verify the configured deployment namespace stays stable. Test actual XLSX/PDF downloads and foreground/back-forward lifecycle on physical iPad/Safari and Android. The implemented U8 offline/sync path still requires hosted and physical-device acceptance before real learners rely on assigned study offline.
 
 Rollback before activation: revert the code. After an approved pilot, disable the deployment boundary/route and retain the new study records, material versions, assignments and files. No table drops, token copying or clearing devices is required.
 
