@@ -201,3 +201,8 @@ none of the six Commonplace migrations or hosted/signup/enrollment gates.
 01 → 03 → 15 path. Existing direct writers require coordinated caller review;
 this is not app admission or a hosted cutover. The six Commonplace migrations
 and deferred restoration checkpoint remain unchanged.
+
+[Structural-change preparation](ROADMAP-STRUCTURE-READINESS.md) adds the separate
+01 → 03 → 09 → 15 → 16 path. Deletion review and retained private history do not
+constitute restoration or hosted authorization. The six Commonplace migrations,
+original offline packs and deferred restoration checkpoint remain unchanged.

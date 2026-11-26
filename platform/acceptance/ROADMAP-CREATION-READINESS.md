@@ -99,8 +99,9 @@ retry, whole-batch capture, older delete rollback, overlapping local edits and
 another form's separate draft. Type checking/build and prior regression suites
 remain required. Hosted/device acceptance is still open.
 
-Next bounded work: **structural task changes and deletion recovery** (moves,
-reordering, folder creation, batch/Undo behavior and retained history), then
+The subsequent [structural task/deletion preparation](ROADMAP-STRUCTURE-READINESS.md)
+now covers moves, reordering, folder creation, deletion review and retained history.
+The next work remains
 suggestion/hub delivery, actual study callers and account-scoped local state.
 Shared-app/Edge admission, API/Auth/provider evidence, deferred recovery and an
 explicit final G0 decision still precede hosted rollout. Merging preparation does

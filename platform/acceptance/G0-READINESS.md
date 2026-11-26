@@ -75,8 +75,14 @@ open. This does not activate sharing or resume deferred restoration.
 
 The [task creation/capture preparation](ROADMAP-CREATION-READINESS.md) adds atomic
 batches, retained drafts and request-owned retry slots. Structural task changes
-and deletion recovery are next. Hosted changes/enrollment stay on hold, and
+and deletion recovery are recorded below. Hosted changes/enrollment stay on hold, and
 restoration remains deferred; no G0 gate is cleared by this preparation.
+
+The [structural-change preparation](ROADMAP-STRUCTURE-READINESS.md) adds atomic
+moves/reordering/new-folder moves, explicit deletion review and retained study
+history. Commonplace #131 and Roadmap #24 are confirmed merged. Suggestion/hub
+delivery, actual callers and account-scoped local-state acceptance remain next.
+Hosted changes/enrollment remain on hold; restoration remains deferred.
 
 Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
