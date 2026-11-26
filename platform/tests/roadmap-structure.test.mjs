@@ -113,3 +113,16 @@ test('containment revokes structural execution even with missing pause control',
   await assert.rejects(()=>db.exec(stop),/Containment incomplete/);await db.exec('rollback');assert.equal((await db.query("select has_function_privilege('authenticated','ga_roadmap_structure(jsonb,uuid)','execute') ok")).rows[0].ok,false);
  }finally{await db.close()}
 });
+test('new folders cannot cross the owner-tree limit and strand an uncertain retry',async()=>{
+ const db=await fixture(),{as}=access(db);try{
+  await db.exec(`insert into roadmap_tasks(id,user_id,title)
+   select ('16000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${users.a}','Capacity fixture' from generate_series(10000,14994) n`);
+  const p={kind:'move',tasks:[],folder:{id:id(90),title:'At capacity',parent_id:null,tags:[]}};
+  const run=()=>as(users.a,'select ga_roadmap_structure($1,$2) result',[p,id(190)]);
+  await assert.rejects(run,e=>e.code==='22023');
+  await db.exec('reset role');assert.equal((await db.query('select count(*) n from roadmap_tasks where user_id=$1',[users.a])).rows[0].n,5000);
+  assert.equal((await db.query('select count(*) n from ga_private.roadmap_creation_ids where id=$1',[id(90)])).rows[0].n,0);
+  const deletion={kind:'delete',tasks:[await target(db,10000)]};await as(users.a,'select ga_roadmap_structure($1,$2)',[deletion,id(191)]);
+  assert.equal((await run()).rows[0].result.replayed,false);assert.equal((await run()).rows[0].result.replayed,true);
+ }finally{await db.close()}
+});

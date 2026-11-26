@@ -134,6 +134,8 @@ begin
   history:=jsonb_build_object('tasks',before_tasks);
   if mode='move' then
    if folder is not null then
+    if (select count(*) from public.roadmap_tasks where user_id=actor)>=5000 then
+     raise exception 'new folder exceeds retryable tree limit' using errcode='22023';end if;
     destination:=(folder->>'parent_id')::uuid;
     if destination is not null and not exists(select from public.roadmap_tasks where id=destination and user_id=actor and kind='group'
      and not coalesce(tags,'{}') && array['wf','orphaned','wf-orphan']) then raise exception 'folder parent unavailable' using errcode='42501';end if;
