@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { randomUUID, randomBytes } from "node:crypto";
 import { legacyFixture } from "../tests/shared-access-fixture.mjs";
+import { eagleWorkspaceAcceptance } from "./eagle-workspace-local.mjs";
+import { eagleFixture } from "../tests/eagle-workspace-fixture.mjs";
 import { healthlogArchiveAcceptance } from "./healthlog-archive-local.mjs";
 
 export async function sharedAccessAcceptance({
@@ -62,6 +64,7 @@ export async function sharedAccessAcceptance({
 
   await check("hardened legacy Auth rejects anonymous signup and retains the approved viewer role", async () => {
     await sql(legacyFixture);
+    await sql(eagleFixture);
     await sql(await readFile(new URL('../tests/code-sensei-fixture.sql', import.meta.url), 'utf8'));
     await sql(await readFile(new URL('../tests/healthlog-archive-fixture.sql', import.meta.url), 'utf8'));
     const address=`legacy-baseline-${tag}@example.invalid`;
@@ -94,8 +97,11 @@ export async function sharedAccessAcceptance({
        select n,u.email,r,u.id from (values(81,'viewer','${a.id}'::uuid),(82,'operator','${b.id}'),
         (83,'admin','${owner.id}'),(84,'admin','${unregistered.id}')) s(n,r,id) join auth.users u using(id);
       insert into ga_private.eagle_members values('${a.id}'),('${b.id}'),('${owner.id}');
-      insert into public.eagle_units(id) values('${unit}');
-      insert into public.eagle_unit_progress(unit_id,notes) values('${unit}','saved');
+      insert into public.logi_projects(id,name) values('${unit}','Early project');
+      insert into public.logi_assemblies(id,project_id,name) values('${unit}','${unit}','Early assembly');
+      insert into public.logi_nodes(id,assembly_id,name) values('${unit}','${unit}','Early node');
+      insert into public.eagle_units(id,assembly_id,name) values('${unit}','${unit}','Early unit');
+      insert into public.eagle_unit_progress(unit_id,node_id,notes) values('${unit}','${unit}','saved');
       insert into public.roadmap_tasks(id,user_id) values('${task}','${a.id}');
       insert into ga_private.owner_links(app,legacy_id,auth_user_id) values
        ('code-sensei','${legacyA}','${a.id}'),('code-sensei','${legacyB}','${b.id}'),
@@ -564,4 +570,5 @@ export async function sharedAccessAcceptance({
     },
   );
   await healthlogArchiveAcceptance({a,b,unregistered,owner,sql,check,client,data,denied,withBlockedWriter});
+  await eagleWorkspaceAcceptance({a,b,unregistered,owner,sql,check,client,data,denied,withBlockedWriter,pause});
 }
