@@ -90,6 +90,10 @@ receipt/history data in the recovery scope. Do not prune receipts while a
 retained device retry can still exist; deleting a comparison uses its already
 reviewed child-cascade semantics, including its receipts.
 
+The subsequent [candidate 11 preparation](ROADMAP-IMPORT-READINESS.md) supplies
+an explicit-target import API and staged review/retry flow. It remains additive;
+legacy caller cutover is separately required.
+
 The legacy `roadmap_save_comparison(jsonb)` importer and direct owner-scoped
 table APIs are unchanged. This candidate does not make those callers versioned
 or give them reliable import retries. Legacy replacement/pick-reset semantics,

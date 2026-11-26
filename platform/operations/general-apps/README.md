@@ -37,6 +37,7 @@ Supabase configuration, downloaded packs and live records have not changed.
 | `08_roadmap_daily_actions.sql` | Atomic daily task/session actions with owner-scoped retry receipts | 01/03, exact source/owner baseline and coordinated client/recovery acceptance; see [Roadmap session readiness](../../acceptance/ROADMAP-SESSION-READINESS.md) |
 | `09_roadmap_record_ownership.sql` | Owner-qualified links, comparison pick membership and bounded browser grants across the other eleven Roadmap tables | 01/03, reviewed exact catalog, consistent historical links/picks and owning-caller/recovery acceptance; see [record readiness](../../acceptance/ROADMAP-RECORD-READINESS.md) |
 | `10_roadmap_comparison_edits.sql` | Acknowledged, version-checked comparison weights/picks and private before/after retry receipts | 01/03/09, exact comparison contract and coordinated client/recovery acceptance; see [comparison readiness](../../acceptance/ROADMAP-COMPARISON-READINESS.md) |
+| `11_roadmap_comparison_imports.sql` | Explicit-target, revision-checked comparison imports, retained before/after history and original-request replay | 01/03/09/10, matching import preview/caller contract and retention/recovery review; see [import readiness](../../acceptance/ROADMAP-IMPORT-READINESS.md) |
 | `edge/` | Candidate `claude-proxy` and `code-exec` handlers require a verified non-anonymous user and a current explicit function grant | JWT-capable clients, per-user grants, source drift review and each owning app's deployment review |
 | `90_containment.sql` | Close new admission, pause both Edge routes, pause Roadmap routines and revoke their browser execution permissions | Full shared incident only. Review the per-component results and retain individual entitlements |
 
@@ -152,7 +153,7 @@ a single Edge route by setting `ga_private.edge_routes.paused` for its exact
 function name. Check that one row changed, that its previously entitled fixture
 is denied, and that the unaffected route still works with a mock provider.
 Pause Roadmap through its singleton and review all installed prepared routine ACLs.
-Candidate 90 also revokes the optional daily/comparison APIs (08/10); it does not
+Candidate 90 also revokes the optional daily/comparison APIs (08/10/11); it does not
 freeze legacy direct writes or the unchanged comparison importer. Preserve the
 underlying grants, identities, saved work, queues and packs. Existing admissions
 and memberships can be withdrawn or suspended individually through Admin Studio.
@@ -238,8 +239,9 @@ of treating them as mandatory parent rows. Existing comparison import remains
 an invoker function with unchanged semantics. It does not close comparison
 retry/stale-edit, hub/caller, local-state or app-admission acceptance gaps.
 Candidate 10 subsequently prepares versioned preference editing and matching
-staging recovery. Legacy importer replacement/retry, other editors and actual
-caller/device acceptance remain separate; no live client cutover is implied.
+staging recovery. Candidate 11 adds explicit-target replacement/retry and staged import review.
+Legacy importer cutover, other editors and actual caller/device acceptance remain
+separate; no live client cutover is implied.
 
 Tests execute the actual candidate SQL in isolated PostgreSQL and the actual
 candidate Edge handlers with fake provider I/O. The local Supabase runner also
