@@ -9,6 +9,7 @@
   const XML='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
   const MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   const SUM='SUM(B2:B4)';
+  const FORMULAS=new Set(['SUM','AVERAGE','COUNT','MIN','MAX'].map(fn=>fn+'(B2:B4)'));
   const esc=value=>String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
   const cell=(value,style=0)=>({value,style});
   const number=v=>cell(v,2);
@@ -52,11 +53,37 @@
       exercise('01 Sum','sum'),exercise('02 Revise','revise'),exercise('03 Copy','copy'),exercise('04 Format','format')
     ]};
   }
+  function buildFormulaModel(id,version,kind){
+    if(kind!=='practice'&&kind!=='solution')throw Error('Unknown workbook type.');
+    const s=scenarioFor(id,version),done=kind==='solution',engine=global.CommonplaceExcelFormulaFoundations;
+    if(!engine)throw Error('Formula lesson library is unavailable.');
+    const lessons=engine.list();
+    const readme=[
+      [cell('COMMONPLACE · ESSENTIAL FORMULAS',1),cell(done?'COMPLETED SOLUTIONS':'INDEPENDENT PRACTICE',1)],
+      [cell('Context',7),cell(s.title,6)],
+      [cell('Situation',7),cell(s.context,6)],
+      [cell('Instructions',7),cell('Use the appropriate function in B5 for each sheet. Leave starting input cells unchanged. AVERAGE and COUNT include one intentional blank; a blank is not zero.',6)],
+      ...lessons.map((l,i)=>[cell(String(i+1).padStart(2,'0')+' '+l.fn,7),cell(l.concept,6)]),
+      [cell('Material version',7),cell(s.id+' · scenario '+s.version+' · F1 formula foundations 1',6)]
+    ];
+    const sheets=lessons.map((l,i)=>{
+      const ex=engine.exercise(l.id,id,version,'independent');
+      const result=engine.evaluate(ex.formula,ex.values);
+      if(result.error||!Number.isFinite(result.result))throw Error('Invalid reviewed exercise.');
+      const rows=[[cell(s.heading,1),cell(s.quantity,1)],...s.labels.map((label,j)=>[cell(label),ex.values[j]===''?cell(null,2):number(Number(ex.values[j]))]),
+        [cell('Result ('+ex.unit+')',7),done?{value:result.result,style:9,formula:ex.formula.slice(1)}:cell(null,8)],
+        [],[cell('Task',7),cell(ex.instruction,6)]];
+      return {name:String(i+1).padStart(2,'0')+' '+l.fn,rows,widths:[33,62],heights:[26,21,21,21,24,12,50]};
+    });
+    return {scenario:s,kind,filename:'Commonplace-Excel-'+s.id+'-v'+s.version+'-F1-'+kind+'.xlsx',sheets:[
+      {name:'Read me',rows:readme,widths:[34,88],heights:readme.map((_,i)=>i===0?28:i===3||i>=4&&i<=8?64:34)},...sheets
+    ]};
+  }
   function sheetXml(sheet){
     const rows=sheet.rows.map((row,r)=>{
       const cells=row.map((c,i)=>{
         const address=String.fromCharCode(65+i)+(r+1),a=' r="'+address+'" s="'+c.style+'"';
-        if(c.formula){if(c.formula!==SUM||typeof c.value!=='number')throw Error('Unexpected formula.');return '<c'+a+'><f>'+SUM+'</f><v>'+c.value+'</v></c>';}
+        if(c.formula){if(!FORMULAS.has(c.formula)||typeof c.value!=='number'||!Number.isFinite(c.value))throw Error('Unexpected formula.');return '<c'+a+'><f>'+c.formula+'</f><v>'+c.value+'</v></c>';}
         if(c.value===null)return '<c'+a+'/>';
         if(typeof c.value==='number'){if(!Number.isFinite(c.value))throw Error('Invalid numeric value.');return '<c'+a+'><v>'+c.value+'</v></c>';}
         return '<c'+a+' t="inlineStr"><is><t xml:space="preserve">'+esc(c.value)+'</t></is></c>';
@@ -71,7 +98,7 @@
     const font=(color,bold=false)=>'<font>'+(bold?'<b/>':'')+'<sz val="11"/><color rgb="FF'+color+'"/><name val="Calibri"/><family val="2"/></font>';
     const fill=c=>'<fill><patternFill patternType="solid"><fgColor rgb="FF'+c+'"/><bgColor indexed="64"/></patternFill></fill>';
     const edge=e=>'<'+e+' style="thin"><color rgb="FF96B4A0"/></'+e+'>';
-    return XML+'<styleSheet xmlns="'+NS+'"><fonts count="3">'+font('222222')+font('FFFFFF',true)+font('185C37',true)+'</fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'+fill('185C37')+fill('FFF2B3')+fill('E3F1E8')+'</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border>'+['left','right','top','bottom'].map(edge).join('')+'<diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="8">'+[xf(),xf(1,2,0,0,true),xf(0,0,0,numeric),xf(0,3,1,numeric),xf(2,4,1,numeric),xf(2,3,1,0),xf(0,0,0,0,true),xf(2,4,0,0,true)].join('')+'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+    return XML+'<styleSheet xmlns="'+NS+'"><fonts count="3">'+font('222222')+font('FFFFFF',true)+font('185C37',true)+'</fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'+fill('185C37')+fill('FFF2B3')+fill('E3F1E8')+'</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border>'+['left','right','top','bottom'].map(edge).join('')+'<diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="10">'+[xf(),xf(1,2,0,0,true),xf(0,0,0,numeric),xf(0,3,1,numeric),xf(2,4,1,numeric),xf(2,3,1,0),xf(0,0,0,0,true),xf(2,4,0,0,true),xf(0,3,1,0),xf(2,4,1,0)].join('')+'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
   }
   function parts(model){
     const rel=(id,type,target)=>'<Relationship Id="'+id+'" Type="'+REL+'/'+type+'" Target="'+target+'"/>';
@@ -108,6 +135,10 @@
     const model=buildModel(id,version,kind);
     return {filename:model.filename,mime:MIME,bytes:zip(parts(model))};
   }
+  function createFormulaWorkbook(id,version,kind){
+    const model=buildFormulaModel(id,version,kind);
+    return {filename:model.filename,mime:MIME,bytes:zip(parts(model))};
+  }
   function download(file){
     const url=URL.createObjectURL(new Blob([file.bytes],{type:file.mime}));
     const a=document.createElement('a');a.href=url;a.download=file.filename;
@@ -128,5 +159,5 @@
     practice.addEventListener('click',()=>handle('practice'));solution.addEventListener('click',()=>handle('solution'));
     refresh();return {refresh};
   }
-  global.CommonplaceExcelTutorials={buildModel,createWorkbook,mount};
+  global.CommonplaceExcelTutorials={buildModel,createWorkbook,buildFormulaModel,createFormulaWorkbook,mount};
 })(window);
