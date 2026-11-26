@@ -99,6 +99,10 @@ Before hosted use:
 
 ## Remaining G0 work
 
+The subsequent [candidate 10 preparation](ROADMAP-COMPARISON-READINESS.md) adds
+version-checked comparison preferences and staged recovery. It does not replace
+the legacy comparison importer or change this candidate's parent-link contract.
+
 This prepares ownership and grant correction for all eleven remaining Roadmap
 tables; it does not certify the entire app. Comparison replacement/retry and
 stale-edit handling, suggestion/hub delivery, daily-reset/editor failures,
