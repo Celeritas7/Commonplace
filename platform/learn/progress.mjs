@@ -1,4 +1,5 @@
 import { progressIdentity } from "../content/contracts.mjs";
+import { validateCalculationHistory } from "../../Office_work/Excel_study/calculation-history.mjs";
 const object = (value, keys) =>
   value &&
   Object.getPrototypeOf(value) === Object.prototype &&
@@ -53,7 +54,8 @@ export function validateAttempt(value, material) {
   if (sum) {
     const w = value.worksheet;
     if (
-      !object(w, ["values", "formula", "applied"]) ||
+      (!object(w, ["values", "formula", "applied"]) &&
+        !object(w, ["values", "formula", "applied", "attempts"])) ||
       !Array.isArray(w.values) ||
       w.values.length !== 3 ||
       w.values.some((v) => typeof v !== "string" || v.length > 40) ||
@@ -62,6 +64,7 @@ export function validateAttempt(value, material) {
       typeof w.applied !== "boolean"
     )
       throw Error("Saved worksheet could not be restored.");
+    if (Object.hasOwn(w, "attempts")) validateCalculationHistory(w.attempts);
   } else if (value.worksheet !== null)
     throw Error("Unexpected saved worksheet.");
   return structuredClone(value);

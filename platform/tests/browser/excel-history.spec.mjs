@@ -1,0 +1,27 @@
+import { test, expect } from "@playwright/test";
+test("assigned Excel calculation history remains after reset, offline reopen and reconnect", async ({page,context})=>{
+  await page.goto("/platform/learn/offline-preview.html");
+  await expect(page.getByRole("heading",{name:"Excel Study",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Study offline / Resume download",exact:true}).click();
+  await expect(page.getByText(/Ready offline ·/)).toBeVisible({timeout:30000});
+  await context.setOffline(true);
+  const formula=page.getByLabel("Formula for B5",{exact:true});
+  await formula.fill("=SUM(A2:A4)");
+  await page.getByRole("button",{name:"Apply formula",exact:true}).click();
+  await expect(page.locator(".learn-save-status")).toContainText("Saved on this device");
+  await formula.fill("=SUM(B2:B4)");
+  await page.getByRole("button",{name:"Apply formula",exact:true}).click();
+  await expect(page.getByLabel("B5 total",{exact:true})).toHaveText("25");
+  await expect(page.locator(".learn-save-status")).toContainText("Saved on this device");
+  await page.getByText("Calculation history (2/40)",{exact:true}).click();
+  await expect(page.getByText(/Formula or values not accepted/)).toBeVisible();
+  await page.getByRole("button",{name:"Reset worksheet",exact:true}).click();
+  await expect(page.locator(".learn-save-status")).toContainText("Saved on this device");
+  await expect(page.getByText("Calculation history (2/40)",{exact:true})).toBeVisible();
+  await page.reload();
+  await page.getByRole("button",{name:"Resume saved study",exact:true}).click();
+  await expect(page.getByText("Calculation history (2/40)",{exact:true})).toBeVisible();
+  await context.setOffline(false);
+  await expect(page.getByText("No changes waiting to sync.",{exact:true})).toBeVisible();
+  await expect(page.getByText("Calculation history (2/40)",{exact:true})).toBeVisible();
+});
