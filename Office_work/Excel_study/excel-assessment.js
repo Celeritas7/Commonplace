@@ -28,12 +28,13 @@
     const actual=bounded(criterion.cell?state.cells?.[criterion.cell]?.[criterion.property]:state[criterion.property]);
     let passed=false;
     if(criterion.property==='formula'){
-      const normalize=v=>typeof v==='string'?v.replace(/\s/g,'').toUpperCase():null;
-      passed=typeof actual==='string'&&normalize(actual)===normalize(criterion.expected);
+      const parsed=global.CommonplaceExcelFormulaSyntax.parse(actual);
+      const expected=global.CommonplaceExcelFormulaSyntax.parse(criterion.expected);
+      passed=!!parsed&&!!expected&&parsed.canonical===expected.canonical;
     }else if(typeof criterion.expected==='boolean'){
       passed=actual===criterion.expected;
     }else if(typeof criterion.expected==='string'&&/^-?\d+(?:\.\d+)?$/.test(criterion.expected)){
-      passed=typeof actual==='string'&&actual.trim()!==''&&Number.isFinite(Number(actual))&&Number(actual)===Number(criterion.expected);
+      try{passed=global.CommonplaceExcelFormulaSyntax.numericCell(actual)===Number(criterion.expected);}catch(e){}
     }else{
       passed=actual===criterion.expected;
     }

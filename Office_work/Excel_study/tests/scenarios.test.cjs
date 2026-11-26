@@ -4,7 +4,7 @@ const read=name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8');
 const html=read('Section_1_Study.html');
 const checks={};
 const check=(k,v)=>{checks[k]=!!v;if(!v)throw Error(k);};
-const names=['excel-operations.js','excel-practice-ribbon.js','excel-guided-lessons.js','excel-guided.js','excel-assessment-lessons.js','excel-assessment.js','excel-scenarios.js'];
+const names=['formula-syntax.js','excel-operations.js','excel-practice-ribbon.js','excel-guided-lessons.js','excel-guided.js','excel-assessment-lessons.js','excel-assessment.js','excel-scenarios.js'];
 const win={};
 for(const n of names)new Function('window',read(n))(win);
 const E=win.CommonplaceExcelScenarios,A=win.CommonplaceExcelAssessment,G=win.CommonplaceExcelGuided;
@@ -111,4 +111,8 @@ g('start').fire('click');choose('jp-ph-trade');check('active guide blocks switch
 a('start').fire('click');choose('jp-ph-trade');check('active assessment blocks switch',$('scenario-picker').value==='monthly-expenses');a('cancel').fire('click');
 choose('jp-ph-trade');check('switch clears old quiz score and options',$('score').textContent===''&&!qs[1].querySelector('input:checked'));
 check('switch preserves local reading state',$('ptext').textContent==='Reading progress 50%'&&JSON.parse(store.commonplace_excel_preview_v1).read[0]==='cells');
+for(const invalid of ['=S UM(B2:B4)','=SUM(B 2:B4)','=SUM(B2:B 4)','=SUM (B2:B4)']){
+ formula.value=invalid;form.requestSubmit();check('page rejects malformed formula '+invalid,$('b5').textContent==='—'&&$('practice-feedback').textContent.includes('Keep the function name'));
+}
+formula.value=' =sum( $B$4 : B$2 ) ';form.requestSubmit();check('page accepts equivalent valid references',$('b5').textContent==='19');
 console.log(Object.keys(checks).length+' scenario checks passed (model + mock DOM).');

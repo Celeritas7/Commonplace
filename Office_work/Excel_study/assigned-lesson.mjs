@@ -1,5 +1,5 @@
 import { prepareExcelExercise } from "../../platform/content/excel-contract.mjs";
-import { sumResult, appendCalculation, validateCalculationHistory, CALCULATION_HISTORY_LIMIT, validatePracticeMode, practiceCriteria, practiceHistory, emptyToolState, validateToolState } from "./calculation-history.mjs";
+import { sumResult, appendCalculation, validateCalculationHistory, CALCULATION_HISTORY_LIMIT, validatePracticeMode, practiceCriteria, practiceHistory, reviewCalculation, emptyToolState, validateToolState } from "./calculation-history.mjs";
 export { sumResult } from "./calculation-history.mjs";
 const el = (tag, text) => {
   const n = document.createElement(tag);
@@ -176,8 +176,14 @@ export function mountAssignedExcel(
         const grade = practiceCriteria(formatMode, worksheet.rows, a.values, a.formula, a.tool_state);
         historyList.append(el("li", "Heading formatting · " + grade.score + "/" + grade.maxScore));
       } else {
+        const current = reviewCalculation(a);
+        const recorded = a.accepted ? "Result: " + a.result : "Formula or values not accepted";
+        const outcome = current.changed
+          ? "Earlier recorded outcome: " + recorded + " · Current check: " +
+            (current.accepted ? "Result: " + current.result : "Formula or values need correction")
+          : recorded;
         historyList.append(el("li", (a.formula || "(empty formula)") + " · " +
-          a.values.join(", ") + " · " + (a.accepted ? "Result: " + a.result : "Formula or values not accepted") +
+          a.values.join(", ") + " · " + outcome +
           (a.activity ? " · " + (a.activity === "guided-sum-v1" ? "Guided" : a.activity === copyMode ? "Clipboard" : "Independent") : "")));
       }
     }
@@ -277,6 +283,8 @@ export function mountAssignedExcel(
       practiceStatus.textContent = "Submit using Apply formula. Criteria are shown after a recorded submission.";
     }
     practiceResults.replaceChildren();
+    if (history.some(a => !Object.hasOwn(a, "evaluation_version")))
+      practiceResults.append(el("p", "Scores below use the current formula and input checks. Earlier recorded outcomes remain unchanged in Calculation history."));
     practiceResults.append(el("p", "Guided: " + guide.filter(a=>a.grade.passed).length + " passed / " + guide.length +
       " submitted · Independent: " + assessments.filter(a=>a.grade.passed).length + " passed / " + assessments.length + " submitted"));
     practiceResults.append(el("p", "Formatting: " + formats.filter(a=>a.grade.passed).length + " passed / " + formats.length + " submitted · Clipboard: " + copies.filter(a=>a.grade.passed).length + " passed / " + copies.length + " submitted"));
@@ -322,8 +330,10 @@ export function mountAssignedExcel(
   if (state.applied) {
     try {
       calculate();
-    } catch {
+    } catch (error) {
+      appliedNow = false;
       output.textContent = "—";
+      feedback.textContent = "Review the saved formula with the current checks. Earlier submissions are kept. " + error.message;
     }
   }
   form.onsubmit = (event) => {

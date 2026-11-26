@@ -22,7 +22,12 @@ let s=clone(state);s.cells.B3.value='8';s.cells.B5.value='25';check('partial gra
 s=clone(state);s.cells.B2.value='13';s.cells.B4.value='4';check('same total but wrong input blocked',grade(stock,s).score===3);
 s=clone(state);s.formula='=SUM(B1:B4)';check('wrong formula blocked',grade(stock,s).score===3);
 s=clone(state);s.formula=' =sum( B2:B4 ) ';check('formula whitespace and case accepted',grade(stock,s).passed);
+s=clone(state);s.formula=' =sum( $B$4 : B$2 ) ';check('equivalent absolute mixed reversed range accepted',grade(stock,s).passed);
+for(const formula of ['=S UM(B2:B4)','=SUM(B 2:B4)','=SUM(B2:B 4)','=SUM (B2:B4)']){
+ s=clone(state);s.formula=formula;const r=grade(stock,s);check('malformed formula loses only formula criterion '+formula,r.score===3&&!r.results[2].passed&&r.results[0].passed&&r.results[1].passed&&r.results[3].passed);
+}
 s=clone(state);s.cells.B3.value='10.0';check('equivalent numeric entry accepted',grade(stock,s).passed);
+s=clone(state);s.cells.B3.value='0xA';check('numeric criterion rejects hexadecimal input',grade(stock,s).score===3&&!grade(stock,s).results[0].passed);
 s=clone(state);s.cells.B5.value='—';check('unapplied formula rejected',grade(stock,s).score===3);
 check('heading correct',grade(heading,state).passed);
 s=clone(state);s.cells.A1.bold=false;s.cells.A1.value='Products';check('heading preserves data and style',grade(heading,s).score===2);
@@ -47,5 +52,5 @@ fields.picker.value='stock-heading';fields.picker.fire('change');fields.start.fi
 submitted[0].score=0;check('sink receives copy',controller.records[0].score===4);
 return checks;
 }
-const sources=['excel-assessment.js','excel-assessment-lessons.js'].map(name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8'));
+const sources=['formula-syntax.js','excel-assessment.js','excel-assessment-lessons.js'].map(name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8'));
 console.log(Object.keys(run(sources)).length+' independent assessment checks passed (mock DOM).');

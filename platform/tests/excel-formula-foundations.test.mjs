@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read=name=>readFileSync(new URL("../../Office_work/Excel_study/"+name,import.meta.url),"utf8");
 const win={};
-for(const name of ["excel-scenarios.js","excel-formula-foundations.js","excel-tutorial-workbooks.js"])
+for(const name of ["formula-syntax.js","excel-scenarios.js","excel-formula-foundations.js","excel-tutorial-workbooks.js"])
   new Function("window","TextEncoder",read(name))(win,TextEncoder);
 const E=win.CommonplaceExcelFormulaFoundations,S=win.CommonplaceExcelScenarios,W=win.CommonplaceExcelTutorials;
 const expected=[
@@ -80,7 +80,10 @@ test("numeric blanks, zero, negative numbers and errors behave like reviewed Exc
 test("independent rubric distinguishes function correctness, valid calculation and unchanged inputs",()=>{
   const ex=E.exercise("count","general-office",1,"independent");
   assert.equal(E.grade(ex,"=COUNT(B2:B4)",ex.values).score,3);
-  assert.equal(E.grade(ex,"=SUM(B2:B4)",ex.values).score,1);
+  assert.equal(E.grade(ex,"=SUM(B2:B4)",ex.values).score,2);
+  assert.deepEqual(E.grade(ex,"=C OUNT(B2:B4)",ex.values).criteria.map(c=>c.passed),[false,false,true]);
+  assert.deepEqual(E.grade(ex,"=COUNT(B2:B4)",["0xC","","5"]).criteria.map(c=>c.passed),[true,false,false]);
+  assert.equal(E.grade(ex," =count( $B$4 : B$2 ) ",ex.values).passed,true);
   assert.equal(E.grade(ex,"=COUNT(B2:B4)",["12","0","5"]).score,2);
   assert.equal(E.grade(ex,"=COUNT(A2:A4)",ex.values).passed,false);
   const avg=E.exercise("average","general-office",1,"guided");

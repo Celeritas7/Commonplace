@@ -107,5 +107,63 @@ activation or clear any device data to perform it.
 | R1-03 | Reconnect and use Study offline / Resume download. Interrupt once, reopen offline, then reconnect and finish. Reopen the updated application when work is saved. | Prior release remains usable during interruption; the completed update loads after reopening; records and packs remain. |
 
 Physical iPad results remain **NOT TESTED** until these steps are observed on the
-device. R2 formula/grading correction follows this PR; R3/R4 and then F2–F6, G/H
+device. R1 is merged in PR #118. R2 is described below; R3/R4 and then F2–F6, G/H
 remain in [the curriculum sequence](CURRICULUM.md#correction-sequence-before-f2).
+
+## R2 — formula rules and saved-history compatibility
+
+Earlier clients removed all whitespace before recognizing a formula, which could
+accept split tokens such as `=S U M(B 2:B4)`. The shared bounded parser now checks
+the actual function and reference tokens and accepts the supported equivalent
+absolute/mixed references. Current input criteria and the SUM-expression criterion
+are evaluated independently; a bad cell no longer removes formula credit, and a
+bad formula does not remove valid input credit. The calculation itself succeeds
+only when both syntax and all required numeric inputs are valid.
+
+Simply replacing the evaluator would invalidate some earlier progress records:
+stored `accepted`/`result` fields are recomputed during reading and backup restore.
+R2 therefore adds `evaluation_version: 2` only to newly appended calculation
+records. Records without that field keep the frozen earlier evaluator for
+validation, including its original numeric conversion. Unknown explicit versions,
+extra fields and inconsistent results remain invalid. Original IDs, timestamps,
+formulas, values and outcomes are not rewritten or dropped. The outer worksheet
+and study-record version, material/account identity and 40-submission cap remain
+unchanged.
+
+The UI distinguishes historical evidence from current feedback. If current
+formula/input checks disagree with an earlier recorded outcome, Calculation history
+shows both. Practice scores use the current criteria and explain that earlier
+recorded outcomes are retained. Opening an old applied draft whose formula now
+needs correction displays a review message and an empty current result; opening
+alone does not rewrite progress or discard the draft. Notes, bookmarks, pending
+operations, conflict alternatives and saved packs follow the existing owned store
+and backup path.
+
+The public shell manifest includes the shared parser and updated assigned-study
+modules. Update the public application shell on each device before expecting an
+older client to read new version-2 evaluations; pre-R2 clients reject the additional
+field rather than silently reinterpret it. R1 preserves old complete shells and
+open-page consistency during that update. Keep existing origins, installations,
+data and backups.
+
+### Repeatable checks and device acceptance
+
+```sh
+node --test platform/tests/excel-formula-accuracy.test.mjs platform/tests/excel-calculation-history.test.mjs platform/tests/excel-formula-foundations.test.mjs
+node platform/tools/build-offline-shell.mjs --check
+npm run test:browser --prefix platform -- tests/browser/excel-formula-accuracy.spec.mjs tests/browser/excel-history.spec.mjs tests/browser/excel-device-acceptance.spec.mjs
+```
+
+Regression fixtures cover all five standalone professional contexts, malformed
+tokens, supported reference forms, independent partial credit, mixed old/new
+histories, unknown evaluation versions, contradictory results, offline reopening,
+lost-acknowledgment retry and repeatable backup restore. The browser checks use
+fictional data and exercise the actual personal and central controls.
+
+After the reviewed test site is updated, repeat the existing E3 physical iPad
+checklist. In the Excel Test worksheet, confirm that `=S UM(B2:B4)` is rejected,
+`=sum($B$2:$B$4)` calculates the total, an incorrect formula retains correct-cell
+credit, and saved old/new attempts survive an offline reopen and backup export.
+Physical-device acceptance remains pending. No production synchronization,
+database/authentication/permission change, learner enrollment or G0 clearance is
+part of R2.
