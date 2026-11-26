@@ -25,6 +25,13 @@ current-client compatibility tests. It requires revised 01/02 and remains
 unapplied. Real mappings, external-consumer acceptance, recovery and the
 remaining shared-app gates still prevent G0 clearance.
 
+**Eagle preparation update — 2026-11-26:** the
+[workspace candidate](EAGLE-WORKSPACE-READINESS.md) covers verified membership,
+linked Logi mutations and atomic deletion/archival, with a companion synthetic
+staging client. The earlier Eagle Advanced consumer association is corrected
+there. Deployed legacy writer/team and real client cutover remain unverified.
+This is another prepared work group within G0, not G0 clearance.
+
 This checkpoint updates the earlier [General_apps review](GENERAL-APPS-REVIEW.md)
 without replacing its historical evidence. Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged

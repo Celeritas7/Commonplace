@@ -117,7 +117,9 @@ language sql stable security definer set search_path='' as $$
  select r.role from public.authentication_mode_user_roles r
  join ga_private.eagle_members e using(auth_user_id)
  join auth.users u on u.id=e.auth_user_id and u.email_confirmed_at is not null
- where e.auth_user_id=auth.uid() and r.role in ('admin','operator','viewer');
+ where e.auth_user_id=auth.uid() and u.is_anonymous is false
+ and coalesce(auth.jwt()->>'is_anonymous','false')='false'
+ and r.role in ('admin','operator','viewer');
 $$;
 -- Called only by the transactional installers. Check effective privileges after
 -- rewriting direct grants, including rights inherited from another role.

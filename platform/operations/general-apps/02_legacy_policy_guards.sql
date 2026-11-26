@@ -27,7 +27,7 @@ begin
  if exists(select from ga_private.owner_links l join auth.users u on u.id=l.auth_user_id
   where u.email_confirmed_at is null) then raise exception 'mapped Auth identity must be verified'; end if;
  if not exists(select from ga_private.eagle_members m join public.authentication_mode_user_roles r using(auth_user_id)
-  join auth.users u on u.id=m.auth_user_id where u.email_confirmed_at is not null and r.role in ('operator','admin')) then
+  join auth.users u on u.id=m.auth_user_id where u.email_confirmed_at is not null and u.is_anonymous is false and r.role in ('operator','admin')) then
   raise exception 'verified Eagle writer required';
  end if;
  if not exists(select from pg_constraint where conrelid='public.eagle_unit_progress'::regclass and
