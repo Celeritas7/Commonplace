@@ -1,0 +1,45 @@
+import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+test("Excel learning path opens F1, grades formulas and downloads the active example",async({page})=>{
+  await page.route("**/*",route=>route.request().url().startsWith("http://127.0.0.1:4173/")?route.continue():route.abort());
+  await page.goto("/platform/content/preview.html");
+  const legacy=JSON.stringify({read:["cells"],open:[],tasks:["calculate"]});
+  await page.evaluate(v=>localStorage.setItem("commonplace_excel_preview_v1",v),legacy);
+  await page.goto("/Office_work/index.html");
+  await page.locator('a[href="Excel_study/index.html"]').click();
+  await page.getByRole("link",{name:/02 · Essential formulas/}).click();
+  await page.getByLabel("Professional example").selectOption("jp-ph-trade");
+  await page.getByLabel("Formula skill").selectOption("count");
+  await page.getByRole("button",{name:"Start independent task",exact:true}).click();
+  await expect(page.locator("#f1-value-1")).toHaveValue("");
+  await page.getByLabel("Formula for B5").fill("=COUNT(B2:B4)");
+  await page.getByRole("button",{name:"Apply formula",exact:true}).click();
+  await expect(page.getByLabel("B5 result")).toHaveText("2");
+  await page.getByRole("button",{name:"Submit task",exact:true}).click();
+  await expect(page.getByText("Task score: 3 / 3",{exact:true})).toBeVisible();
+  await expect(page.locator("#f1-progress")).toContainText("1 / 5 independent formula skills passed");
+  await page.locator("#f1-value-1").fill("0");
+  await page.getByRole("button",{name:"Submit task",exact:true}).click();
+  await expect(page.getByLabel("B5 result")).toHaveText("3");
+  await expect(page.getByText("Task score: 2 / 3",{exact:true})).toBeVisible();
+  await page.getByLabel("Formula skill").selectOption("average");
+  await page.getByLabel("Formula for B5").fill("=AVERAGE(B2:B4)");
+  await page.getByRole("button",{name:"Submit task",exact:true}).click();
+  await expect(page.getByLabel("B5 result")).toHaveText("7.5");
+  await expect(page.locator("#f1-progress")).toContainText("2 / 5 independent formula skills passed");
+  await page.getByRole("radio",{name:"9",exact:true}).check();
+  await page.getByRole("button",{name:"Check answer",exact:true}).click();
+  await expect(page.locator("#f1-quiz-feedback")).toContainText("Correct.");
+  for(const width of [390,820]){
+    await page.setViewportSize({width,height:900});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  const d=page.waitForEvent("download");
+  await page.getByRole("button",{name:"Download practice workbook (.xlsx)",exact:true}).click();
+  const file=await d;
+  expect(file.suggestedFilename()).toBe("Commonplace-Excel-jp-ph-trade-v1-F1-practice.xlsx");
+  expect((await readFile(await file.path())).subarray(0,4).toString("hex")).toBe("504b0304");
+  await page.getByLabel("Professional example").selectOption("mechanical-engineering");
+  await expect(page.locator("#f1-progress")).toContainText("0 / 5 independent formula skills passed");
+  expect(await page.evaluate(()=>localStorage.getItem("commonplace_excel_preview_v1"))).toBe(legacy);
+});
