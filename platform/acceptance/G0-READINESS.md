@@ -51,6 +51,12 @@ adds acknowledged preference edits, stale-version rejection and original-account
 retry recovery in an opt-in Roadmap preview. Legacy import replacement/retry,
 other caller and shared-project gates remain open; it does not activate sharing.
 
+The next [comparison-import preparation](ROADMAP-IMPORT-READINESS.md) adds explicit
+import targets, parent/product revision checks, retained replacement history and
+account-owned staging retries. It leaves the original importer available until
+its separate caller cutover; remaining editor, hub, provider and recovery gates
+still prevent G0 clearance.
+
 Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
 preparation PR or passing synthetic tests do not clear those gates.

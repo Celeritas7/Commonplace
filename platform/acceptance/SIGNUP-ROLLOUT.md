@@ -179,3 +179,7 @@ downloaded/exported content cannot be recalled from a disconnected device.
 Keep the same staging origin/namespace for recovery, reconcile saved edits and
 resume only the reviewed compatible build after its approval. The existing
 personal study environment remains in place throughout this preparation.
+
+Comparison import preparation is recorded in [candidate 11 readiness](ROADMAP-IMPORT-READINESS.md).
+Its comparison path is 01 → 03 → 09 → 10 → 11; it does not change the six CP
+migrations or authorize hosted installation, signup or learner enrollment.
