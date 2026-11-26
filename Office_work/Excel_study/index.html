@@ -108,7 +108,7 @@ a{color:var(--green)}a:focus-visible{outline:3px solid #19784b;outline-offset:4p
     tab.addEventListener("click", event => {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
-      activate(i);
+      selectMode(i);
     });
     tab.addEventListener("keydown", event => {
       let next;
@@ -119,8 +119,8 @@ a{color:var(--green)}a:focus-visible{outline:3px solid #19784b;outline-offset:4p
       else if (event.key === " ") next = i;
       else return;
       event.preventDefault();
-      activate(next);
-      tabs[next].focus();
+      selectMode(next);
+      tabs[next].focus({preventScroll: true});
     });
   });
   function activate(index) {
@@ -130,10 +130,30 @@ a{color:var(--green)}a:focus-visible{outline:3px solid #19784b;outline-offset:4p
       panes[i].hidden = i !== index;
     });
   }
-  function fromHash() {
-    activate(Math.max(0, panes.findIndex(pane => "#" + pane.id === location.hash)));
+  function selectMode(index) {
+    activate(index);
+    const hash = tabs[index].getAttribute("href");
+    if (location.hash === hash || (!location.hash && index === 0)) return;
+    // History entries restore the selected pane on reload and Back/Forward
+    // without the jump caused by assigning location.hash.
+    try {
+      history.pushState(null, "", hash);
+    } catch {
+      // Native same-page navigation remains available if History is restricted.
+      location.hash = hash;
+    }
   }
+  function fromHash() {
+    const index = Math.max(0, panes.findIndex(pane => "#" + pane.id === location.hash));
+    const focused = document.activeElement;
+    const needsFocus = tabs.some((tab, i) => i !== index && tab === focused) ||
+      panes.some((pane, i) => i !== index && pane.contains(focused));
+    activate(index);
+    if (needsFocus) tabs[index].focus({preventScroll: true});
+  }
+  window.addEventListener("popstate", fromHash);
   window.addEventListener("hashchange", fromHash);
+  window.addEventListener("pageshow", fromHash);
   fromHash();
 })();
 </script>
