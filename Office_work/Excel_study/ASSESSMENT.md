@@ -19,3 +19,7 @@ The existing central U7/U8 worksheet/quiz records are not a complete assessment-
 ## Tests
 
 From repo root: `node Office_work/Excel_study/tests/assessment.test.cjs`. This checks grading and mock-DOM lifecycle, not browser rendering, database persistence or iPad acceptance. Use only synthetic data during preview.
+
+## D1 scenario identity
+
+Scenario-derived attempts additionally carry `scenario_id`, `scenario_version` and `scenario_title`. These are public preview metadata, not an authorization claim. Persisting assigned assessment versions remains a central-platform integration task.
