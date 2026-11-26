@@ -14,6 +14,9 @@ create table public.code_sensei_users(id uuid primary key,name text not null def
 create table public.code_sensei_user_notes(id uuid primary key default gen_random_uuid(),user_id uuid references public.code_sensei_users,note_text text not null);
 create table public.code_sensei_progress(id uuid primary key default gen_random_uuid(),user_id uuid references public.code_sensei_users,topic_id text,status text);
 create table public.healthlog_visits_old(id uuid primary key default gen_random_uuid(),user_id text not null,notes text);
+-- Mapping validation also accepts keys belonging only to an archived clinic or dose.
+create table public.healthlog_clinics_old(id uuid primary key default gen_random_uuid(),user_id text not null);
+create table public.healthlog_dose_logs_old(user_id text not null);
 create table public.logi_projects(id uuid primary key);
 create table public.logi_assemblies(id uuid primary key,project_id uuid references public.logi_projects on delete cascade);
 create table public.logi_versions(id uuid primary key,assembly_id uuid references public.logi_assemblies on delete cascade);

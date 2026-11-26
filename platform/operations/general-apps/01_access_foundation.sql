@@ -33,10 +33,16 @@ begin
  if tg_op='UPDATE' and (new.app,new.legacy_id) is distinct from (old.app,old.legacy_id) then
   raise exception 'retire the original mapping before changing its source key';
  end if;
- perform 1 from auth.users where id=new.auth_user_id and email_confirmed_at is not null for share;
+ perform 1 from auth.users where id=new.auth_user_id and email_confirmed_at is not null and is_anonymous is false for share;
  if not found then raise exception 'mapped Auth identity must be verified'; end if;
  if new.app='healthlog-archive' then
   perform 1 from public.healthlog_visits_old where user_id=new.legacy_id limit 1 for share;
+  if not found then
+   perform 1 from public.healthlog_clinics_old where user_id=new.legacy_id limit 1 for share;
+  end if;
+  if not found then
+   perform 1 from public.healthlog_dose_logs_old where user_id=new.legacy_id limit 1 for share;
+  end if;
   if not found then raise exception 'archive source key does not exist'; end if;
  end if;
  return new;
@@ -99,8 +105,12 @@ create function ga_private.owns_legacy(app_name text,legacy_owner text) returns 
 language sql stable security definer set search_path='' as $$
  select auth.uid() is not null and exists(
   select 1 from ga_private.owner_links l join auth.users u on u.id=l.auth_user_id
-  where u.email_confirmed_at is not null and l.app=app_name and l.legacy_id=legacy_owner and l.auth_user_id=auth.uid()
-  and (l.app='code-sensei' or exists(select from public.healthlog_visits_old v where v.user_id=l.legacy_id)));
+  where u.email_confirmed_at is not null and u.is_anonymous is false
+  and coalesce(auth.jwt()->>'is_anonymous','false')='false'
+  and l.app=app_name and l.legacy_id=legacy_owner and l.auth_user_id=auth.uid()
+  and (l.app='code-sensei' or exists(select from public.healthlog_visits_old v where v.user_id=l.legacy_id)
+   or exists(select from public.healthlog_clinics_old c where c.user_id=l.legacy_id)
+   or exists(select from public.healthlog_dose_logs_old d where d.user_id=l.legacy_id)));
 $$;
 create function ga_private.linked_legacy_role() returns text
 language sql stable security definer set search_path='' as $$

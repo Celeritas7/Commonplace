@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { randomUUID, randomBytes } from "node:crypto";
 import { legacyFixture } from "../tests/shared-access-fixture.mjs";
+import { healthlogArchiveAcceptance } from "./healthlog-archive-local.mjs";
 
 export async function sharedAccessAcceptance({
   edge,
@@ -62,6 +63,7 @@ export async function sharedAccessAcceptance({
   await check("hardened legacy Auth rejects anonymous signup and retains the approved viewer role", async () => {
     await sql(legacyFixture);
     await sql(await readFile(new URL('../tests/code-sensei-fixture.sql', import.meta.url), 'utf8'));
+    await sql(await readFile(new URL('../tests/healthlog-archive-fixture.sql', import.meta.url), 'utf8'));
     const address=`legacy-baseline-${tag}@example.invalid`;
     secrets.push(address);
     await sql(`insert into public.authentication_mode_user_roles(id,email,role) values(70,'${address}','viewer')`);
@@ -86,7 +88,8 @@ export async function sharedAccessAcceptance({
     assert.equal(await sql(`select count(*) from public.alarm_settings where user_id='${baselineLegacy}'`),"1");
     await sql(`insert into public.code_sensei_users(id) values('${legacyA}'),('${legacyB}');
       insert into public.code_sensei_user_notes(user_id,topic_id,note_text) values('${legacyA}','fixture','A'),('${legacyB}','fixture','B');
-      insert into public.healthlog_visits_old(user_id,notes) values('archive-a','A'),('archive-b','B');
+      insert into public.healthlog_visits_old(user_id,notes,clinic_name,visit_date,concern)
+       values('archive-a','A','Synthetic A','2026-01-01','Fixture'),('archive-b','B','Synthetic B','2026-01-02','Fixture');
       insert into public.authentication_mode_user_roles(id,email,role,auth_user_id)
        select n,u.email,r,u.id from (values(81,'viewer','${a.id}'::uuid),(82,'operator','${b.id}'),
         (83,'admin','${owner.id}'),(84,'admin','${unregistered.id}')) s(n,r,id) join auth.users u using(id);
@@ -560,4 +563,5 @@ export async function sharedAccessAcceptance({
       );
     },
   );
+  await healthlogArchiveAcceptance({a,b,unregistered,owner,sql,check,client,data,denied,withBlockedWriter});
 }

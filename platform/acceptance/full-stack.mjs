@@ -760,8 +760,8 @@ try {
         id,
         "--no-backup",
       ]);
-    } catch {
-      console.error("Disposable stack cleanup needs attention.");
+    } catch (error) {
+      console.error("Disposable stack cleanup needs attention: " + safeDiagnostic(error.message, secrets));
       process.exitCode = 1;
     }
     await rm(work, { recursive: true, force: true });
