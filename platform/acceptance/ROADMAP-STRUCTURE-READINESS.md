@@ -17,7 +17,7 @@ timed deletion when the view unmounts. Deleting a task cascades into its study
 sessions, including recorded proof and feedback.
 
 [Candidate 16](../operations/general-apps/16_roadmap_structure.sql), after
-**01 → 03 → 09 → 15 → 16**, prepares
+**01 → 03 → 08 → 09 → 15 → 16**, prepares
 `ga_roadmap_structure(p_payload, p_request_id)`. It does not change the six
 Commonplace migrations, existing public session API or legacy direct writer.
 
@@ -44,7 +44,10 @@ stops installation; no source records are modified by installation. Moves or
 history/receipt failures roll back all changes, including folder creation and
 UUID reservations. Unsupported result rows are refused before commit.
 
-Private receipts contain exact task and linked-record snapshots. They have RLS
+Private receipts contain exact task and linked-record snapshots, including the
+candidate 08 daily-action receipts that otherwise cascade on deletion. The daily
+API still denies replay when its task no longer exists; its original contract is
+unchanged. Candidate 08 is now an explicit installation prerequisite. They have RLS
 and no public/anon/authenticated/service-role table privileges. Removed UUIDs
 remain reserved against reuse through candidate 15. Review retention, erasure
 and recovery custody before installation; never prune identities while retries

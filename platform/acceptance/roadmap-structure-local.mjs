@@ -1,7 +1,7 @@
 // Real synthetic JWTs and lock waits, only in the disposable loopback stack.
 import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';import {readFile} from 'node:fs/promises';
 export async function roadmapStructureAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause}){
- const root=randomUUID(),dest=randomUUID(),task=randomUUID(),child=randomUUID(),session=randomUUID(),log=randomUUID(),resource=randomUUID();let params;
+ const root=randomUUID(),dest=randomUUID(),task=randomUUID(),child=randomUUID(),session=randomUUID(),log=randomUUID(),resource=randomUUID(),dailyRequest=randomUUID();let params;
  const claim=`set local role authenticated;select set_config('request.jwt.claim.sub','${a.id}',true);select set_config('request.jwt.claims','{"sub":"${a.id}","role":"authenticated","is_anonymous":false}',true);`;
  const literal=x=>"'"+String(x).replaceAll("'","''")+"'";
  const call=p=>`select ga_roadmap_structure(${literal(JSON.stringify(p.p_payload))},'${p.p_request_id}')`;
@@ -15,6 +15,9 @@ export async function roadmapStructureAcceptance({a,b,sql,check,client,data,deni
    ('${session}','${a.id}','${task}','2026-11-26','study-app','app','{"keep":"proof"}',now());
    insert into roadmap_daily_logs(id,user_id,task_id,notes) values('${log}','${a.id}','${task}','Keep 日本語 notes');
    insert into roadmap_task_resources(id,user_id,task_id,label,url) values('${resource}','${a.id}','${task}','Keep link','https://example.invalid')`);
+  await sql(`update roadmap_tasks set tags='{daily-routine}' where id='${task}'`);
+  data(await a.client.rpc('ga_roadmap_set_daily_task',{p_task_id:task,p_expected_updated_at:(await target(task)).expected_updated_at,
+   p_done:true,p_day_key:'2026-11-26',p_request_id:dailyRequest}),'Daily proof before structural preparation');
   const before=await sql(`select jsonb_agg(to_jsonb(t) order by id) from roadmap_tasks t`);
   await sql(await readFile(new URL('../operations/general-apps/16_roadmap_structure.sql',import.meta.url),'utf8'));
   assert.equal(await sql(`select jsonb_agg(to_jsonb(t) order by id) from roadmap_tasks t`),before);
@@ -51,6 +54,9 @@ export async function roadmapStructureAcceptance({a,b,sql,check,client,data,deni
   assert.equal(await sql(`select task_id is null and verification='app' and feedback='{"keep":"proof"}'::jsonb from roadmap_study_sessions where id='${session}'`),'t');
   assert.equal(await sql(`select task_id is null and notes='Keep 日本語 notes' from roadmap_daily_logs where id='${log}'`),'t');
   assert.equal(await sql(`select before_state->'roadmap_task_resources'->0->>'url' from ga_private.roadmap_structure_receipts where request_id='${p.p_request_id}'`),'https://example.invalid');
+  assert.equal(await sql(`select before_state->'roadmap_daily_receipts'->0->>'request_id' from ga_private.roadmap_structure_receipts where request_id='${p.p_request_id}'`),dailyRequest);
+  assert.equal(await sql(`select count(*) from ga_private.roadmap_daily_receipts where request_id='${dailyRequest}'`),'0');
+
   assert.deepEqual(data(await b.client.from('roadmap_study_sessions').select('*').eq('id',session),'Foreign proof'),[]);
   params=p;
  });

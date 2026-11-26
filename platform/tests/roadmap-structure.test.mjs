@@ -4,7 +4,7 @@ const read=f=>readFile(new URL('../operations/general-apps/'+f,import.meta.url),
 const id=n=>'16000000-0000-4000-8000-'+String(n).padStart(12,'0');
 async function fixture(install=true){const db=await createAcceptanceDatabase();try{
  await db.exec(legacyFixture);for(const f of ['roadmap-session-fixture.sql','roadmap-records-fixture.sql'])await db.exec(await readFile(new URL('./'+f,import.meta.url),'utf8'));
- for(const f of ['01_access_foundation.sql','03_roadmap_session_owner.sql','09_roadmap_record_ownership.sql','15_roadmap_task_creation.sql'])await db.exec(await read(f));
+ for(const f of ['01_access_foundation.sql','03_roadmap_session_owner.sql','08_roadmap_daily_actions.sql','09_roadmap_record_ownership.sql','15_roadmap_task_creation.sql'])await db.exec(await read(f));
  await db.exec(`insert into roadmap_tasks(id,user_id,parent_id,title,kind,tags,done,streak) values
  ('${id(1)}','${users.a}',null,'Root','group','{}',false,0),('${id(2)}','${users.a}',null,'Destination','group','{}',false,0),
  ('${id(3)}','${users.a}','${id(1)}','Study 日本語','task','{parked}',true,4),('${id(4)}','${users.a}','${id(1)}','Nested','group','{}',false,0),
@@ -16,9 +16,15 @@ async function fixture(install=true){const db=await createAcceptanceDatabase();t
  insert into roadmap_comparisons(id,user_id,task_id,title,notes) values('${id(10)}','${users.a}','${id(3)}','Keep comparison','Keep notes');
  insert into roadmap_suggestions(id,user_id,rm_task_id,task,title,say,until) values('suggestion','${users.a}','${id(3)}','{}','Keep suggestion','Keep',now()+interval '1 day');
  update auth.users set email_confirmed_at=null where id='${users.fresh}'`);
- if(install)await db.exec(candidate);return db;
+ await db.exec(`update roadmap_tasks set tags='{parked,daily-routine}' where id='${id(3)}'`);
+ await access(db).as(users.a,'select ga_roadmap_set_daily_task($1,(select updated_at from roadmap_tasks where id=$1),true,$2,$3)',[id(3),'2026-11-25',id(18)]);
+ await db.exec('reset role');if(install)await db.exec(candidate);return db;
  }catch(e){await db.close();throw e}}
-async function snapshot(db){await db.exec('reset role');const out={};for(const name of ['roadmap_tasks','roadmap_study_sessions','roadmap_daily_logs','roadmap_task_resources','roadmap_comparisons','roadmap_suggestions'])out[name]=(await db.query(`select coalesce(jsonb_agg(to_jsonb(t) order by id),'[]') rows from ${name} t`)).rows[0].rows;return out}
+async function snapshot(db){await db.exec('reset role');const out={};
+ for(const name of ['roadmap_tasks','roadmap_study_sessions','roadmap_daily_logs','roadmap_task_resources','roadmap_comparisons','roadmap_suggestions','ga_private.roadmap_daily_receipts'])
+  out[name]=(await db.query(`select coalesce(jsonb_agg(to_jsonb(t) order by ${name.startsWith('ga_private.')?'request_id':'id'}),'[]') rows from ${name} t`)).rows[0].rows;
+ return out}
+
 async function target(db,n,patch){await db.exec('reset role');const r=(await db.query('select to_jsonb(t) row from roadmap_tasks t where id=$1',[id(n)])).rows[0].row;return {id:r.id,label:r.title,expected_updated_at:r.updated_at,...patch}}
 test('structural actions are versioned, atomic and preserve study history',async t=>{
  const db=await fixture(false),{as}=access(db);let seq=1000;
@@ -81,6 +87,7 @@ test('structural actions are versioned, atomic and preserve study history',async
    }
    await db.exec('reset role');const history=(await db.query('select before_state from ga_private.roadmap_structure_receipts where request_id=$1',[id(104)])).rows[0].before_state;
    assert.equal(history.roadmap_task_resources[0].url,'https://example.invalid');assert.deepEqual(history.roadmap_study_sessions[0].feedback,{keep:'proof'});
+   assert.deepEqual(history.roadmap_daily_receipts,before['ga_private.roadmap_daily_receipts'].map(({auth_user_id,...r})=>r));assert.deepEqual(after['ga_private.roadmap_daily_receipts'],[]);
    assert.equal((await run(p,104)).replayed,true);
    await assert.rejects(()=>as(users.a,'select * from ga_private.roadmap_structure_receipts'),e=>e.code==='42501');
    await assert.rejects(()=>as(users.a,'select ga_roadmap_create_tasks($1,$2)',[{kind:'task',parent_id:null,items:[{id:id(3),title:'Reuse',tags:[]}]},id(105)]),e=>e.code==='42501');
@@ -105,7 +112,7 @@ test('structural actions are versioned, atomic and preserve study history',async
 });
 test('structure installer rejects source or inbound cascade drift',async t=>{
  for(const change of ['alter table roadmap_daily_logs add column surprise text','alter policy roadmap_tasks_owner on roadmap_tasks using(true)',
-  'alter table roadmap_study_sessions drop constraint ga_session_task_owner','create table unexpected_link(id uuid references roadmap_tasks(id) on delete cascade)'])
+  'alter table roadmap_study_sessions drop constraint ga_session_task_owner','alter table ga_private.roadmap_daily_receipts add column surprise text','create table unexpected_link(id uuid references roadmap_tasks(id) on delete cascade)'])
   await t.test(change,async()=>{const db=await fixture(false);try{await db.exec(change);const before=await snapshot(db);await assert.rejects(()=>db.exec(candidate),/review/);await db.exec('rollback');assert.deepEqual(await snapshot(db),before)}finally{await db.close()}});
 });
 test('containment revokes structural execution even with missing pause control',async()=>{

@@ -279,7 +279,7 @@ recovery are recorded below. G0 stays open; hosted work and enrollment remain on
 remains deferred. Existing direct writers are not an application admission gate.
 
 Candidate 16 prepares [structural changes and deletion recovery](../../acceptance/ROADMAP-STRUCTURE-READINESS.md)
-after 01/03/09/15. It preserves study sessions and linked history while changing
+after 01/03/08/09/15. It preserves study sessions and linked history while changing
 only reviewed task subtrees, with atomic moves and durable original-request
 retries in the isolated owning client. Suggestion/hub delivery and actual caller/
 account-state acceptance remain next. It adds no Commonplace migration and does

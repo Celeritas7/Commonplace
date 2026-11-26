@@ -1,4 +1,4 @@
--- REVIEW CANDIDATE ONLY. Requires 01/03/09/15 and coordinated caller review.
+-- REVIEW CANDIDATE ONLY. Requires 01/03/08/09/15 and coordinated caller review.
 -- Installation changes no source records. This is not an automatic CP migration.
 begin;
 set local search_path=pg_catalog,public;
@@ -6,6 +6,7 @@ set local lock_timeout='5s';
 set local statement_timeout='60s';
 lock table public.roadmap_tasks,public.roadmap_study_sessions,public.roadmap_daily_logs,
  public.roadmap_comparisons,public.roadmap_suggestions,public.roadmap_task_resources in access exclusive mode;
+lock table ga_private.roadmap_daily_receipts in access exclusive mode;
 lock table ga_private.roadmap_control in share mode;
 do $$ declare expected record; relation regclass; begin
  if not exists(select from ga_private.roadmap_control where id and not paused) then raise exception 'review Roadmap control';end if;
@@ -32,7 +33,7 @@ do $$ declare expected record; relation regclass; begin
    raise exception 'review structural record baseline: %',expected.tbl;
   end if;
  end loop;
- if (select count(*) from pg_constraint where confrelid='roadmap_tasks'::regclass and contype='f')<>8
+ if (select count(*) from pg_constraint where confrelid='roadmap_tasks'::regclass and contype='f')<>9
   or not exists(select from pg_proc where oid='roadmap_set_updated_at()'::regprocedure and not prosecdef
    and pg_get_userbyid(proowner)='postgres' and md5(replace(prosrc,chr(13),''))='9b1889f56258bf9d6554213c05019c76')
   or not exists(select from pg_proc where oid=to_regprocedure('ga_private.insert_roadmap_created_task(uuid,uuid,uuid,uuid,text,text,text[])')
@@ -40,6 +41,23 @@ do $$ declare expected record; relation regclass; begin
    and md5(replace(prosrc,chr(13),''))='3a5e0d6e1de7f3ac555d21f9ddd4db4f') then
   raise exception 'review structural dependency or inbound cascade drift';
  end if;
+ if not exists(select from pg_class where oid='ga_private.roadmap_daily_receipts'::regclass and relkind='r'
+   and relrowsecurity and pg_get_userbyid(relowner)='postgres')
+  or (select md5(string_agg(a.attname||':'||format_type(a.atttypid,a.atttypmod)||':'||a.attnotnull::text||':'||
+   coalesce(pg_get_expr(d.adbin,d.adrelid),''),'|' order by a.attnum)) from pg_attribute a left join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+   where a.attrelid='ga_private.roadmap_daily_receipts'::regclass and a.attnum>0 and not a.attisdropped) is distinct from '62ca69d2452dca146546402be33fb122'
+  or (select count(*) from pg_constraint where conrelid='ga_private.roadmap_daily_receipts'::regclass)<>2
+  or not exists(select from pg_constraint where conrelid='ga_private.roadmap_daily_receipts'::regclass and convalidated
+   and conname='roadmap_daily_receipts_pkey' and pg_get_constraintdef(oid)='PRIMARY KEY (auth_user_id, request_id)')
+  or not exists(select from pg_constraint where conrelid='ga_private.roadmap_daily_receipts'::regclass and convalidated
+   and conname='roadmap_daily_receipts_task_id_auth_user_id_fkey' and pg_get_constraintdef(oid)=
+   'FOREIGN KEY (task_id, auth_user_id) REFERENCES roadmap_tasks(id, user_id) ON DELETE CASCADE')
+  or exists(select from pg_trigger where tgrelid='ga_private.roadmap_daily_receipts'::regclass and not tgisinternal)
+  or exists(select from pg_policies where schemaname='ga_private' and tablename='roadmap_daily_receipts')
+  or not exists(select from pg_proc where oid=to_regprocedure('public.ga_roadmap_set_daily_task(uuid,timestamptz,boolean,text,uuid)')
+   and prosecdef and pg_get_userbyid(proowner)='postgres' and proconfig=array['search_path=""']
+   and md5(replace(prosrc,chr(13),''))='2e98874954dda617b50cd1928efec15e') then
+  raise exception 'review candidate 08 daily receipts';end if;
 end $$;
 
 create table ga_private.roadmap_structure_receipts (
@@ -169,6 +187,12 @@ begin
      into rows using actor,ids;
     history:=history||jsonb_build_object(related,rows);
    end loop;
+   -- Candidate 08 receipts also cascade. Archive their exact operation evidence
+   -- before deletion; old daily replays still require a current owned task.
+   perform from ga_private.roadmap_daily_receipts where auth_user_id=actor and task_id=any(ids) order by request_id for update;
+   select coalesce(jsonb_agg(to_jsonb(r)-'auth_user_id' order by request_id),'[]') into rows
+    from ga_private.roadmap_daily_receipts r where auth_user_id=actor and task_id=any(ids);
+   history:=history||jsonb_build_object('roadmap_daily_receipts',rows);
    if octet_length(history::text)>1048576 then raise exception 'deletion history exceeds review limit' using errcode='22023';end if;
    -- Sessions otherwise cascade. Retain proof/feedback under the same owner.
    update public.roadmap_study_sessions set task_id=null where user_id=actor and task_id=any(ids);
