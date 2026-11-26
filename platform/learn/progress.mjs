@@ -1,5 +1,5 @@
 import { progressIdentity } from "../content/contracts.mjs";
-import { validateCalculationHistory } from "../../Office_work/Excel_study/calculation-history.mjs";
+import { validateCalculationHistory, validatePracticeMode } from "../../Office_work/Excel_study/calculation-history.mjs";
 const object = (value, keys) =>
   value &&
   Object.getPrototypeOf(value) === Object.prototype &&
@@ -55,7 +55,9 @@ export function validateAttempt(value, material) {
     const w = value.worksheet;
     if (
       (!object(w, ["values", "formula", "applied"]) &&
-        !object(w, ["values", "formula", "applied", "attempts"])) ||
+        !object(w, ["values", "formula", "applied", "attempts"]) &&
+        !object(w, ["values", "formula", "applied", "practice_mode"]) &&
+        !object(w, ["values", "formula", "applied", "attempts", "practice_mode"])) ||
       !Array.isArray(w.values) ||
       w.values.length !== 3 ||
       w.values.some((v) => typeof v !== "string" || v.length > 40) ||
@@ -65,6 +67,7 @@ export function validateAttempt(value, material) {
     )
       throw Error("Saved worksheet could not be restored.");
     if (Object.hasOwn(w, "attempts")) validateCalculationHistory(w.attempts);
+    if (Object.hasOwn(w, "practice_mode")) validatePracticeMode(w.practice_mode);
   } else if (value.worksheet !== null)
     throw Error("Unexpected saved worksheet.");
   return structuredClone(value);

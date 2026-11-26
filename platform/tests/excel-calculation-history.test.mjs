@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  appendCalculation, validateCalculationHistory, CALCULATION_HISTORY_LIMIT
+  appendCalculation, validateCalculationHistory, CALCULATION_HISTORY_LIMIT, practiceCriteria, practiceHistory, validatePracticeMode
 } from "../../Office_work/Excel_study/calculation-history.mjs";
+import { mountAssignedExcel } from "../../Office_work/Excel_study/assigned-lesson.mjs";
 import { initialAttempt, validateAttempt, memoryStorage, studyIdentity } from "../learn/progress.mjs";
 import { exampleBundle } from "../content/examples.mjs";
 import { createAccountStore } from "../lib/account-store.mjs";
@@ -30,10 +31,10 @@ async function key(m) {
     section_id:"office.excel",lesson_ref:{id:bundle.lesson.id,version:bundle.lesson.version},status:"assigned"
   }});
 }
-function submit(state, values, formula, n) {
-  const history=append(state.worksheet.attempts??[],values,formula,n);
+function submit(state, values, formula, n, activity="free") {
+  const history=appendCalculation(state.worksheet.attempts??[],values,formula,{id:id(n),submittedAt,activity});
   const accepted=history.at(-1).accepted;
-  return {...state,completed:accepted,worksheet:{values,formula,applied:accepted,attempts:history}};
+  return {...state,completed:accepted,worksheet:{values,formula,applied:accepted,attempts:history,...(activity!=="free"?{practice_mode:activity}:{})}};
 }
 test("records successful and rejected submissions with detached, validated values",()=>{
   const first=append([],["12","8","5"],FORMULA,1);
@@ -76,7 +77,7 @@ test("existing records remain readable; history is allowed only on the assigned 
   assert.deepEqual(validateAttempt(initialAttempt(q),q),initialAttempt(q));
   assert.throws(()=>validateAttempt({...initialAttempt(q),worksheet:saved.worksheet},q));
 });
-test("assigned calculation records survive offline reopen, reconnect, account switches and material versions",async()=>{
+for(const tagged of [false,true]) test((tagged?"Tagged":"Free")+" calculation records survive offline reopen, reconnect, account switches and material versions",async()=>{
   const storage=memoryStorage(),store=createAccountStore(storage,"e1-test"),db=memoryDatabase();
   storage.setItem("commonplace_excel_preview_v1","keep legacy");
   store.switchAccount(OWNER_A);
@@ -98,15 +99,16 @@ test("assigned calculation records survive offline reopen, reconnect, account sw
   const sync=createSyncStore({db,store,namespace:"e1-test",online:()=>online});
   const m=material(),record=await key(m);
   const r=await sync.open(c,m,record,client);
-  let state=submit(r.state,["12","8","5"],FORMULA,1);
+  let state=submit(r.state,["12","8","5"],FORMULA,1,tagged?"guided-sum-v1":"free");
   await r.saveProgress(state);
-  state=submit(state,["12","10","5"],"=SUM(A2:A4)",2);
+  state=submit(state,["12","10","5"],"=SUM(A2:A4)",2,tagged?"independent-match-v1":"free");
   await r.saveProgress(state);
   assert.equal(calls.length,0);
   assert.equal((await sync.summary(c)).pending,1);
   const reopened=await sync.open(c,m,record,client);
   assert.deepEqual(reopened.state.worksheet.attempts,state.worksheet.attempts);
-  const reset={...initialAttempt(m),worksheet:{...initialAttempt(m).worksheet,attempts:state.worksheet.attempts}};
+  assert.equal(reopened.state.worksheet.practice_mode,tagged?"independent-match-v1":undefined);
+  const reset={...initialAttempt(m),worksheet:{...initialAttempt(m).worksheet,attempts:state.worksheet.attempts,...(tagged?{practice_mode:"independent-match-v1"}:{})}};
   await reopened.saveProgress(reset);
   assert.equal((await sync.open(c,m,record,client)).state.worksheet.attempts.length,2);
   online=true;c={...c,offline:false};loseAck=true;
@@ -136,4 +138,99 @@ test("assigned calculation records survive offline reopen, reconnect, account sw
   const restored=await sync.open(ca,m,record,client);
   assert.equal(restored.state.worksheet.attempts.length,2);
   assert.equal(restored.state.worksheet.attempts[1].accepted,false);
+  if(tagged){
+    assert.equal(restored.state.worksheet.practice_mode,"independent-match-v1");
+    assert.equal(practiceHistory(restored.state.worksheet.attempts,m.payload.content.bundle.dataset.rows,"guided-sum-v1")[0].grade.score,4);
+    assert.equal(practiceHistory(restored.state.worksheet.attempts,m.payload.content.bundle.dataset.rows,"independent-match-v1")[0].grade.score,2);
+  }
+});
+
+test("guided and independent criteria derive from the assigned dataset, not formula success alone",()=>{
+  const rows=exampleBundle("trade").dataset.rows;
+  assert.equal(practiceCriteria("guided-sum-v1",rows,["12","8","5"],FORMULA).score,4);
+  assert.equal(practiceCriteria("guided-sum-v1",rows,["12","9","5"],FORMULA).score,3);
+  assert.equal(practiceCriteria("independent-match-v1",rows,["12","12","5"],FORMULA).score,4);
+  assert.equal(practiceCriteria("independent-match-v1",rows,["13","13","3"],FORMULA).score,1);
+  assert.equal(practiceCriteria("independent-match-v1",rows,["12","12","5"],"=SUM(B1:B4)").score,3);
+  const other=exampleBundle("mechanical").dataset.rows;
+  assert.equal(practiceCriteria("independent-match-v1",other,[String(other[0][1]),String(other[0][1]),String(other[2][1])],FORMULA).passed,true);
+  assert.equal(practiceCriteria("independent-match-v1",other,["12","12","5"],FORMULA).passed,false);
+});
+test("activity allowlist, legacy records and shared history cap",()=>{
+  let h=append([],["12","8","5"],FORMULA,1);
+  h=appendCalculation(h,["12","8","5"],FORMULA,{id:id(2),submittedAt,activity:"guided-sum-v1"});
+  h=appendCalculation(h,["12","12","5"],FORMULA,{id:id(3),submittedAt,activity:"independent-match-v1"});
+  assert.equal(h[0].activity,undefined);
+  assert.equal(practiceHistory(h,exampleBundle("trade").dataset.rows,"independent-match-v1").length,1);
+  for(const activity of ["exam","free",null,{}]){
+    const invalid=structuredClone(h);invalid[1].activity=activity;
+    assert.throws(()=>validateCalculationHistory(invalid));
+  }
+  const m=material(),s=initialAttempt(m);s.worksheet.attempts=h;s.worksheet.practice_mode="guided-sum-v1";
+  assert.deepEqual(validateAttempt(s,m),s);
+  s.worksheet.practice_mode="admin";
+  assert.throws(()=>validateAttempt(s,m));
+  assert.throws(()=>validatePracticeMode(null));
+  assert.throws(()=>appendCalculation(h,["12","8","5"],FORMULA,{id:id(4),submittedAt,activity:"exam"}));
+  let bounded=[];
+  for(let n=1;n<=CALCULATION_HISTORY_LIMIT;n++)bounded=appendCalculation(bounded,Array(3).fill("\u0001".repeat(40)),"\u0001".repeat(80),{id:id(n),submittedAt,activity:"independent-match-v1"});
+  const full=initialAttempt(m);full.worksheet.attempts=bounded;full.worksheet.practice_mode="independent-match-v1";
+  assert.ok(new TextEncoder().encode(JSON.stringify(validateAttempt(full,m))).length<65536);
+  assert.equal(appendCalculation(bounded,["12","12","5"],FORMULA,{id:id(99),submittedAt,activity:"independent-match-v1"}),null);
+  assert.equal(bounded.length,40);
+});
+test("assigned renderer records actual worksheet submissions and restores mode and scores",()=>{
+  class Element {
+    constructor(tag){this.tag=tag;this.children=[];this.attrs={};this.events={};this.dataset={};this.value="";this._text="";this.hidden=false;this.disabled=false;}
+    append(...items){this.children.push(...items);}
+    replaceChildren(...items){this.children=items;this._text="";}
+    get textContent(){return this._text+this.children.map(x=>x.textContent).join(" ");}
+    set textContent(v){this._text=String(v);this.children=[];}
+    get lastChild(){return this.children.at(-1);}
+    setAttribute(k,v){this.attrs[k]=String(v);}
+    addEventListener(k,fn){this.events[k]=fn;}
+    fire(k){this.events[k]?.({preventDefault(){}});}
+  }
+  const oldWindow=globalThis.window,oldDocument=globalThis.document;
+  globalThis.window={CommonplaceExcelRibbon:{mount(){return {select(){},refresh(){}};}}};
+  globalThis.document={createElement:tag=>new Element(tag)};
+  try{
+    const m=material(),bundle=m.payload.content.bundle,root=new Element("main");
+    let latest=initialAttempt(m).worksheet,changes=0;
+    const mount=()=>mountAssignedExcel(root,bundle,{state:latest,onChange:s=>{latest=structuredClone(s);changes++;}});
+    const find=(predicate,node=root)=>predicate(node)?node:node.children.map(c=>find(predicate,c)).find(Boolean);
+    const button=text=>find(e=>e.tag==="button"&&e.textContent===text);
+    const formula=()=>find(e=>e.attrs["aria-label"]==="Formula for B5");
+    const inputB3=()=>find(e=>e.tag==="input"&&e.attrs["aria-label"]?.startsWith("B3,"));
+    const submitForm=()=>find(e=>e.tag==="form").onsubmit({preventDefault(){}});
+    let dispose=mount();
+    assert.equal(changes,0);
+    button("Start guided SUM (reset worksheet)").onclick();
+    assert.equal(latest.practice_mode,"guided-sum-v1");
+    formula().value=FORMULA;formula().fire("input");submitForm();
+    assert.ok(root.textContent.includes("Submission complete"));
+    assert.equal(latest.attempts[0].activity,"guided-sum-v1");
+    button("Start independent revision (reset worksheet)").onclick();
+    assert.equal(latest.practice_mode,"independent-match-v1");
+    formula().value=FORMULA;formula().fire("input");submitForm();
+    assert.ok(root.textContent.includes("Last independent submission: 3 / 4"));
+    inputB3().value="12";inputB3().fire("input");submitForm();
+    assert.ok(root.textContent.includes("Last independent submission: 4 / 4"));
+    assert.equal(latest.attempts.length,3);
+    button("Reset worksheet").onclick();
+    assert.equal(latest.attempts.length,3);
+    assert.equal(latest.applied,false);
+    assert.equal(latest.values[1],"8");
+    const saved=structuredClone(latest);dispose();dispose=mount();
+    assert.deepEqual(latest,saved);
+    assert.ok(root.textContent.includes("Mode: Independent revision"));
+    assert.ok(root.textContent.includes("Last independent submission: 4 / 4"));
+    button("Leave practice mode").onclick();
+    assert.equal(latest.practice_mode,undefined);
+    assert.equal(latest.attempts.length,3);
+    dispose();
+  }finally{
+    if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;
+    if(oldDocument===undefined)delete globalThis.document;else globalThis.document=oldDocument;
+  }
 });
