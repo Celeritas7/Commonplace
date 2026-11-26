@@ -22,8 +22,8 @@ separately. Each correction below has its own reviewable PR. F2 follows R1–R4.
 | --- | --- | --- |
 | R1 | An automatically activated, incomplete public shell uses one complete saved revision without a network-first launch. Preserve legacy caches, open-page revision consistency, study records and private packs; exercise real automatic activation and cold reopen. | Merged in PR #118. Physical iPad acceptance remains pending. |
 | R2 | Reject whitespace inside function names and cell references while preserving legitimate Excel syntax. Grade each criterion independently, with correct/incorrect formula and input cases. | Merged in PR #120, including compatibility for earlier saved evaluations. |
-| R3 | Establish extensible, versioned lesson capabilities shared by personal study and central assigned learning, including common assessment logic and compatibility with existing records. | Implemented in this correction; see the architecture and extension contract below. |
-| R4 | Plan durable attempt history beyond the current 40-submission central cap, persistent curriculum progress and meaningful comparison of assessment conflicts. Define ownership, migration, offline/retry and backup compatibility before implementing storage changes. Preserve every existing record. | Next correction |
+| R3 | Establish extensible, versioned lesson capabilities shared by personal study and central assigned learning, including common assessment logic and compatibility with existing records. | Merged in PR #122; see the architecture and extension contract below. |
+| R4 | Plan durable attempt history beyond the current 40-submission central cap, persistent curriculum progress and meaningful comparison of assessment conflicts. Define ownership, migration, offline/retry and backup compatibility before implementing storage changes. Preserve every existing record. | Plan prepared in [Learning records](LEARNING-RECORDS-PLAN.md); implementation remains separate. F2 follows review/merge of this correction. |
 
 The primary learner is a beginner in Japan–Philippines second-hand product
 trading. Prioritize inventory, quotations, customer follow-ups, fictional currency
@@ -104,3 +104,19 @@ permissions, profiles, assignments and reporting; its prompt guidance now reflec
 the current bounded controls. R3 adds no new learner enrollment, production
 activation, storage migration or F2 lesson. The other F1 functions still need the
 later G/H publication and assigned-UI integration.
+
+## R4 learning-records plan
+
+[The durable learning-records plan](LEARNING-RECORDS-PLAN.md) selects an immutable
+attempt journal in a companion database, preserving the existing U8 database and
+old cached shells. It defines additive migration from current work, pending
+snapshots and conflict history; separate recorded/current assessment outcomes;
+persistent progress dimensions; meaningful conflict comparison; and versioned
+append, backup and reporting contracts for later implementation.
+
+This correction is planning only. Central history still refuses new records at
+40; it does not prune earlier attempts. Personal F1/Section 1 assessment history
+remains session-only. Admin Studio reporting and the proposed storage changes
+are not delivered by this plan. Continue F2–F6, then G/H, after R4 review/merge;
+later persistence packages must meet the plan's compatibility/recovery gates
+before claiming durable or synchronized learning records.

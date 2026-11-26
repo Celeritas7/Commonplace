@@ -80,3 +80,12 @@ Rollback starts by disabling the feature/route, preserving IndexedDB, pending ed
 Automated tests cover signed-lease tampering/expiry/binding, partial download reuse/integrity, stale account responses, SQL default-deny/assignment revocation/CAS/idempotency/expected-owner checks, local/cloud/tab conflicts, cold offline Chromium reopen, notes/worksheet recovery, reconnect sync, cross-tab ownership changes, blocked renewal, expiry, backup restore and quota failure. All existing U7/Admin Studio/Excel regressions run alongside them. The historical U1–U6 raw-DML contract is tested before U8; the new database suite applies **all** migrations and verifies the replacement write boundary.
 
 The public preview simulates authorization and cloud storage. It proves client behavior, not hosted security. Real Supabase JWT/Edge/Storage, physical iPad/Safari/Android, deployment-origin/service-worker conflicts and restore/rollback evidence remain U9 release gates. No user needs to clear website data.
+
+## Excel learning-records planning
+
+The [Excel R4 plan](../../Office_work/Excel_study/LEARNING-RECORDS-PLAN.md) proposes
+a companion immutable attempt journal, separate progress projections, evidence
+comparison and segmented backups. It preserves this U8 database/record format
+and current CAS endpoints, including older cached-shell access. This is design
+only: no journal, schema migration, cap increase, reporting permission or
+production synchronization is enabled by the plan.
