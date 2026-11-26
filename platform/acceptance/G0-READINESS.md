@@ -46,6 +46,11 @@ Roadmap tables. Existing historical conflicts stop installation without changing
 rows. The original invoker comparison API stays compatible; owning-client/hub,
 provider and recovery gates remain open. This is G0 preparation only.
 
+The subsequent [comparison-edit preparation](ROADMAP-COMPARISON-READINESS.md)
+adds acknowledged preference edits, stale-version rejection and original-account
+retry recovery in an opt-in Roadmap preview. Legacy import replacement/retry,
+other caller and shared-project gates remain open; it does not activate sharing.
+
 Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
 preparation PR or passing synthetic tests do not clear those gates.
