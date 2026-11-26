@@ -66,7 +66,8 @@ test("Excel-only learner opens personalized materials using the existing Ribbon,
   await page
     .getByRole("button", { name: "Apply formula", exact: true })
     .click();
-  await expect(page.locator(".assigned-feedback")).toContainText("Enter =SUM");
+  await expect(page.getByLabel("B5 total", { exact: true })).toHaveText("—");
+  await expect(page.locator(".assigned-feedback")).toContainText("Keep SUM and each cell reference together.");
 });
 test("same-owner refresh preserves work; account changes clear it and isolate persistent notes and completion", async ({
   page,
