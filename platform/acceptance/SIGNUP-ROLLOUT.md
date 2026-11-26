@@ -192,3 +192,7 @@ hosted/signup/enrollment gate.
 01 → 03 → 13 path. The integrated preview also uses 08/12 for daily actions and
 resets and 09/10/11 for comparisons. It adds no Commonplace migration and does
 not authorize installation, client cutover or learner enrollment.
+
+[Daily-log preparation](ROADMAP-LOG-READINESS.md) adds 01 → 03 → 09 → 14. Its
+new API is additive; actual callers still require coordinated cutover. It changes
+none of the six Commonplace migrations or hosted/signup/enrollment gates.

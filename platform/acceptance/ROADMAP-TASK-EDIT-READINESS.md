@@ -110,3 +110,7 @@ provider evidence, deferred recovery and the final G0 decision still precede any
 hosted rollout. These are work groups inside G0, not new platform phases. The six
 Commonplace migrations, Excel development, study materials, notes, bookmarks,
 progress, offline manifests and downloaded packs are unchanged.
+
+The subsequent [daily-log preparation](ROADMAP-LOG-READINESS.md) covers awaited
+log entry forms and stable original-date retries. Creation/capture and structural
+task/log mutations remain separate; no hosted cutover is implied.
