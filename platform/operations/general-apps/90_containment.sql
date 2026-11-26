@@ -41,9 +41,12 @@ begin;
 do $$ declare signature text; routine regprocedure; role_name text;
 begin
  foreach signature in array array['public.roadmap_start_session(uuid,text,text)',
-  'public.roadmap_complete_session(uuid,text,text,integer,jsonb,text)'] loop
+  'public.roadmap_complete_session(uuid,text,text,integer,jsonb,text)',
+  'public.ga_roadmap_set_daily_task(uuid,timestamptz,boolean,text,uuid)'] loop
   begin
    routine:=to_regprocedure(signature);
+   -- Candidate 08 is optional until its separate installation window.
+   if routine is null and signature='public.ga_roadmap_set_daily_task(uuid,timestamptz,boolean,text,uuid)' then continue; end if;
    if routine is null then raise exception 'missing routine'; end if;
    execute format('revoke execute on function %s from public,anon,authenticated,service_role',routine);
    foreach role_name in array array['anon','authenticated','service_role'] loop

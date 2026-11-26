@@ -32,6 +32,12 @@ staging client. The earlier Eagle Advanced consumer association is corrected
 there. Deployed legacy writer/team and real client cutover remain unverified.
 This is another prepared work group within G0, not G0 clearance.
 
+**Roadmap session preparation update — 2026-11-26:**
+[Candidate 08 and client staging](ROADMAP-SESSION-READINESS.md) prepare atomic
+daily task/session changes, durable retries and explicit failure recovery. The
+existing session RPC signatures remain intact. Broader Roadmap table/relationship
+and caller checks remain open; no hosted action or G0 advancement is authorized.
+
 This checkpoint updates the earlier [General_apps review](GENERAL-APPS-REVIEW.md)
 without replacing its historical evidence. Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
