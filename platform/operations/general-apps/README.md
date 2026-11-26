@@ -31,6 +31,7 @@ Supabase configuration, downloaded packs and live records have not changed.
 | `02_legacy_policy_guards.sql` | Restrictive guards on six legacy tables, including Eagle units and progress | Candidate 01, verified mappings, Eagle members including a confirmed writer, reviewed policy and grant baselines, and all three client cutovers |
 | `03_roadmap_session_owner.sql` | Enforce matching owners for tasks, child tasks and sessions. Start and complete retain their signatures and return a saved session ID | Candidate 01, both reviewed RPC fingerprints, consistent historical ownership, caller regression and recovery checkpoint |
 | `04_commonplace_signup.sql` | Administrator-managed admission, revision-checked recovery, atomic UUID reservation and verified completion | Six CP migrations, verified CP administrator, reviewed foundation fingerprints and four ordinary nondeferred legacy triggers; installed **disabled** |
+| `05_code_sensei_isolation.sql` | Full Code_sensei ownership graph, member-only curriculum, retry receipts and atomic project saves | Candidates 01 and 02, verified mappings, owning-client cutover and old saved-work reconciliation; see [preparation evidence](../../acceptance/CODE-SENSEI-ISOLATION.md) |
 | `edge/` | Candidate `claude-proxy` and `code-exec` handlers require a verified non-anonymous user and a current explicit function grant | JWT-capable clients, per-user grants, source drift review and each owning app's deployment review |
 | `90_containment.sql` | Close new admission, pause both Edge routes, pause Roadmap routines and revoke their browser execution permissions | Full shared incident only. Review the per-component results and retain individual entitlements |
 
@@ -44,7 +45,7 @@ No real user ID, email, token, key or ownership assignment is embedded here.
 
 | Consumer | Observed contract | Required client/owner review before enforcement |
 | --- | --- | --- |
-| [Code_sensei](https://github.com/Celeritas7/Code_sensei) | Its `user_id` references a separate app user table. Current main uses anonymous REST headers and a single display-name lookup | Add verified Supabase sign-in to the owning client, pass its JWT on every private read/write and AI call, replace the name lookup with `code_sensei_current_user_id()`, and preserve/account-scope saved work. Test existing notes/progress before recording cutover. This client change is **not included** in the candidate package |
+| [Code_sensei](https://github.com/Celeritas7/Code_sensei) | Its `user_id` references a separate app user table. The production entry point still uses anonymous headers and a display-name lookup | [Companion PR #4](https://github.com/Celeritas7/Code_sensei/pull/4) prepares verified JWT access and account-scoped work in an opt-in staging build. It requires 01/02/05, real verified mappings and original saved-work/queue reconciliation before cutover. It is not a deployed client or a real cutover attestation |
 | [HealthLog](https://github.com/Celeritas7/HealthLog) | The legacy archive stores textual user keys; current sync has a separate authenticated implementation | Review actual archive consumers and map the original keys to verified UUIDs. Never cast a textual key or assign all history to the first admin |
 | [Eagle workspace](https://github.com/Celeritas7/Eagle_eye_view_app_advanced) | Progress belongs to shared assembly units and nodes, not individual learner records | Confirm the actual legacy client and team. Explicit Eagle members with a verified UUID and linked viewer role can read. Members with admin/operator roles can write. Include assembly, project and version workflows that modify units indirectly |
 | [Roadmap_advanced](https://github.com/Celeritas7/Roadmap_advanced/blob/main/src/store/studySessions.ts) | Uses start and complete RPCs, session reads and direct undo | Check both RPCs, defaults, retry IDs, client-visible errors, direct undo and null-task sessions. Reconcile existing session/task or parent/child ownership discrepancies with the owning app before installation |
@@ -211,10 +212,12 @@ signup triggers and two Edge routes. It is **not a complete shared-project
 authorization repair**. Remaining broad tables/functions, email-fallback role
 helpers, other Edge routes, actual exposed-schema settings, affected client
 cutovers and the owner identity mappings still require closure. No unverified
-mapping or client-readiness attestation is supplied for live use. The six other
-Code_sensei learner-data tables, including notebooks, saved projects and chat
-history, remain a rollout blocker. The owning app must protect those paths and
-demonstrate authenticated access with real verified mappings before enforcement.
+mapping or client-readiness attestation is supplied for live use. The additional
+Code_sensei paths are covered by the unapplied
+[candidate 05 preparation](../../acceptance/CODE-SENSEI-ISOLATION.md), including
+exercise, attempt and game-progress tables beyond the six originally noted.
+Its companion client is opt-in staging only. Real verified mappings, saved-work
+reconciliation and owning-app acceptance remain required before enforcement.
 
 Tests execute the actual candidate SQL in isolated PostgreSQL and the actual
 candidate Edge handlers with fake provider I/O. The local Supabase runner also
