@@ -68,6 +68,11 @@ retries. Daily-log recovery is next; creation/capture, structural changes and
 hub/caller acceptance remain separate. Hosted work and enrollment stay on hold,
 and restoration remains deferred.
 
+The [daily-log preparation](ROADMAP-LOG-READINESS.md) now adds acknowledged
+entry creation with original-day/idempotent retries and retained failed drafts.
+Task creation/capture is next; structural/hub/admission and other G0 gates remain
+open. This does not activate sharing or resume deferred restoration.
+
 Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
 preparation PR or passing synthetic tests do not clear those gates.
