@@ -61,6 +61,48 @@
       worksheet: { sourceCell: 'D3', targetCells: ['D4', 'D5'],
         inputCells: ['B3', 'C3', 'B4', 'C4', 'B5', 'C5'], formula: '=B3/C3' } },
   ];
+  const tableColumns = ['id', 'item', 'status', 'quantity', 'unitPrice', 'discount', 'shipDate'];
+  const tableNumberColumns = ['quantity', 'unitPrice', 'discount', 'shipDate'];
+  const tableFormats = ['general', 'integer', 'decimal', 'jpy', 'php', 'percent', 'date'];
+  const tableStatuses = ['Ready', 'Reserved', 'Shipped'];
+  const tableWorksheet = { range: 'A1:G7', rowCount: 6, columns: tableColumns };
+  const tableLessons = [
+    { id: 'number-formats', title: 'Number formats — Read business values',
+      concept: 'A number format changes how a value appears, not the value stored in the cell. Show quantities as whole numbers, prices in their original currency, discounts as percentages and shipping dates as dates. Choosing a currency format does not convert an amount to another currency.',
+      task: 'Format quantity as an integer, unit price in the example’s currency, discount as a percentage and ship date as a date. Keep the underlying values unchanged.',
+      question: 'A discount cell stores 0.15. What does a percentage format display?',
+      choices: ['15.0%', '0.15%', 'The stored value becomes 15'], answer: 0,
+      explanation: 'This percentage format displays 0.15 as 15.0%. The stored value remains 0.15.',
+      goal: { formats: { quantity: 'integer', unitPrice: 'scenario-currency', discount: 'percent', shipDate: 'date' } } },
+    { id: 'create-table', title: 'Tables — Keep related records together',
+      concept: 'An Excel table gives a related range a name, headers and table controls. Each row is one complete record. Include every column and all six records so a product’s identity, status, quantities, price and shipping date stay together.',
+      task: 'Create the PracticeItems table over A1:G7, using the existing header row and banded rows. Keep every record and value.',
+      question: 'Which range includes the seven headers and all six records in this worksheet?',
+      choices: ['A2:G7', 'A1:G7', 'D1:D7'], answer: 1,
+      explanation: 'A1:G7 includes the header row and all seven fields for each of the six records.',
+      goal: { table: { name: 'PracticeItems', range: 'A1:G7', headers: true, banded: true } } },
+    { id: 'sort-records', title: 'Sorting — Move complete records',
+      concept: 'Sort quantities from smallest to largest to see low stock first. A numeric sort puts 2 before 10. Move the whole record, never only the quantity cells, so prices and dates remain attached to the same SKU. Editing a value does not automatically sort again.',
+      task: 'Sort the full table by quantity, smallest to largest. Keep all six complete records visible and preserve their original values.',
+      question: 'How should quantities 2, 10 and 6 appear in a smallest-to-largest numeric sort?',
+      choices: ['10, 2, 6', '6, 2, 10', '2, 6, 10'], answer: 2,
+      explanation: 'Numeric order is 2, 6, 10. Sorting complete records keeps every quantity with its original SKU and other fields.',
+      goal: { sort: { column: 'quantity', direction: 'asc' } } },
+    { id: 'filter-records', title: 'Filtering — Focus without deleting',
+      concept: 'A filter hides records that do not match your conditions; it does not delete them. Conditions on different columns work together. Show only Ready records with at least 5 units, then clear the filter to see every record again. Reapply the filter after editing a value.',
+      task: 'Show only Ready records with quantity at least 5. Use both conditions and keep every original record stored in the table.',
+      question: 'With Status = Ready and Quantity at least 5, which record remains visible?',
+      choices: ['Reserved, quantity 10', 'Ready, quantity 6', 'Ready, quantity 2'], answer: 1,
+      explanation: 'Both conditions must be true. Ready with quantity 6 matches; the other records are hidden, not removed.',
+      goal: { filters: { status: 'Ready', minimumQuantity: 5 } } },
+    { id: 'validate-entry', title: 'Data validation — Prevent invalid entries',
+      concept: 'Validation can restrict new entries to a list or a number range. This practice requires the exact status spelling Ready, Reserved or Shipped, and whole quantities from 0 to 10000. Applying a rule does not repair earlier invalid values. Check existing data separately; this practice blocks invalid edits while a rule is enabled.',
+      task: 'Enable the status-list rule and the whole-number quantity rule. Confirm all current records satisfy both rules and preserve the original values.',
+      question: 'What happens to an existing quantity of -2 when you add a rule requiring whole numbers from 0 to 10000?',
+      choices: ['It is automatically changed to 0', 'The row is deleted', 'It remains and needs a separate correction'], answer: 2,
+      explanation: 'Applying validation does not rewrite existing data. The earlier -2 remains invalid and needs to be corrected separately.',
+      goal: { validation: { quantity: true, status: true } } },
+  ];
   const capabilities = freeze([
     { id: 'explanation.text.v1', version: 1, kind: 'explanation' },
     ...formulaFunctions.map(fn => ({
@@ -73,6 +115,10 @@
       id: 'excel.references.' + lesson.id + '.v1', version: 1,
       kind: 'reference-formula', engine: 'bounded-reference-arithmetic.v1',
       worksheet: lesson.worksheet,
+    })),
+    ...tableLessons.map(lesson => ({
+      id: 'excel.tables.' + lesson.id + '.v1', version: 1,
+      kind: 'business-table', engine: 'bounded-business-table.v1', worksheet: tableWorksheet,
     })),
   ]);
   const runtimes = freeze([
@@ -101,6 +147,15 @@
       lessons: [{ id: 'relative-line-totals', version: 1 }, { id: 'absolute-rate', version: 1 },
         { id: 'mixed-quotation', version: 1 }, { id: 'relative-unit-cost', version: 1 }],
       formula_error: 'Use two cell references from A1:F12 joined by * or /. Keep each reference and its dollar signs together.' },
+    { id: 'personal-tables', version: 1, engine: 'bounded-business-table.v1',
+      row_count: 6, columns: tableColumns, numeric_columns: tableNumberColumns,
+      formats: tableFormats, statuses: tableStatuses,
+      capabilities: ['explanation.text.v1', 'excel.tables.number-formats.v1',
+        'excel.tables.create-table.v1', 'excel.tables.sort-records.v1',
+        'excel.tables.filter-records.v1', 'excel.tables.validate-entry.v1'],
+      lessons: [{ id: 'number-formats', version: 1 }, { id: 'create-table', version: 1 },
+        { id: 'sort-records', version: 1 }, { id: 'filter-records', version: 1 },
+        { id: 'validate-entry', version: 1 }] },
   ]);
   const rubrics = freeze([
     { id: 'formula-foundations', version: 1, engine: 'formula-foundations.v1',
@@ -117,6 +172,9 @@
       runtime: { id: 'personal-references', version: 1 },
       criteria_per_cell: ['reference-pattern', 'valid-calculation'],
       independent_criteria: ['original-inputs'] },
+    { id: 'table-foundations', version: 1, engine: 'table-foundations.v1',
+      runtime: { id: 'personal-tables', version: 1 },
+      independent_criteria: ['original-records'] },
   ]);
   const lessonContent = [
     {id:"sum",fn:"SUM",title:"SUM — Add values",concept:"SUM adds numeric cells in a range. Empty cells are ignored; a zero is a number. Use SUM instead of typing a fixed total so Excel can recalculate when inputs change.",task:"Calculate the total",question:"Which formula adds all three numeric cells?",choices:["=SUM(B2:B4)","=COUNT(B2:B4)","=SUM(A2:A4)"],answer:0,explanation:"SUM(B2:B4) adds the numbers in column B from rows 2 through 4."},
@@ -136,6 +194,10 @@
     capability_id: 'excel.references.' + item.id + '.v1',
     runtime: { id: 'personal-references', version: 1 },
     rubric: { id: 'reference-foundations', version: 1 },
+  })), ...tableLessons.map(item => ({
+    ...item, version: 1, capability_id: 'excel.tables.' + item.id + '.v1',
+    runtime: { id: 'personal-tables', version: 1 },
+    rubric: { id: 'table-foundations', version: 1 }, worksheet: tableWorksheet,
   }))]);
   function resolveCapability(id) {
     const found = capabilities.find(item => item.id === id);
@@ -286,6 +348,259 @@
           numberMatches(input[address], baseline[address])) });
     return { ...result(criteria), evaluated };
   }
+  // F3 keeps typed records separate from order, formatting and hidden rows.
+  // Every operation is pure, and rules never rewrite already-entered values.
+  function tableRuntime(ref) {
+    const runtime = resolveRuntime(ref);
+    if (runtime.engine !== 'bounded-business-table.v1')
+      throw Error('A business-table practice runtime is required.');
+    return runtime;
+  }
+  const hasKeys = (value, keys) => plain(value) &&
+    Object.keys(value).sort().join() === keys.slice().sort().join();
+  const packedList = (value, max) => Array.isArray(value) && value.length <= max &&
+    Object.keys(value).length === value.length &&
+    Array.from({ length: value.length }, (_, index) => Object.hasOwn(value, index)).every(Boolean);
+  const tableNumber = value => value === null ||
+    (typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 1e12);
+  const tableDate = value => value === null ||
+    (Number.isSafeInteger(value) && value >= 61 && value <= 2958465);
+  const shortText = (value, max) => typeof value === 'string' && value.length <= max;
+  function tableId(value) {
+    if (!shortText(value, 24)) return false;
+    const match = /^[A-Za-z0-9][A-Za-z0-9_-]*$/.exec(value);
+    return !!match && match[0].length === value.length;
+  }
+  function tableRows(runtime, rows) {
+    if (!packedList(rows, runtime.row_count) || rows.length !== runtime.row_count ||
+        rows.some(row => !hasKeys(row, tableColumns) ||
+          !tableId(row.id) ||
+          !shortText(row.item, 80) || !row.item.trim() || !shortText(row.status, 32) ||
+          !['quantity', 'unitPrice', 'discount'].every(column => tableNumber(row[column])) ||
+          !tableDate(row.shipDate)) || new Set(rows.map(row => row.id)).size !== runtime.row_count)
+      throw Error('Use six complete records with unique SKU IDs and bounded typed values.');
+    return rows;
+  }
+  function tableName(value) {
+    if (typeof value !== 'string') return false;
+    const match = /^[A-Za-z_][A-Za-z0-9_]{0,30}$/.exec(value);
+    return !!match && match[0].length === value.length &&
+      !/^(?:[A-Za-z]{1,3}[1-9][0-9]*|[RC]|R[1-9][0-9]*C[1-9][0-9]*)$/i.test(value);
+  }
+  function tableFilter(value) {
+    return hasKeys(value, ['status', 'minimumQuantity']) &&
+      (value.status === null || shortText(value.status, 32)) &&
+      (value.minimumQuantity === null || (typeof value.minimumQuantity === 'number' &&
+        Number.isFinite(value.minimumQuantity) && Math.abs(value.minimumQuantity) <= 1e12));
+  }
+  function validateTableState(runtime, state) {
+    if (!hasKeys(state, ['schema_version', 'rows', 'order', 'formats', 'table', 'sort',
+      'filters', 'filterVisibleIds', 'validation']) || state.schema_version !== 1)
+      throw Error('Unsupported table worksheet state.');
+    tableRows(runtime, state.rows);
+    const ids = state.rows.map(row => row.id);
+    if (!packedList(state.order, ids.length) || state.order.length !== ids.length ||
+        new Set(state.order).size !== ids.length ||
+        !state.order.every(id => ids.includes(id))) throw Error('Keep every SKU exactly once in the row order.');
+    if (!hasKeys(state.formats, tableNumberColumns) ||
+        !tableNumberColumns.every(column => tableFormats.includes(state.formats[column])))
+      throw Error('Unsupported column format.');
+    if (state.table !== null && (!hasKeys(state.table, ['name', 'range', 'headers', 'banded']) ||
+        !tableName(state.table.name) || state.table.range !== 'A1:G7' ||
+        state.table.headers !== true || typeof state.table.banded !== 'boolean'))
+      throw Error('Create a named table over A1:G7 with the existing headers.');
+    if (state.sort !== null && (!hasKeys(state.sort, ['column', 'direction']) ||
+        !tableColumns.includes(state.sort.column) || !['asc', 'desc'].includes(state.sort.direction) || !state.table))
+      throw Error('Unsupported table sort.');
+    if (!tableFilter(state.filters)) throw Error('Unsupported table filter.');
+    if (state.filterVisibleIds !== null && (!packedList(state.filterVisibleIds, ids.length) ||
+        new Set(state.filterVisibleIds).size !== state.filterVisibleIds.length ||
+        !state.filterVisibleIds.every(id => ids.includes(id)) || !state.table))
+      throw Error('Unsupported filtered-row selection.');
+    if (state.filterVisibleIds === null &&
+        (state.filters.status !== null || state.filters.minimumQuantity !== null))
+      throw Error('Apply the filter to establish its visible rows.');
+    if (!hasKeys(state.validation, ['quantity', 'status']) ||
+        typeof state.validation.quantity !== 'boolean' || typeof state.validation.status !== 'boolean')
+      throw Error('Unsupported validation rules.');
+    return state;
+  }
+  function copyTableState(state) {
+    return { schema_version: 1, rows: state.rows.map(row => ({ ...row })), order: [...state.order],
+      formats: { ...state.formats }, table: state.table && { ...state.table },
+      sort: state.sort && { ...state.sort }, filters: { ...state.filters },
+      filterVisibleIds: state.filterVisibleIds && [...state.filterVisibleIds],
+      validation: { ...state.validation } };
+  }
+  function createTableState(runtimeRef, rows) {
+    const runtime = tableRuntime(runtimeRef);
+    tableRows(runtime, rows);
+    return { schema_version: 1, rows: rows.map(row => ({ ...row })), order: rows.map(row => row.id),
+      formats: Object.fromEntries(tableNumberColumns.map(column => [column, 'general'])),
+      table: null, sort: null, filters: { status: null, minimumQuantity: null },
+      filterVisibleIds: null, validation: { quantity: false, status: false } };
+  }
+  function quantityAllowed(value) {
+    return Number.isSafeInteger(value) && value >= 0 && value <= 10000;
+  }
+  function filterMatches(row, filter) {
+    return (filter.status === null || row.status === filter.status) &&
+      (filter.minimumQuantity === null || (row.quantity !== null && row.quantity >= filter.minimumQuantity));
+  }
+  function compareTableValues(a, b, direction) {
+    // A blank remains at the end in either direction; ties keep their prior order.
+    const blankA = a === null || a === '', blankB = b === null || b === '';
+    if (blankA || blankB) return blankA === blankB ? 0 : blankA ? 1 : -1;
+    const left = typeof a === 'string' ? a.toUpperCase() : a;
+    const right = typeof b === 'string' ? b.toUpperCase() : b;
+    return (left < right ? -1 : left > right ? 1 : 0) * (direction === 'asc' ? 1 : -1);
+  }
+  function applyTableAction(runtimeRef, state, action) {
+    const runtime = tableRuntime(runtimeRef);
+    validateTableState(runtime, state);
+    if (!plain(action) || typeof action.type !== 'string') throw Error('Choose a supported table action.');
+    const next = copyTableState(state);
+    if (action.type === 'set-format') {
+      if (!hasKeys(action, ['type', 'column', 'format']) || !tableNumberColumns.includes(action.column) ||
+          !tableFormats.includes(action.format)) throw Error('Choose a numeric column and supported number format.');
+      next.formats[action.column] = action.format;
+    } else if (action.type === 'create-table') {
+      if (!hasKeys(action, ['type', 'name', 'range', 'headers', 'banded']) || !tableName(action.name))
+        throw Error('Use a table name beginning with a letter or underscore, without spaces or cell references.');
+      if (action.range !== 'A1:G7' || action.headers !== true || typeof action.banded !== 'boolean')
+        throw Error('This practice table must include A1:G7 and its existing header row.');
+      next.table = { name: action.name, range: action.range, headers: action.headers, banded: action.banded };
+    } else if (action.type === 'sort') {
+      if (!hasKeys(action, ['type', 'column', 'direction']) || !tableColumns.includes(action.column) ||
+          !['asc', 'desc'].includes(action.direction) || !next.table)
+        throw Error('Create the table, then choose a column and sort direction.');
+      const byId = new Map(next.rows.map(row => [row.id, row]));
+      next.order = next.order.map((id, index) => ({ id, index })).sort((a, b) =>
+        compareTableValues(byId.get(a.id)[action.column], byId.get(b.id)[action.column], action.direction) ||
+        a.index - b.index).map(row => row.id);
+      next.sort = { column: action.column, direction: action.direction };
+    } else if (action.type === 'filter') {
+      const filter = { status: action.status, minimumQuantity: action.minimumQuantity };
+      if (!hasKeys(action, ['type', 'status', 'minimumQuantity']) || !tableFilter(filter) || !next.table)
+        throw Error('Create the table, then choose a status and numeric minimum quantity.');
+      next.filters = filter;
+      next.filterVisibleIds = next.rows.filter(row => filterMatches(row, filter)).map(row => row.id);
+    } else if (action.type === 'clear-filter') {
+      if (!hasKeys(action, ['type'])) throw Error('Unsupported clear-filter action.');
+      next.filters = { status: null, minimumQuantity: null }; next.filterVisibleIds = null;
+    } else if (action.type === 'set-validation') {
+      if (!hasKeys(action, ['type', 'column', 'enabled']) || !['quantity', 'status'].includes(action.column) ||
+          typeof action.enabled !== 'boolean') throw Error('Choose the quantity or status validation rule.');
+      next.validation[action.column] = action.enabled;
+    } else if (action.type === 'edit-cell') {
+      if (!hasKeys(action, ['type', 'rowId', 'column', 'value']) || !['quantity', 'status'].includes(action.column) ||
+          typeof action.value !== 'string') throw Error('Edit a quantity or status using its SKU.');
+      const row = next.rows.find(item => item.id === action.rowId);
+      if (!row) throw Error('Choose an existing SKU.');
+      let value;
+      if (action.column === 'quantity') {
+        value = syntax.numericCell(action.value, { allowBlank: true });
+        if (next.validation.quantity && !quantityAllowed(value))
+          throw Error('Quantity must be a whole number from 0 to 10000; blanks are not allowed.');
+      } else {
+        value = action.value;
+        if (!shortText(value, 32)) throw Error('Use a status of at most 32 characters.');
+        if (next.validation.status && !tableStatuses.includes(value))
+          throw Error('Use the exact status Ready, Reserved or Shipped; blanks are not allowed.');
+      }
+      row[action.column] = value;
+    } else throw Error('Unsupported table action.');
+    validateTableState(runtime, next);
+    return next;
+  }
+  function tableView(runtimeRef, state) {
+    validateTableState(tableRuntime(runtimeRef), state);
+    const byId = new Map(state.rows.map(row => [row.id, row]));
+    return state.order.filter(id => state.filterVisibleIds === null || state.filterVisibleIds.includes(id))
+      .map(id => ({ ...byId.get(id) }));
+  }
+  function inspectTableValidation(runtimeRef, state) {
+    validateTableState(tableRuntime(runtimeRef), state);
+    return state.rows.flatMap(row => [
+      ...(state.validation.quantity && !quantityAllowed(row.quantity)
+        ? [{ rowId: row.id, column: 'quantity', message: 'Use a whole quantity from 0 to 10000.' }] : []),
+      ...(state.validation.status && !tableStatuses.includes(row.status)
+        ? [{ rowId: row.id, column: 'status', message: 'Use the exact status Ready, Reserved or Shipped.' }] : []),
+    ]);
+  }
+  function formatTableValue(runtimeRef, column, value, format) {
+    tableRuntime(runtimeRef);
+    if (!tableColumns.includes(column) || !tableFormats.includes(format)) throw Error('Unsupported column format.');
+    if (!tableNumberColumns.includes(column)) {
+      if (format !== 'general' || !shortText(value, column === 'item' ? 80 : 32))
+        throw Error('Text fields use their original text.');
+      return value;
+    }
+    if (!tableNumber(value) || (column === 'shipDate' && !tableDate(value)))
+      throw Error('Use a bounded numeric value for this column.');
+    if (value === null) return '';
+    const number = digits => new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: digits, maximumFractionDigits: digits,
+    }).format(value);
+    if (format === 'general') return String(value);
+    if (format === 'integer') return number(0);
+    if (format === 'decimal') return number(2);
+    if (format === 'jpy') return 'JPY ' + number(0);
+    if (format === 'php') return 'PHP ' + number(2);
+    if (format === 'percent') return new Intl.NumberFormat('en-US', {
+      style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1,
+    }).format(value);
+    if (!tableDate(value)) return 'Date outside this practice';
+    return new Date(Date.UTC(1899, 11, 30) + value * 86400000).toISOString().slice(0, 10);
+  }
+  function gradeTables(rubricRef, exercise, state) {
+    const rubric = resolveRubric(rubricRef);
+    if (rubric.engine !== 'table-foundations.v1') throw Error('A business-table rubric is required.');
+    const runtime = tableRuntime(rubric.runtime);
+    const lesson = resolveLesson({ id: exercise?.lesson?.id, version: exercise?.lesson?.version });
+    if (lesson.rubric.id !== rubric.id || lesson.rubric.version !== rubric.version ||
+        !runtime.lessons.some(ref => ref.id === lesson.id && ref.version === lesson.version) ||
+        !runtime.capabilities.includes(lesson.capability_id) || !['guided', 'independent'].includes(exercise.mode) ||
+        !['JPY', 'PHP'].includes(exercise.currency)) throw Error('Table lesson, currency and rubric must match.');
+    tableRows(runtime, exercise.rows); validateTableState(runtime, state);
+    const byId = new Map(state.rows.map(row => [row.id, row]));
+    const sameIds = exercise.rows.every(row => byId.has(row.id));
+    const original = sameIds && exercise.rows.every(row =>
+      tableColumns.every(column => row[column] === byId.get(row.id)[column]));
+    const criteria = [], add = (id, label, passed) => criteria.push({ id, label, passed: !!passed });
+    if (lesson.id === 'number-formats') {
+      for (const [column, expected] of Object.entries(lesson.goal.formats))
+        add('format:' + column, column + ' uses the requested display format',
+          state.formats[column] === (expected === 'scenario-currency' ? exercise.currency.toLowerCase() : expected));
+    } else if (lesson.id === 'create-table') {
+      add('table-created', 'All six records belong to a table with the existing headers', !!state.table);
+      add('table-name', 'The table is named PracticeItems', state.table?.name === lesson.goal.table.name);
+      add('table-banding', 'Banded table rows are enabled', state.table?.banded === true);
+    } else if (lesson.id === 'sort-records') {
+      add('sort-setting', 'Quantity is selected for a smallest-to-largest sort',
+        state.sort?.column === lesson.goal.sort.column && state.sort?.direction === lesson.goal.sort.direction);
+      const current = state.order.map(id => byId.get(id));
+      add('numeric-row-order', 'Complete records are in numeric quantity order',
+        current.every((row, i) => !i || compareTableValues(current[i - 1].quantity, row.quantity, 'asc') <= 0));
+      add('all-records-visible', 'All six records remain visible', tableView(rubric.runtime, state).length === 6);
+    } else if (lesson.id === 'filter-records') {
+      add('filter-status', 'The status filter selects Ready', state.filters.status === lesson.goal.filters.status);
+      add('filter-quantity', 'The quantity filter requires at least 5',
+        state.filters.minimumQuantity === lesson.goal.filters.minimumQuantity);
+      const expected = state.rows.filter(row => filterMatches(row, lesson.goal.filters)).map(row => row.id).sort();
+      const visible = tableView(rubric.runtime, state).map(row => row.id).sort();
+      add('matching-records-visible', 'Only records matching both conditions are visible',
+        expected.length === visible.length && expected.every((id, i) => id === visible[i]));
+    } else if (lesson.id === 'validate-entry') {
+      add('validation:quantity', 'Quantity requires a whole number from 0 to 10000', state.validation.quantity);
+      add('validation:status', 'Status requires Ready, Reserved or Shipped', state.validation.status);
+      add('valid-quantities', 'All existing quantities satisfy the requested rule', state.rows.every(row => quantityAllowed(row.quantity)));
+      add('valid-statuses', 'All existing statuses satisfy the requested list', state.rows.every(row => tableStatuses.includes(row.status)));
+    }
+    add('record-identities', 'All six original SKU records are retained', sameIds);
+    if (exercise.mode === 'independent') add('original-records', 'Every original value stays with its SKU', original);
+    return result(criteria);
+  }
   function formulaMatches(actual, expected) {
     const a = syntax.parse(actual), b = syntax.parse(expected);
     return !!a && !!b && a.canonical === b.canonical;
@@ -403,5 +718,6 @@
     resolveLesson, resolveCapability, resolveRuntime, resolveRubric,
     evaluateFormula, gradeFormula, checkCriterion, gradeAssigned,
     parseReferenceFormula, copyReferenceFormula, evaluateReferenceFormula, gradeReferences,
+    createTableState, applyTableAction, tableView, inspectTableValidation, formatTableValue, gradeTables,
   });
 })(typeof window === 'undefined' ? globalThis : window);

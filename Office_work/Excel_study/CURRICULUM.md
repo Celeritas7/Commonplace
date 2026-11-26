@@ -6,7 +6,7 @@ The standalone personal-study path is expanded in small reviewable modules. F1 i
 | --- | --- | --- |
 | F1 | Section 2 SUM / AVERAGE / COUNT / MIN / MAX; blanks versus zero; five professional contexts; guided/independent tasks, quiz and separate XLSX starter/solution | Merged in PR #116 |
 | F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Implemented in Section 3; see F2 below |
-| F3 | Number formats, tables, sorting, filtering, validation | Planned |
+| F3 | Number formats, tables, sorting, filtering, validation | Implemented in Section 4; see F3 below |
 | F4 | IF, conditional formatting, lookup functions | Planned |
 | F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | Planned |
 | F6 | Power Query and repeatable data preparation; link to existing VBA section | Planned |
@@ -176,4 +176,79 @@ central shell is refreshed because its shared curriculum dependency changed;
 standalone Section 3 gains no service worker or private assigned capability.
 Downloaded XLSX files can be used separately; real Excel open/save and physical
 iPad acceptance remain to be observed. No hosted activation, permission change
-or learner enrollment is included. F3 is the next curriculum module.
+or learner enrollment is included. F3 continues below.
+
+## F3 business tables and entry checks
+
+[Section 4](Section_4_Study.html) adds five version-1 lessons through
+`personal-tables@1` and `table-foundations@1`. Japan–Philippines second-hand
+trading is the default; all five professional contexts remain available. Each
+lesson uses six fictional records with a stable item ID, description, status,
+quantity, unit price, discount and planned shipping date. Guided and independent
+tasks have distinct dataset identities and starting values.
+
+| Lesson | Required task | What is assessed |
+| --- | --- | --- |
+| Number formats | Show whole quantities, JPY/PHP prices, one-decimal percentages and yyyy-mm-dd dates | Each column format independently; stored values remain unchanged |
+| Create a table | Create `PracticeItems` over A1:G7 with headers and banded rows | Full table, requested name and banding independently |
+| Sort complete records | Sort Quantity from smallest to largest and show every record | Selected sort, actual numeric order and complete visibility independently |
+| Filter records | Show Ready items with Quantity at least 5 | Each condition and the actual visible set independently |
+| Validate entries | Require whole quantities from 0 to 10000 and Ready/Reserved/Shipped status | Each enabled rule and existing values independently |
+
+Every task also checks retention of the original six item identities. Independent
+tasks separately check that every raw value remains attached to its original ID.
+A display, sorting or filtering mistake does not remove unrelated criterion
+credit. Resetting restores the task's original draft without adding or deleting
+submitted session attempts. Quiz checks remain separate from independent passes.
+
+The bounded table engine keeps typed records, row order, display formats and
+filtered visibility separate. Formatting never converts currencies or replaces
+numeric values with display strings. Percentages retain their fractional values;
+dates retain numeric serials in the Excel 1900 system. Sorting moves all seven
+fields together, compares numeric values numerically, keeps equal values stable
+and leaves blanks last in either direction. It does not automatically sort again
+after an edit.
+
+Filters retain all records and use a snapshot of the last applied criteria.
+Editing a record does not silently reapply its filter; use **Reapply current
+filter**. **Clear filters** restores visibility in the current row order. Editing
+uses the stable item ID, including after sorting or while a record is hidden.
+The practice compares its preset status labels exactly.
+
+Rules apply to direct quantity/status entry. An invalid new entry leaves both
+the worksheet and the typed draft intact. Enabling a rule retains earlier invalid
+values; **Check existing values** lists them for correction. The native workbook
+uses whole-number and inline-list Stop validation. Native Excel alerts apply to
+direct entry; copied or deleted values can bypass those alerts, and existing
+values need a separate check. The page and workbook explain this behavior.
+
+These behaviors follow the reviewed Microsoft guides for
+[number formats](https://support.microsoft.com/en-us/excel/get-started/available-number-formats-in-excel),
+[tables](https://support.microsoft.com/en-us/excel/get-started/create-and-format-tables),
+[sorting](https://support.microsoft.com/en-us/excel/sort-data-in-a-range-or-table-in-excel),
+[filters](https://support.microsoft.com/en-us/excel/get-started/filter-data-in-a-range-or-table-in-excel)
+and [validation](https://support.microsoft.com/en-us/excel/more-on-data-validation).
+The preview has fixed columns, six records, bounded numeric inputs, selected
+formats and entry rules. It does not implement arbitrary Excel formulas, row
+insertion/deletion, locale-specific text sorting or every table option.
+
+Session evidence includes the exact lesson/runtime/rubric/scenario/dataset
+references, the full typed worksheet state, criterion results, UUID and time.
+The latest ten of at most 100 submissions are displayed, without pruning the
+earlier in-memory submissions. Reloading or closing ends this session. R4's
+durable-history implementation, the central 40-submission cap and existing saved
+records remain unchanged.
+
+The ten new F3 downloads contain Read me and five exercise sheets, with native
+Excel table definitions, number formats, sort/filter metadata, hidden rows and
+entry validation. Practice files leave each task to complete; solutions apply
+the goal to the guided data. All six records remain in a filtered solution.
+The 30 earlier D2/F1/F2 outputs retain their bytes. See
+[F3 workbook verification](WORKBOOKS.md#f3-business-table-workbooks).
+
+The existing homepage now links Section 4 from Learn, Practice and Workbooks,
+with four available and three planned sections. The central shell is refreshed
+for its changed shared core, while the assigned publication contract remains
+SUM-only. F3 adds no personal service worker, storage migration, hosted change,
+production activation or enrollment. Physical iPad and native Excel acceptance
+remain pending. F4 — decisions, conditional formatting and lookups — follows.
