@@ -51,6 +51,9 @@ declare actor uuid:=auth.uid(); result uuid;
 begin
  perform from ga_private.roadmap_control where id and not paused for share;
  if not found or actor is null then raise exception 'session access denied' using errcode='42501'; end if;
+ perform 1 from auth.users where id=actor and email_confirmed_at is not null
+  and is_anonymous is false and coalesce(auth.jwt()->>'is_anonymous','false')='false' for share;
+ if not found then raise exception 'session access denied' using errcode='42501'; end if;
  -- Hold the task row so ownership cannot change between this check and insert.
  perform 1 from public.roadmap_tasks where id=p_task_id and user_id=actor for update;
  if not found then raise exception 'session access denied' using errcode='42501'; end if;
@@ -72,6 +75,9 @@ declare actor uuid:=auth.uid(); result uuid;
 begin
  perform from ga_private.roadmap_control where id and not paused for share;
  if not found or actor is null then raise exception 'session access denied' using errcode='42501'; end if;
+ perform 1 from auth.users where id=actor and email_confirmed_at is not null
+  and is_anonymous is false and coalesce(auth.jwt()->>'is_anonymous','false')='false' for share;
+ if not found then raise exception 'session access denied' using errcode='42501'; end if;
  if p_verification not in ('app','api','manual') then raise exception 'bad verification: %',p_verification; end if;
  perform 1 from public.roadmap_tasks where id=p_task_id and user_id=actor for update;
  if not found then raise exception 'session access denied' using errcode='42501'; end if;

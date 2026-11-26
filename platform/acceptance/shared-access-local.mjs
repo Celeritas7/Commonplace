@@ -3,6 +3,7 @@
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { randomUUID, randomBytes } from "node:crypto";
+import { roadmapDailyAcceptance } from "./roadmap-daily-local.mjs";
 import { legacyFixture } from "../tests/shared-access-fixture.mjs";
 import { eagleWorkspaceAcceptance } from "./eagle-workspace-local.mjs";
 import { eagleFixture } from "../tests/eagle-workspace-fixture.mjs";
@@ -65,6 +66,7 @@ export async function sharedAccessAcceptance({
   await check("hardened legacy Auth rejects anonymous signup and retains the approved viewer role", async () => {
     await sql(legacyFixture);
     await sql(eagleFixture);
+    await sql(await readFile(new URL("../tests/roadmap-session-fixture.sql",import.meta.url),"utf8"));
     await sql(await readFile(new URL('../tests/code-sensei-fixture.sql', import.meta.url), 'utf8'));
     await sql(await readFile(new URL('../tests/healthlog-archive-fixture.sql', import.meta.url), 'utf8'));
     const address=`legacy-baseline-${tag}@example.invalid`;
@@ -102,7 +104,7 @@ export async function sharedAccessAcceptance({
       insert into public.logi_nodes(id,assembly_id,name) values('${unit}','${unit}','Early node');
       insert into public.eagle_units(id,assembly_id,name) values('${unit}','${unit}','Early unit');
       insert into public.eagle_unit_progress(unit_id,node_id,notes) values('${unit}','${unit}','saved');
-      insert into public.roadmap_tasks(id,user_id) values('${task}','${a.id}');
+      insert into public.roadmap_tasks(id,user_id,title) values('${task}','${a.id}','Synthetic session task');
       insert into ga_private.owner_links(app,legacy_id,auth_user_id) values
        ('code-sensei','${legacyA}','${a.id}'),('code-sensei','${legacyB}','${b.id}'),
        ('healthlog-archive','archive-a','${a.id}'),('healthlog-archive','archive-b','${b.id}');
@@ -309,13 +311,14 @@ export async function sharedAccessAcceptance({
     denied(await b.client.from("roadmap_study_sessions").insert({task_id:task,day_key:"other",source:"roadmap"}),"Foreign task link","23503");
     assert.deepEqual(data(await a.client.from("roadmap_study_sessions").update({completed_at:null,verification:"manual"}).eq("id",x).select("id"),"Direct undo"),[{id:x}]);
     const moving = randomUUID();
-    await sql(`insert into public.roadmap_tasks(id,user_id) values('${moving}','${a.id}')`);
+    await sql(`insert into public.roadmap_tasks(id,user_id,title) values('${moving}','${a.id}','Synthetic transfer task')`);
     await withBlockedWriter(2,
       `update public.roadmap_tasks set user_id='${b.id}' where id='${moving}'`,
       `begin; set local role authenticated; select set_config('request.jwt.claim.sub','${a.id}',true);
        select public.roadmap_complete_session('${moving}','roadmap'); commit;`,/session access denied/);
     assert.equal(await sql(`select count(*) from public.roadmap_study_sessions where task_id='${moving}'`),"0");
   });
+  await roadmapDailyAcceptance({a,b,owner,sql,check,client,data,denied,withBlockedWriter,pause});
   await check(
     "real Auth binds CP-only identity without legacy roles and preserves legacy viewer signup",
     async () => {
