@@ -19,7 +19,9 @@ begin
   or exists(select from public.healthlog_visits_old v where not exists(
    select from ga_private.owner_links l where l.app='healthlog-archive' and l.legacy_id=v.user_id))
   or exists(select from ga_private.owner_links l where l.app='healthlog-archive' and not exists(
-   select from public.healthlog_visits_old v where v.user_id=l.legacy_id)) then
+   select from public.healthlog_visits_old v where v.user_id=l.legacy_id)
+   and not exists(select from public.healthlog_clinics_old c where c.user_id=l.legacy_id)
+   and not exists(select from public.healthlog_dose_logs_old d where d.user_id=l.legacy_id)) then
   raise exception 'verified owner mapping required; existing data was not changed';
  end if;
  if exists(select from ga_private.owner_links l join auth.users u on u.id=l.auth_user_id

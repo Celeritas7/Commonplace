@@ -18,6 +18,13 @@ with a companion opt-in client staging build and synthetic tests. It is unapplie
 Verified ownership, old offline queues, client/device acceptance and the remaining
 shared-app gates still need closure. This does not clear G0.
 
+**HealthLog preparation update — 2026-11-26:** the
+[archive candidate](HEALTHLOG-ARCHIVE-READINESS.md) covers all four old tables,
+including parent/child ownership, clinic-only keys, read-only browser access and
+current-client compatibility tests. It requires revised 01/02 and remains
+unapplied. Real mappings, external-consumer acceptance, recovery and the
+remaining shared-app gates still prevent G0 clearance.
+
 This checkpoint updates the earlier [General_apps review](GENERAL-APPS-REVIEW.md)
 without replacing its historical evidence. Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
