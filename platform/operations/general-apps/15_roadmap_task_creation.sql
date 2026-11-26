@@ -179,6 +179,13 @@ begin
  -- Return current owned rows, never the historical snapshot. Missing rows deny
  -- the whole replay; a deleted task/root/folder is never silently recreated.
  for row in select * from public.roadmap_tasks where id=any(ids) and user_id=actor order by id for share loop
+  -- Legacy columns are nullable. Do not commit a new batch whose reused
+  -- folder cannot be represented by the existing client row contract.
+  if row.kind is null or row.done is null or row.expanded is null or row.position is null
+   or row.tags is null or array_position(row.tags,null) is not null
+   or row.created_at is null or not isfinite(row.created_at) or row.updated_at is null or not isfinite(row.updated_at) then
+   raise exception 'created task state needs review' using errcode='22023';
+  end if;
   rows:=rows||jsonb_build_array(to_jsonb(row)-'user_id');
  end loop;
  if jsonb_array_length(rows)<>cardinality(ids) then raise exception 'created task unavailable' using errcode='42501';end if;

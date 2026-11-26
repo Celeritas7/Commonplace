@@ -39,7 +39,9 @@ root task under the existing owner policy; admission remains a separate G0 gate.
 
 Installation pins the task columns, ownership policies, parent constraint and
 reviewed update trigger. Drift stops the transaction without rewriting history.
-The internal insert helper has no public/client EXECUTE privilege. Private
+Reused folders with unsupported nullable legacy fields stop the whole batch for
+review before any task or receipt commits. The internal insert helper has no
+public/client EXECUTE privilege. Private
 receipts/reservations have RLS and no public, anonymous, authenticated or
 service-role table grants. Rows, UUID reservations and receipt commit or roll back
 together, including suppressed writes. The receipt stores newly created rows;

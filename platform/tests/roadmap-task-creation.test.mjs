@@ -72,6 +72,8 @@ test('task creation and capture preserve records and recover original identities
    ])await assert.rejects(()=>create(bad),e=>e.code==='22023');
    assert.deepEqual(await snapshot(db),before);
    const boundary=await create({...p,items:[{...item,title:'x'.repeat(4096),tags:Array.from({length:32},(_,n)=>String(n)+'x'.repeat(78))}]});assert.equal(boundary.tasks[0].title.length,4096);
+   const full={...capture(400),items:Array.from({length:32},(_,n)=>({...capture().items[0],id:id(400+n),title:'Item '+n}))};
+   assert.equal((await create(full)).tasks.filter(t=>t.kind==='task').length,32);
   });
   await t.test('capture receipt or row failure rolls back every new folder, task and identity reservation',async()=>{
    // A distinct owner has no capture root yet; all three inserts must roll back together.
@@ -95,6 +97,9 @@ test('task creation and capture preserve records and recover original identities
    const before=await snapshot(db);await assert.rejects(()=>create(capture(90)),e=>e.code==='22023');assert.deepEqual(await snapshot(db),before);
    await db.exec(`delete from roadmap_tasks where id='${id(80)}';update roadmap_tasks set tags='{}' where user_id='${users.a}' and title='Captured'`);
    await assert.rejects(()=>create(capture(90)),e=>e.code==='22023');await db.exec(`reset role;update roadmap_tasks set tags='{inbox}' where user_id='${users.a}' and title='Captured'`);
+   await db.exec(`update roadmap_tasks set expanded=null where user_id='${users.a}' and title='Captured'`);
+   const unsupported=await snapshot(db);await assert.rejects(()=>create(capture(90)),e=>e.code==='22023');assert.deepEqual(await snapshot(db),unsupported);
+   await db.exec(`update roadmap_tasks set expanded=true where user_id='${users.a}' and title='Captured'`);
   });
   await t.test('pause, verification and anonymous revocation deny original retries',async()=>{
    await db.exec('reset role;update ga_private.roadmap_control set paused=true');await assert.rejects(()=>create(task(),10),e=>e.code==='42501');
