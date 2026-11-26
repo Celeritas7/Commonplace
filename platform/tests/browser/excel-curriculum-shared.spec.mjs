@@ -36,7 +36,9 @@ async function savedWork(page) {
     const db = await openOwnedDatabase("sample-u8");
     try {
       return {
-        packs: (await db.all("packs")).map((row) => row.key),
+        packs: (await db.all("packs")).map((row) => ({
+          key: row.key, phase: row.data.phase,
+        })),
         documents: await db.all("documents"),
         files: await Promise.all((await db.all("files")).map(async (row) => ({ key: row.key,
           bytes: Array.from(new Uint8Array(await row.data.arrayBuffer())) }))),
@@ -69,10 +71,14 @@ test("R3 central shared curriculum cold-reopens offline without changing materia
     };
   }).toEqual({ note: "Keep the Manila shipment workbook history", bookmark: true, attempts: 1 });
   const before = await savedWork(page);
+  expect(before.packs).toHaveLength(1);
+  expect(before.packs[0].phase).toBe("ready");
   expect(before.documents).toHaveLength(3);
   expect(before.files).toHaveLength(1);
-  await context.setOffline(true);
+  // This checks a cold launch of a completed pack. Switch the empty context
+  // offline after closing the learner so no live permission refresh is cut off.
   await page.close();
+  await context.setOffline(true);
   const reopened = await context.newPage();
   await reopened.goto("/platform/learn/offline-preview.html");
   await reopened.getByRole("button", { name: "Resume saved study", exact: true }).click();

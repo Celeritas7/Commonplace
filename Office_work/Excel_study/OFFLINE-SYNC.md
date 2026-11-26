@@ -258,3 +258,44 @@ reopening, packs, old/new saved outcomes, retries and backups. Native Excel and
 physical iPad acceptance remain pending, as do hosted recovery and G0. F2 does
 not activate production synchronization, alter hosted databases/authentication/
 permissions or enroll learners.
+
+## F3 — business tables without persistent-record changes
+
+Section 4 adds personal practice for number formats, tables, whole-record
+sorting, retained-row filters and direct-entry validation. It uses its own
+`personal-tables@1` runtime and `table-foundations@1` rubric. Earlier F1/F2 and
+assigned SUM definitions, central publication and Admin Studio responsibilities
+remain unchanged.
+
+The new table state is personal session evidence. Each submitted snapshot retains
+typed records, row order, formats, table metadata, sort/filter settings, the last
+applied visible IDs, entry rules and criterion results with exact curriculum and
+dataset references. A failed edit keeps the existing worksheet and typed draft.
+Reset, sorting and filtering do not erase submitted results. The latest ten of
+up to 100 in-memory submissions are shown; reload/close ends the session.
+
+There is no migration, new database, persistent progress key, journal, sync
+operation or backup shape. The central 40-submission limit, original material
+identities, saved study records and private packs remain unchanged. R4 still
+defines future durable-record work. Personal F3 adds no service worker or
+installation; its downloaded XLSX files can be used separately in Excel.
+
+The central public shell's 45-file manifest is regenerated for the expanded
+shared core. R1 complete-cache fallback and open-page consistency continue to
+apply. Keep existing website data, installations and downloaded packs. Existing
+R1/R2/R3 offline, saved-history, retry and backup regressions remain required.
+
+The R1/R3 cold-reopen fixtures include the pack's ready phase in their saved
+snapshots and close the live learner before switching the empty context offline.
+Their cache, material bytes, records and zero-network assertions remain intact.
+Interrupted online revalidation continues to block a pack while preserving its
+bytes and pending work for authorized retry, as documented in the existing
+[offline contract](../../platform/offline/README.md). F3 changes no permission
+or renewal behavior.
+
+F3 browser checks cover independent task/quiz separation, rejected-entry draft
+preservation, reset/reload semantics and unchanged browser-storage inventory.
+Workbook checks preserve all 30 previous D2/F1/F2 outputs. Native Excel and
+physical iPad acceptance remain pending, along with hosted recovery and G0.
+F3 does not activate production synchronization, alter hosted database/Auth/
+permissions or enroll learners.
