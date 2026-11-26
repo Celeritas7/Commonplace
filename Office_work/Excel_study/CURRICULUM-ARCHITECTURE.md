@@ -3,8 +3,9 @@
 R3 follows merged R2 (PR #120). Its purpose is to make the existing personal and
 assigned learning paths consume the same reviewed lesson definitions, evaluator
 and assessment logic before F2 expands the curriculum. It preserves their
-different UI and record formats. R4 owns durable-history/progress/conflict planning;
-G/H owns broader central publication and reporting integration.
+different UI and record formats. The [R4 learning-records plan](LEARNING-RECORDS-PLAN.md)
+defines durable history, progress and conflict comparison without implementing
+storage changes. G/H owns broader central publication and reporting integration.
 
 ## Shared core and adapters
 
@@ -138,3 +139,9 @@ Existing R1/R2, workbook, content-contract and account/sync regressions remain.
 Physical iPad acceptance, hosted recovery and central G0 remain pending. R3 does
 not activate production synchronization, modify hosted databases/authentication/
 permissions or enroll a learner.
+
+The R4 plan keeps these released references distinct from journal schemas,
+legacy evaluation markers and curriculum-plan versions. Future record adapters
+must preserve unknown historical rubric provenance and establish stable criterion
+IDs before emitting durable grades. New curriculum definitions alone cannot
+authorize storage migration, central publication or reporting access.

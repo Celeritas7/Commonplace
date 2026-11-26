@@ -204,3 +204,26 @@ updated application through a cold offline reopen with saved notes, bookmarks,
 attempts and pack bytes. Existing R2 retry/backup and R1 update regressions remain
 part of verification. Actual iPad/hosted acceptance and G0 remain pending; follow
 the existing E3 checklist after the reviewed test deployment updates.
+
+## R4 — learning-records planning
+
+R3 is merged in PR #122. The [R4 plan](LEARNING-RECORDS-PLAN.md) audits current
+history and recovery limits and defines the future implementation contracts.
+It selects a companion journal database so an older R1-pinned shell can still
+open the existing version-1 U8 study/pack database. New immutable attempts,
+bounded append/read operations and durable receipts are separate from the
+existing mutable `cp_sync_read` / `cp_sync_write` path.
+
+Migration must preserve attempts from current work, pending/base snapshots,
+conflicts and retained resolution history. Original evaluation outcomes stay
+unchanged; missing original grades are labeled rather than reconstructed as
+historical facts. A draft conflict choice must retain both sides' attempts.
+Persistent reading, guided, independent and quiz progress have distinct semantics,
+and future reports belong to a separately authorized central Admin Studio path.
+
+R4 adds no persistence implementation. The 40-entry central cap, personal session
+history, v1 backup bounds, pending operations, saved packs, shell manifest and
+activation settings are unchanged. The plan specifies segmented complete backups,
+old/new-client coexistence, crash/quota recovery and future acceptance cases;
+those cases are requirements, not completed device/hosted verification. F2 is
+the next curriculum phase after this planning correction is reviewed and merged.
