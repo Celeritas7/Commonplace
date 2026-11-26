@@ -167,3 +167,40 @@ credit, and saved old/new attempts survive an offline reopen and backup export.
 Physical-device acceptance remains pending. No production synchronization,
 database/authentication/permission change, learner enrollment or G0 clearance is
 part of R2.
+
+## R3 — shared curriculum without record migration
+
+The personal and assigned adapters now import the same reviewed versioned
+curriculum core. Current central calculation uses `assigned-sum@1`; practice
+grading uses `assigned-practice@1`. The original legacy evaluator is retained
+unchanged for unversioned saved attempts. R2 `evaluation_version: 2` entries retain
+their existing formula acceptance, numeric requirements, precision and outcomes.
+These evaluation markers are distinct from curriculum and material versions.
+
+R3 adds internal `curriculumRef` and `runtimeRef` to prepared worksheet models.
+Those references are not inserted into published bundles, progress records or
+backup payloads. The authorized dataset, canonical material document bytes and
+assignment/activity identity remain unchanged. Existing private pack manifests,
+downloaded documents/attachments, signed leases and pending operation identities
+are preserved. There is no migration, new store, history pruning or limit change.
+
+The public shell gains the shared core and its module facade. The generated
+manifest verifies those dependencies with the assigned adapters. R1's complete
+revision fallback and open-page consistency continue to apply; keep existing
+installations and website data when updating. No additional personal-study
+service worker is installed.
+
+Repeatable checks from the repository root:
+
+```sh
+node --test platform/tests/excel-curriculum.test.mjs platform/tests/content-contracts.test.mjs platform/tests/excel-calculation-history.test.mjs platform/tests/excel-tools-history.test.mjs platform/tests/excel-formula-accuracy.test.mjs platform/tests/excel-formula-foundations.test.mjs
+node platform/tools/build-offline-shell.mjs --check
+npm run test:browser --prefix platform -- tests/browser/excel-curriculum-shared.spec.mjs tests/browser/excel-formula-accuracy.spec.mjs tests/browser/excel-history.spec.mjs tests/browser/excel-device-acceptance.spec.mjs tests/browser/excel-shell-update.spec.mjs
+```
+
+The new fixtures pin an existing material's serialized bytes and progress key,
+check exact-version rejection and shared evaluation/grading, and verify the
+updated application through a cold offline reopen with saved notes, bookmarks,
+attempts and pack bytes. Existing R2 retry/backup and R1 update regressions remain
+part of verification. Actual iPad/hosted acceptance and G0 remain pending; follow
+the existing E3 checklist after the reviewed test deployment updates.

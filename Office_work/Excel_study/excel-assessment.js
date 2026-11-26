@@ -2,6 +2,8 @@
 (function(global){
   'use strict';
   const section='office.excel';
+  const curriculum=global.CommonplaceExcelCurriculum;
+  const rubric={id:'worksheet-criteria',version:1};
   const maxAnswerLength=512;
   function bounded(value){
     if(typeof value==='boolean'||value===null)return value;
@@ -21,24 +23,7 @@
     return {cells,formula:bounded(root.querySelector('[data-excel-formula]')?.value??'')};
   }
   function evaluate(criterion,state){
-    if(criterion.all){
-      const children=criterion.all.map(c=>evaluate(c,state));
-      return {passed:children.every(c=>c.passed),response:children.map(c=>c.response)};
-    }
-    const actual=bounded(criterion.cell?state.cells?.[criterion.cell]?.[criterion.property]:state[criterion.property]);
-    let passed=false;
-    if(criterion.property==='formula'){
-      const parsed=global.CommonplaceExcelFormulaSyntax.parse(actual);
-      const expected=global.CommonplaceExcelFormulaSyntax.parse(criterion.expected);
-      passed=!!parsed&&!!expected&&parsed.canonical===expected.canonical;
-    }else if(typeof criterion.expected==='boolean'){
-      passed=actual===criterion.expected;
-    }else if(typeof criterion.expected==='string'&&/^-?\d+(?:\.\d+)?$/.test(criterion.expected)){
-      try{passed=global.CommonplaceExcelFormulaSyntax.numericCell(actual)===Number(criterion.expected);}catch(e){}
-    }else{
-      passed=actual===criterion.expected;
-    }
-    return {passed,response:{cell:criterion.cell??null,property:criterion.property,value:actual}};
+    return curriculum.checkCriterion(rubric,criterion,state);
   }
   function grade(lesson,state){
     const results=lesson.criteria.map(c=>{

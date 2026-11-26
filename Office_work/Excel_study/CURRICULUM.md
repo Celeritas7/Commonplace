@@ -1,6 +1,6 @@
 # Excel curriculum — Phase F
 
-The standalone personal-study path is expanded in small reviewable modules. F1 introduces the curriculum index and essential formula lessons. The existing Section 1 URL, gate, workbook API and local reading key remain available. Central assigned content still supports the reviewed SUM contract; new curriculum capabilities, private assignments, per-user persistence and offline packs require separate integration. F1 adds no account-wide storage, auth or database changes.
+The standalone personal-study path is expanded in small reviewable modules. F1 introduces the curriculum index and essential formula lessons. The existing Section 1 URL, gate, workbook API and local reading key remain available. R3 shares versioned lesson metadata, evaluation and grading with central assigned learning. The central publication contract still supports reviewed SUM assignments; publishing the other personal formula lessons and extending persistent progress require separate integration. F1 adds no account-wide storage, auth or database changes.
 
 | Module | Coverage | Status |
 | --- | --- | --- |
@@ -21,9 +21,9 @@ separately. Each correction below has its own reviewable PR. F2 follows R1–R4.
 | Phase | Scope and acceptance | Status |
 | --- | --- | --- |
 | R1 | An automatically activated, incomplete public shell uses one complete saved revision without a network-first launch. Preserve legacy caches, open-page revision consistency, study records and private packs; exercise real automatic activation and cold reopen. | Merged in PR #118. Physical iPad acceptance remains pending. |
-| R2 | Reject whitespace inside function names and cell references while preserving legitimate Excel syntax. Grade each criterion independently, with correct/incorrect formula and input cases. | Implemented in this correction, including compatibility for earlier saved evaluations. |
-| R3 | Establish extensible, versioned lesson capabilities shared by personal study and central assigned learning, including common assessment logic and compatibility with existing records. | Next correction |
-| R4 | Plan durable attempt history beyond the current 40-submission central cap, persistent curriculum progress and meaningful comparison of assessment conflicts. Define ownership, migration, offline/retry and backup compatibility before implementing storage changes. Preserve every existing record. | Planned correction |
+| R2 | Reject whitespace inside function names and cell references while preserving legitimate Excel syntax. Grade each criterion independently, with correct/incorrect formula and input cases. | Merged in PR #120, including compatibility for earlier saved evaluations. |
+| R3 | Establish extensible, versioned lesson capabilities shared by personal study and central assigned learning, including common assessment logic and compatibility with existing records. | Implemented in this correction; see the architecture and extension contract below. |
+| R4 | Plan durable attempt history beyond the current 40-submission central cap, persistent curriculum progress and meaningful comparison of assessment conflicts. Define ownership, migration, offline/retry and backup compatibility before implementing storage changes. Preserve every existing record. | Next correction |
 
 The primary learner is a beginner in Japan–Philippines second-hand product
 trading. Prioritize inventory, quotations, customer follow-ups, fictional currency
@@ -78,6 +78,29 @@ Earlier central attempt records are preserved with their original evaluation.
 Current scores are recomputed from the recorded evidence and clearly identified
 as current checks; a changed outcome is shown alongside the earlier outcome.
 See [R2 saved-history compatibility](OFFLINE-SYNC.md#r2--formula-rules-and-saved-history-compatibility).
-The shared syntax helper and per-attempt evaluation marker are a bounded R2
-correction. The versioned lesson/capability architecture remains R3, and durable
+The shared syntax helper and per-attempt evaluation marker are the bounded R2
+correction. R3 builds on those semantics without changing saved outcomes; durable
 history/progress planning remains R4.
+
+## R3 shared versioned curriculum
+
+[The curriculum architecture and extension contract](CURRICULUM-ARCHITECTURE.md)
+defines the shared core, exact lesson/runtime/rubric versions and the compatibility
+rules for future modules. The existing five F1 lessons now live in that core.
+Personal formula tasks, standalone criterion assessments, central assigned
+calculation/practice and the content review preview consume its evaluation or
+grading functions through thin adapters.
+
+`personal-formulas@1` pins all five existing lesson versions and permits numbers
+and blanks. `assigned-sum@1` pins the existing SUM lesson and requires three numeric
+inputs. These are explicit reviewed policies; adding a future catalog entry does
+not expand either released runtime. Unknown versions and unsupported capabilities
+fail instead of falling back to a newer or different lesson.
+
+The published SUM bundle remains the only source of assigned scenario data.
+Central capabilities, authorized material bytes, progress identities, saved
+record shapes and the 40-submission cap remain compatible. Admin Studio keeps
+permissions, profiles, assignments and reporting; its prompt guidance now reflects
+the current bounded controls. R3 adds no new learner enrollment, production
+activation, storage migration or F2 lesson. The other F1 functions still need the
+later G/H publication and assigned-UI integration.

@@ -7,7 +7,7 @@ import {
   lessonFromMaterial,
   downloadAssignedMaterial,
 } from "../materials/learner.mjs";
-import { EXCEL_PHASE_A_CAPABILITIES } from "../content/excel-contract.mjs";
+import { EXCEL_ASSIGNED_CAPABILITIES } from "../content/excel-contract.mjs";
 import {
   studyIdentity,
   openStudyRecords,
@@ -299,7 +299,7 @@ export function mountLearningWorkspace(
                 c,
                 material,
                 sectionId,
-                EXCEL_PHASE_A_CAPABILITIES,
+                EXCEL_ASSIGNED_CAPABILITIES,
               )
             : null;
         if (!active(c, request, view)) return;

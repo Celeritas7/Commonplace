@@ -52,5 +52,5 @@ fields.picker.value='stock-heading';fields.picker.fire('change');fields.start.fi
 submitted[0].score=0;check('sink receives copy',controller.records[0].score===4);
 return checks;
 }
-const sources=['formula-syntax.js','excel-assessment.js','excel-assessment-lessons.js'].map(name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8'));
+const sources=['formula-syntax.js','excel-curriculum.js','excel-assessment.js','excel-assessment-lessons.js'].map(name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8'));
 console.log(Object.keys(run(sources)).length+' independent assessment checks passed (mock DOM).');

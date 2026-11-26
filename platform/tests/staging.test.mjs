@@ -387,7 +387,7 @@ test("staging package contains complete hashed public dependencies, separate Edg
         join(output, "server/supabase/functions/offline-lease/index.ts"),
         "utf8",
       ),
-      /\.\.\/_shared\/offline/,
+      /\.\.\/_shared\/platform\/offline\/lease-handler\.mjs/,
     );
     await assert.rejects(
       () =>

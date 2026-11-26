@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 const read=name=>readFileSync(new URL("../../Office_work/Excel_study/"+name,import.meta.url),"utf8");
 const win={};
-for(const name of ["formula-syntax.js","excel-scenarios.js","excel-formula-foundations.js","excel-tutorial-workbooks.js"])
+for(const name of ["formula-syntax.js","excel-curriculum.js","excel-scenarios.js","excel-formula-foundations.js","excel-tutorial-workbooks.js"])
   new Function("window","TextEncoder",read(name))(win,TextEncoder);
 const E=win.CommonplaceExcelFormulaFoundations,S=win.CommonplaceExcelScenarios,W=win.CommonplaceExcelTutorials;
 const expected=[
@@ -89,7 +89,13 @@ test("independent rubric distinguishes function correctness, valid calculation a
   const avg=E.exercise("average","general-office",1,"guided");
   assert.equal(E.grade(avg,avg.formula,["","",""]).score,1);
   assert.equal(E.grade(avg,avg.formula,["12","0","6"]).passed,true);
-  const detached=E.list();detached[0].fn="EVIL";assert.equal(E.list()[0].fn,"SUM");
+  const detached=E.list();detached[0].fn="EVIL";
+  detached[0].choices[0]="Altered answer";detached[0].runtime.version=99;
+  const next=E.exercise("sum","general-office",1,"independent");
+  assert.equal(E.list()[0].fn,"SUM");
+  assert.equal(next.lesson.choices[0],"=SUM(B2:B4)");
+  assert.deepEqual(next.lesson.runtime,{id:"personal-formulas",version:1});
+  assert.equal(E.grade(next,next.formula,next.values).passed,true);
   assert.throws(()=>E.exercise("unknown","general-office",1));
   assert.throws(()=>E.exercise("sum","general-office",2));
   assert.throws(()=>E.exercise("sum","not-real",1));

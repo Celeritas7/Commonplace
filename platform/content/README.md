@@ -1,6 +1,6 @@
 # U4 — Flexible curriculum and scenario contracts
 
-Status: isolated, data-only implementation on merged U3 (`8cd37c2`, PR #75). No production deployment or database migration. No existing curriculum, authentication, service workers, progress keys or Excel files changed.
+Original U4 checkpoint: isolated, data-only implementation on merged U3 (`8cd37c2`, PR #75). The R3 Excel binding below now reuses the shared versioned curriculum without changing the published content schema, progress identities or authorization boundary. No production deployment or database migration is included.
 
 ## What is reusable
 
@@ -51,9 +51,11 @@ The U3 profile reader supplies learning context separately. Do not put account/e
 
 ## Excel reference boundary
 
-Main's Phase A source supports manual `=SUM(B2:B4)` in B5 and three numeric inputs. `excel-contract.mjs` declares `explanation.text.v1` and `excel.sum.b2-b4.v1` and prepares the validated worksheet model. It requires exactly three rows, text/number columns and one SUM activity. It rejects unsupported shapes and capability requests, including an AutoSum-button operation. The Ribbon contains location previews, not implemented capabilities.
+The central publication contract remains `explanation.text.v1` and `excel.sum.b2-b4.v1`: exactly three text/number rows and one `sum-column` activity. `excel-contract.mjs` binds that existing wire capability to the shared `sum@1` curriculum lesson and `assigned-sum@1` runtime. Worksheet cells and formula come from the pinned lesson; data comes only from the authorized bundle. The prepared model includes internal curriculum/runtime references without adding fields to or normalizing the published bundle.
 
-PR #70 was rechecked during U4 and remains open against `feat/excel-study-phase-a` (head `c19e571`). U4 does not depend on or modify that PR. New capability IDs must be backed by merged simulator operations and acceptance tests. The model is not injected into the existing Excel DOM; U7 will implement the actual Excel adapter. Its current lesson, simulator and `commonplace_excel_preview_v1` data stay intact.
+`EXCEL_ASSIGNED_CAPABILITIES` is the current export; `EXCEL_PHASE_A_CAPABILITIES` remains the same-array compatibility alias for existing consumers. Personal F1 lesson support does not widen this publication list or the material/database schema. Unknown capabilities, unsupported worksheet shapes and an AutoSum-button capability still fail. Central assigned evaluation and practice rubrics reuse the shared engine; existing SUM input requirements and per-criterion scores remain intact. The review-only content preview uses that evaluator too.
+
+Central E2/E2B practice includes guided SUM, quantity revision, heading styles and bounded numeric Copy/Paste. Other Ribbon operations remain previews. Existing personal Section 1, quizzes and `commonplace_excel_preview_v1` records retain their identities. Broader central lesson publication remains a separate reviewed contract extension; do not merge superseded intermediate Excel branches to obtain it.
 
 ## Preview and checks
 
@@ -71,10 +73,10 @@ npm run test:browser
 
 Evidence: Node tests cover composition, generic non-Excel records, version/shape mismatches, strict JSON validation, capability rejection, formula-safe export, distinct progress identities, assignment state/owner/version checks and account-switch races. Browser tests cover scenario switching, recomputation, empty input, markup injection, mobile width and the existing Excel exercise/progress remaining functional across preview visits. Local browser runs use the documented Chromium 133 override; actual iPad/Safari and live authorization acceptance remain pending.
 
-## Remaining phases and deployment gates
+## Implementation sequence and deployment gates
 
-U5 builds the copyable prompt workflow using these contracts and U3 profiles. U6 adds server ingestion using the same validators, immutable publication, assignments and private assets; it must reject unsupported content before publishing. U7 connects the existing Excel simulator, then other sections. U8 handles owned offline content and progress synchronization. No U0/U1 activation/backup/staging prerequisite is removed by U4. Public fixtures and already public static lessons are not confidential; restricted material must never be bundled into this public repository/build.
+The original U4 sequence led to U5's copyable prompt workflow, U6's reviewed material ingestion/publication/assignment service, U7's Excel adapter and U8's owned offline/synchronization path. Those code paths are now implemented behind the disabled deployment boundary; hosted readiness and physical-device acceptance remain separate gates. No activation, backup or staging prerequisite is removed by the shared R3 curriculum. Public fixtures and already public static lessons are not confidential; restricted material must never be bundled into this public repository/build.
 
 ## U7 integration
 
-The [learner workspace](../learn/README.md) now composes freshly authorized U6 material bundles and passes their worksheet model to Excel's assigned lesson renderer. It reuses the existing Phase A Ribbon and fixed SUM capability; the legacy static lesson and unmerged PR #70 remain unchanged. Local progress uses the versioned identities described above. The U7 host remains behind the disabled deployment boundary.
+The [learner workspace](../learn/README.md) composes freshly authorized U6 material bundles and passes their worksheet model to Excel's assigned lesson renderer. It reuses the existing Ribbon and fixed SUM publication capability, now backed by the shared R3 curriculum, with E2/E2B guided, revision, formatting and bounded clipboard practice. Progress retains the versioned identities described above. The host remains behind the disabled deployment boundary.

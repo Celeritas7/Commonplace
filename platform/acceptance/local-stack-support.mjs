@@ -92,7 +92,7 @@ export async function prepareLocalStack(target, id) {
     "code-exec/route.mjs",
   ]) {
     const source = await readFile(join(platformRoot, paid, file));
-    await write("supabase/functions/_shared/" + paid + file, source);
+    await write("supabase/functions/_shared/platform/" + paid + file, source);
     hashes[paid + file] = createHash("sha256").update(source).digest("hex");
   }
   await write(
@@ -102,7 +102,7 @@ export async function prepareLocalStack(target, id) {
   for (const name of ["claude-proxy", "code-exec"]) {
     await write(
       "supabase/functions/" + name + "/index.ts",
-      'import "../_shared/mock-paid-provider.mjs";\nimport "../_shared/' +
+      'import "../_shared/mock-paid-provider.mjs";\nimport "../_shared/platform/' +
         paid +
         name +
         '/index.ts";\n',

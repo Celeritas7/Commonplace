@@ -1,6 +1,7 @@
 // Bounded calculation history for authorized, versioned Excel SUM assignments.
-import "./formula-syntax.js";
-const syntax = globalThis.CommonplaceExcelFormulaSyntax ?? globalThis.window?.CommonplaceExcelFormulaSyntax;
+import { curriculum } from "./curriculum.mjs";
+const assignedRuntime = Object.freeze({ id: "assigned-sum", version: 1 });
+const assignedRubric = Object.freeze({ id: "assigned-practice", version: 1 });
 export const CALCULATION_HISTORY_LIMIT = 40;
 export const CALCULATION_EVALUATION_VERSION = 2;
 export const PRACTICE_MODES = Object.freeze(["free", "guided-sum-v1", "independent-match-v1", "independent-format-v1", "independent-copy-v1"]);
@@ -44,13 +45,7 @@ function legacySumResult(values, formula) {
   return Number(values.reduce((sum, v) => sum + Number(v), 0).toPrecision(15));
 }
 export function sumResult(values, formula) {
-  if (syntax.parse(formula)?.fn !== "SUM")
-    throw Error("Enter a SUM formula for B2:B4. Keep SUM and each cell reference together.");
-  if (!Array.isArray(values) || values.length !== 3 ||
-      Object.keys(values).length !== 3 || ![0, 1, 2].every(i => Object.hasOwn(values, i)))
-    throw Error("Enter a valid number in all three quantity cells.");
-  const numbers = values.map(v => syntax.numericCell(v));
-  return Number(numbers.reduce((sum, value) => sum + value, 0).toPrecision(15));
+  return curriculum.evaluateFormula(assignedRuntime, formula, values).result;
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function validTime(text) {
@@ -114,47 +109,10 @@ export function appendCalculation(history, values, formula, { id, submittedAt, a
   return validateCalculationHistory(next);
 }
 
-/* The published SUM dataset is the only source of expected input values.
-   Grading is deterministic self-practice, never authority or a private answer key. */
-function baseline(rows) {
-  if (!Array.isArray(rows) || rows.length !== 3 ||
-      rows.some(r => !Array.isArray(r) || typeof r[1] !== "number" ||
-        !Number.isFinite(r[1]) || Math.abs(r[1]) > 1e12))
-    throw Error("Unsupported assigned SUM dataset.");
-  return rows.map(r => String(r[1]));
-}
-function sameNumber(value, expected) {
-  try { return syntax.numericCell(value) === Number(expected); }
-  catch { return false; }
-}
+/* The published dataset remains the only source of expected input values.
+   The shared, pinned rubric grades evidence; it confers no authority. */
 export function practiceCriteria(activity, rows, values, formula, toolState) {
-  validatePracticeMode(activity);
-  if (activity === "free") throw Error("A practice activity is required.");
-  const original = baseline(rows), target = [...original];
-  const inputs = Array.isArray(values) && values.length === 3 &&
-    Object.keys(values).length === 3 && [0, 1, 2].every(i => Object.hasOwn(values, i))
-    ? values : [];
-  if (activity === "independent-match-v1" || activity === "independent-copy-v1") target[1] = original[0];
-  const labels = [
-    "B2 retains the original value",
-    activity === "guided-sum-v1" ? "B3 retains the original value" : "B3 matches the original B2",
-    "B4 retains the original value",
-    "SUM formula uses B2:B4",
-  ];
-  const passed = target.map((v,i) => sameNumber(inputs[i],v));
-  passed.push(syntax.parse(formula)?.fn === "SUM");
-  if (activity === "independent-format-v1") {
-    const tools = validateToolState(toolState);
-    labels.splice(0, labels.length, "A1 is bold", "A1 has yellow fill", "A1 has borders", "All original numeric values preserved");
-    passed.splice(0, passed.length, tools.bold, tools.fill, tools.border,
-      original.every((v,i)=>sameNumber(inputs[i],v)));
-  } else if (activity === "independent-copy-v1") {
-    const tools = validateToolState(toolState);
-    labels.push("Used Ribbon Copy B2 and Paste B3");
-    passed.push(tools.copy_used);
-  }
-  return { score: passed.filter(Boolean).length, maxScore: labels.length,
-    passed: passed.every(Boolean), criteria: labels.map((label,i)=>({label,passed:passed[i]})) };
+  return curriculum.gradeAssigned(assignedRubric, activity, rows, values, formula, toolState);
 }
 export function practiceHistory(history, rows, activity) {
   return validateCalculationHistory(history)

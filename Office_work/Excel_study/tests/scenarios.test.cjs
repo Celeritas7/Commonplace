@@ -4,7 +4,7 @@ const read=name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8');
 const html=read('Section_1_Study.html');
 const checks={};
 const check=(k,v)=>{checks[k]=!!v;if(!v)throw Error(k);};
-const names=['formula-syntax.js','excel-operations.js','excel-practice-ribbon.js','excel-guided-lessons.js','excel-guided.js','excel-assessment-lessons.js','excel-assessment.js','excel-scenarios.js'];
+const names=['formula-syntax.js','excel-curriculum.js','excel-operations.js','excel-practice-ribbon.js','excel-guided-lessons.js','excel-guided.js','excel-assessment-lessons.js','excel-assessment.js','excel-scenarios.js'];
 const win={};
 for(const n of names)new Function('window',read(n))(win);
 const E=win.CommonplaceExcelScenarios,A=win.CommonplaceExcelAssessment,G=win.CommonplaceExcelGuided;
