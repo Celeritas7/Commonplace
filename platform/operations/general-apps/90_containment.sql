@@ -46,14 +46,16 @@ begin
   'public.ga_roadmap_edit_comparison(uuid,timestamptz,jsonb,uuid)',
   'public.ga_roadmap_preview_import(uuid)',
   'public.ga_roadmap_import_comparison(uuid,uuid,text,jsonb,uuid)',
-  'public.ga_roadmap_reset_daily_tasks(jsonb,text,text,uuid)'] loop
+  'public.ga_roadmap_reset_daily_tasks(jsonb,text,text,uuid)',
+  'public.ga_roadmap_edit_tasks(jsonb,uuid)'] loop
   begin
    routine:=to_regprocedure(signature);
-   -- Candidates 08/10/11/12 are optional until their separate installation windows.
+   -- Candidates 08/10/11/12/13 are optional until their separate installation windows.
    if routine is null and signature in ('public.ga_roadmap_set_daily_task(uuid,timestamptz,boolean,text,uuid)',
     'public.ga_roadmap_edit_comparison(uuid,timestamptz,jsonb,uuid)',
     'public.ga_roadmap_preview_import(uuid)','public.ga_roadmap_import_comparison(uuid,uuid,text,jsonb,uuid)',
-    'public.ga_roadmap_reset_daily_tasks(jsonb,text,text,uuid)') then continue; end if;
+    'public.ga_roadmap_reset_daily_tasks(jsonb,text,text,uuid)',
+    'public.ga_roadmap_edit_tasks(jsonb,uuid)') then continue; end if;
    if routine is null then raise exception 'missing routine'; end if;
    execute format('revoke execute on function %s from public,anon,authenticated,service_role',routine);
    foreach role_name in array array['anon','authenticated','service_role'] loop

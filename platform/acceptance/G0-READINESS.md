@@ -62,6 +62,12 @@ version-checked reset with account-owned retry recovery, preserving streaks and
 study-session history. General editor/caller, provider and recovery gates remain
 open. This is another bounded G0 work group, not permission to activate sharing.
 
+The [task metadata preparation](ROADMAP-TASK-EDIT-READINESS.md) adds atomic
+name/tag/expansion saves, retained drafts and version-checked account-owned
+retries. Daily-log recovery is next; creation/capture, structural changes and
+hub/caller acceptance remain separate. Hosted work and enrollment stay on hold,
+and restoration remains deferred.
+
 Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
 preparation PR or passing synthetic tests do not clear those gates.

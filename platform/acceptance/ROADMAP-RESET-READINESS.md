@@ -109,3 +109,7 @@ by other shared-app/Edge entitlements and API/Auth/provider evidence. Existing
 owner policies are not an app-admission allowlist. An explicit final G0 decision
 is still required before any rollout. Commonplace/Excel study UI, materials,
 progress, bookmarks, notes and offline packs are unchanged by this work.
+
+The subsequent [task metadata preparation](ROADMAP-TASK-EDIT-READINESS.md) covers
+name/tag/expansion saves and reset coordination. Daily-log recovery and the
+remaining capture/structural/hub paths still need their own acceptance.

@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { randomUUID, randomBytes } from "node:crypto";
 import { roadmapDailyAcceptance } from "./roadmap-daily-local.mjs";
 import { roadmapRecordsAcceptance } from "./roadmap-records-local.mjs";
+import {roadmapTaskEditsAcceptance} from "./roadmap-task-edits-local.mjs";
 import {roadmapResetAcceptance} from "./roadmap-reset-local.mjs";
 import {roadmapImportAcceptance} from "./roadmap-import-local.mjs";
 import { roadmapComparisonAcceptance } from "./roadmap-comparison-local.mjs";
@@ -328,6 +329,7 @@ export async function sharedAccessAcceptance({
   await roadmapComparisonAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await roadmapImportAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await roadmapResetAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
+  await roadmapTaskEditsAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await check(
     "real Auth binds CP-only identity without legacy roles and preserves legacy viewer signup",
     async () => {
