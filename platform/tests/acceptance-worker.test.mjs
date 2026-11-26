@@ -27,6 +27,7 @@ function cacheStorage() {
         put: async (r, response) => {
           rows.set(key(r), response.clone());
         },
+        delete: async (r) => rows.delete(key(r)),
         keys: async () => [...rows.keys()].map((u) => new Request(u)),
       };
     },
@@ -46,15 +47,18 @@ function worker(caches, version, changed = false) {
     fail = new Set();
   let skipped = 0,
     claimed = 0;
+  const assets = [...bodies].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+    .map(([href, body]) => ({
+      path: href.slice(root.length),
+      bytes: Buffer.byteLength(body),
+      sha256: createHash("sha256").update(body).digest("hex"),
+    }));
+  version = createHash("sha256").update(JSON.stringify(assets)).digest("hex").slice(0, 16);
   const self = {
     location: { href: url("platform/learn/sw.js") },
     CP_SHELL: {
       version,
-      assets: [...bodies].map(([href, body]) => ({
-        path: href.slice(root.length),
-        bytes: Buffer.byteLength(body),
-        sha256: createHash("sha256").update(body).digest("hex"),
-      })),
+      assets,
     },
     addEventListener: (name, fn) => {
       events[name] = fn;
@@ -63,6 +67,7 @@ function worker(caches, version, changed = false) {
       skipped++;
     },
     clients: {
+      matchAll: async () => [],
       claim: async () => {
         claimed++;
       },
@@ -75,6 +80,7 @@ function worker(caches, version, changed = false) {
     Response,
     AbortController,
     Uint8Array,
+    TextEncoder,
     crypto: webcrypto,
     importScripts() {},
     fetch: async (r) => {
@@ -85,6 +91,7 @@ function worker(caches, version, changed = false) {
     },
   });
   return {
+    cacheName: "cp-u8-shell-" + version,
     fail,
     requests,
     skipped: () => skipped,
@@ -129,7 +136,7 @@ test("U9 incomplete public shell never reports ready or serves partial bytes; re
   w.fail.add(url("platform/learn/learn.css"));
   assert.equal((await w.save()).at(-1).type, "error");
   assert.equal(w.skipped(), 0);
-  const cache = await caches.open("cp-u8-shell-first");
+  const cache = await caches.open(w.cacheName);
   assert.equal(
     await cache.match(url("platform/learn/.shell-ready")),
     undefined,
@@ -142,10 +149,7 @@ test("U9 incomplete public shell never reports ready or serves partial bytes; re
   w.fail.clear();
   w.requests.length = 0;
   assert.equal((await w.save()).at(-1).type, "ready");
-  assert.deepEqual(w.requests, [
-    url("platform/learn/learn.css"),
-    url("platform/learn/bootstrap.mjs"),
-  ]);
+  assert.deepEqual(w.requests, [url("platform/learn/learn.css")]);
   assert.equal(w.skipped(), 1);
 });
 test("U9 failed update keeps old shell usable; complete update reuses runtime and leaves legacy caches untouched", async () => {
@@ -159,7 +163,7 @@ test("U9 failed update keeps old shell usable; complete update reuses runtime an
   const update = worker(caches, "new", true);
   update.fail.add(url("platform/learn/learn.css"));
   assert.equal((await update.save()).at(-1).type, "error");
-  assert.ok((await caches.keys()).includes("cp-u8-shell-old"));
+  assert.ok((await caches.keys()).includes(old.cacheName));
   assert.equal(
     await (await old.fetch("platform/learn/index.html")).text(),
     "<main>Public shell</main>",
@@ -171,8 +175,9 @@ test("U9 failed update keeps old shell usable; complete update reuses runtime an
   await update.activate();
   assert.deepEqual((await caches.keys()).sort(), [
     "commonplace-python-existing",
-    "cp-u8-shell-new",
-  ]);
+    old.cacheName,
+    update.cacheName,
+  ].sort());
   assert.equal(
     await (
       await (
@@ -200,7 +205,7 @@ test("U9 worker ignores APIs/private files and does not store OAuth callback URL
     await (await w.fetch(callback)).text(),
     "<main>Public shell</main>",
   );
-  const keys = await (await caches.open("cp-u8-shell-boundary")).keys();
+  const keys = await (await caches.open(w.cacheName)).keys();
   assert.ok(
     keys.every((r) => !r.url.includes("code=") && !r.url.includes("state=")),
   );

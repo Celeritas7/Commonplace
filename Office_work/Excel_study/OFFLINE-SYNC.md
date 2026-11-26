@@ -50,3 +50,62 @@ Open the updated HTTPS deployment's exact `/platform/learn/offline-preview.html`
 | E3-08 | Export study backup from Sync, backups and access. Confirm it is available in Files. Lock saved study and check Resume saved study is disabled while offline. Reconnect and refresh online access. | Backup file exists; locked sample cannot reopen offline; sample data returns after online access. Do not share backup contents publicly. |
 
 Report iPadOS version, device/install type, exact tested origin and source revision if known, each ID as PASS/FAIL/NOT TESTED, and a screenshot or error text for failures. Avoid real names, account data and real lesson contents. No production activation or real learner enrollment is authorized by this sample test. Real XLSX download/open/save acceptance belongs to the separate D2 practice page; the central sample attachment is TXT. Production offline acceptance must be repeated after central access/recovery approval and hosted rollout with authorized test accounts.
+
+## R1 — incomplete application update recovery
+
+The pre-R1 worker could activate automatically after all old pages closed, even
+though its new shell had not been downloaded. Its fetch handler then looked only
+in the new cache and tried the network, leaving a complete older shell unused.
+The existing failed-update test exercised the old worker, so it missed this
+transition. This failure is reproduced by the new worker and real-browser tests.
+
+The correction chooses one verified complete public shell before serving its
+page, modules or styles. An incomplete active worker can use a previous complete
+release directly, including after a worker restart. Legacy completion markers
+remain usable by verifying the saved release's combined asset digest. Interrupted,
+cancelled or corrupt downloads keep the previous release available. New completion
+markers retain the exact public manifest; partially saved files remain reusable
+when the download resumes.
+
+Open pages keep their selected revision while a new download finishes and across
+worker restarts. New navigation can use the completed update. Prior complete
+shells are retained rather than deleted during activation; their additional storage
+is an intentional recovery tradeoff. Account permissions, the 40-submission cap,
+study records, pending changes, signed private packs, backup formats and central
+deployment configuration are unchanged.
+
+### Repeatable automated checks
+
+From the repository root:
+
+```sh
+node --test platform/tests/acceptance-worker.test.mjs platform/tests/shell-worker.test.mjs platform/tests/excel-shell-control.test.mjs
+node platform/tools/build-offline-shell.mjs --check
+npm run test:browser --prefix platform -- tests/browser/excel-shell-update.spec.mjs tests/browser/excel-device-acceptance.spec.mjs tests/browser/excel-history.spec.mjs
+```
+
+The dedicated browser regression uses a loopback server and fictional sample
+data. It downloads the old shell through the real UI, saves work, installs an
+updated worker, closes the last controlled page and observes natural activation
+without downloading the update. Reopening with the server rejecting public assets
+must produce zero public asset requests and render the saved revision. A further
+offline cold reopen must retain the note, bookmark, SUM submission, pack documents
+and attachment bytes. This is client/offline evidence, not hosted sync or iPad
+acceptance.
+
+### Additional physical iPad update acceptance
+
+Repeat E3-01–E3-08 in the same **Excel Test** installation after the correction is
+merged and the test site is updated. On a controlled test origin with two reviewed
+shell revisions, also check the update transition below; do not change production
+activation or clear any device data to perform it.
+
+| ID | Action | Required evidence |
+| --- | --- | --- |
+| R1-01 | Prepare a complete prior shell and save a fictional note, bookmark and calculation. Allow the browser to discover the next revision, then close all pages before downloading that update. | Prior pack and study work are saved; the update shell is incomplete. |
+| R1-02 | Disconnect, cold-open the same Home Screen icon and resume saved study. Repeat after closing it again. | Saved application loads; note, bookmark, submission and downloaded materials remain usable. |
+| R1-03 | Reconnect and use Study offline / Resume download. Interrupt once, reopen offline, then reconnect and finish. Reopen the updated application when work is saved. | Prior release remains usable during interruption; the completed update loads after reopening; records and packs remain. |
+
+Physical iPad results remain **NOT TESTED** until these steps are observed on the
+device. R2 formula/grading correction follows this PR; R3/R4 and then F2–F6, G/H
+remain in [the curriculum sequence](CURRICULUM.md#correction-sequence-before-f2).
