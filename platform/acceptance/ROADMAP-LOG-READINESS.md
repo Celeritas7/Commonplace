@@ -112,8 +112,9 @@ lost acknowledgement/reload, successful recovery without duplicate submission,
 older delete rollback and overlapping local edits. Type check/build and existing
 regressions cover the integrated preview. Hosted/device acceptance remains open.
 
-Next bounded work: **task creation/capture recovery**, followed by structural
-mutations and deletion, suggestion/hub delivery, actual study callers and
+The subsequent [task creation/capture preparation](ROADMAP-CREATION-READINESS.md)
+is now recorded. Next bounded work: **structural task changes and deletion recovery**,
+followed by suggestion/hub delivery, actual study callers and
 account-scoped local state. Remaining shared-app/Edge admission, API/Auth/provider
 evidence, deferred recovery and the explicit final G0 decision still precede
 hosted rollout. These are G0 work groups, not new platform phases. Excel work,

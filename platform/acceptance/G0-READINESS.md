@@ -64,14 +64,19 @@ open. This is another bounded G0 work group, not permission to activate sharing.
 
 The [task metadata preparation](ROADMAP-TASK-EDIT-READINESS.md) adds atomic
 name/tag/expansion saves, retained drafts and version-checked account-owned
-retries. Daily-log recovery is next; creation/capture, structural changes and
+retries. Daily-log and creation recovery are recorded below; structural changes and
 hub/caller acceptance remain separate. Hosted work and enrollment stay on hold,
 and restoration remains deferred.
 
 The [daily-log preparation](ROADMAP-LOG-READINESS.md) now adds acknowledged
 entry creation with original-day/idempotent retries and retained failed drafts.
-Task creation/capture is next; structural/hub/admission and other G0 gates remain
+Task creation/capture preparation is recorded below; structural/hub/admission and other G0 gates remain
 open. This does not activate sharing or resume deferred restoration.
+
+The [task creation/capture preparation](ROADMAP-CREATION-READINESS.md) adds atomic
+batches, retained drafts and request-owned retry slots. Structural task changes
+and deletion recovery are next. Hosted changes/enrollment stay on hold, and
+restoration remains deferred; no G0 gate is cleared by this preparation.
 
 Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged

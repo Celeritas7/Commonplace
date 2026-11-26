@@ -196,3 +196,8 @@ not authorize installation, client cutover or learner enrollment.
 [Daily-log preparation](ROADMAP-LOG-READINESS.md) adds 01 → 03 → 09 → 14. Its
 new API is additive; actual callers still require coordinated cutover. It changes
 none of the six Commonplace migrations or hosted/signup/enrollment gates.
+
+[Task creation/capture preparation](ROADMAP-CREATION-READINESS.md) adds the separate
+01 → 03 → 15 path. Existing direct writers require coordinated caller review;
+this is not app admission or a hosted cutover. The six Commonplace migrations
+and deferred restoration checkpoint remain unchanged.
