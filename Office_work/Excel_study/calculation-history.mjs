@@ -1,10 +1,22 @@
 // Bounded calculation history for authorized, versioned Excel SUM assignments.
 export const CALCULATION_HISTORY_LIMIT = 40;
-export const PRACTICE_MODES = Object.freeze(["free", "guided-sum-v1", "independent-match-v1"]);
+export const PRACTICE_MODES = Object.freeze(["free", "guided-sum-v1", "independent-match-v1", "independent-format-v1", "independent-copy-v1"]);
 export function validatePracticeMode(mode) {
   if (!PRACTICE_MODES.includes(mode)) throw Error("Unsupported practice mode.");
   return mode;
 }
+export function emptyToolState() {
+  return { bold: false, fill: false, border: false, copy_used: false };
+}
+export function validateToolState(state) {
+  const keys = ["bold", "fill", "border", "copy_used"];
+  if (!state || Object.getPrototypeOf(state) !== Object.prototype ||
+      Object.keys(state).length !== keys.length ||
+      !keys.every(k => Object.hasOwn(state,k) && typeof state[k] === "boolean"))
+    throw Error("Invalid saved worksheet tools.");
+  return { ...state };
+}
+const toolActivity = activity => activity === "independent-format-v1" || activity === "independent-copy-v1";
 export function sumResult(values, formula) {
   if (
     typeof formula !== "string" ||
@@ -50,11 +62,14 @@ export function validateCalculationHistory(history) {
   for (const a of history) {
     if (!a || Object.getPrototypeOf(a) !== Object.prototype ||
         (Object.keys(a).sort().join() !== "accepted,formula,id,result,submitted_at,values" &&
-          Object.keys(a).sort().join() !== "accepted,activity,formula,id,result,submitted_at,values") ||
+          Object.keys(a).sort().join() !== "accepted,activity,formula,id,result,submitted_at,values" &&
+          Object.keys(a).sort().join() !== "accepted,activity,formula,id,result,submitted_at,tool_state,values") ||
+        (Object.hasOwn(a, "tool_state") !== toolActivity(a.activity)) ||
         (Object.hasOwn(a, "activity") && !PRACTICE_MODES.slice(1).includes(a.activity)) ||
         typeof a.id !== "string" || !uuid.test(a.id) || seen.has(a.id.toLowerCase()) ||
         !validTime(a.submitted_at) || !inputShape(a.values, a.formula))
       throw Error("Saved calculation history could not be restored.");
+    if (toolActivity(a.activity)) validateToolState(a.tool_state);
     const expected = evaluate(a.values, a.formula);
     if (a.accepted !== expected.accepted || a.result !== expected.result)
       throw Error("Saved calculation result is inconsistent.");
@@ -62,14 +77,17 @@ export function validateCalculationHistory(history) {
   }
   return structuredClone(history);
 }
-export function appendCalculation(history, values, formula, { id, submittedAt, activity = "free" }) {
+export function appendCalculation(history, values, formula, { id, submittedAt, activity = "free", toolState }) {
   validatePracticeMode(activity);
   const next = validateCalculationHistory(history);
   if (next.length >= CALCULATION_HISTORY_LIMIT) return null;
   if (!inputShape(values, formula)) throw Error("Calculation input is too long to record.");
+  if (toolActivity(activity)) validateToolState(toolState);
+  else if (toolState !== undefined) throw Error("Unexpected tool state for activity.");
   const evaluation = evaluate(values, formula);
   next.push({ id, submitted_at: submittedAt, values: [...values], formula, ...evaluation,
-    ...(activity === "free" ? {} : { activity }) });
+    ...(activity === "free" ? {} : { activity }),
+    ...(toolActivity(activity) ? { tool_state: validateToolState(toolState) } : {}) });
   return validateCalculationHistory(next);
 }
 
@@ -86,11 +104,11 @@ function sameNumber(value, expected) {
   return typeof value === "string" && value.trim() !== "" &&
     Number.isFinite(Number(value)) && Number(value) === Number(expected);
 }
-export function practiceCriteria(activity, rows, values, formula) {
+export function practiceCriteria(activity, rows, values, formula, toolState) {
   validatePracticeMode(activity);
   if (activity === "free") throw Error("A practice activity is required.");
   const original = baseline(rows), target = [...original];
-  if (activity === "independent-match-v1") target[1] = original[0];
+  if (activity === "independent-match-v1" || activity === "independent-copy-v1") target[1] = original[0];
   const labels = [
     "B2 retains the original value",
     activity === "guided-sum-v1" ? "B3 retains the original value" : "B3 matches the original B2",
@@ -99,11 +117,21 @@ export function practiceCriteria(activity, rows, values, formula) {
   ];
   const passed = target.map((v,i) => sameNumber(values[i],v));
   passed.push(evaluate(values,formula).accepted);
+  if (activity === "independent-format-v1") {
+    const tools = validateToolState(toolState);
+    labels.splice(0, labels.length, "A1 is bold", "A1 has yellow fill", "A1 has borders", "All original numeric values preserved");
+    passed.splice(0, passed.length, tools.bold, tools.fill, tools.border,
+      original.every((v,i)=>sameNumber(values[i],v)));
+  } else if (activity === "independent-copy-v1") {
+    const tools = validateToolState(toolState);
+    labels.push("Used Ribbon Copy B2 and Paste B3");
+    passed.push(tools.copy_used);
+  }
   return { score: passed.filter(Boolean).length, maxScore: labels.length,
     passed: passed.every(Boolean), criteria: labels.map((label,i)=>({label,passed:passed[i]})) };
 }
 export function practiceHistory(history, rows, activity) {
   return validateCalculationHistory(history)
     .filter(a => a.activity === activity)
-    .map(a => ({ ...a, grade: practiceCriteria(activity, rows, a.values, a.formula) }));
+    .map(a => ({ ...a, grade: practiceCriteria(activity, rows, a.values, a.formula, a.tool_state) }));
 }

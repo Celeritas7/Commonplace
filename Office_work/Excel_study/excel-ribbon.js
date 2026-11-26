@@ -29,7 +29,8 @@
     const id=root.id||'excel-simulator';
     const shell=element('div','excel-shell');
     const title=element('div','excel-title');
-    title.append(element('span','excel-brand','X'),element('strong','',options.workbook||'Book1 — Excel'),element('span','excel-tag','Explore mode'));
+    const enabled=tool=>typeof options.onPracticeTool==='function'&&Array.isArray(options.practiceTools)&&options.practiceTools.includes(tool);
+    title.append(element('span','excel-brand','X'),element('strong','',options.workbook||'Book1 — Excel'),element('span','excel-tag',enabled('Bold')?'Explore & practice':'Explore mode'));
     const tabs=element('div','excel-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Excel Ribbon tabs');
     const ribbon=element('div','excel-ribbon');ribbon.id=id+'-ribbon';ribbon.setAttribute('role','tabpanel');ribbon.tabIndex=0;
     const guide=element('div','excel-guide');
@@ -45,6 +46,7 @@
       ribbon.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===control)));
       path.textContent=catalog[activeTab].tab+' → '+group+' → '+tool[0];
       desc.textContent=tool[2];
+      if(enabled(tool[0])){note.textContent=options.onPracticeTool(tool[0],selected?.dataset.cell)||'Practice tool.';return;}
       note.textContent=tool[0]==='AutoSum'?'Try the existing SUM exercise below. AutoSum itself is a location preview in Phase A.':'Location preview only — this operation is not simulated yet.';
     }
     function showTab(index,focus=false){
@@ -56,13 +58,13 @@
         const panel=element('div','excel-group');
         const controls=element('div','excel-tools');
         for(const tool of tools){
-          const b=button('excel-tool','');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',tool[0]);b.append(element('span','excel-symbol',tool[1]),element('span','excel-tool-label',tool[0]));
+          const b=button('excel-tool','');b.setAttribute('aria-pressed','false');b.setAttribute('aria-label',tool[0]);if(enabled(tool[0])){b.setAttribute('data-excel-practice','true');b.title='Practice tool — limited to assigned cells';}b.append(element('span','excel-symbol',tool[1]),element('span','excel-tool-label',tool[0]));
           b.addEventListener('click',()=>describe(group,tool,b));controls.append(b);
         }
         panel.append(controls,element('div','excel-group-label',group));ribbon.append(panel);
       }
       path.textContent=catalog[index].tab+' Ribbon';
-      desc.textContent='Select a tool to learn what it does and where to find it.';
+      desc.textContent=enabled('Bold')?'Select a cell and use a marked practice tool, or explore the other tool locations.':'Select a tool to learn what it does and where to find it.';
       note.textContent='Ribbon layout is simplified from desktop Excel for Windows. Actual icons and placement can vary by version.';
       if(focus)tabButtons[index].focus();
     }

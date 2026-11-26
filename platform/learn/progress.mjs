@@ -1,5 +1,5 @@
 import { progressIdentity } from "../content/contracts.mjs";
-import { validateCalculationHistory, validatePracticeMode } from "../../Office_work/Excel_study/calculation-history.mjs";
+import { validateCalculationHistory, validatePracticeMode, validateToolState } from "../../Office_work/Excel_study/calculation-history.mjs";
 const object = (value, keys) =>
   value &&
   Object.getPrototypeOf(value) === Object.prototype &&
@@ -53,11 +53,11 @@ export function validateAttempt(value, material) {
     );
   if (sum) {
     const w = value.worksheet;
+    const allowed = ["values", "formula", "applied", "attempts", "practice_mode", "tool_state"];
     if (
-      (!object(w, ["values", "formula", "applied"]) &&
-        !object(w, ["values", "formula", "applied", "attempts"]) &&
-        !object(w, ["values", "formula", "applied", "practice_mode"]) &&
-        !object(w, ["values", "formula", "applied", "attempts", "practice_mode"])) ||
+      !w || Object.getPrototypeOf(w) !== Object.prototype ||
+      !["values", "formula", "applied"].every(k=>Object.hasOwn(w,k)) ||
+      Object.keys(w).some(k=>!allowed.includes(k)) ||
       !Array.isArray(w.values) ||
       w.values.length !== 3 ||
       w.values.some((v) => typeof v !== "string" || v.length > 40) ||
@@ -68,6 +68,7 @@ export function validateAttempt(value, material) {
       throw Error("Saved worksheet could not be restored.");
     if (Object.hasOwn(w, "attempts")) validateCalculationHistory(w.attempts);
     if (Object.hasOwn(w, "practice_mode")) validatePracticeMode(w.practice_mode);
+    if (Object.hasOwn(w, "tool_state")) validateToolState(w.tool_state);
   } else if (value.worksheet !== null)
     throw Error("Unexpected saved worksheet.");
   return structuredClone(value);
