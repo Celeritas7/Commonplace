@@ -39,7 +39,14 @@ existing session RPC signatures remain intact. Broader Roadmap table/relationshi
 and caller checks remain open; no hosted action or G0 advancement is authorized.
 
 This checkpoint updates the earlier [General_apps review](GENERAL-APPS-REVIEW.md)
-without replacing its historical evidence. Follow the
+without replacing its historical evidence. The
+[Roadmap related-record candidate](ROADMAP-RECORD-READINESS.md) now prepares
+owner-qualified parent links and bounded browser grants for the other eleven
+Roadmap tables. Existing historical conflicts stop installation without changing
+rows. The original invoker comparison API stays compatible; owning-client/hub,
+provider and recovery gates remain open. This is G0 preparation only.
+
+Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
 preparation PR or passing synthetic tests do not clear those gates.
 
