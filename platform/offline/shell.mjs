@@ -1,3 +1,35 @@
+// Verified cache completion precedes asynchronous activation and client claim.
+// Do not report Ready offline until the saved worker controls this page.
+export function waitForShellControl(workers, worker, signal, timeoutMs = 20000) {
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const timer = setTimeout(() => finish(Error(
+      "Application saved, but offline control is not ready. Reopen online and resume the download."
+    )), timeoutMs);
+    const abort = () => finish(Error("Download paused. Resume to reuse completed files."));
+    function finish(error) {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      workers.removeEventListener("controllerchange", check);
+      worker.removeEventListener("statechange", check);
+      signal?.removeEventListener("abort", abort);
+      error ? reject(error) : resolve();
+    }
+    function check() {
+      if (signal?.aborted) return abort();
+      if (worker.state === "redundant") return finish(Error(
+        "Application update was replaced. Reopen online and resume the download."
+      ));
+      if (workers.controller === worker && worker.state === "activated") finish();
+    }
+    workers.addEventListener("controllerchange", check);
+    worker.addEventListener("statechange", check);
+    signal?.addEventListener("abort", abort, { once: true });
+    check();
+  });
+}
+
 export async function saveOfflineShell(progress = () => {}, signal) {
   if (!("serviceWorker" in navigator))
     throw Error("This browser cannot save the study application offline.");
@@ -15,14 +47,19 @@ export async function saveOfflineShell(progress = () => {}, signal) {
       "Offline application did not start. Retry without clearing website data.",
     );
   if (worker.state === "installing")
-    await new Promise((resolve, reject) =>
-      worker.addEventListener("statechange", () => {
-        if (worker.state === "installed" || worker.state === "activated")
-          resolve();
-        if (worker.state === "redundant")
-          reject(Error("Offline application update failed."));
-      }),
-    );
+    await new Promise((resolve, reject) => {
+      const installing = worker;
+      function check() {
+        if (["installed", "activating", "activated", "redundant"].includes(installing.state)) {
+          installing.removeEventListener("statechange", check);
+          installing.state === "redundant"
+            ? reject(Error("Offline application update failed."))
+            : resolve();
+        }
+      }
+      installing.addEventListener("statechange", check);
+      check();
+    });
   worker = registration.waiting || registration.active || worker;
   await new Promise((resolve, reject) => {
     const channel = new MessageChannel(),
@@ -56,6 +93,7 @@ export async function saveOfflineShell(progress = () => {}, signal) {
     worker.postMessage({ type: "SAVE_SHELL" }, [channel.port2]);
     if (signal?.aborted) abort();
   });
+  await waitForShellControl(navigator.serviceWorker, worker, signal);
 }
 
 // Check only an already installed, exact-scope worker. Updates are offered for
