@@ -85,8 +85,9 @@ links lacking composite owner constraints, and excess browser grants. The
 subsequent [record-ownership candidate 09](ROADMAP-RECORD-READINESS.md) prepares
 those link/grant corrections without changing the comparison invoker API.
 Historical ownership and actual caller acceptance remain required before use.
-The comparison
-RPC, suggestion/hub flows, daily-reset behavior and other editors also retain
+The subsequent [daily-reset candidate 12](ROADMAP-RESET-READINESS.md) prepares
+atomic reset/retry behavior while preserving session history. It is not deployed.
+The comparison RPC, suggestion/hub flows, actual reset callers and other editors retain
 their own acceptance requirements. No broad revocation, data remapping or
 unreviewed replacement of those workflows is included. Continue those remaining
 shared-app safeguards, then Edge/provider evidence and the final G0 decision.

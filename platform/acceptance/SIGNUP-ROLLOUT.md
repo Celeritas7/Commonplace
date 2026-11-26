@@ -183,3 +183,7 @@ personal study environment remains in place throughout this preparation.
 Comparison import preparation is recorded in [candidate 11 readiness](ROADMAP-IMPORT-READINESS.md).
 Its comparison path is 01 → 03 → 09 → 10 → 11; it does not change the six CP
 migrations or authorize hosted installation, signup or learner enrollment.
+
+[Daily-reset preparation](ROADMAP-RESET-READINESS.md) adds the separate daily
+path 01 → 03 → 08 → 12. It changes neither the six CP migrations nor any
+hosted/signup/enrollment gate.
