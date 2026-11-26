@@ -38,7 +38,8 @@ const SUM = "excel.sum.b2-b4.v1", FORMULA = "=SUM(B2:B4)";
 const VALUES = ["12", "8", "5"];
 
 test("R3 resolves exact versioned lessons and capabilities without a default or latest fallback", () => {
-  const lessons = curriculum.listLessons();
+  // Catalog additions must not silently widen the already released F1 runtime.
+  const lessons = curriculum.listLessons(PERSONAL);
   assert.deepEqual(lessons.map((lesson) => lesson.id), ["sum", "average", "count", "min", "max"]);
   const personalRefs = lessons.map(({ id, version }) => ({ id, version }));
   assert.deepEqual(curriculum.resolveRuntime(PERSONAL).lessons, personalRefs);
@@ -90,9 +91,10 @@ test("R3 metadata cannot change the catalog, runtime policy or future resolution
   try { runtime.capabilities.push("excel.average.b2-b4.v1"); } catch {}
   try { runtime.lessons[0].version = 99; } catch {}
   assert.deepEqual(curriculum.resolveRuntime(ASSIGNED), snapshot);
-  const list = curriculum.listLessons();
+  const list = curriculum.listLessons(), catalogSize = list.length;
   try { list.pop(); } catch {}
-  assert.equal(curriculum.listLessons().length, 5);
+  assert.equal(curriculum.listLessons().length, catalogSize);
+  assert.equal(curriculum.listLessons(PERSONAL).length, 5);
 });
 
 test("R3 runtime capabilities preserve the assigned required-number policy and personal blank semantics", () => {

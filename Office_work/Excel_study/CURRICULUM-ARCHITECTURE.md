@@ -18,6 +18,7 @@ formula interpreters or other executable implementations.
 | Consumer | Shared behavior | Adapter responsibility |
 | --- | --- | --- |
 | `excel-formula-foundations.js` | Five F1 lesson definitions, formula evaluation, requested-function/calculation/input grading | Resolve the selected fictional scenario, prepare existing guided/independent values, retain the F1 public API |
+| `excel-reference-foundations.js` | Four F2 lesson definitions, reference translation, arithmetic evaluation and stable per-cell grading | Resolve separate fictional F2 datasets and units, preserve all five context identities and supply worksheet layout |
 | `excel-assessment.js` | Declarative formula, numeric, style and grouped criterion checks | Read worksheet evidence, retain criterion/skill IDs, bounded response snapshots, session records and UI |
 | `calculation-history.mjs` | Current central SUM calculation and guided/revision/formatting/clipboard rubrics | Preserve legacy evaluation, validate stored history, append bounded attempts and distinguish recorded/current outcomes |
 | `platform/content/excel-contract.mjs` | Exact lesson/capability/runtime metadata and worksheet cells/formula | Validate the authorized wire bundle and consume only its supplied dataset |
@@ -26,8 +27,9 @@ formula interpreters or other executable implementations.
 
 Guided Ribbon event sequencing and simulator editing controls retain their current
 responsibilities. The D2/F1 workbook writer continues to use its existing adapter
-API, filenames and answer separation. The shared core is a bounded engine for the
-reviewed B2:B4 aggregate functions, not an arbitrary spreadsheet evaluator.
+API, filenames and answer separation. The shared core contains bounded engines
+for reviewed B2:B4 aggregate functions and the separate F2 reference exercises;
+it is not an arbitrary spreadsheet evaluator.
 
 Central material validation also imports this core in the isolated server
 package. The package builder admits exactly `curriculum.mjs`,
@@ -46,15 +48,15 @@ There is no implicit latest-version or default-SUM fallback.
 
 | Reference kind | Current released entries | Meaning |
 | --- | --- | --- |
-| Lesson | `sum@1`, `average@1`, `count@1`, `min@1`, `max@1` | Existing content/quiz plus worksheet, capability, runtime and rubric references |
-| Capability | `explanation.text.v1`; `excel.sum.b2-b4.v1`, `excel.average.b2-b4.v1`, `excel.count.b2-b4.v1`, `excel.min.b2-b4.v1`, `excel.max.b2-b4.v1` | Reviewed operation and fixed worksheet shape; catalog presence is not publication permission |
-| Runtime | `personal-formulas@1`, `assigned-sum@1` | Pinned capability set, ordered lesson references, evaluator and numeric-input policy |
-| Rubric | `formula-foundations@1`, `worksheet-criteria@1`, `assigned-practice@1` | Versioned assessment implementation and applicable evidence/template |
+| Lesson | `sum@1`, `average@1`, `count@1`, `min@1`, `max@1`; four F2 lessons listed below | Content/quiz plus worksheet, capability, runtime and rubric references |
+| Capability | `explanation.text.v1`; `excel.sum.b2-b4.v1`, `excel.average.b2-b4.v1`, `excel.count.b2-b4.v1`, `excel.min.b2-b4.v1`, `excel.max.b2-b4.v1`; four `excel.references.<lesson-id>.v1` entries below | Reviewed operation and fixed worksheet shape; catalog presence is not publication permission |
+| Runtime | `personal-formulas@1`, `assigned-sum@1`, `personal-references@1` | Pinned capability set, ordered lesson references, evaluator and numeric-input policy |
+| Rubric | `formula-foundations@1`, `worksheet-criteria@1`, `assigned-practice@1`, `reference-foundations@1` | Versioned assessment implementation and applicable evidence/template |
 
 Resolved metadata is deeply frozen. Catalog lists are detached copies. A
 runtime-specific lesson list follows that runtime's exact references; F1 uses
 this list, so registering a future catalog entry cannot silently expand F1.
-Both runtime capability lists are explicit and pinned for the same reason.
+Every runtime capability list is explicit and pinned for the same reason.
 
 The published central material already has its own lesson/concept/scenario/
 dataset versions. An internal `sum@1` reference does not replace any of those
@@ -67,8 +69,9 @@ outcome-validation version, not a new lesson or material version.
 | --- | --- | --- |
 | `personal-formulas@1` | SUM, AVERAGE, COUNT, MIN, MAX on the reviewed B2:B4 rectangle | Three numeric-or-blank input strings. Blanks are ignored; all-blank AVERAGE reports `#DIV/0!` |
 | `assigned-sum@1` | SUM on the same rectangle | All three input strings must be valid numbers |
+| `personal-references@1` | Two A1 references within A1:F12 joined by `*` or `/` | Bounded numeric strings; referenced blanks are zero; text and zero denominators produce errors |
 
-Both use R2's strict token parser, decimal/scientific numeric rules and existing
+The two aggregate runtimes use R2's strict token parser, decimal/scientific numeric rules and existing
 15-significant-digit result conversion. The shared evaluator preserves the
 intentional blank-policy difference. It does not substitute a personal scenario
 when assigned data is missing or invalid.
@@ -92,7 +95,8 @@ three text/number rows. `EXCEL_ASSIGNED_CAPABILITIES` names that supported set;
 The new prepared-model `curriculumRef` and `runtimeRef` fields are internal. They
 are never added to an authorized bundle, material bytes or stored learner state.
 Personal AVERAGE/COUNT/MIN/MAX support therefore does not permit central assignment
-of those worksheet activities. G/H must review the corresponding publication
+of those worksheet activities. The same restriction applies to F2's reference
+lessons. G/H must review the corresponding publication
 schema, server validation, UI, authorization and offline contracts together.
 
 Permissions, profiles, personalized assignments and reporting remain in Commonplace
@@ -145,3 +149,49 @@ legacy evaluation markers and curriculum-plan versions. Future record adapters
 must preserve unknown historical rubric provenance and establish stable criterion
 IDs before emitting durable grades. New curriculum definitions alone cannot
 authorize storage migration, central publication or reporting access.
+
+## F2 — exact reference lessons and copy behavior
+
+F2 adds four version-1 lessons under the new `personal-references@1` runtime and
+`reference-foundations@1` rubric. It does not add lessons to either released
+aggregate runtime or change an existing lesson/rubric definition.
+
+| Lesson | Capability | Source and destinations |
+| --- | --- | --- |
+| `relative-line-totals@1` | `excel.references.relative-line-totals.v1` | D3 to D4/D5, using `=B3*C3` |
+| `absolute-rate@1` | `excel.references.absolute-rate.v1` | C3 to C4/C5, using `=B3*$F$2` |
+| `mixed-quotation@1` | `excel.references.mixed-quotation.v1` | C3 to D3/C4/D4, using `=$B3*C$2` |
+| `relative-unit-cost@1` | `excel.references.relative-unit-cost.v1` | D3 to D4/D5, using `=B3/C3` |
+
+The core exposes pure parse, copy, evaluate and grade operations with explicit
+runtime/rubric references. Copying translates the learner's actual expression,
+preserving each row/column lock independently. The page computes every destination
+before changing any destination input, so one out-of-range reference cannot cause
+a partial copy. The bounded grammar accepts two contiguous A1 references joined
+by multiplication or division, with ordinary spaces or line endings at expression
+boundaries. Split tokens, unsupported operators and references outside A1:F12 are
+rejected. References to formula cells are outside this practice. Supported numeric
+inputs and the 15-significant-digit result conversion follow the existing numeric
+rules; missing/blank referenced cells are zero and a zero denominator is an error.
+
+Each answer cell has separate stable `reference-pattern:<address>` and
+`valid-calculation:<address>` criteria. Independent tasks also have
+`original-inputs`. Pattern grading uses the registered lesson, destination and
+exact locks, while calculation grading uses the entered expression and current
+inputs. Equivalent multiplication operand order is accepted; reversed division
+is a different operation. An invalid source does not erase credit for a correct
+destination. Correct arithmetic alone does not satisfy a requested lock pattern.
+
+The F2 adapter supplies separate guided/independent dataset IDs and version 1
+for each of the five existing professional contexts. Section 3 keeps exact
+lesson, runtime, rubric, scenario and dataset references with its session-only
+attempt snapshots. Independent progress uses the complete independent dataset
+identity; quiz feedback is a separate learning signal. These are not durable
+journal entries, centrally assigned materials or an R4 storage migration.
+
+Regression coverage lives in `excel-references-engine.test.mjs`,
+`excel-reference-workbooks.test.mjs` and `browser/excel-references.spec.mjs` under
+`platform/tests/`. Existing curriculum tests continue to pin F1 scope, central
+material bytes, progress identity and legacy outcomes. The central public shell
+is regenerated for the updated shared core; private packs and personal storage
+behavior remain unchanged.

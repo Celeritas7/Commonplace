@@ -225,5 +225,36 @@ R4 adds no persistence implementation. The 40-entry central cap, personal sessio
 history, v1 backup bounds, pending operations, saved packs, shell manifest and
 activation settings are unchanged. The plan specifies segmented complete backups,
 old/new-client coexistence, crash/quota recovery and future acceptance cases;
-those cases are requirements, not completed device/hosted verification. F2 is
-the next curriculum phase after this planning correction is reviewed and merged.
+those cases are requirements, not completed device/hosted verification. The plan
+is merged in PR #125; the following F2 phase continues curriculum development.
+
+## F2 — personal reference lessons and existing offline records
+
+Section 3 adds four personal lessons on relative, absolute and mixed references,
+multiplication, division and formula copying. The new `personal-references@1`
+runtime and `reference-foundations@1` rubric are separate from F1 and central SUM.
+Central publication remains the existing authorized SUM contract. Permissions,
+profiles, assignments and reporting remain in Commonplace Admin Studio.
+
+The shared curriculum file is part of the central public shell, so the generated
+45-file shell manifest is refreshed for its changed bytes. R1's complete-cache
+fallback and open-page consistency continue to apply. Existing private packs,
+material bytes, record schemas, evaluation versions and backup payloads are
+unchanged. There is no new personal-study service worker, origin or installation.
+Keep existing website data and packs when updating the reviewed application.
+
+F2's personal attempts and independent progress stay in memory for the current
+page session, with a disclosed limit of 100 task submissions and a latest-10
+history view. Reloading ends that session. The independent task's exact lesson,
+rubric, runtime, scenario and dataset identity is recorded in memory, and quiz
+feedback remains separate from task completion. No persistent progress, journal
+database, migration or change to the central 40-submission cap is implemented.
+R4's durable-record requirements remain future implementation work.
+
+The new engine/workbook/browser regressions cover all five contexts, independent
+partial credit, copy failures, syntax boundaries, download contents and unchanged
+browser storage. Existing R1/R2/R3 checks continue to cover central offline
+reopening, packs, old/new saved outcomes, retries and backups. Native Excel and
+physical iPad acceptance remain pending, as do hosted recovery and G0. F2 does
+not activate production synchronization, alter hosted databases/authentication/
+permissions or enroll learners.
