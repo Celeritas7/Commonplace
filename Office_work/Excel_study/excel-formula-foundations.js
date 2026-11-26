@@ -27,37 +27,37 @@
     return {lesson:l,scenario:s,mode,values,unit,formula:"="+l.fn+"("+range+")",
       instruction:l.task+" in B5 using "+l.fn+". "+(mode==="independent"?"Keep the three starting cells unchanged.":"You can change the inputs to explore how the formula behaves.")};
   }
-  const normalize=formula=>typeof formula==="string"&&formula.length<=80?formula.replace(/\s/g,"").toUpperCase():"";
+  const syntax=global.CommonplaceExcelFormulaSyntax;
   function numeric(values){
-    if(!Array.isArray(values)||values.length!==3||Object.keys(values).length!==3)throw Error("Three input cells are required.");
+    if(!Array.isArray(values)||values.length!==3||Object.keys(values).length!==3||![0,1,2].every(i=>Object.hasOwn(values,i)))throw Error("Three input cells are required.");
     return values.flatMap(v=>{
-      if(typeof v!=="string"||v.length>40)throw Error("Use numbers or empty cells.");
-      const t=v.trim();
-      if(!t)return [];
-      if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(t)||!Number.isFinite(Number(t))||Math.abs(Number(t))>1e12)throw Error("Enter finite numeric values within ±1 trillion, or leave a cell blank.");
-      return [Number(t)];
+      const value=syntax.numericCell(v,{allowBlank:true});
+      return value===null?[]:[value];
     });
   }
   function evaluate(formula,values){
-    const m=normalize(formula).match(/^=(SUM|AVERAGE|COUNT|MIN|MAX)\(B2:B4\)$/);
-    if(!m)throw Error("This lesson supports SUM, AVERAGE, COUNT, MIN and MAX on B2:B4 only.");
-    const nums=numeric(values),fn=m[1];
+    const parsed=syntax.parse(formula);
+    if(!parsed)throw Error("Use SUM, AVERAGE, COUNT, MIN or MAX on B2:B4. Keep each function name and cell reference together.");
+    const nums=numeric(values),fn=parsed.fn;
     if(fn==="AVERAGE"&&!nums.length)return {fn,result:null,error:"#DIV/0!"};
     const sum=nums.reduce((a,b)=>a+b,0);
     const result=fn==="SUM"?sum:fn==="AVERAGE"?sum/nums.length:fn==="COUNT"?nums.length:fn==="MIN"?(nums.length?Math.min(...nums):0):(nums.length?Math.max(...nums):0);
     return {fn,result:Number(result.toPrecision(15)),error:null};
   }
   function sameInputs(a,b){
+    // Input preservation is a separate criterion even when the formula fails.
+    // Validate the cells themselves before comparing numeric/blank equivalence.
+    try{numeric(a);numeric(b);}catch(e){return false;}
     return a.length===b.length&&a.every((v,i)=>v.trim()===""?b[i].trim()==="":b[i].trim()!==""&&Number(v)===Number(b[i]));
   }
   function grade(ex,formula,values){
     // The rubric uses the assigned task rather than comparing a hard-coded output.
     let evaluated=null;
     try{evaluated=evaluate(formula,values);}catch(e){}
-    const correct=normalize(formula)===ex.formula;
+    const correct=syntax.parse(formula)?.canonical===ex.formula;
     const criteria=[{label:"Correct function and B2:B4 range",passed:correct},
-      {label:"Valid calculation for the task",passed:correct&&!!evaluated&&!evaluated.error}];
-    if(ex.mode==="independent")criteria.push({label:"Original exercise inputs preserved",passed:!!evaluated&&sameInputs(values,ex.values)});
+      {label:"Valid calculation for the entered formula",passed:!!evaluated&&!evaluated.error}];
+    if(ex.mode==="independent")criteria.push({label:"Original exercise inputs preserved",passed:sameInputs(values,ex.values)});
     const score=criteria.filter(c=>c.passed).length;
     return {score,maxScore:criteria.length,passed:score===criteria.length,criteria,evaluated};
   }
