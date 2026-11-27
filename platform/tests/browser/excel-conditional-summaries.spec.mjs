@@ -1,0 +1,81 @@
+import {test,expect} from "@playwright/test";
+const root="/Office_work/Excel_study/",route=root+"Section_6_Study.html";
+const c=(page,id)=>page.locator("#f5a-"+id);
+const sum='=SUMIF(B2:B7,F2,D2:D7)',both='=SUMIFS(D2:D7,B2:B7,F2,C2:C7,F3)',count='=COUNTIF(B2:B7,F2)';
+async function open(page){
+  await page.route("**/*",r=>r.request().url().startsWith("http://127.0.0.1:4173/")?r.continue():r.abort());
+  await page.goto(route);
+  await expect(c(page,"scenario")).toHaveValue("jp-ph-trade");
+  await expect(c(page,"lesson")).toHaveValue("sumif-status");
+}
+test("F5A guided register previews sum, both criteria, count and positional evidence",async({page})=>{
+  const errors=[];page.on("pageerror",e=>errors.push(e.message));
+  await open(page);
+  await expect(c(page,"scenario").locator("option")).toHaveCount(5);
+  await expect(c(page,"lesson").locator("option")).toHaveCount(3);
+  await c(page,"G2").fill(sum);await c(page,"preview").click();
+  await expect(c(page,"result")).toHaveText("4200 JPY");
+  await expect(c(page,"cell-D5")).toHaveClass(/matched-cell/);
+  await expect(c(page,"match")).toContainText("3 matching position");
+  await c(page,"G2").fill(both);await c(page,"preview").click();
+  await expect(c(page,"result")).toHaveText("1800 JPY");
+  await expect(c(page,"cell-D3")).not.toHaveClass(/matched-cell/);
+  await c(page,"G2").fill(count);await c(page,"preview").click();
+  await expect(c(page,"result")).toHaveText("3 matching records");
+  await expect(c(page,"cell-D5")).not.toHaveClass(/matched-cell/);
+  await expect(c(page,"cell-B5")).toHaveClass(/matched-cell/);
+  await c(page,"F2").fill("Absent");
+  await expect(c(page,"result")).toHaveText("—");
+  await c(page,"preview").click();await expect(c(page,"result")).toHaveText("0 matching records");
+  await c(page,"F2").fill("Ready");await c(page,"G2").fill("=SUMIF(B2:B6,F2,D3:D7)");
+  await c(page,"preview").click();
+  await expect(c(page,"match")).toContainText("B2 → D3");
+  await expect(c(page,"result")).toHaveText("6500 JPY");
+  await expect(c(page,"history").locator(":scope > li")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+test("F5A independent partial credit, separate quiz and retained submissions",async({page})=>{
+  await open(page);await c(page,"independent").click();
+  await expect(c(page,"hint")).toBeHidden();
+  await c(page,"G2").fill('=SUMIF(B2:B7,"Pending",D2:D7)');await c(page,"submit").click();
+  await expect(c(page,"feedback")).toHaveText("Task score: 5 / 6");
+  await expect(c(page,"progress")).toContainText("0 / 15");
+  await c(page,"G2").fill(sum);await c(page,"submit").click();
+  await expect(c(page,"feedback")).toHaveText("Task score: 6 / 6");
+  await expect(c(page,"progress")).toContainText("1 / 15");
+  await c(page,"lesson").selectOption("sumifs-status-group");
+  await c(page,"G2").fill("=SUMIFS(D2:D7,C2:C7,F3,B2:B7,F2)");await c(page,"submit").click();
+  await expect(c(page,"feedback")).toHaveText("Task score: 6 / 6");
+  await expect(c(page,"progress")).toContainText("2 / 15");
+  await c(page,"lesson").selectOption("countif-status");
+  await c(page,"G2").fill("=COUNTIF(B 2:B7,F2)");await c(page,"preview").click();
+  await expect(c(page,"result")).toHaveText("Check formula or inputs");
+  await expect(c(page,"G2")).toHaveValue("=COUNTIF(B 2:B7,F2)");
+  await c(page,"G2").fill(count);await c(page,"submit").click();
+  await expect(c(page,"feedback")).toHaveText("Task score: 5 / 5");
+  await expect(c(page,"progress")).toContainText("3 / 15");
+  await c(page,"choices").locator("input").last().check();await c(page,"check-quiz").click();
+  await expect(c(page,"quiz-feedback")).toContainText("Correct");
+  await expect(c(page,"history").locator(":scope > li")).toHaveCount(4);
+  await c(page,"scenario").selectOption("mechanical-engineering");
+  await expect(c(page,"amount-heading")).toContainText("pieces");
+  await c(page,"reset").click();
+  await expect(c(page,"history").locator(":scope > li")).toHaveCount(4);
+  await expect(c(page,"progress")).toContainText("3 / 15");
+});
+test("F5A launcher links, responsive layout and contextual return",async({page})=>{
+  await page.route("**/*",r=>r.request().url().startsWith("http://127.0.0.1:4173/")?r.continue():r.abort());
+  await page.goto(root+"index.html#practice");
+  await page.getByRole("link",{name:"Open summary practice"}).click();
+  await expect(page).toHaveURL(/Section_6_Study\.html#f5a-practice$/);
+  for(const width of [320,390,820,1280]){
+    await page.setViewportSize({width,height:900});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }
+  await page.getByRole("link",{name:"Section 5 · Lookup functions"}).click();
+  await expect(page).toHaveURL(/Section_5_Lookups\.html$/);
+  await page.getByRole("link",{name:"Section 6 · Conditional summaries →",exact:true}).click();
+  await expect(page).toHaveURL(/Section_6_Study\.html$/);
+  await page.getByRole("link",{name:"Return to Practice"}).click();
+  await expect(page).toHaveURL(/index\.html#practice$/);
+});
