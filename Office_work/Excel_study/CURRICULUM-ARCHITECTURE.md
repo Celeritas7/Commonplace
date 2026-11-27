@@ -354,3 +354,7 @@ caches for IF, numeric caches for lookups, native conditional formatting).
 Earlier workbook writer paths and hash tests are retained. The shared curriculum
 core, central SUM publication, record contracts, public shell dependency manifest
 and private packs are unchanged by this export-only extension. No record migration.
+
+## F5A — conditional summary foundations
+
+`sumif-status@1`, `sumifs-status-group@1` and `countif-status@1` pin `personal-conditional-summaries@1`, `conditional-summary-foundations@1` and exact `excel.summary.<lesson-id>.v1` capabilities. The pure parser/evaluator supports fixed B/C text ranges, D numeric sum ranges, aligned lengths, exact text comparison without case sensitivity and F2/F3 criteria. Literal criteria calculate but do not satisfy the requested cell-reference criterion. SUMIFS permits either pair order; no matches return zero; COUNTIF does not require numeric amount values. Results and matching cell addresses are derived, not supplied by content. Grading uses registered goals and checks independent original inputs. F5A changes no earlier exact definitions, persistence, workbook exporter or central publication. Refresh only the public-shell shared core. F5B/C/D follow separately.
