@@ -109,3 +109,7 @@ need explicit caller/cutover acceptance, not assumed coverage from this endpoint
 Shared-app admission, API/Auth/provider evidence, deferred recovery and the final
 G0 decision still precede hosted rollout. Merging this preparation does not make
 restricted learner sharing available.
+
+The subsequent [suggestion delivery preparation](ROADMAP-SUGGESTION-READINESS.md)
+addresses answer/session atomicity and bounded hub retry behavior; its remaining
+caller/account-state activation gates remain explicit.
