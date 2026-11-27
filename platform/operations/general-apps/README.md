@@ -40,6 +40,8 @@ Supabase configuration, downloaded packs and live records have not changed.
 | `11_roadmap_comparison_imports.sql` | Explicit-target, revision-checked comparison imports, retained before/after history and original-request replay | 01/03/09/10, matching import preview/caller contract and retention/recovery review; see [import readiness](../../acceptance/ROADMAP-IMPORT-READINESS.md) |
 | `12_roadmap_daily_reset.sql` | Atomic, version-checked daily reset with retained history and original-account retries | 01/03/08, exact timer/day contract and owning-client/retention/recovery acceptance; see [reset readiness](../../acceptance/ROADMAP-RESET-READINESS.md) |
 | `13_roadmap_task_edits.sql` | Atomic, versioned task name/tag/expansion edits with private history and saved retries | 01/03, coordinated metadata client and retention/recovery acceptance; see [task edit readiness](../../acceptance/ROADMAP-TASK-EDIT-READINESS.md) |
+| `14_roadmap_log_entries.sql` | Acknowledged daily-log creation, stable retry identities and private creation receipts | 01/03/09, coordinated log client and retention/recovery acceptance; see [log readiness](../../acceptance/ROADMAP-LOG-READINESS.md) |
+| `15_roadmap_task_creation.sql` | Acknowledged task creation and atomic capture batches with private UUID reservations | 01/03, coordinated creation client and retention/recovery acceptance; see [creation readiness](../../acceptance/ROADMAP-CREATION-READINESS.md) |
 | `edge/` | Candidate `claude-proxy` and `code-exec` handlers require a verified non-anonymous user and a current explicit function grant | JWT-capable clients, per-user grants, source drift review and each owning app's deployment review |
 | `90_containment.sql` | Close new admission, pause both Edge routes, pause Roadmap routines and revoke their browser execution permissions | Full shared incident only. Review the per-component results and retain individual entitlements |
 
@@ -155,7 +157,7 @@ a single Edge route by setting `ga_private.edge_routes.paused` for its exact
 function name. Check that one row changed, that its previously entitled fixture
 is denied, and that the unaffected route still works with a mock provider.
 Pause Roadmap through its singleton and review all installed prepared routine ACLs.
-Candidate 90 also revokes the optional daily/comparison APIs (08/10/11/12/13); it does not
+Candidate 90 also revokes the optional daily/comparison APIs (08/10/11/12/13/14/15); it does not
 freeze legacy direct writes or the unchanged comparison importer. Preserve the
 underlying grants, identities, saved work, queues and packs. Existing admissions
 and memberships can be withdrawn or suspended individually through Admin Studio.
@@ -263,6 +265,15 @@ session evidence. General editor failures, actual caller acceptance and every
 remaining G0 gate still require closure before hosted use.
 
 Candidate 13 prepares [task metadata recovery](../../acceptance/ROADMAP-TASK-EDIT-READINESS.md)
-after 01/03. The next bounded group is daily-log entry recovery; capture,
+after 01/03. Daily-log and creation recovery are recorded below;
 structural task changes and hub/caller acceptance remain separate. This changes
 no hosted gate or deferred recovery decision.
+
+Candidate 14 prepares [daily-log entry recovery](../../acceptance/ROADMAP-LOG-READINESS.md)
+after 01/03/09. Task creation/capture preparation is recorded below. Hosted
+changes/enrollment remain on hold and restoration remains deferred.
+
+Candidate 15 prepares [task creation/capture recovery](../../acceptance/ROADMAP-CREATION-READINESS.md)
+after 01/03. The next bounded work group is structural task changes and deletion
+recovery. G0 stays open; hosted work and enrollment remain on hold, and restoration
+remains deferred. Existing direct writers are not an application admission gate.

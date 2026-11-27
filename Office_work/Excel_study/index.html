@@ -19,6 +19,47 @@ a{color:var(--green)}a:focus-visible{outline:3px solid #19784b;outline-offset:4p
 .related{margin:18px 0 0;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--card);display:flex;gap:10px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap}.related p{margin:0;color:var(--muted);font-size:13px}.related a{font-weight:650;display:inline-flex;align-items:center;min-height:44px}.context{margin-top:28px;padding:20px 0;border-top:1px solid var(--line)}.context h2{font:600 22px Georgia,serif;margin:0 0 8px}.context p{color:var(--muted);margin:0 0 10px}.context .tags span{background:var(--card);border-color:var(--line);font:12px var(--sans)}.foot{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.foot a{display:inline-flex;align-items:center;min-height:44px}
 @media(max-width:720px){.wrap{padding:20px 18px 48px}.hero{grid-template-columns:1fr;gap:24px;padding:25px}.demo{max-width:480px;width:100%}.hero h1{font-size:52px}.modes{margin:18px 0 24px}.shelf{gap:10px}.lesson{padding:16px}}
 @media(max-width:490px){.wrap{padding:16px 12px 40px}.hero{padding:20px;gap:20px;border-radius:14px}.hero h1{font-size:46px}.facts{gap:8px 16px}.mode{flex-direction:column;gap:2px;padding:7px 2px;min-height:48px;font-size:12px}.shelf{grid-template-columns:1fr}.lesson{min-height:0}.planned-item{grid-template-columns:36px minmax(0,1fr);gap:8px}.planned-label{grid-column:2;padding:0}.sec-head{gap:8px}.demo th,.demo td{padding:6px 8px}}
+
+/* UI-3: preserve the desktop design, give narrow screens a study-first layout. */
+.wrap{padding-left:max(28px,env(safe-area-inset-left));padding-right:max(28px,env(safe-area-inset-right));padding-top:max(26px,env(safe-area-inset-top));padding-bottom:max(64px,env(safe-area-inset-bottom))}
+.crumb{font-size:12px;letter-spacing:.7px;gap:4px 9px;margin-bottom:18px}
+.crumb a{display:inline-flex;align-items:center;min-height:44px}
+.facts span,.mode span,.sec-head .count,.available,.tags span,.planned-label{font-size:12px}
+.kick,.eyebrow{font-size:12px;letter-spacing:1px}
+.demo-note{font-size:12px}
+.open,.foot{font-size:13px}
+.mode{min-width:0}
+@media(max-width:900px){
+  .wrap{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+  .hero{padding:26px;gap:20px}
+  .hero h1{font-size:clamp(40px,6.5vw,60px)}
+  .facts{gap:10px 16px}
+}
+@media(max-width:720px){
+  .wrap{padding-top:max(12px,env(safe-area-inset-top));padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));padding-bottom:max(40px,env(safe-area-inset-bottom))}
+  .crumb{margin-bottom:10px}
+  .hero{display:block;padding:20px}
+  .hero h1{font-size:clamp(36px,7vw,48px);margin:8px 0 10px}
+  .hero p{margin-bottom:12px;max-width:none}
+  /* The sheet is an illustration, not an interactive exercise. */
+  .hero .demo{display:none}
+  .facts{padding-top:10px;gap:8px 18px}
+  .facts strong{font-size:18px}
+  .modes{margin:14px 0 20px}
+  .mode{font-size:14px;min-height:48px;flex-direction:row;gap:6px}
+  .mode span{display:none}
+  .lesson{min-height:0}
+}
+@media(max-width:420px){
+  .wrap{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  .hero{padding:16px}
+  .facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .facts span{overflow-wrap:anywhere}
+  .modes{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .shelf{grid-template-columns:1fr}
+  .related{padding:12px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -112,7 +153,7 @@ a{color:var(--green)}a:focus-visible{outline:3px solid #19784b;outline-offset:4p
     tab.addEventListener("click", event => {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
-      activate(i);
+      selectMode(i);
     });
     tab.addEventListener("keydown", event => {
       let next;
@@ -123,8 +164,8 @@ a{color:var(--green)}a:focus-visible{outline:3px solid #19784b;outline-offset:4p
       else if (event.key === " ") next = i;
       else return;
       event.preventDefault();
-      activate(next);
-      tabs[next].focus();
+      selectMode(next);
+      tabs[next].focus({preventScroll: true});
     });
   });
   function activate(index) {
@@ -134,10 +175,30 @@ a{color:var(--green)}a:focus-visible{outline:3px solid #19784b;outline-offset:4p
       panes[i].hidden = i !== index;
     });
   }
-  function fromHash() {
-    activate(Math.max(0, panes.findIndex(pane => "#" + pane.id === location.hash)));
+  function selectMode(index) {
+    activate(index);
+    const hash = tabs[index].getAttribute("href");
+    if (location.hash === hash || (!location.hash && index === 0)) return;
+    // History entries restore the selected pane on reload and Back/Forward
+    // without the jump caused by assigning location.hash.
+    try {
+      history.pushState(null, "", hash);
+    } catch {
+      // Native same-page navigation remains available if History is restricted.
+      location.hash = hash;
+    }
   }
+  function fromHash() {
+    const index = Math.max(0, panes.findIndex(pane => "#" + pane.id === location.hash));
+    const focused = document.activeElement;
+    const needsFocus = tabs.some((tab, i) => i !== index && tab === focused) ||
+      panes.some((pane, i) => i !== index && pane.contains(focused));
+    activate(index);
+    if (needsFocus) tabs[index].focus({preventScroll: true});
+  }
+  window.addEventListener("popstate", fromHash);
   window.addEventListener("hashchange", fromHash);
+  window.addEventListener("pageshow", fromHash);
   fromHash();
 })();
 </script>

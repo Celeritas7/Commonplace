@@ -22,6 +22,7 @@
     const s=S.list().find(x=>x.id===$('scenario').value);
     ex=E.exercise($('lesson').value,s.id,s.version,mode);
     $('context').textContent=ex.scenario.context;
+    $('workbook-context').textContent=ex.scenario.title+' · '+ex.scenario.unit;
     $('title').textContent=ex.lesson.title;
     $('mode').textContent=mode==='guided'?'Guided practice':'Independent self-assessment';
     $('concept').open=mode==='guided';

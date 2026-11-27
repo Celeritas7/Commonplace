@@ -127,6 +127,7 @@
   function start(mode) {
     const scenario = S.list().find(item => item.id === $('scenario').value);
     exercise = E.exercise($('lesson').value, scenario.id, scenario.version, mode);
+    $('workbook-context').textContent = exercise.scenario.title;
     $('context').textContent = exercise.context || exercise.scenario.context;
     $('title').textContent = exercise.lesson.title;
     $('mode').textContent = mode === 'guided' ? 'Guided practice' : 'Independent self-assessment';
