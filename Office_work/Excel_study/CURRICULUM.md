@@ -7,7 +7,7 @@ The standalone personal-study path is expanded in small reviewable modules. F1 i
 | F1 | Section 2 SUM / AVERAGE / COUNT / MIN / MAX; blanks versus zero; five professional contexts; guided/independent tasks, quiz and separate XLSX starter/solution | Merged in PR #116 |
 | F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Merged in combined PR #128; see F2 below |
 | F3 | Number formats, tables, sorting, filtering, validation | #132 merged into F2, then combined #128 merged to main; R5 below corrects table naming |
-| F4 | IF, conditional formatting, lookup functions | F4A merged in #137; F4B conditional formatting (#139); F4C exact lookups candidate; F4D workbooks remain separate |
+| F4 | IF, conditional formatting, lookup functions | F4A #137, F4B #139 and F4C #140 merged; F4D native workbook candidate |
 | F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | Planned |
 | F6 | Power Query and repeatable data preparation; link to existing VBA section | Planned |
 | G/H | Review and extend central published capability contracts, personalized assignment and performance reporting | Separate |
@@ -351,3 +351,14 @@ are outside this practice. Original catalog values and query are separately
 assessed in independent mode. Quiz checks, attempts and progress remain
 session-only. IF and conditional formatting remain intact. Native F4 practice
 and solution workbooks are reserved for F4D.
+
+## F4D — native practice and solution workbooks
+
+F4B #139 and F4C #140 are merged into main; F4D builds on main `89ac478`.
+Section 5 now offers ten separate practice/solution files for the five contexts,
+covering all four exercises in five sheets including Read me. Existing browser
+practice, exact curriculum references and saved session evidence are unchanged.
+The native formulas, cached results and conditional rule use the guided datasets.
+See [workbook details](WORKBOOKS.md#f4-decision-conditional-formatting-and-lookup-workbooks).
+F4D does not start F5, persistent history, central publication or hosted activation.
+Native Excel and physical iPad acceptance remain separate.

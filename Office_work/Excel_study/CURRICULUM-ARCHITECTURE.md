@@ -343,3 +343,14 @@ numeric result and independent original data. The registered lesson goal is
 not taken from caller-derived metadata. Earlier exact references and shared
 central SUM publication are unchanged. Refresh the existing public shell for
 its shared-core dependency; no storage, permissions or native export changes.
+
+## F4D — version-pinned workbook export
+
+The public workbook writer explicitly checks the exact F4A/F4B/F4C lesson,
+runtime, rubric, scenario and guided dataset version-1 references before generating
+a file. It does not implicitly adopt a later personal runtime. F4 uses a separate
+formula/address allowlist and native worksheet serialization (string formula
+caches for IF, numeric caches for lookups, native conditional formatting).
+Earlier workbook writer paths and hash tests are retained. The shared curriculum
+core, central SUM publication, record contracts, public shell dependency manifest
+and private packs are unchanged by this export-only extension. No record migration.

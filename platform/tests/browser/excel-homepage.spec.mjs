@@ -36,6 +36,7 @@ test("Excel homepage separates existing learning, practice, workbooks and planne
   await expect(pane("workbooks").getByRole("link", { name: "Open Section 2 tutorial files" })).toHaveAttribute("href", "Section_2_Study.html#f1-tutorial");
   await expect(pane("workbooks").getByRole("link", { name: "Open Section 3 tutorial files" })).toHaveAttribute("href", "Section_3_Study.html#f2-workbook-title");
   await expect(pane("workbooks").getByRole("link", { name: "Open Section 4 tutorial files" })).toHaveAttribute("href", "Section_4_Study.html#f3-workbook-title");
+  await expect(pane("workbooks").getByRole("link", { name: "Open Section 5 tutorial files" })).toHaveAttribute("href", "Section_5_Study.html#f4-workbook-title");
   await tab("Workbooks").press("End");
   await expect(tab("Roadmap")).toBeFocused();
   await expect(pane("roadmap")).toBeVisible();
