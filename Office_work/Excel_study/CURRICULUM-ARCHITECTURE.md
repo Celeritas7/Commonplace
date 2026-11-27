@@ -313,3 +313,18 @@ and actual result, plus independent original inputs. It does not trust a caller'
 derived formula or change any released reference. The central SUM publication
 contract and staged package allowlist remain unchanged. F4B/F4C/F4D follow in
 separate PRs; no new record storage, production sync or permission changes.
+
+## F4B — numeric conditional formatting
+
+`highlight-below-target@1`, `excel.conditional.highlight-below-target.v1`,
+`personal-conditional-formatting@1` and `conditional-foundations@1` are new exact
+personal references. The existing IF runtime and every earlier reference remain
+pinned. A pure validator returns detached rule data (range, operator, normalized
+numeric threshold, style), or rejects without modifying the existing rule. The
+view derives highlighted and invalid cell addresses from numeric inputs, never
+from user-supplied style evidence. The rubric checks range, strict comparison,
+threshold, style, matching addresses and independent original inputs separately.
+The lesson goal is registered; the numeric target and baseline come from the
+selected fictional dataset. No central publication change, new storage, schema,
+workbook exporter or production activation. Refresh only the existing public
+shell shared-core dependency. F4C/F4D follow separately.
