@@ -48,3 +48,16 @@ same breadcrumb pattern to newly released pages.
 Regression coverage: platform/tests/browser/excel-ui-responsive.spec.mjs.
 Browser viewport checks do not replace a physical iPad Safari/Home Screen
 acceptance run. No production deployment, storage, permissions or engine changes.
+
+## UI-4 — curriculum integration acceptance
+
+UI-1 through UI-3 are merged. This integration brings latest main into the
+existing curriculum PR #128, preserving the four-section launcher inventory
+from that branch and the approved main launcher styles and tab history. The
+Section 2 adjacent links are retained; Sections 3 and 4 adopt the same
+breadcrumb, contextual return links, and active workbook example label.
+Changing the example retains the original worksheet-reset behavior. No
+curriculum, engine, workbook bytes, or record model is changed by this UI
+integration. Existing UI-2/UI-3 tests remain in the merged tree. A new
+browser regression covers the new pages, workbook context and downloads.
+Physical iPad acceptance and hosted deployment checks are still outstanding.
