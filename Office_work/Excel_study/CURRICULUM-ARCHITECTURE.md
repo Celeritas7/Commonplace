@@ -298,3 +298,18 @@ backup contracts retain their existing semantics. Regenerate the public shell
 manifest for the changed shared core. Core/browser regressions cover both
 versions, equivalent spellings, partial credit, length boundaries, atomic
 rejection and retained evidence; workbook hashes pin the published files.
+
+## F4A — IF decision practice
+
+The new `if-minimum-target@1` lesson, `excel.decisions.if-minimum-target.v1`
+capability, `personal-decisions@1` runtime and `decision-foundations@1` rubric
+are exact personal-only entries. The pure shared evaluator checks a bounded
+IF grammar: B2:C4 cell references (optional locks, no copying), six comparison
+operators, and two quoted ASCII text literals up to 24 characters. Input cells
+must be numeric under the existing bounded numeric policy. No eval, arbitrary
+formula parsing or executable content. The rubric checks the registered goal
+per output: required minimum condition including equality, correct text branches
+and actual result, plus independent original inputs. It does not trust a caller's
+derived formula or change any released reference. The central SUM publication
+contract and staged package allowlist remain unchanged. F4B/F4C/F4D follow in
+separate PRs; no new record storage, production sync or permission changes.
