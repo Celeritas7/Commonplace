@@ -290,3 +290,11 @@ Candidate 17 prepares bounded suggestion answer recovery and publication retry i
 the isolated owning client. It does not enable the hub; remaining mirror/reply/
 session callers, multi-device ordering, account state and admission require the
 [suggestion readiness gates](../../acceptance/ROADMAP-SUGGESTION-READINESS.md).
+
+Candidate 18 prepares [durable task mirror pairing and recovery](../../acceptance/ROADMAP-MIRROR-READINESS.md)
+after 01/03/15. Its private per-owner gate starts empty and requires original-link
+reconciliation, including local deletions, before any separately approved use.
+The isolated owning client retains retries and applies current rows; hub startup
+and deletion acknowledgement remain gated pending shared-contract acceptance.
+Next: task.done/reply recovery. G0 remains open; hosted changes/enrollment remain
+on hold, and restoration remains deferred.

@@ -88,7 +88,7 @@ following evidence must be completed before enabling the copied hub:
 
 | Remaining path | Required acceptance |
 | --- | --- |
-| `task.upsert` mirrors and pairing | Durable sequence/pairing across crash, devices and lost ack; no duplicate folders or resurrected local deletion; explicit malformed-row rejection |
+| `task.upsert` mirrors and pairing | Bounded durable pairing prepared in [mirror readiness](ROADMAP-MIRROR-READINESS.md); original-link reconciliation, actual hub ack/deletion ordering and activation remain gated |
 | `task.done` and replies | Replace/reconcile daily item keys with request identities as appropriate; persist pending work before send; full reply ordering/cursor and applied-view recovery |
 | `session.completed` and actual study callers | Replay-safe completed proof, sender/caller contracts, original task/day/source, rejected/unknown targets and existing launch handshake |
 | Shared hub state | Actual registration/vocabulary/routes, current hub SQL/error/outcome contract, multi-device publication ordering and target-side completion; no fabricated registration evidence |
