@@ -17,6 +17,23 @@ test("Excel launcher prioritizes study controls on phone and split-screen widths
     const demo=page.locator(".hero .demo");
     if(width<=720)await expect(demo).toBeHidden();
     else await expect(demo).toBeVisible();
+    // The workbook identity stays visible even when the large desktop sheet is hidden.
+    const art=page.getByRole("img",{name:"Excel-inspired workbook and spreadsheet grid"});
+    await expect(art).toBeVisible();
+    expect((await art.boundingBox()).width).toBeGreaterThanOrEqual(70);
+    const icons=page.locator("#excel-modes .mode svg use");
+    await expect(icons).toHaveCount(4);
+    const lessons=page.locator("#learn .lesson");
+    await expect(lessons.first()).toBeVisible();
+    await expect(page.locator("#learn .lesson .mini svg use")).toHaveCount(await lessons.count());
+    if(width<=420){
+      const first=await lessons.nth(0).boundingBox(),second=await lessons.nth(1).boundingBox();
+      expect(first.x).toBeCloseTo(second.x,0);
+      expect(second.y).toBeGreaterThan(first.y);
+      expect(first.y).toBeLessThan(height);
+      const mini=await lessons.first().locator(".mini").boundingBox();
+      expect(mini.width).toBeGreaterThanOrEqual(56);
+    }
     const controls=await page.locator("#excel-modes").boundingBox();
     expect(controls.y+controls.height).toBeLessThanOrEqual(height);
     for(const mode of modes){
@@ -68,4 +85,42 @@ test("Released lessons share a breadcrumb and retain adjacent navigation",async 
   await page.goto(section2);
   await page.getByRole("navigation",{name:"Adjacent lessons"}).getByRole("link",{name:/Section 1/}).click();
   await expect(page).toHaveURL(/Section_1_Study\.html$/);
+});
+
+test("Visual launcher uses local artwork and preserves compact semantic navigation",async ({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.goto(home);
+  const missing=await page.locator("svg use").evaluateAll(uses=>uses.map(el=>el.getAttribute("href")).filter(ref=>!ref?.startsWith("#")||!document.getElementById(ref.slice(1))));
+  expect(missing).toEqual([]);
+  const header=page.locator(".hero");
+  await expect(header.getByRole("heading",{name:"Excel Study",exact:true})).toBeVisible();
+  const count=await page.locator("#learn .lesson").count();
+  expect(count).toBeGreaterThanOrEqual(6);
+  await expect(page.locator(".facts div").filter({hasText:"Available sections"}).locator("strong")).toHaveText(String(count));
+  await expect(page.locator("#learn .count")).toHaveText(count+" available");
+  for(const mode of ["Practice","Workbooks"]){
+    await tab(page,mode).click();
+    const cards=page.locator("#"+mode.toLowerCase()+" .task");
+    expect(await cards.count()).toBeGreaterThan(0);
+    await expect(cards.locator(".mini svg use")).toHaveCount(await cards.count());
+    await expect(cards.first()).toBeVisible();
+  }
+  await tab(page,"Roadmap").click();
+  await expect(page.locator("#roadmap .planned-item").first().locator(".mini svg")).toBeVisible();
+  await expect(page.locator("#roadmap .planned-item a")).toHaveCount(0);
+  await expect(page.locator("#roadmap .note")).toBeVisible();
+});
+
+test.describe("Without JavaScript",()=>{
+  test.use({javaScriptEnabled:false});
+  test("illustrated homepage still exposes native lesson and mode links",async ({page})=>{
+    await page.goto(home);
+    await expect(page.locator(".hero .hero-art")).toBeVisible();
+    await expect(page.locator("#learn .lesson").first()).toBeVisible();
+    await page.locator("#mode-workbooks").click();
+    await expect(page).toHaveURL(/#workbooks$/);
+    await expect(page.locator("#workbooks").getByRole("link",{name:"Open Section 1 tutorial files"})).toHaveAttribute("href","Section_1_Study.html#excel-tutorials");
+    await expect(page.locator("#practice")).toBeVisible();
+    await expect(page.locator("#roadmap")).toBeVisible();
+  });
 });
