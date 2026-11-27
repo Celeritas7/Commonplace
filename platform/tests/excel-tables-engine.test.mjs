@@ -1,9 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { curriculum as C } from "../../Office_work/Excel_study/curriculum.mjs";
 
 const RUNTIME = { id: "personal-tables", version: 1 };
 const RUBRIC = { id: "table-foundations", version: 1 };
+const RUNTIME_V2 = { id: "personal-tables", version: 2 };
+const RUBRIC_V2 = { id: "table-foundations", version: 2 };
 const IDS = ["number-formats", "create-table", "sort-records", "filter-records", "validate-entry"];
 const rows = () => [
   { id: "SKU-A", item: "Used chairs", status: "Ready", quantity: 10, unitPrice: 1500.75, discount: 0.025, shipDate: 46359 },
@@ -28,6 +31,17 @@ const formatted = (state, currency = "jpy") => {
     state = apply(state, { type: "set-format", column, format });
   return state;
 };
+const initialV2 = (data = rows()) => C.createTableState(RUNTIME_V2, data);
+const applyV2 = (state, action) => C.applyTableAction(RUNTIME_V2, state, action);
+const tableV2 = state => applyV2(state, { type: "create-table", name: "PracticeItems", range: "A1:G7", headers: true, banded: true });
+const gradeV2 = (id, state) => C.gradeTables(RUBRIC_V2, {
+  lesson: C.resolveLesson({ id, version: 2 }), mode: "independent", currency: "JPY", rows: rows(),
+}, state);
+const formattedV2 = state => {
+  for (const [column, format] of Object.entries({ quantity: "integer", unitPrice: "jpy", discount: "percent", shipDate: "date" }))
+    state = applyV2(state, { type: "set-format", column, format });
+  return state;
+};
 
 test("F3 exact definitions are frozen and do not widen earlier curriculum runtimes", () => {
   assert.deepEqual(C.listLessons(RUNTIME).map(({ id }) => id), IDS);
@@ -45,7 +59,7 @@ test("F3 exact definitions are frozen and do not widen earlier curriculum runtim
     assert.equal(C.resolveCapability(lesson.capability_id).engine, "bounded-business-table.v1");
     assert.ok(!Object.hasOwn(C.resolveCapability(lesson.capability_id), "activity_type"));
     assert.ok(Object.isFrozen(lesson.goal));
-    assert.throws(() => C.resolveLesson({ id, version: 2 }));
+    assert.throws(() => C.resolveLesson({ id, version: 3 }));
   }
   const detached = C.listLessons(RUNTIME);
   detached[0].goal.formats.quantity = "php";
@@ -53,7 +67,7 @@ test("F3 exact definitions are frozen and do not widen earlier curriculum runtim
   assert.equal(C.listLessons(RUNTIME)[0].goal.formats.quantity, "integer");
   assert.equal(C.listLessons(RUNTIME)[0].worksheet.columns.length, 7);
   for (const runtime of [{ id: "personal-formulas", version: 1 }, { id: "assigned-sum", version: 1 },
-    { id: "personal-references", version: 1 }, { ...RUNTIME, version: 2 }, { id: RUNTIME.id }]) {
+    { id: "personal-references", version: 1 }, { ...RUNTIME, version: 3 }, { id: RUNTIME.id }]) {
     assert.throws(() => C.createTableState(runtime, rows()));
     assert.throws(() => C.applyTableAction(runtime, initial(), { type: "clear-filter" }));
     assert.throws(() => C.tableView(runtime, initial()));
@@ -143,6 +157,127 @@ test("F3 table creation is bounded, preserves data, and independently grades nam
   assert.equal(flags(result)["table-name"], false);
   assert.equal(flags(result)["table-banding"], false);
   assert.equal(flags(result)["original-records"], true);
+});
+
+test("R5 table-name grading accepts case equivalents without changing spelling or independent criteria", () => {
+  const original = initialV2(), before = structuredClone(original);
+  const expected = { "table-created": true, "table-name": true, "table-banding": true,
+    "record-identities": true, "original-records": true };
+  for (const name of ["PracticeItems", "practiceitems", "PRACTICEITEMS", "pRaCtIcEiTeMs"]) {
+    const created = applyV2(original, { type: "create-table", name, range: "A1:G7", headers: true, banded: true });
+    const submitted = structuredClone(created), result = gradeV2("create-table", created);
+    assert.equal(result.score, 5, name);
+    assert.equal(result.maxScore, 5);
+    assert.equal(result.passed, true);
+    assert.deepEqual(flags(result), expected);
+    assert.equal(created.table.name, name);
+    assert.deepEqual(created, submitted);
+    assert.deepEqual(created.rows, before.rows);
+  }
+  const other = applyV2(original, { type: "create-table", name: "OtherItems", range: "A1:G7", headers: true, banded: true });
+  const earlierResult = gradeV2("create-table", other), earlierState = structuredClone(other);
+  const earlierOutcome = structuredClone(earlierResult);
+  assert.equal(earlierResult.score, 4);
+  assert.deepEqual(flags(earlierResult), { ...expected, "table-name": false });
+  const unbanded = applyV2(other, { type: "create-table", name: "practiceitems", range: "A1:G7", headers: true, banded: false });
+  assert.deepEqual(flags(gradeV2("create-table", unbanded)), { ...expected, "table-banding": false });
+  const edited = applyV2(tableV2(original), { type: "edit-cell", rowId: "SKU-A", column: "quantity", value: "11" });
+  const renamed = applyV2(edited, { type: "create-table", name: "PRACTICEITEMS", range: "A1:G7", headers: true, banded: true });
+  assert.deepEqual(flags(gradeV2("create-table", renamed)), { ...expected, "original-records": false });
+  assert.deepEqual(renamed.rows, edited.rows);
+  assert.deepEqual(other, earlierState);
+  assert.deepEqual(earlierResult, earlierOutcome);
+  assert.deepEqual(original, before);
+});
+
+test("R5 table names accept the documented 31 and 32 character boundaries and ASCII subset", () => {
+  const original = initialV2(), before = structuredClone(original);
+  for (const name of ["A".repeat(31), "A".repeat(32), "_Items_2026"]) {
+    const created = applyV2(original, { type: "create-table", name, range: "A1:G7", headers: true, banded: true });
+    assert.equal(created.table.name, name);
+    assert.deepEqual(C.tableView(RUNTIME_V2, created), before.rows);
+    assert.deepEqual(flags(gradeV2("create-table", created)), {
+      "table-created": true, "table-name": false, "table-banding": true,
+      "record-identities": true, "original-records": true,
+    });
+  }
+  assert.deepEqual(original, before);
+});
+
+test("R5 rejected table names preserve existing records, display, order, filters and action drafts atomically", () => {
+  let state = applyV2(tableV2(formattedV2(initialV2())), { type: "sort", column: "quantity", direction: "desc" });
+  state = applyV2(state, { type: "filter", status: "Ready", minimumQuantity: 5 });
+  state = applyV2(state, { type: "set-validation", column: "quantity", enabled: true });
+  const before = structuredClone(state), previousResult = gradeV2("create-table", state);
+  const recordedOutcome = structuredClone(previousResult);
+  for (const name of ["", "A".repeat(33), "1Items", "Bad name", "PracticeItems ", " PracticeItems",
+    "PracticeItems\n", "PracticeItems\r\n", "Practice\tItems", "Practice.Items", "\\Items", "商品",
+    "A1", "z100", "R1C1", "r2c3", "R", "r", "C", "c"]) {
+    const action = { type: "create-table", name, range: "A1:G7", headers: true, banded: false };
+    const draft = structuredClone(action);
+    assert.throws(() => applyV2(state, action), name.length === 33 ? /32/ : /table name/);
+    assert.deepEqual(state, before, name);
+    assert.deepEqual(action, draft, name);
+    assert.deepEqual(previousResult, recordedOutcome);
+  }
+  assert.deepEqual(C.tableView(RUNTIME_V2, state).map(row => row.id), ["SKU-A", "SKU-C"]);
+  assert.deepEqual(state.rows, rows());
+});
+
+test("R5 pins v2 references without changing released F3 v1 metadata or accepting mixed versions", () => {
+  const oldRuntime = C.resolveRuntime(RUNTIME), oldRubric = C.resolveRubric(RUBRIC);
+  // Captured from released main f0f8618, including every v1 lesson and capability field.
+  const releasedMetadata = { runtime: oldRuntime, rubric: oldRubric, lessons: C.listLessons(RUNTIME),
+    capabilities: IDS.map(id => C.resolveCapability("excel.tables." + id + ".v1")) };
+  assert.equal(createHash("sha256").update(JSON.stringify(releasedMetadata)).digest("hex"),
+    "7b6dceb8aa0218d40055fdbf9be3d87aa935cbc3d51ca93fdef411fcc2d4f082");
+  const capabilities = oldRuntime.capabilities.map(id => id === "excel.tables.create-table.v1" ? "excel.tables.create-table.v2" : id);
+  assert.deepEqual(C.resolveRuntime(RUNTIME_V2), { ...oldRuntime, version: 2, table_name_max_length: 32,
+    capabilities, lessons: IDS.map(id => ({ id, version: 2 })) });
+  assert.deepEqual(C.resolveRubric(RUBRIC_V2), { ...oldRubric, version: 2,
+    engine: "table-foundations.v2", runtime: RUNTIME_V2 });
+  assert.deepEqual(C.resolveCapability("excel.tables.create-table.v2"), {
+    ...C.resolveCapability("excel.tables.create-table.v1"), id: "excel.tables.create-table.v2", version: 2,
+    table_name_max_length: 32,
+  });
+  assert.deepEqual(C.listLessons(RUNTIME_V2).map(({ id, version }) => ({ id, version })), IDS.map(id => ({ id, version: 2 })));
+  for (const id of IDS) {
+    const lesson = C.resolveLesson({ id, version: 2 });
+    assert.deepEqual(lesson, { ...C.resolveLesson({ id, version: 1 }), version: 2,
+      runtime: RUNTIME_V2, rubric: RUBRIC_V2,
+      capability_id: "excel.tables." + id + (id === "create-table" ? ".v2" : ".v1") });
+    assert.ok(Object.isFrozen(lesson));
+    assert.ok(Object.isFrozen(lesson.goal));
+    assert.throws(() => C.gradeTables(RUBRIC_V2, ex(id), initialV2()));
+    assert.throws(() => C.gradeTables(RUBRIC, { ...ex(id), lesson }, initial()));
+    assert.throws(() => C.resolveLesson({ id, version: 3 }));
+  }
+  assert.ok(Object.isFrozen(oldRuntime.lessons));
+  assert.ok(Object.isFrozen(oldRuntime.capabilities));
+  assert.ok(Object.isFrozen(oldRubric));
+  assert.throws(() => C.resolveRuntime({ ...RUNTIME, version: 3 }));
+  assert.throws(() => C.resolveRubric({ ...RUBRIC, version: 3 }));
+  assert.throws(() => C.resolveCapability("excel.tables.create-table.v3"));
+});
+
+test("R5 retains v1 grading, name limits and original evidence while v2 uses corrected rules", () => {
+  const action = { type: "create-table", name: "practiceitems", range: "A1:G7", headers: true, banded: true };
+  const worksheet = apply(initial(), action), recordedResult = grade("create-table", worksheet);
+  const before = structuredClone({ worksheet, recordedResult });
+  assert.equal(recordedResult.score, 4);
+  assert.equal(flags(recordedResult)["table-name"], false);
+  assert.equal(gradeV2("create-table", worksheet).score, 5);
+  assert.deepEqual({ worksheet, recordedResult }, before);
+  assert.deepEqual(grade("create-table", worksheet), recordedResult);
+  const oldLimit = apply(initial(), { ...action, name: "A".repeat(31) });
+  assert.equal(oldLimit.table.name.length, 31);
+  assert.throws(() => apply(oldLimit, { ...action, name: "A".repeat(32) }), {
+    message: "Use a table name beginning with a letter or underscore, without spaces or cell references.",
+  });
+  const newLimit = applyV2(initialV2(), { ...action, name: "A".repeat(32) });
+  assert.equal(newLimit.table.name.length, 32);
+  assert.throws(() => C.tableView(RUNTIME, newLimit));
+  assert.deepEqual(C.tableView(RUNTIME_V2, newLimit), rows());
 });
 
 test("F3 sorts whole records numerically with stable ties and blanks last in either direction", () => {

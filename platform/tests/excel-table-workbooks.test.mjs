@@ -39,14 +39,25 @@ function expectedState(ex) {
 
 test('F3 prepares 50 exact, separate mode/context/lesson datasets without changing earlier scenarios', () => {
   const before = JSON.stringify(S.list()), datasets = new Set();
+  const released = E.forVersion(1);
+  assert.throws(() => E.forVersion(3));
   assert.deepEqual(E.list().map(l => l.id), ids);
   for (const scenario of S.list()) for (const id of ids) {
     const guided = E.exercise(id, scenario.id, 1), independent = E.exercise(id, scenario.id, 1, 'independent');
     assert.notDeepEqual(guided.rows, independent.rows);
     for (const ex of [guided, independent]) {
       assert.deepEqual(ex.scenario, scenario);
-      assert.deepEqual(ex.lesson.runtime, { id: 'personal-tables', version: 1 });
-      assert.deepEqual(ex.lesson.rubric, { id: 'table-foundations', version: 1 });
+      assert.equal(ex.lesson.version, 2);
+      assert.deepEqual(ex.lesson.runtime, { id: 'personal-tables', version: 2 });
+      assert.deepEqual(ex.lesson.rubric, { id: 'table-foundations', version: 2 });
+      const earlier = released.exercise(id, scenario.id, 1, ex.mode);
+      assert.equal(earlier.lesson.version, 1);
+      assert.deepEqual(earlier.lesson.runtime, { id: 'personal-tables', version: 1 });
+      assert.deepEqual(earlier.lesson.rubric, { id: 'table-foundations', version: 1 });
+      assert.deepEqual(ex.rows, earlier.rows);
+      assert.deepEqual(ex.dataset, earlier.dataset);
+      assert.throws(() => E.initial(earlier));
+      assert.throws(() => released.initial(ex));
       assert.deepEqual(ex.columns.map(c => c.id), fields);
       assert.equal(ex.rows.length, 6);
       assert.equal(new Set(ex.rows.map(row => row.id)).size, 6);
@@ -212,4 +223,25 @@ test('F3 preserves all thirty earlier D2, F1 and F2 workbook outputs byte-for-by
       count++;
     }
   assert.equal(count, 30);
+});
+
+// Published F3 bytes captured before R5; exports remain pinned to lesson/runtime v1.
+const releasedTableHashes = {
+  "Commonplace-Excel-general-office-v1-F3-practice.xlsx": "6320c62f25d7ab26efbfe749aa9ea06edd2ec44a5b23e70dd877ddb33d0ab861",
+  "Commonplace-Excel-general-office-v1-F3-solution.xlsx": "f1c27516751a2204d9ef4a843ff9da61f32d66f1f9ebc75c44e9976380925318",
+  "Commonplace-Excel-jp-ph-trade-v1-F3-practice.xlsx": "357033dcc5a627e19d72dd66c057d2b303f8e41e50a6136b80a0ea772f18b99e",
+  "Commonplace-Excel-jp-ph-trade-v1-F3-solution.xlsx": "b1b34e174e6b8d60668869f33d3991b739de9819c59efb73090cac5fd2d0a266",
+  "Commonplace-Excel-ph-customer-quote-v1-F3-practice.xlsx": "2f08f7850bee3923482f932f3ce869d80827eb1d30888543039a840630c808f0",
+  "Commonplace-Excel-ph-customer-quote-v1-F3-solution.xlsx": "533698157dede239cdaa4d2f9f7d9d316d3afe6d7d7c0d44db911ee4871e4b8f",
+  "Commonplace-Excel-mechanical-engineering-v1-F3-practice.xlsx": "74e84b2850da4d464a1671d3bd9190c664d22a8870373bbca048bcc54fa9679f",
+  "Commonplace-Excel-mechanical-engineering-v1-F3-solution.xlsx": "123cf2915a66fa08a91047781e03c7375e91f29e26b4ea9db1a39c35c8bc3537",
+  "Commonplace-Excel-monthly-expenses-v1-F3-practice.xlsx": "4e3dc42407d137873d506af5341e4d9dc6817d721f8bd06c52414808e4db74a3",
+  "Commonplace-Excel-monthly-expenses-v1-F3-solution.xlsx": "05d1e50815f5ae8f7e029c74cf571304c7510cb1113ffdb9070d2d06c52e8558"
+};
+
+test('R5 preserves all ten published F3 workbook files byte-for-byte', () => {
+  for (const scenario of S.list()) for (const kind of ['practice', 'solution']) {
+    const file = W.createTableWorkbook(scenario.id, scenario.version, kind);
+    assert.equal(createHash('sha256').update(file.bytes).digest('hex'), releasedTableHashes[file.filename], file.filename);
+  }
 });

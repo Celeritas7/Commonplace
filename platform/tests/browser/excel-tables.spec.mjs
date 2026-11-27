@@ -121,6 +121,113 @@ test("F3 independently completes all five table skills with stable records and s
   expect(errors).toEqual([]);
 });
 
+test("R5 F3 table-name case variants receive equivalent credit and retain their original submitted spelling", async ({ page }) => {
+  await open(page);
+  await start(page, "create-table");
+  const original = await rows(page);
+  const result = control(page, "results"), history = control(page, "history").locator("pre");
+  await click(page, "submit");
+  await expect(result).toContainText("Task score: 2 / 5");
+  await expect(result.locator('[data-criterion="record-identities"]')).toHaveClass(/correct/);
+  await expect(result.locator('[data-criterion="original-records"]')).toHaveClass(/correct/);
+  let previous = await history.allTextContents();
+
+  for (const name of ["PracticeItems", "practiceitems", "PRACTICEITEMS", "pRaCtIcEiTeMs", "OtherItems"]) {
+    await control(page, "table-name").fill(name);
+    await click(page, "create-table");
+    await expect(control(page, "table-status")).toContainText(`Table: ${name} · A1:G7`);
+    expect(await rows(page)).toEqual(original);
+    await click(page, "submit");
+    const differentName = name === "OtherItems";
+    await expect(result).toContainText(`Task score: ${differentName ? 4 : 5} / 5`);
+    await expect(result.locator(".review")).toHaveCount(differentName ? 1 : 0);
+    await expect(result.locator('[data-criterion="table-name"]')).toHaveClass(differentName ? /review/ : /correct/);
+    const current = await history.allTextContents();
+    expect(current.slice(1)).toEqual(previous);
+    expect(JSON.parse(current[0]).worksheet.table.name).toBe(name);
+    previous = current;
+  }
+
+  await control(page, "table-name").fill("practiceitems");
+  await control(page, "table-banded").uncheck();
+  await click(page, "create-table");
+  await click(page, "submit");
+  await expect(result).toContainText("Task score: 4 / 5");
+  await expect(result.locator(".review")).toHaveCount(1);
+  await expect(result.locator('[data-criterion="table-name"]')).toHaveClass(/correct/);
+  await expect(result.locator('[data-criterion="table-banding"]')).toHaveClass(/review/);
+  expect((await history.allTextContents()).slice(1)).toEqual(previous);
+});
+
+test("R5 F3 table-name control and guidance agree on the 32-character practice limit", async ({ page }) => {
+  await open(page);
+  await start(page, "create-table");
+  const input = control(page, "table-name");
+  await expect(input).toHaveAttribute("maxlength", "32");
+  await expect(input).toHaveAttribute("aria-describedby", "f3-table-name-help");
+  await expect(input).toHaveAccessibleDescription(/1[–-]32 characters/);
+  await expect(control(page, "table-name-help")).toContainText(/cell references|cell-reference/);
+  await expect(control(page, "table-name-help")).toContainText(/case/i);
+  const original = await rows(page);
+
+  for (const length of [31, 32]) {
+    const name = "N".repeat(length);
+    await input.fill(name);
+    await click(page, "create-table");
+    await expect(input).toHaveValue(name);
+    await expect(control(page, "feedback")).toContainText("Table settings applied");
+    await expect(control(page, "table-status")).toContainText(`Table: ${name} · A1:G7`);
+    expect(await rows(page)).toEqual(original);
+  }
+  await input.press("End");
+  await input.pressSequentially("X");
+  await expect(input).toHaveValue("N".repeat(32));
+});
+
+test("R5 F3 rejected table names preserve worksheet state, typed drafts and prior submission evidence", async ({ page }) => {
+  test.setTimeout(30000);
+  await open(page);
+  await start(page, "create-table");
+  const original = await rows(page);
+  await complete(page, "create-table");
+  await setFormat(page, "unitPrice", "jpy");
+  await complete(page, "sort-records");
+  await filter(page);
+  await enableValidation(page);
+  await click(page, "submit");
+  await expect(control(page, "results")).toContainText("Task score: 5 / 5");
+  await reveal(control(page, "edit-value"));
+  await control(page, "edit-value").fill("123.5");
+  await control(page, "filter-minimum").fill("42");
+  const preserved = {
+    rows: await rows(page), sheet: await control(page, "sheet").innerHTML(),
+    status: await control(page, "table-status").textContent(),
+    visible: await control(page, "visible-count").textContent(),
+    rules: await control(page, "rule-status").textContent(),
+    result: await control(page, "results").textContent(),
+    history: await control(page, "history").textContent(),
+  };
+  for (const name of ["", "Two Words", "1Items", "A1", "R1C1", "r", "c", "Stock.Items", "\\Stock", "在庫"]) {
+    await control(page, "table-name").fill(name);
+    await click(page, "create-table");
+    await expect(control(page, "feedback")).toContainText("Change not applied.");
+    await expect(control(page, "feedback")).toContainText(/1[–-]32/);
+    await expect(control(page, "table-name")).toHaveValue(name);
+    await expect(control(page, "edit-value")).toHaveValue("123.5");
+    await expect(control(page, "filter-minimum")).toHaveValue("42");
+    expect(await rows(page)).toEqual(preserved.rows);
+    expect(await control(page, "sheet").innerHTML()).toBe(preserved.sheet);
+    await expect(control(page, "table-status")).toHaveText(preserved.status);
+    await expect(control(page, "visible-count")).toHaveText(preserved.visible);
+    await expect(control(page, "rule-status")).toHaveText(preserved.rules);
+    await expect(control(page, "results")).toHaveText(preserved.result);
+    await expect(control(page, "history")).toHaveText(preserved.history);
+  }
+  await click(page, "clear-filter");
+  expect(await rows(page)).toEqual([...original].sort((a, b) => Number(a.quantity) - Number(b.quantity)));
+  await expect(control(page, "history")).toHaveText(preserved.history);
+});
+
 test("F3 number formats preserve raw values and independently grade missing formats and changed inputs", async ({ page }) => {
   await open(page);
   const original = await rows(page), first = original[0];

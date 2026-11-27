@@ -40,19 +40,24 @@ their source bytes and repository-relative layout under
 local imports inside the functions mount. Other Office pages/controllers are not
 included. This is packaging preparation, with no hosted function deployment.
 
-## Exact released references
+## Exact references and release status
+
+F1, F2, F3 v1 and assigned SUM are released on main. F3 PR #132 first merged
+into the F2 branch; the combined PR #128 then merged into main during R5 work.
+R5 therefore adds explicit v2 table references while preserving released v1.
+See the R5 decision below for the checked heads and compatibility boundary.
 
 Lesson, runtime and rubric references have exactly `{ id, version }`. Resolution
 requires an explicit supported version; missing, unknown, future and mismatched
 references fail. Capability IDs include their wire version and resolve exactly.
 There is no implicit latest-version or default-SUM fallback.
 
-| Reference kind | Current released entries | Meaning |
+| Reference kind | Available exact entries | Meaning |
 | --- | --- | --- |
-| Lesson | `sum@1`, `average@1`, `count@1`, `min@1`, `max@1`; four F2 and five F3 lessons listed below | Content/quiz plus worksheet, capability, runtime and rubric references |
-| Capability | `explanation.text.v1`; five `excel.<function>.b2-b4.v1` entries; four `excel.references.<lesson-id>.v1` and five `excel.tables.<lesson-id>.v1` entries below | Reviewed operation and fixed worksheet shape; catalog presence is not publication permission |
-| Runtime | `personal-formulas@1`, `assigned-sum@1`, `personal-references@1`, `personal-tables@1` | Pinned capability set, ordered lesson references, evaluator and numeric-input policy |
-| Rubric | `formula-foundations@1`, `worksheet-criteria@1`, `assigned-practice@1`, `reference-foundations@1`, `table-foundations@1` | Versioned assessment implementation and applicable evidence/template |
+| Lesson | `sum@1`, `average@1`, `count@1`, `min@1`, `max@1`; four F2 lessons; five F3 lessons at both `@1` and `@2` | Content/quiz plus worksheet, capability, runtime and rubric references |
+| Capability | `explanation.text.v1`; five `excel.<function>.b2-b4.v1` entries; four `excel.references.<lesson-id>.v1` and five `excel.tables.<lesson-id>.v1` entries below; `excel.tables.create-table.v2` | Reviewed operation and fixed worksheet shape; catalog presence is not publication permission |
+| Runtime | `personal-formulas@1`, `assigned-sum@1`, `personal-references@1`, `personal-tables@1` and `@2` | Pinned capability set, ordered lesson references, evaluator and input policy |
+| Rubric | `formula-foundations@1`, `worksheet-criteria@1`, `assigned-practice@1`, `reference-foundations@1`, `table-foundations@1` and `@2` | Versioned assessment implementation and applicable evidence/template |
 
 Resolved metadata is deeply frozen. Catalog lists are detached copies. A
 runtime-specific lesson list follows that runtime's exact references; F1 uses
@@ -71,7 +76,7 @@ outcome-validation version, not a new lesson or material version.
 | `personal-formulas@1` | SUM, AVERAGE, COUNT, MIN, MAX on the reviewed B2:B4 rectangle | Three numeric-or-blank input strings. Blanks are ignored; all-blank AVERAGE reports `#DIV/0!` |
 | `assigned-sum@1` | SUM on the same rectangle | All three input strings must be valid numbers |
 | `personal-references@1` | Two A1 references within A1:F12 joined by `*` or `/` | Bounded numeric strings; referenced blanks are zero; text and zero denominators produce errors |
-| `personal-tables@1` | Selected formats, table creation, whole-row sorting, status/quantity filtering and entry rules on six records | Typed numbers or null; raw input uses the existing numeric parser; quantities can be negative/decimal before the explicit whole-number rule is enabled |
+| `personal-tables@1` / `@2` | Selected formats, table creation, whole-row sorting, status/quantity filtering and entry rules on six records; v1 retains 31-character table names, v2 permits 32 | Typed numbers or null; raw input uses the existing numeric parser; quantities can be negative/decimal before the explicit whole-number rule is enabled |
 
 The two aggregate runtimes use R2's strict token parser, decimal/scientific numeric rules and existing
 15-significant-digit result conversion. The shared evaluator preserves the
@@ -246,3 +251,50 @@ publication permission or durable account history.
 and actual controls. Existing F1/F2, R1/R2/R3 and central contract tests remain.
 The generated public shell changes only for its shared core bytes. Server
 packaging retains the same three-file curriculum allowlist and no deployment.
+
+### R5 — released v1 compatibility and corrected v2 practice
+
+The development review is dated 27 November 2026 (Japan). At R5's first check,
+main was `b115ccf9b7e580f35f84d8a0cfd0113cee5851bb` and combined F2/F3 PR #128
+was open at `a88ab60ffe13f5274007836c496c1f9bd7ff92ae`. During this work, #128
+merged into main at `f0f861887de26c4040ec8b4a451e08056bfbfa13`, with head
+`640398d8a5a2c0884f1aa343007a63b48592ed94`. R5 is based on that merged main.
+The pre-release-v1 option in the review no longer applies. **Released F3 v1 is
+preserved, and new personal practice explicitly selects v2.**
+
+`personal-tables@2` pins all five table lessons at version 2 and the new
+`excel.tables.create-table.v2` capability. The other four capability definitions
+remain v1. Both runtimes use the same bounded table implementation family;
+the v2 runtime and create-table capability explicitly declare the 32-character
+name policy. `table-foundations@2` supplies the corrected name comparison.
+All five lessons need v2 references because each exposes the same table controls
+and uses that exact runtime/rubric pair. Lesson content, stable criterion IDs,
+dataset identities/version 1 and worksheet schema version 1 remain unchanged.
+
+`personal-tables@1`, `table-foundations@1`, all five v1 lessons and their
+capabilities retain their metadata and behavior, including the original
+31-character limit, rejection message and case-sensitive score. Mixed
+lesson/rubric versions and unknown versions fail explicitly. Calling the newer
+rubric never rewrites a result previously recorded under v1.
+
+Only the v2 `table-name` criterion compares names without letter case. The learner's
+original spelling remains in worksheet state and submitted snapshots. Names
+use a bounded ASCII subset: 1–32 characters, an English letter or underscore
+first, then English letters, digits or underscores. Full-token matching and
+rejection of cell-reference-like names and the single letters R/C remain.
+Periods, backslashes and non-ASCII letters are outside this practice subset.
+The HTML limit, accessible guidance and rejection message use the same 32-character
+maximum. This is an exercise limit; native Excel supports broader forms and
+up to 255 characters, with case-insensitive names, as described in Microsoft's
+[table-naming rules](https://support.microsoft.com/en-us/excel/rename-an-excel-table).
+
+The personal adapter selects v2 for new sessions. Its explicit `forVersion(1)`
+adapter keeps workbook generation pinned to released lessons and their original
+data-version labels, so all 40 D2/F1/F2/F3 files retain their bytes. Submitted
+records keep the exact lesson/runtime/rubric references used at submission.
+No existing snapshot is regraded or migrated, and no missing history is invented.
+Independent criteria, original rows, F1/F2/assigned behavior, private packs and
+backup contracts retain their existing semantics. Regenerate the public shell
+manifest for the changed shared core. Core/browser regressions cover both
+versions, equivalent spellings, partial credit, length boundaries, atomic
+rejection and retained evidence; workbook hashes pin the published files.

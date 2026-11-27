@@ -5,8 +5,8 @@ The standalone personal-study path is expanded in small reviewable modules. F1 i
 | Module | Coverage | Status |
 | --- | --- | --- |
 | F1 | Section 2 SUM / AVERAGE / COUNT / MIN / MAX; blanks versus zero; five professional contexts; guided/independent tasks, quiz and separate XLSX starter/solution | Merged in PR #116 |
-| F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Implemented in Section 3; see F2 below |
-| F3 | Number formats, tables, sorting, filtering, validation | Implemented in Section 4; see F3 below |
+| F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Merged in combined PR #128; see F2 below |
+| F3 | Number formats, tables, sorting, filtering, validation | #132 merged into F2, then combined #128 merged to main; R5 below corrects table naming |
 | F4 | IF, conditional formatting, lookup functions | Planned |
 | F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | Planned |
 | F6 | Power Query and repeatable data preparation; link to existing VBA section | Planned |
@@ -252,3 +252,52 @@ for its changed shared core, while the assigned publication contract remains
 SUM-only. F3 adds no personal service worker, storage migration, hosted change,
 production activation or enrollment. Physical iPad and native Excel acceptance
 remain pending. F4 — decisions, conditional formatting and lookups — follows.
+
+## R5 — F3 table-name grading and boundary guidance
+
+R5 is the bounded correction from the development review dated 27 November
+2026 (Japan). PR #128 was still open when R5 started, with #132 already merged
+into its F2 branch. A later check found combined #128 merged to main at
+`f0f861887de26c4040ec8b4a451e08056bfbfa13`. R5 is based on that main, preserving
+the existing UI integration and its browser-test syntax correction. R5 does
+not perform a PR merge or start another curriculum module.
+
+On an otherwise correct independent create-table task, `PracticeItems`,
+`practiceitems`, `PRACTICEITEMS` and mixed-case equivalents earn 5/5.
+`OtherItems` earns 4/5, losing only the name criterion. Incorrect banding and
+changed original records retain their separate criteria. The submitted name's
+spelling and all earlier session snapshots remain unchanged.
+
+The practice accepts 1–32 ASCII characters: an English letter or underscore
+first, then English letters, digits or underscores. Cell-reference-like names,
+the single letters R/C, spaces and unsupported punctuation remain rejected.
+The input, accessible guidance and rejection message now agree. Rejection keeps
+the current worksheet, typed drafts and submitted results intact. This bounded
+subset is narrower than native Excel's naming rules; it does not expand the
+exercise into a complete Excel name parser.
+
+The [version decision](CURRICULUM-ARCHITECTURE.md#r5--released-v1-compatibility-and-corrected-v2-practice)
+preserves released F3 v1 and selects explicit lesson/runtime/rubric v2 references
+for new personal practice. All five lessons expose the common table controls,
+so each pins the corrected runtime/rubric pair. Earlier outcomes retain their
+original references and grades. Workbooks explicitly use the v1 adapter and
+retain their original bytes. There is no record migration, history rewrite,
+persistence implementation or new central publication capability.
+The shared-core dependency requires a regenerated public shell manifest; existing
+private packs, saved records and installations are preserved.
+
+Update #128's description to accurately record the combined F2/F3 merge, then
+check CI on this R5 candidate against current main before any R5 integration.
+Do not merge superseded #93 or old intermediate Excel branches. F4 remains a
+separate phase.
+Workbook context/units, Change example, return navigation, breadcrumbs and
+mobile readability belong to the separate [UI work](UI-NAVIGATION.md); R5
+does not repeat or extend it.
+
+R4 remains planning only. Its implementation stays in six separate units:
+contracts and recovery; personal persistence; central journal and reconciliation;
+conflict comparison and stale-choice protection; append transport; and central
+Admin Studio reporting. The central 40-submission cap and personal session-only
+history remain. Physical iPad, native Excel and G0 acceptance remain pending;
+no production sync, hosted database, authentication/permission or enrollment
+change is included.
