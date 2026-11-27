@@ -7,7 +7,7 @@ The standalone personal-study path is expanded in small reviewable modules. F1 i
 | F1 | Section 2 SUM / AVERAGE / COUNT / MIN / MAX; blanks versus zero; five professional contexts; guided/independent tasks, quiz and separate XLSX starter/solution | Merged in PR #116 |
 | F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Merged in combined PR #128; see F2 below |
 | F3 | Number formats, tables, sorting, filtering, validation | #132 merged into F2, then combined #128 merged to main; R5 below corrects table naming |
-| F4 | IF, conditional formatting, lookup functions | F4A IF practice candidate; F4B conditional formatting, F4C lookups and F4D workbooks remain separate |
+| F4 | IF, conditional formatting, lookup functions | F4A merged in #137; F4B conditional formatting candidate; F4C lookups and F4D workbooks remain separate |
 | F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | Planned |
 | F6 | Power Query and repeatable data preparation; link to existing VBA section | Planned |
 | G/H | Review and extend central published capability contracts, personalized assignment and performance reporting | Separate |
@@ -319,3 +319,19 @@ Blank or nonnumeric inputs and unsupported expressions are explicit errors;
 no arbitrary formulas, nesting, chaining, or external references are supported.
 Session-only evidence retains exact references; quiz and task checks are separate.
 No XLSX export is added in F4A; existing 40 files stay on their current paths.
+
+## F4B — conditional formatting
+
+F4A #137 is merged at `bc2fb18`. The second Section 5 lesson teaches Home →
+Conditional Formatting → Highlight Cells Rules → Less Than. Apply one numeric
+rule to B2:B4, compare with the displayed target and select light red fill with
+dark red text. All five contexts have distinct guided/independent data containing
+below, above and equal values. Formatting is derived from current input values;
+it never changes the stored numbers. A smaller range or different rule can earn
+partial credit without a full pass. Invalid rule drafts leave the previous applied
+rule intact; clear removes styling only. Invalid numeric inputs are explicitly
+marked and prevent full credit. Submit grades the applied rule, not the unapplied
+draft. The bounded simulator permits a single rule, selected contiguous ranges,
+five comparisons, and three styles; it is not a general Excel rule manager.
+F4A remains unchanged and session histories are separate per page. Native F4
+workbooks are reserved for F4D; F4C lookups follows separately.
