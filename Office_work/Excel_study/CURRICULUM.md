@@ -7,7 +7,7 @@ The standalone personal-study path is expanded in small reviewable modules. F1 i
 | F1 | Section 2 SUM / AVERAGE / COUNT / MIN / MAX; blanks versus zero; five professional contexts; guided/independent tasks, quiz and separate XLSX starter/solution | Merged in PR #116 |
 | F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Merged in combined PR #128; see F2 below |
 | F3 | Number formats, tables, sorting, filtering, validation | #132 merged into F2, then combined #128 merged to main; R5 below corrects table naming |
-| F4 | IF, conditional formatting, lookup functions | Planned |
+| F4 | IF, conditional formatting, lookup functions | F4A IF practice candidate; F4B conditional formatting, F4C lookups and F4D workbooks remain separate |
 | F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | Planned |
 | F6 | Power Query and repeatable data preparation; link to existing VBA section | Planned |
 | G/H | Review and extend central published capability contracts, personalized assignment and performance reporting | Separate |
@@ -301,3 +301,21 @@ Admin Studio reporting. The central 40-submission cap and personal session-only
 history remain. Physical iPad, native Excel and G0 acceptance remain pending;
 no production sync, hosted database, authentication/permission or enrollment
 change is included.
+
+## F4A — IF and business decisions
+
+After R5 #136 merged at `6676c73`, F4 is split into bounded review units: F4A
+IF, F4B conditional formatting, F4C lookups, F4D native practice/solution
+workbooks and final F4 integration. Section 5 begins with IF only. Guided and
+independent tasks use separate fictional data in all five contexts, including
+ready stock versus minimum shipment quantity, PHP quotations, mechanical
+components, office supplies and reserved JPY funds versus estimated expenses.
+
+The fixed B2:C4 practice uses required numeric inputs, two cell references,
+a comparison and two quoted English text literals. Equality counts for >=.
+The learner writes three IF formulas and checks each result; condition and
+result criteria remain independent and independent work checks original inputs.
+Blank or nonnumeric inputs and unsupported expressions are explicit errors;
+no arbitrary formulas, nesting, chaining, or external references are supported.
+Session-only evidence retains exact references; quiz and task checks are separate.
+No XLSX export is added in F4A; existing 40 files stay on their current paths.

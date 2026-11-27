@@ -103,7 +103,19 @@
       explanation: 'Applying validation does not rewrite existing data. The earlier -2 remains invalid and needs to be corrected separately.',
       goal: { validation: { quantity: true, status: true } } },
   ];
+  const decisionLesson = {
+    id: 'if-minimum-target', title: 'IF — Decide whether a target is met',
+    concept: 'IF checks a condition and returns one of two results. Use >= to include equality. Put text results inside double quotes. The same decision can respond to changing inputs without manually replacing the result.',
+    task: 'For each row, return Ready when the recorded value is at least the minimum target; otherwise return Review.',
+    question: 'Actual stock and the minimum target are both 5. What does IF(5>=5,"Ready","Review") return?',
+    choices: ['Ready', 'Review', 'An error'], answer: 0,
+    explanation: 'Greater than or equal to includes equality, so the condition is true and IF returns Ready.',
+    worksheet: { inputCells: ['B2','C2','B3','C3','B4','C4'], outputCells: ['D2','D3','D4'],
+      formula: '=IF(B2>=C2,"Ready","Review")' },
+  };
   const capabilities = freeze([
+    { id: 'excel.decisions.if-minimum-target.v1', version: 1, kind: 'decision-formula',
+      engine: 'bounded-if.v1', worksheet: decisionLesson.worksheet },
     { id: 'explanation.text.v1', version: 1, kind: 'explanation' },
     ...formulaFunctions.map(fn => ({
       id: 'excel.' + fn.toLowerCase() + '.b2-b4.v1', version: 1, kind: 'formula',
@@ -125,6 +137,10 @@
       table_name_max_length: 32 },
   ]);
   const runtimes = freeze([
+    { id: 'personal-decisions', version: 1, engine: 'bounded-if.v1',
+      input_policy: 'required-numbers',
+      capabilities: ['explanation.text.v1', 'excel.decisions.if-minimum-target.v1'],
+      lessons: [{ id: 'if-minimum-target', version: 1 }] },
     { id: 'personal-formulas', version: 1, engine: 'bounded-aggregate.v1',
       input_policy: 'numbers-or-blanks',
       // Pin this release; registering a future capability must not widen v1.
@@ -170,6 +186,10 @@
         { id: 'validate-entry', version: 2 }] },
   ]);
   const rubrics = freeze([
+    { id: 'decision-foundations', version: 1, engine: 'decision-foundations.v1',
+      runtime: { id: 'personal-decisions', version: 1 },
+      criteria_per_cell: ['decision-condition', 'decision-result'],
+      independent_criteria: ['original-inputs'] },
     { id: 'formula-foundations', version: 1, engine: 'formula-foundations.v1',
       runtime: { id: 'personal-formulas', version: 1 },
       criteria: ['requested-formula', 'valid-calculation'],
@@ -198,7 +218,11 @@
     {id:"min",fn:"MIN",title:"MIN — Find the smallest value",concept:"MIN returns the smallest numeric value in a range. It ignores blank cells. It does not tell you the corresponding product name; that requires a lookup or another method.",task:"Find the smallest recorded value",question:"Which formula finds the smallest numeric value in B2:B4?",choices:["=MIN(B2:B4)","=MAX(B2:B4)","=AVERAGE(B2:B4)"],answer:0,explanation:"MIN returns the smallest of the numeric entries."},
     {id:"max",fn:"MAX",title:"MAX — Find the largest value",concept:"MAX returns the largest numeric value in a range. It ignores blanks, and it works with negative numbers too. Use it to identify the highest quantity or cost.",task:"Find the largest recorded value",question:"The three recorded values are -7, -2 and -5. Which is MAX?",choices:["-7","-2","0"],answer:1,explanation:"-2 is the greatest number, even though all entries are negative."}
   ];
-  const lessons = freeze([...lessonContent.map(item => ({
+  const lessons = freeze([{ ...decisionLesson, version: 1,
+    capability_id: 'excel.decisions.if-minimum-target.v1',
+    runtime: { id: 'personal-decisions', version: 1 },
+    rubric: { id: 'decision-foundations', version: 1 },
+  }, ...lessonContent.map(item => ({
     ...item, version: 1,
     capability_id: 'excel.' + item.id + '.b2-b4.v1',
     runtime: { id: 'personal-formulas', version: 1 },
@@ -368,6 +392,87 @@
           numberMatches(input[address], baseline[address])) });
     return { ...result(criteria), evaluated };
   }
+  // F4A: compare two numeric cells and return one of two literal strings.
+  // No eval, nested formulas, arbitrary cell ranges or executable lesson data.
+  function decisionRuntime(ref) {
+    const runtime = resolveRuntime(ref);
+    if (runtime.engine !== 'bounded-if.v1') throw Error('An IF practice runtime is required.');
+    return runtime;
+  }
+  const ifGap = '(?: |\\r\\n)*';
+  const ifRef = '(\\$?[BC]\\$?[234])';
+  const ifText = '"([A-Za-z][A-Za-z ]{0,23})"';
+  const ifPattern = new RegExp('^' + ifGap + '=' + ifGap + 'IF\\(' + ifGap +
+    ifRef + ifGap + '(>=|<=|<>|=|>|<)' + ifGap + ifRef + ifGap + ',' +
+    ifGap + ifText + ifGap + ',' + ifGap + ifText + ifGap + '\\)' + ifGap + '$', 'i');
+  function parseDecisionFormula(runtimeRef, formula) {
+    decisionRuntime(runtimeRef);
+    const match = typeof formula === 'string' && formula.length <= 128 && ifPattern.exec(formula);
+    if (!match || match[0].length !== formula.length)
+      throw Error('Use IF with two B2:C4 references, a comparison and two quoted text results. Keep tokens together.');
+    const address = value => value.replaceAll('$', '').toUpperCase();
+    return { left: address(match[1]), operator: match[2], right: address(match[3]),
+      whenTrue: match[4], whenFalse: match[5] };
+  }
+  function evaluateDecisionFormula(runtimeRef, formula, cells) {
+    const parsed = parseDecisionFormula(runtimeRef, formula);
+    if (!plain(cells)) throw Error('Worksheet inputs are required.');
+    const number = address => {
+      if (!Object.hasOwn(cells, address)) throw Error('Missing input ' + address + '.');
+      return syntax.numericCell(cells[address]);
+    };
+    const a = number(parsed.left), b = number(parsed.right);
+    const condition = { '>=': a >= b, '<=': a <= b, '>': a > b,
+      '<': a < b, '=': a === b, '<>': a !== b }[parsed.operator];
+    return { condition, result: condition ? parsed.whenTrue : parsed.whenFalse };
+  }
+  function gradeDecision(rubricRef, exercise, formulas, cells) {
+    const rubric = resolveRubric(rubricRef);
+    if (rubric.engine !== 'decision-foundations.v1') throw Error('An IF lesson rubric is required.');
+    const lesson = resolveLesson({ id: exercise?.lesson?.id, version: exercise?.lesson?.version });
+    const runtime = decisionRuntime(rubric.runtime);
+    if (lesson.rubric.id !== rubric.id || lesson.rubric.version !== rubric.version ||
+        !runtime.lessons.some(ref => ref.id === lesson.id && ref.version === lesson.version) ||
+        !runtime.capabilities.includes(lesson.capability_id) ||
+        !['guided', 'independent'].includes(exercise.mode))
+      throw Error('IF lesson and rubric do not match.');
+    const { inputCells, outputCells } = lesson.worksheet;
+    const baseline = exercise.values;
+    if (!plain(baseline) || Object.keys(baseline).sort().join() !== inputCells.slice().sort().join())
+      throw Error('IF exercise inputs do not match the lesson.');
+    inputCells.forEach(address => syntax.numericCell(baseline[address]));
+    const input = plain(cells) ? cells : {}, submitted = plain(formulas) ? formulas : {};
+    const criteria = [], evaluated = {};
+    for (const cell of outputCells) {
+      const row = cell.slice(1), left = 'B' + row, right = 'C' + row;
+      let parsed = null;
+      const formula = Object.hasOwn(submitted, cell) ? submitted[cell] : '';
+      try { parsed = parseDecisionFormula(rubric.runtime, formula); } catch {}
+      const conditionMatches = parsed && (
+        (parsed.left === left && parsed.operator === '>=' && parsed.right === right) ||
+        (parsed.left === right && parsed.operator === '<=' && parsed.right === left));
+      criteria.push({ id: 'decision-condition:' + cell, label: cell + ' checks the required minimum (including equality)',
+        passed: Boolean(conditionMatches) });
+      let actual = null;
+      try { actual = evaluateDecisionFormula(rubric.runtime, formula, input); } catch (error) {
+        evaluated[cell] = { result: null, error: error.message };
+      }
+      if (actual) evaluated[cell] = { ...actual, error: null };
+      // Check both branches, even if only one is selected by the current values.
+      // A wrong condition can still earn result credit if both literal branches
+      // are correct and the actual result matches the goal on current inputs.
+      let expected = null;
+      try { expected = evaluateDecisionFormula(rubric.runtime, '=IF(' + left + '>=' + right + ',"Ready","Review")', input); } catch {}
+      criteria.push({ id: 'decision-result:' + cell, label: cell + ' returns the required Ready/Review result',
+        passed: Boolean(parsed && actual && expected &&
+          parsed.whenTrue === 'Ready' && parsed.whenFalse === 'Review' && actual.result === expected.result) });
+    }
+    if (exercise.mode === 'independent')
+      criteria.push({ id: 'original-inputs', label: 'Original exercise inputs preserved',
+        passed: inputCells.every(address => Object.hasOwn(input, address) && numberMatches(input[address], baseline[address])) });
+    return { ...result(criteria), evaluated };
+  }
+
   // F3 keeps typed records separate from order, formatting and hidden rows.
   // Every operation is pure, and rules never rewrite already-entered values.
   function tableRuntime(ref) {
@@ -744,6 +849,7 @@
     resolveLesson, resolveCapability, resolveRuntime, resolveRubric,
     evaluateFormula, gradeFormula, checkCriterion, gradeAssigned,
     parseReferenceFormula, copyReferenceFormula, evaluateReferenceFormula, gradeReferences,
+    parseDecisionFormula, evaluateDecisionFormula, gradeDecision,
     createTableState, applyTableAction, tableView, inspectTableValidation, formatTableValue, gradeTables,
   });
 })(typeof window === 'undefined' ? globalThis : window);
