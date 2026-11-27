@@ -88,6 +88,14 @@ Follow the
 [rollout order](SIGNUP-ROLLOUT.md) after the gates below are closed. A merged
 preparation PR or passing synthetic tests do not clear those gates.
 
+**Suggestion delivery preparation — 2026-11-27:**
+[Candidate 17 and the isolated owning-client changes](ROADMAP-SUGGESTION-READINESS.md)
+prepare atomic answer/session receipts, exact skip delivery retries, visible
+recovery, publication retries and adapter acknowledgement checks. Commonplace
+#134 and Roadmap #25 are confirmed merged. Remaining mirror/done/session callers,
+hub contract/ordering and account-scoped state acceptance stay explicit gates.
+No hosted work or restoration was resumed; this is not G0 clearance.
+
 ## What this review established
 
 Read current project health, migration history, public/Storage catalog,

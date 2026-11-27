@@ -62,6 +62,7 @@ Their numbers do not authorize applying the directory in one batch.
 | `09_roadmap_record_ownership.sql` | After 01/03, exact catalog review, reconciliation of historical parent links/picks, and owning-caller/recovery acceptance. Preserves current APIs and optional history links; see [Roadmap record readiness](ROADMAP-RECORD-READINESS.md). Independent of 08's client cutover; still G0 preparation. |
 | `10_roadmap_comparison_edits.sql` | After 01/03/09 and matching client/recovery review. Adds version-checked weights/pick edits and private retry history. See [comparison-edit readiness](ROADMAP-COMPARISON-READINESS.md). Legacy import remains separate; still G0 preparation. |
 | `04_commonplace_signup.sql` | **After all six Commonplace migrations and verified owner setup below.** It changes shared Auth trigger routines and must have its own approved window and legacy-signup regression checks. Install it paused. |
+| `17_roadmap_suggestion_delivery.sql` | After 01/03/09, exact source/catalog review and owning-client/hub acceptance. Adds atomic answer/session receipts and skip delivery recovery; see [suggestion readiness](ROADMAP-SUGGESTION-READINESS.md). Keeps hub activation on hold and adds no Commonplace migration. |
 | `90_containment.sql` | Incident containment, not an installation step. Its separately committed stops affect signup, two legacy Edge routes and Roadmap. Use only the approved incident scope. |
 
 Candidate 04 does not install candidates 01–03/05 or repair the remaining shared
