@@ -23,3 +23,28 @@ assessment storage, account permissions or synchronization.
 Regression tests: platform/tests/browser/excel-ui-navigation.spec.mjs.
 UI-3 will handle sticky-bar anchor clearance, narrow layout, text readability
 and physical iPad verification. No hosting or production changes.
+
+## UI-3 — responsive polish
+
+The approved desktop launcher and all current learning links are retained.
+On viewports at or below 720 CSS pixels, hide only the decorative worksheet
+example so the study controls appear sooner. At 420 pixels and below, modes
+use a two-column layout with comfortable touch targets. Secondary labels are
+larger, and launcher padding accounts for safe-area insets.
+
+Section 1 measures the actual sticky reading bar height and sets document
+scroll padding; the initial value is available before the lesson content is
+parsed. ResizeObserver tracks layout changes, with a resize fallback. No
+scrolling is forced on resize, no user state is cleared, and the CSS fallback
+applies without JavaScript. Section 2 has a small fragment offset.
+
+Released Sections 1 and 2 use a consistent breadcrumb with an explicit current
+page; the Section 2 adjacent-lesson link remains separate. Existing practice
+and workbook destinations and UI-2 URL behavior remain unchanged. Future
+Sections 3/4 in open curriculum PR #128 are not introduced by UI-3. When
+reconciling those branches, preserve their next/previous links and apply the
+same breadcrumb pattern to newly released pages.
+
+Regression coverage: platform/tests/browser/excel-ui-responsive.spec.mjs.
+Browser viewport checks do not replace a physical iPad Safari/Home Screen
+acceptance run. No production deployment, storage, permissions or engine changes.
