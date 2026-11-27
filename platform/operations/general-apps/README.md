@@ -43,6 +43,7 @@ Supabase configuration, downloaded packs and live records have not changed.
 | `14_roadmap_log_entries.sql` | Acknowledged daily-log creation, stable retry identities and private creation receipts | 01/03/09, coordinated log client and retention/recovery acceptance; see [log readiness](../../acceptance/ROADMAP-LOG-READINESS.md) |
 | `15_roadmap_task_creation.sql` | Acknowledged task creation and atomic capture batches with private UUID reservations | 01/03, coordinated creation client and retention/recovery acceptance; see [creation readiness](../../acceptance/ROADMAP-CREATION-READINESS.md) |
 | `edge/` | Candidate `claude-proxy` and `code-exec` handlers require a verified non-anonymous user and a current explicit function grant | JWT-capable clients, per-user grants, source drift review and each owning app's deployment review |
+| `17_roadmap_suggestion_delivery.sql` | Atomic suggestion answers/session starts and durable skip delivery receipts | 01/03/09, exact catalog and routine review, legacy answer reconciliation and owning hub/caller acceptance; see [suggestion readiness](../../acceptance/ROADMAP-SUGGESTION-READINESS.md) |
 | `90_containment.sql` | Close new admission, pause both Edge routes, pause Roadmap routines and revoke their browser execution permissions | Full shared incident only. Review the per-component results and retain individual entitlements |
 
 The SQL runs in transactions. Session/trigger definition drift aborts the relevant
@@ -284,3 +285,8 @@ only reviewed task subtrees, with atomic moves and durable original-request
 retries in the isolated owning client. Suggestion/hub delivery and actual caller/
 account-state acceptance remain next. It adds no Commonplace migration and does
 not authorize hosted changes, enrollment or resuming deferred restoration.
+
+Candidate 17 prepares bounded suggestion answer recovery and publication retry in
+the isolated owning client. It does not enable the hub; remaining mirror/reply/
+session callers, multi-device ordering, account state and admission require the
+[suggestion readiness gates](../../acceptance/ROADMAP-SUGGESTION-READINESS.md).
