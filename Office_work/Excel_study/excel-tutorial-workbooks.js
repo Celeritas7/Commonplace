@@ -383,7 +383,7 @@
     const versionText=ex=>ex.dataset.id+' · dataset '+ex.dataset.version+' · lesson '+ex.lesson.version;
     const descriptions=[
       'In D2:D4 enter IF tests comparing column B with column C in each row. Return Ready if the value is at least the target; otherwise return Review. Equality is included.',
-      'Select B2:B4. In Home → Conditional Formatting → Highlight Cells Rules → Less Than, enter the target in D2 and select light red fill with dark red text. Do not manually color the cells.',
+      'Select B2:B4. In Home → Conditional Formatting → Highlight Cells Rules → Less Than, enter the target in D2 and select light red fill with dark red text. Do not manually color the cells. Changing D2 alone does not change an applied rule; use Manage Rules to edit its threshold.',
       'In F2 use XLOOKUP to find E2 in A2:A4 and return the corresponding amount from C2:C4. Exact matching is the default. Change E2 to another code to see the result update.',
       'In F2 use VLOOKUP to find E2 in A2:C4 and return its third column. Specify FALSE (or 0) for exact matching. The table need not be sorted.'
     ];
