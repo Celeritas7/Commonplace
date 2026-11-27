@@ -298,3 +298,11 @@ The isolated owning client retains retries and applies current rows; hub startup
 and deletion acknowledgement remain gated pending shared-contract acceptance.
 Next: task.done/reply recovery. G0 remains open; hosted changes/enrollment remain
 on hold, and restoration remains deferred.
+
+Candidate 19 prepares [task completion requests and reply recovery](../../acceptance/ROADMAP-COMPLETION-READINESS.md)
+after 01/03/09/15/18 plus the reviewed hub read catalog. Requests and their aliases
+are durable before publication; reply application is atomic and ordered against
+mirror updates. Private per-request receipts replace the old shared cursor in the
+isolated client. The completion review gate starts empty. Hub sender/key contract
+acceptance and automatic startup remain gated. Next: session.completed and actual
+study callers. Hosted changes/enrollment remain on hold; restoration stays deferred.
