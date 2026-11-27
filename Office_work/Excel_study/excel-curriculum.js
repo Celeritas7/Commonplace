@@ -138,7 +138,33 @@
       explanation:'A is column 1, B is 2, and C is 3 in that table. FALSE or 0 selects exact matching.',
       worksheet:{ formula:'=VLOOKUP(E2,A2:C4,3,FALSE)', query:'E2', search:'A2:A4', returns:'C2:C4', output:'F2' } },
   ];
+  const summaryLessons = [
+    { id:'sumif-status', fn:'SUMIF', title:'SUMIF — Add amounts for one status',
+      concept:'SUMIF tests one range and adds corresponding numbers from a sum range. The rows must align. A criterion can reference a cell, so changing that cell updates the total.',
+      task:'Add the amounts in D2:D7 for rows whose status in B2:B7 matches F2.',
+      question:'SUMIF adds matching amounts, including a matching amount of zero. Does it count matching rows instead?',
+      choices:['No, it adds their amounts','Yes, it counts rows','It always adds every amount'],answer:0,
+      explanation:'SUMIF adds corresponding amounts. COUNTIF counts matches instead.',
+      worksheet:{formula:'=SUMIF(B2:B7,F2,D2:D7)',output:'G2',sumRange:'D2:D7',pairs:[{range:'B2:B7',criterion:'F2'}]} },
+    { id:'sumifs-status-group', fn:'SUMIFS', title:'SUMIFS — Add amounts meeting two conditions',
+      concept:'SUMIFS puts the sum range first, followed by criteria-range/criterion pairs. All conditions must be true on the same row (AND). The two pairs can be supplied in either order.',
+      task:'Add amounts in D2:D7 only when status matches F2 AND the group matches F3.',
+      question:'A row matches the status but not the group. Does SUMIFS include it?',
+      choices:['Yes','No','Only when its amount is zero'],answer:1,
+      explanation:'Both conditions must be true on the same row. A status match alone is insufficient.',
+      worksheet:{formula:'=SUMIFS(D2:D7,B2:B7,F2,C2:C7,F3)',output:'G2',sumRange:'D2:D7',
+        pairs:[{range:'B2:B7',criterion:'F2'},{range:'C2:C7',criterion:'F3'}]} },
+    { id:'countif-status', fn:'COUNTIF', title:'COUNTIF — Count matching records',
+      concept:'COUNTIF counts cells that meet one criterion. It does not add monetary values or quantities. A matching record with a zero amount still counts as one.',
+      task:'Count the records in B2:B7 whose status matches F2.',
+      question:'Three rows match the status; their amounts are 10, 20 and 0. What does COUNTIF return?',
+      choices:['30','2','3'],answer:2,
+      explanation:'All three status cells match, including the row whose amount is zero. COUNTIF returns 3.',
+      worksheet:{formula:'=COUNTIF(B2:B7,F2)',output:'G2',sumRange:null,pairs:[{range:'B2:B7',criterion:'F2'}]} },
+  ];
   const capabilities = freeze([
+    ...summaryLessons.map(lesson=>({id:'excel.summary.'+lesson.id+'.v1',version:1,
+      kind:'conditional-summary',engine:'bounded-conditional-summary.v1',worksheet:lesson.worksheet})),
     ...lookupLessons.map(lesson=>({ id:'excel.lookup.'+lesson.id+'.v1', version:1,
       kind:'lookup-formula', engine:'bounded-lookup.v1', worksheet:lesson.worksheet })),
     { id: 'excel.conditional.highlight-below-target.v1', version: 1, kind: 'conditional-formatting',
@@ -166,6 +192,10 @@
       table_name_max_length: 32 },
   ]);
   const runtimes = freeze([
+    {id:'personal-conditional-summaries',version:1,engine:'bounded-conditional-summary.v1',
+      input_policy:'exact-text-and-required-numbers',
+      capabilities:['explanation.text.v1',...summaryLessons.map(l=>'excel.summary.'+l.id+'.v1')],
+      lessons:summaryLessons.map(l=>({id:l.id,version:1}))},
     { id:'personal-lookups', version:1, engine:'bounded-lookup.v1',
       input_policy:'text-codes-and-numbers',
       capabilities:['explanation.text.v1',...lookupLessons.map(l=>'excel.lookup.'+l.id+'.v1')],
@@ -223,6 +253,10 @@
         { id: 'validate-entry', version: 2 }] },
   ]);
   const rubrics = freeze([
+    {id:'conditional-summary-foundations',version:1,engine:'conditional-summary-foundations.v1',
+      runtime:{id:'personal-conditional-summaries',version:1},
+      criteria:['summary-function','criteria-ranges','criteria-references','sum-range','summary-result'],
+      independent_criteria:['original-inputs']},
     { id:'lookup-foundations', version:1, engine:'lookup-foundations.v1',
       runtime:{id:'personal-lookups',version:1},
       criteria:['lookup-function','lookup-key','search-range','return-range','lookup-result'],
@@ -263,7 +297,9 @@
     {id:"min",fn:"MIN",title:"MIN — Find the smallest value",concept:"MIN returns the smallest numeric value in a range. It ignores blank cells. It does not tell you the corresponding product name; that requires a lookup or another method.",task:"Find the smallest recorded value",question:"Which formula finds the smallest numeric value in B2:B4?",choices:["=MIN(B2:B4)","=MAX(B2:B4)","=AVERAGE(B2:B4)"],answer:0,explanation:"MIN returns the smallest of the numeric entries."},
     {id:"max",fn:"MAX",title:"MAX — Find the largest value",concept:"MAX returns the largest numeric value in a range. It ignores blanks, and it works with negative numbers too. Use it to identify the highest quantity or cost.",task:"Find the largest recorded value",question:"The three recorded values are -7, -2 and -5. Which is MAX?",choices:["-7","-2","0"],answer:1,explanation:"-2 is the greatest number, even though all entries are negative."}
   ];
-  const lessons = freeze([...lookupLessons.map(item=>({ ...item, version:1,
+  const lessons = freeze([...summaryLessons.map(item=>({...item,version:1,
+    capability_id:'excel.summary.'+item.id+'.v1',runtime:{id:'personal-conditional-summaries',version:1},
+    rubric:{id:'conditional-summary-foundations',version:1}})), ...lookupLessons.map(item=>({ ...item, version:1,
     capability_id:'excel.lookup.'+item.id+'.v1',runtime:{id:'personal-lookups',version:1},
     rubric:{id:'lookup-foundations',version:1} })), { ...conditionalLesson, version: 1,
     capability_id: 'excel.conditional.highlight-below-target.v1',
@@ -716,6 +752,125 @@
     return {...result(criteria),evaluated};
   }
 
+  // F5A: exact text criteria and aligned ranges, not a general Excel interpreter.
+  const summaryGap='(?: |\\r\\n)*';
+  const summaryOuter=new RegExp('^'+summaryGap+'='+summaryGap+'(SUMIF|SUMIFS|COUNTIF)\\('+summaryGap+'([^()]*)\\)'+summaryGap+'$','i');
+  const summaryRangePattern=new RegExp('^'+summaryGap+'(\\$?[BCD]\\$?[2-7])'+summaryGap+':'+summaryGap+'(\\$?[BCD]\\$?[2-7])'+summaryGap+'$','i');
+  const summaryCriterionPattern=new RegExp('^'+summaryGap+'(?:(\\$?F\\$?[23])|"([A-Za-z][A-Za-z0-9 _-]{0,31})")'+summaryGap+'$','i');
+  const summaryInputCells=[2,3,4,5,6,7].flatMap(row=>['A'+row,'B'+row,'C'+row,'D'+row]).concat(['F2','F3']);
+  function summaryRuntime(ref){
+    const runtime=resolveRuntime(ref);
+    if(runtime.engine!=='bounded-conditional-summary.v1')throw Error('A conditional-summary runtime is required.');
+    return runtime;
+  }
+  const summaryAddress=value=>value.replaceAll('$','').toUpperCase();
+  function summaryRange(value,columns){
+    const match=summaryRangePattern.exec(value);
+    if(!match||match[0].length!==value.length)throw Error('Use a contiguous range within B2:D7.');
+    const first=summaryAddress(match[1]),last=summaryAddress(match[2]);
+    if(first[0]!==last[0]||!columns.includes(first[0])||Number(first[1])>Number(last[1]))
+      throw Error('Use an ordered single-column range in the supported columns.');
+    return first+':'+last;
+  }
+  function summaryCriterion(value){
+    const match=summaryCriterionPattern.exec(value);
+    if(!match||match[0].length!==value.length)throw Error('Use F2/F3 or an exact quoted text criterion.');
+    return match[1]?{kind:'cell',value:summaryAddress(match[1])}:{kind:'text',value:match[2]};
+  }
+  const summaryAddresses=range=>{
+    const [first,last]=range.split(':');
+    return Array.from({length:Number(last[1])-Number(first[1])+1},(_,i)=>first[0]+(Number(first[1])+i));
+  };
+  function parseSummaryFormula(runtimeRef,formula){
+    summaryRuntime(runtimeRef);
+    if(typeof formula!=='string'||formula.length>200)throw Error('Enter a supported summary formula of at most 200 characters.');
+    const match=summaryOuter.exec(formula);
+    if(!match||match[0].length!==formula.length)throw Error('Use SUMIF, SUMIFS or COUNTIF with contiguous function and cell tokens.');
+    const fn=match[1].toUpperCase(),args=match[2].split(',');
+    if(args.length!==({SUMIF:3,SUMIFS:5,COUNTIF:2})[fn])throw Error('Check the number and order of formula arguments.');
+    const pair=(range,criterion)=>({range:summaryRange(range,['B','C']),criterion:summaryCriterion(criterion)});
+    let pairs,sumRange=null;
+    if(fn==='SUMIFS'){
+      sumRange=summaryRange(args[0],['D']);pairs=[pair(args[1],args[2]),pair(args[3],args[4])];
+    }else{
+      pairs=[pair(args[0],args[1])];
+      if(fn==='SUMIF')sumRange=summaryRange(args[2],['D']);
+    }
+    const ranges=[...pairs.map(p=>p.range),...(sumRange?[sumRange]:[])],length=summaryAddresses(ranges[0]).length;
+    if(ranges.some(r=>summaryAddresses(r).length!==length))throw Error('Every range must have the same number of rows in this practice.');
+    return {fn,pairs,sumRange};
+  }
+  function summaryText(value){
+    if(typeof value!=='string'||! /^[A-Za-z][A-Za-z0-9 _-]{0,31}$/.test(value)||/[\r\n]/.test(value))
+      throw Error('Use nonempty exact text of 1–32 supported ASCII characters; no wildcards or comparison operators.');
+    return value.toUpperCase();
+  }
+  function summaryLabel(value){
+    if(typeof value!=='string'||!value.trim()||value.length>80||/[\x00-\x1f\x7f]/.test(value))
+      throw Error('Use a nonempty record label of at most 80 characters.');
+    return value;
+  }
+  function summaryValue(cells,address){
+    if(!Object.hasOwn(cells,address))throw Error('Missing input '+address+'.');
+    const value=cells[address];
+    return address[0]==='D'?syntax.numericCell(value):address[0]==='A'?summaryLabel(value):summaryText(value);
+  }
+  function evaluateSummaryFormula(runtimeRef,formula,cells){
+    const parsed=parseSummaryFormula(runtimeRef,formula);
+    if(!plain(cells))throw Error('Worksheet inputs are required.');
+    const pairs=parsed.pairs.map(p=>({addresses:summaryAddresses(p.range),
+      expected:p.criterion.kind==='cell'?summaryValue(cells,p.criterion.value):summaryText(p.criterion.value)}));
+    const compared=pairs.map(p=>p.addresses.map(address=>summaryValue(cells,address)===p.expected));
+    const amountAddresses=parsed.sumRange?summaryAddresses(parsed.sumRange):null;
+    const amounts=amountAddresses?amountAddresses.map(address=>summaryValue(cells,address)):null;
+    let total=0;
+    const matched=[];
+    for(let i=0;i<compared[0].length;i++){
+      if(!compared.every(values=>values[i]))continue;
+      // Preserve positional pairing even when a learner shifts a range.
+      matched.push({criteria:pairs.map(p=>p.addresses[i]),amount:amountAddresses?amountAddresses[i]:null});
+      total+=amounts?amounts[i]:1;
+    }
+    return {result:Number(total.toPrecision(15)),error:null,matched};
+  }
+  function gradeSummary(rubricRef,exercise,formula,cells){
+    const rubric=resolveRubric(rubricRef);
+    if(rubric.engine!=='conditional-summary-foundations.v1')throw Error('A conditional-summary rubric is required.');
+    const lesson=resolveLesson({id:exercise?.lesson?.id,version:exercise?.lesson?.version});
+    const runtime=summaryRuntime(rubric.runtime);
+    if(lesson.rubric.id!==rubric.id||lesson.rubric.version!==rubric.version||
+        !runtime.lessons.some(ref=>ref.id===lesson.id&&ref.version===lesson.version)||
+        !runtime.capabilities.includes(lesson.capability_id)||
+        !['guided','independent'].includes(exercise.mode))
+      throw Error('Summary lesson and rubric do not match.');
+    const baseline=exercise.values;
+    if(!plain(baseline)||Object.keys(baseline).sort().join()!==summaryInputCells.slice().sort().join())
+      throw Error('Summary exercise inputs do not match the lesson.');
+    summaryInputCells.forEach(address=>summaryValue(baseline,address));
+    const goal=lesson.worksheet;
+    let parsed=null,evaluated={result:null,error:'Enter a supported summary formula.',matched:[]},expected=null;
+    try{parsed=parseSummaryFormula(rubric.runtime,formula);}catch{}
+    try{evaluated=evaluateSummaryFormula(rubric.runtime,formula,cells);}
+    catch(error){evaluated={result:null,error:error.message,matched:[]};}
+    try{expected=evaluateSummaryFormula(rubric.runtime,goal.formula,cells);}catch{}
+    const actualPairs=parsed?.pairs??[];
+    const columnsMatch=actualPairs.length===goal.pairs.length&&goal.pairs.every(p=>actualPairs.some(a=>a.range===p.range));
+    const referencesMatch=actualPairs.length===goal.pairs.length&&goal.pairs.every(p=>
+      actualPairs.some(a=>a.range[0]===p.range[0]&&a.criterion.kind==='cell'&&a.criterion.value===p.criterion));
+    const criteria=[
+      {id:'summary-function',label:'Use the requested '+lesson.fn+' function',passed:parsed?.fn===lesson.fn},
+      {id:'criteria-ranges',label:'Use the complete required criteria ranges',passed:columnsMatch},
+      {id:'criteria-references',label:'Use the requested criterion cells with the corresponding columns',passed:referencesMatch},
+    ];
+    if(goal.sumRange)criteria.push({id:'sum-range',label:'Sum the complete aligned amount range D2:D7',passed:parsed?.sumRange===goal.sumRange});
+    criteria.push({id:'summary-result',label:'Calculate the correct numeric summary for current inputs',
+      passed:expected?.error===null&&evaluated.error===null&&evaluated.result===expected.result});
+    if(exercise.mode==='independent')criteria.push({id:'original-inputs',label:'Original records and criteria preserved',
+      passed:plain(cells)&&summaryInputCells.every(address=>Object.hasOwn(cells,address)&&
+        (address[0]==='D'?numberMatches(cells[address],baseline[address]):cells[address]===baseline[address]))});
+    return {...result(criteria),evaluated};
+  }
+
   // F3 keeps typed records separate from order, formatting and hidden rows.
   // Every operation is pure, and rules never rewrite already-entered values.
   function tableRuntime(ref) {
@@ -1095,6 +1250,7 @@
     parseDecisionFormula, evaluateDecisionFormula, gradeDecision,
     validateConditionalRule, conditionalView, gradeConditional,
     parseLookupFormula, evaluateLookupFormula, gradeLookup,
+    parseSummaryFormula, evaluateSummaryFormula, gradeSummary,
     createTableState, applyTableAction, tableView, inspectTableValidation, formatTableValue, gradeTables,
   });
 })(typeof window === 'undefined' ? globalThis : window);

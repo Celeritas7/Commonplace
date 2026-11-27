@@ -7,8 +7,8 @@ The standalone personal-study path is expanded in small reviewable modules. F1 i
 | F1 | Section 2 SUM / AVERAGE / COUNT / MIN / MAX; blanks versus zero; five professional contexts; guided/independent tasks, quiz and separate XLSX starter/solution | Merged in PR #116 |
 | F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Merged in combined PR #128; see F2 below |
 | F3 | Number formats, tables, sorting, filtering, validation | #132 merged into F2, then combined #128 merged to main; R5 below corrects table naming |
-| F4 | IF, conditional formatting, lookup functions | F4A #137, F4B #139 and F4C #140 merged; F4D native workbook candidate |
-| F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | Planned |
+| F4 | IF, conditional formatting, lookup functions | F4A #137, F4B #139, F4C #140 and F4D #141 merged |
+| F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | F5A conditional summaries candidate; F5B PivotTables, F5C charts/reports and F5D workbooks remain separate |
 | F6 | Power Query and repeatable data preparation; link to existing VBA section | Planned |
 | G/H | Review and extend central published capability contracts, personalized assignment and performance reporting | Separate |
 
@@ -362,3 +362,7 @@ The native formulas, cached results and conditional rule use the guided datasets
 See [workbook details](WORKBOOKS.md#f4-decision-conditional-formatting-and-lookup-workbooks).
 F4D does not start F5, persistent history, central publication or hosted activation.
 Native Excel and physical iPad acceptance remain separate.
+
+## F5A — conditional summaries
+
+After F4D #141 merged at `5a1b5bf`, Section 6 begins with SUMIF, SUMIFS and COUNTIF. A six-record fictional register keeps item labels, statuses, destination/group and numeric amounts in A2:D7; F2/F3 are the criteria and G2 the result. All five contexts retain distinct guided/independent data for all three lessons. SUMIF adds matching amounts; SUMIFS requires both conditions; COUNTIF counts records, including a matching zero-amount record. The default context is Japan–Philippines trading. The bounded parser supports equal-length contiguous ranges, exact case-insensitive text criteria, F2/F3 references or supported quoted literals, and optional reference locks. No wildcards, comparison criteria, arbitrary expressions or multiple-condition variants beyond the two SUMIFS pairs. Required numeric amounts are checked for sums; COUNTIF does not read amounts. No matches return zero. The rubric checks function, required ranges, criterion-cell pairing, applicable sum range, calculated result and independent original values separately. Session-only history and quizzes remain separate. F5B PivotTables, F5C charts/business reports and F5D native workbooks follow in separate PRs. Existing 50 workbook exports and central SUM publication are unchanged.

@@ -9,15 +9,16 @@ test("Excel homepage separates existing learning, practice, workbooks and planne
   await expect(tab("Learn")).toHaveAttribute("aria-selected", "true");
   await expect(pane("learn")).toBeVisible();
   await expect(pane("practice")).toBeHidden();
-  await expect(page.locator(".facts div").filter({ hasText: "Available sections" }).locator("strong")).toHaveText("5");
-  await expect(pane("learn").locator(".count")).toHaveText("5 available");
-  await expect(pane("learn").locator(".lesson")).toHaveCount(5);
+  await expect(page.locator(".facts div").filter({ hasText: "Available sections" }).locator("strong")).toHaveText("6");
+  await expect(pane("learn").locator(".count")).toHaveText("6 available");
+  await expect(pane("learn").locator(".lesson")).toHaveCount(6);
   await expect(pane("learn").getByRole("link", { name: /01 · Cells, ranges/ })).toHaveAttribute("href", "Section_1_Study.html");
   await expect(pane("learn").getByRole("link", { name: /02 · Essential formulas/ })).toHaveAttribute("href", "Section_2_Study.html");
   await expect(pane("learn").getByRole("link", { name: /03 · References and business calculations/ })).toHaveAttribute("href", "Section_3_Study.html");
   await expect(pane("learn").getByRole("link", { name: /04 · .*tables/ })).toHaveAttribute("href", "Section_4_Study.html");
 
   await expect(pane("learn").getByRole("link", { name: /05 · Decisions and lookups/ })).toHaveAttribute("href", "Section_5_Study.html");
+  await expect(pane("learn").getByRole("link", { name: /06 · Summarize and report/ })).toHaveAttribute("href", "Section_6_Study.html");
   await tab("Practice").click();
   await expect(pane("practice")).toBeVisible();
   await expect(pane("learn")).toBeHidden();
@@ -29,6 +30,7 @@ test("Excel homepage separates existing learning, practice, workbooks and planne
   await expect(pane("practice").getByRole("link", { name: "Open table practice" })).toHaveAttribute("href", "Section_4_Study.html#f3-choose-title");
 
   await expect(pane("practice").getByRole("link", { name: "Open IF practice" })).toHaveAttribute("href", "Section_5_Study.html#f4a-practice");
+  await expect(pane("practice").getByRole("link", { name: "Open summary practice" })).toHaveAttribute("href", "Section_6_Study.html#f5a-practice");
   await tab("Practice").press("ArrowRight");
   await expect(tab("Workbooks")).toBeFocused();
   await expect(pane("workbooks")).toBeVisible();
@@ -40,8 +42,8 @@ test("Excel homepage separates existing learning, practice, workbooks and planne
   await tab("Workbooks").press("End");
   await expect(tab("Roadmap")).toBeFocused();
   await expect(pane("roadmap")).toBeVisible();
-  await expect(pane("roadmap").locator(".count")).toHaveText("2 planned sections");
-  await expect(pane("roadmap").locator(".planned-item")).toHaveCount(2);
+  await expect(pane("roadmap").locator(".count")).toHaveText("1 planned section");
+  await expect(pane("roadmap").locator(".planned-item")).toHaveCount(1);
   await expect(pane("roadmap").getByRole("heading", { name: "References and business calculations" })).toHaveCount(0);
   await expect(pane("roadmap").getByRole("heading", { name: "Working with business tables" })).toHaveCount(0);
   await expect(pane("roadmap").getByRole("link")).toHaveCount(0);
