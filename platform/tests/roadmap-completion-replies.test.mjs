@@ -72,7 +72,8 @@ test('durable completion requests and server-read replies preserve task ownershi
    await answer(db,'stale',100,80);await assert.rejects(()=>a.reply(id(4)),e=>e.code==='40001');await answer(db,'applied',100,80);
   });
   await t.test('unknown source retains an orphan; local deletion is not recreated; original recovery stays readable',async()=>{
-   const next=await a.prepare(task,id(5));await publish(db,next,120);await answer(db,'unknown',130,120);const r=await a.reply(id(5));assert.equal(r.state,'unknown');assert.ok(r.tasks[0].tags.includes('orphaned'));
+   await db.exec(`reset role;update roadmap_tasks set tags='{wf,lang,fullstack,keep-local}' where id='${task}'`);
+   const next=await a.prepare(task,id(5));await publish(db,next,120);await answer(db,'unknown',130,120);const r=await a.reply(id(5));assert.equal(r.state,'unknown');assert.deepEqual(r.tasks[0].tags,['wf','lang','fullstack','keep-local','orphaned']);
    assert.equal((await a.prepare(task,id(5))).publishable,false);await a.mirror(135,{title:'Source returned',done:false});
    const next2=await a.prepare(task,id(6));await publish(db,next2,140);await answer(db,'applied',150,140);await db.exec(`reset role;delete from roadmap_tasks where id='${task}'`);
    const gone=await a.reply(id(6));assert.equal(gone.state,'removed');assert.deepEqual(gone.tasks,[]);assert.equal((await a.prepare(task,id(6))).publishable,false);

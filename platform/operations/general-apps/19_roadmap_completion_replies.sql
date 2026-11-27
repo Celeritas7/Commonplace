@@ -166,7 +166,8 @@ begin
   outcome_value:=case when row.id is null or pair.suppressed then 'removed' when pair.effect_seq>=event.reply_seq then 'superseded' else status_value end;
   if outcome_value in ('applied','already','unknown') then
    if outcome_value='unknown' then
-    update public.roadmap_tasks set tags=array(select distinct x from unnest(coalesce(tags,'{}')||array['wf','orphaned']) x) where id=row.id and user_id=actor returning * into row;
+    update public.roadmap_tasks set tags=coalesce(tags,'{}')||case when 'wf'=any(coalesce(tags,'{}')) then '{}'::text[] else array['wf'] end
+     ||case when 'orphaned'=any(coalesce(tags,'{}')) then '{}'::text[] else array['orphaned'] end where id=row.id and user_id=actor returning * into row;
     pair.source_deleted:=true;
    else
     update public.roadmap_tasks set done=true where id=row.id and user_id=actor returning * into row;
