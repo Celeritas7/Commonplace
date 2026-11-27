@@ -31,7 +31,7 @@ for (const {section, prefix, workbook, practice} of routes) {
     await expect(page.getByRole("tab",{name:/Workbooks/})).toHaveAttribute("aria-selected","true");
     await page.reload();
     await expect(page.getByRole("tab",{name:/Workbooks/})).toHaveAttribute("aria-selected","true");
-    await page.getByRole("tab",{name:/Practice/})).click();
+    await page.getByRole("tab",{name:/Practice/}).click();
     await page.getByRole("link",{name:practice}).click();
     const crumb = page.getByRole("navigation",{name:"Breadcrumb"});
     await expect(crumb.locator('[aria-current="page"]')).toHaveText("Section " + section);
