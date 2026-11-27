@@ -30,7 +30,7 @@ export async function roadmapCompletionAcceptance({a,b,sql,check,client,data,den
   const result=data(await a.client.rpc('ga_roadmap_reconcile_done',{p_request_id:prepared.request_id}),'Confirmed completion');assert.equal(result.state,'applied');assert.equal(result.tasks[0].done,true);
   const old=data(await a.client.rpc('ga_roadmap_receive_task',{p_address:address,p_payload:{title:'Older',done:false},p_seq:19000025}),'Late source');assert.equal(old.tasks.at(-1).done,true);assert.equal(old.last_seq,19000030);
   await a.client.rpc('ga_roadmap_receive_task',{p_address:address,p_payload:{title:'Latest',done:false},p_seq:19000040});
-  const replay=data(await a.client.rpc('ga_roadmap_reconcile_done',{p_request_id:prepared.request_id}),'Completion replay');assert.equal(replay.tasks[0].done,false);assert.equal(replay.tasks[0].title,'Latest');
+  const replay=data(await a.client.rpc('ga_roadmap_reconcile_done',{p_request_id:prepared.request_id}),'Completion replay');assert.equal(replay.state,'superseded');assert.equal(replay.tasks[0].done,false);assert.equal(replay.tasks[0].title,'Latest');
   const alias=data(await a.client.rpc('ga_roadmap_prepare_done',params),'Original preparation replay');assert.equal(alias.request_id,prepared.request_id);assert.equal(alias.closed,true);
   assert.deepEqual(data(await a.client.rpc('ga_roadmap_done_recovery',{}),'Closed recovery'),[]);
  });

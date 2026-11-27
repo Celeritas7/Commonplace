@@ -60,7 +60,7 @@ test('durable completion requests and server-read replies preserve task ownershi
   await t.test('late task.upsert cannot undo a newer completion reply, and replay never undoes newer source truth',async()=>{
    const old=await a.mirror(25,{title:'Old update',done:false});assert.equal(old.tasks.at(-1).done,true);assert.equal(old.last_seq,30);
    const latest=await a.mirror(40,{title:'Latest source',done:false});assert.equal(latest.tasks.at(-1).done,false);
-   const replay=await a.reply(id(1));assert.equal(replay.tasks[0].title,'Latest source');assert.equal(replay.tasks[0].done,false);
+   const replay=await a.reply(id(1));assert.equal(replay.state,'superseded');assert.equal(replay.tasks[0].title,'Latest source');assert.equal(replay.tasks[0].done,false);
    const next=await a.prepare(task,id(3));assert.notEqual(next.effect.idempotency_key,p.effect.idempotency_key);await publish(db,next,50);await answer(db,'already',60,50);
    await a.mirror(65,{title:'Even newer',done:false});const stale=await a.reply(id(3));assert.equal(stale.state,'superseded');assert.equal(stale.tasks[0].done,false);
   });

@@ -187,6 +187,9 @@ begin
   update ga_private.roadmap_done_requests set last_reply_seq=event.reply_seq,last_reply=event.reply,outcome=outcome_value,closed=true where auth_user_id=actor and request_id=saved.request_id;
   if not found then raise exception 'completion acknowledgement not saved' using errcode='40001';end if;
  end if;
+ -- The receipt records history; the displayed outcome describes the current view.
+ if row.id is null or pair.suppressed then outcome_value:='removed';
+ elsif pair.effect_seq>event.reply_seq then outcome_value:='superseded';end if;
  if row.id is not null and not pair.suppressed then tasks:=jsonb_build_array(to_jsonb(row)-'user_id');end if;
  return jsonb_build_object('request_id',saved.request_id,'task_id',saved.task_id,'state',outcome_value,'reply_seq',event.reply_seq,'tasks',tasks,'suggestion',
   (select jsonb_build_object('id',s.id,'task_id',s.rm_task_id,'done_at',s.done_at) from public.roadmap_suggestions s where s.user_id=actor and s.id=saved.suggestion_id and s.rm_task_id=saved.task_id));
