@@ -104,7 +104,9 @@ async function savedPack(page) {
     const db = await openOwnedDatabase("sample-u8");
     try {
       return {
-        packs: (await db.all("packs")).map((row) => row.key),
+        packs: (await db.all("packs")).map((row) => ({
+          key: row.key, phase: row.data.phase,
+        })),
         documents: await db.all("documents"),
         files: await Promise.all((await db.all("files")).map(async (row) => ({
           key: row.key,
@@ -134,6 +136,8 @@ test("an automatically activated incomplete Excel shell cold-reopens the previou
     await expect(page.locator(".learn-save-status")).toContainText("Saved on this device");
     await expect(page.getByText("No changes waiting to sync.", { exact: true })).toBeVisible();
     const before = await savedPack(page);
+    expect(before.packs).toHaveLength(1);
+    expect(before.packs[0].phase).toBe("ready");
 
     // The deployed pre-R1 cache used this marker with no saved manifest. Keep
     // its complete bytes and cache name to exercise the compatible upgrade path.
@@ -180,9 +184,13 @@ test("an automatically activated incomplete Excel shell cold-reopens the previou
     expect(site.requests).toEqual([]);
     expect(await savedPack(current)).toEqual(before);
 
-    await context.setOffline(true);
-    await monitor.close();
+    // Start the true-offline cold launch with no learner tab alive. Closing the
+    // monitor first can focus the learner and begin permission renewal; taking
+    // that tab offline or closing it mid-renewal deliberately blocks its pack.
+    // The snapshot above includes its ready phase as well as all saved bytes.
     await current.close();
+    await monitor.close();
+    await context.setOffline(true);
     current = await context.newPage();
     await current.goto(launch);
     await expect(current.locator("html")).toHaveAttribute("data-r1-shell", "old");
