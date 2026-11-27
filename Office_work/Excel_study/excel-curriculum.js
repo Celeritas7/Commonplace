@@ -113,7 +113,18 @@
     worksheet: { inputCells: ['B2','C2','B3','C3','B4','C4'], outputCells: ['D2','D3','D4'],
       formula: '=IF(B2>=C2,"Ready","Review")' },
   };
+  const conditionalLesson = {
+    id: 'highlight-below-target', title: 'Conditional formatting — Highlight values below a target',
+    concept: 'Conditional formatting changes how a cell looks when a rule is true. It does not change the stored value. A Less Than rule excludes a value equal to its threshold, and the formatting updates when a value changes.',
+    task: 'Highlight only the values strictly below the given target, using a light red fill and dark red text. Apply the rule to the whole B2:B4 range.',
+    question: 'A Less Than 5 rule is applied to values 4, 5 and 6. Which value is highlighted?',
+    choices: ['4 only', '4 and 5', 'All three'], answer: 0,
+    explanation: 'Only 4 is strictly less than 5. Equality does not qualify, and none of the underlying values changes.',
+    worksheet: { inputCells: ['B2','B3','B4'], goal: { range: 'B2:B4', operator: 'lt', style: 'red' } },
+  };
   const capabilities = freeze([
+    { id: 'excel.conditional.highlight-below-target.v1', version: 1, kind: 'conditional-formatting',
+      engine: 'bounded-conditional.v1', worksheet: conditionalLesson.worksheet },
     { id: 'excel.decisions.if-minimum-target.v1', version: 1, kind: 'decision-formula',
       engine: 'bounded-if.v1', worksheet: decisionLesson.worksheet },
     { id: 'explanation.text.v1', version: 1, kind: 'explanation' },
@@ -137,6 +148,10 @@
       table_name_max_length: 32 },
   ]);
   const runtimes = freeze([
+    { id: 'personal-conditional-formatting', version: 1, engine: 'bounded-conditional.v1',
+      input_policy: 'required-numbers',
+      capabilities: ['explanation.text.v1', 'excel.conditional.highlight-below-target.v1'],
+      lessons: [{ id: 'highlight-below-target', version: 1 }] },
     { id: 'personal-decisions', version: 1, engine: 'bounded-if.v1',
       input_policy: 'required-numbers',
       capabilities: ['explanation.text.v1', 'excel.decisions.if-minimum-target.v1'],
@@ -186,6 +201,10 @@
         { id: 'validate-entry', version: 2 }] },
   ]);
   const rubrics = freeze([
+    { id: 'conditional-foundations', version: 1, engine: 'conditional-foundations.v1',
+      runtime: { id: 'personal-conditional-formatting', version: 1 },
+      criteria: ['rule-range', 'rule-operator', 'rule-threshold', 'rule-style', 'matched-cells'],
+      independent_criteria: ['original-inputs'] },
     { id: 'decision-foundations', version: 1, engine: 'decision-foundations.v1',
       runtime: { id: 'personal-decisions', version: 1 },
       criteria_per_cell: ['decision-condition', 'decision-result'],
@@ -218,7 +237,11 @@
     {id:"min",fn:"MIN",title:"MIN — Find the smallest value",concept:"MIN returns the smallest numeric value in a range. It ignores blank cells. It does not tell you the corresponding product name; that requires a lookup or another method.",task:"Find the smallest recorded value",question:"Which formula finds the smallest numeric value in B2:B4?",choices:["=MIN(B2:B4)","=MAX(B2:B4)","=AVERAGE(B2:B4)"],answer:0,explanation:"MIN returns the smallest of the numeric entries."},
     {id:"max",fn:"MAX",title:"MAX — Find the largest value",concept:"MAX returns the largest numeric value in a range. It ignores blanks, and it works with negative numbers too. Use it to identify the highest quantity or cost.",task:"Find the largest recorded value",question:"The three recorded values are -7, -2 and -5. Which is MAX?",choices:["-7","-2","0"],answer:1,explanation:"-2 is the greatest number, even though all entries are negative."}
   ];
-  const lessons = freeze([{ ...decisionLesson, version: 1,
+  const lessons = freeze([{ ...conditionalLesson, version: 1,
+    capability_id: 'excel.conditional.highlight-below-target.v1',
+    runtime: { id: 'personal-conditional-formatting', version: 1 },
+    rubric: { id: 'conditional-foundations', version: 1 },
+  }, { ...decisionLesson, version: 1,
     capability_id: 'excel.decisions.if-minimum-target.v1',
     runtime: { id: 'personal-decisions', version: 1 },
     rubric: { id: 'decision-foundations', version: 1 },
@@ -471,6 +494,83 @@
       criteria.push({ id: 'original-inputs', label: 'Original exercise inputs preserved',
         passed: inputCells.every(address => Object.hasOwn(input, address) && numberMatches(input[address], baseline[address])) });
     return { ...result(criteria), evaluated };
+  }
+
+  // F4B: one numeric cell-value rule. Raw cell values and applied styling
+  // are separate; matching addresses are always derived, never accepted as input.
+  const conditionalCells = ['B2','B3','B4'];
+  const conditionalRanges = freeze({
+    'B2:B4': conditionalCells, 'B2:B3': ['B2','B3'], 'B3:B4': ['B3','B4'],
+    B2: ['B2'], B3: ['B3'], B4: ['B4'],
+  });
+  const conditionalOperators = ['lt','lte','gt','gte','eq'];
+  const conditionalStyles = ['red','green','amber'];
+  function conditionalRuntime(ref) {
+    const runtime = resolveRuntime(ref);
+    if (runtime.engine !== 'bounded-conditional.v1')
+      throw Error('A conditional-formatting practice runtime is required.');
+    return runtime;
+  }
+  function validateConditionalRule(runtimeRef, rule) {
+    conditionalRuntime(runtimeRef);
+    if (!plain(rule) || Object.keys(rule).sort().join() !== 'operator,range,style,threshold' ||
+        typeof rule.range !== 'string' || !Object.hasOwn(conditionalRanges, rule.range) ||
+        !conditionalOperators.includes(rule.operator) || !conditionalStyles.includes(rule.style))
+      throw Error('Choose a supported range, comparison and format.');
+    const threshold = syntax.numericCell(rule.threshold);
+    return { range: rule.range, operator: rule.operator, threshold: String(threshold), style: rule.style };
+  }
+  function conditionalView(runtimeRef, rule, cells) {
+    conditionalRuntime(runtimeRef);
+    if (!plain(cells)) throw Error('Worksheet inputs are required.');
+    const active = rule === null ? null : validateConditionalRule(runtimeRef, rule);
+    const threshold = active ? syntax.numericCell(active.threshold) : null;
+    const compare = (a,b,op) => ({ lt:a<b, lte:a<=b, gt:a>b, gte:a>=b, eq:a===b })[op];
+    const invalid = [], highlighted = [];
+    for (const address of conditionalCells) {
+      let value;
+      try {
+        if (!Object.hasOwn(cells,address)) throw Error('Missing input');
+        value = syntax.numericCell(cells[address]);
+      } catch { invalid.push(address); continue; }
+      if (active && conditionalRanges[active.range].includes(address) &&
+          compare(value,threshold,active.operator)) highlighted.push(address);
+    }
+    return { highlighted, invalid, style: active?.style ?? null };
+  }
+  function gradeConditional(rubricRef, exercise, rule, cells) {
+    const rubric = resolveRubric(rubricRef);
+    if (rubric.engine !== 'conditional-foundations.v1')
+      throw Error('A conditional-formatting rubric is required.');
+    const lesson = resolveLesson({ id: exercise?.lesson?.id, version: exercise?.lesson?.version });
+    const runtime = conditionalRuntime(rubric.runtime);
+    if (lesson.rubric.id !== rubric.id || lesson.rubric.version !== rubric.version ||
+        !runtime.lessons.some(ref => ref.id === lesson.id && ref.version === lesson.version) ||
+        !runtime.capabilities.includes(lesson.capability_id) ||
+        !['guided','independent'].includes(exercise.mode))
+      throw Error('Conditional lesson and rubric do not match.');
+    const { inputCells, goal } = lesson.worksheet;
+    const baseline = exercise.values;
+    if (!plain(baseline) || Object.keys(baseline).sort().join() !== inputCells.slice().sort().join())
+      throw Error('Conditional exercise inputs do not match the lesson.');
+    inputCells.forEach(address => syntax.numericCell(baseline[address]));
+    const target = validateConditionalRule(rubric.runtime, { ...goal, threshold: exercise.threshold });
+    const active = rule === null ? null : validateConditionalRule(rubric.runtime, rule);
+    const view = conditionalView(rubric.runtime, active, cells);
+    const expected = conditionalView(rubric.runtime, target, cells);
+    const criteria = [
+      { id:'rule-range', label:'Rule applies to the entire B2:B4 range', passed:active?.range === target.range },
+      { id:'rule-operator', label:'Rule uses strictly less than', passed:active?.operator === target.operator },
+      { id:'rule-threshold', label:'Rule uses the requested numeric threshold', passed:active?.threshold === target.threshold },
+      { id:'rule-style', label:'Rule uses light red fill and dark red text', passed:active?.style === target.style },
+      { id:'matched-cells', label:'Actual highlighted cells match the goal, with all inputs valid',
+        passed:active !== null && view.invalid.length === 0 &&
+          view.highlighted.join(',') === expected.highlighted.join(',') },
+    ];
+    if (exercise.mode === 'independent') criteria.push({ id:'original-inputs',
+      label:'Original exercise inputs preserved',
+      passed:inputCells.every(address => Object.hasOwn(cells,address) && numberMatches(cells[address],baseline[address])) });
+    return { ...result(criteria), view };
   }
 
   // F3 keeps typed records separate from order, formatting and hidden rows.
@@ -850,6 +950,7 @@
     evaluateFormula, gradeFormula, checkCriterion, gradeAssigned,
     parseReferenceFormula, copyReferenceFormula, evaluateReferenceFormula, gradeReferences,
     parseDecisionFormula, evaluateDecisionFormula, gradeDecision,
+    validateConditionalRule, conditionalView, gradeConditional,
     createTableState, applyTableAction, tableView, inspectTableValidation, formatTableValue, gradeTables,
   });
 })(typeof window === 'undefined' ? globalThis : window);
