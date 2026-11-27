@@ -329,6 +329,181 @@
     const model=buildTableModel(id,version,kind);
     return {filename:model.filename,mime:MIME,bytes:zip(tableParts(model))};
   }
+  // F4 uses a separate, exact-version native writer. Do not widen any of the
+  // earlier formula allowlists or alter the published D2/F1/F2/F3 ZIP bytes.
+  const F4_FORMULAS={
+    'if-minimum-target':{D2:'IF(B2>=C2,"Ready","Review")',D3:'IF(B3>=C3,"Ready","Review")',D4:'IF(B4>=C4,"Ready","Review")'},
+    'xlookup-exact':{F2:'_xlfn.XLOOKUP(E2,A2:A4,C2:C4)'},
+    'vlookup-exact':{F2:'VLOOKUP(E2,A2:C4,3,FALSE)'}
+  };
+  function f4Numeric(value){
+    return global.CommonplaceExcelFormulaSyntax.numericCell(value);
+  }
+  function f4Exercises(id,version){
+    const decision=global.CommonplaceExcelDecisionFoundations,conditional=global.CommonplaceExcelConditionalFoundations,
+      lookup=global.CommonplaceExcelLookupFoundations;
+    if(!decision||!conditional||!lookup)throw Error('The Section 5 lesson libraries are unavailable.');
+    const exercises=[
+      decision.exercise(id,version,'guided'),
+      conditional.exercise(id,version,'guided'),
+      lookup.exercise('xlookup-exact',id,version,'guided'),
+      lookup.exercise('vlookup-exact',id,version,'guided')
+    ];
+    const refs=[
+      ['if-minimum-target','personal-decisions','decision-foundations','f4a-'],
+      ['highlight-below-target','personal-conditional-formatting','conditional-foundations','f4b-'],
+      ['xlookup-exact','personal-lookups','lookup-foundations','f4c-xlookup-exact-'],
+      ['vlookup-exact','personal-lookups','lookup-foundations','f4c-vlookup-exact-']
+    ];
+    exercises.forEach((ex,i)=>{
+      const [lesson,runtime,rubric,prefix]=refs[i];
+      if(ex.lesson.id!==lesson||ex.lesson.version!==1||ex.lesson.runtime.id!==runtime||
+          ex.lesson.runtime.version!==1||ex.lesson.rubric.id!==rubric||ex.lesson.rubric.version!==1||
+          ex.dataset.id!==prefix+id+'-guided'||ex.dataset.version!==1||ex.mode!=='guided'||
+          ex.scenario.id!==id||ex.scenario.version!==version)
+        throw Error('Unsupported Section 5 workbook material version.');
+    });
+    return exercises;
+  }
+  function f4WorkbookContext(id,version){
+    const scenario=scenarioFor(id,version),exercises=f4Exercises(id,version);
+    return {title:scenario.title,units:exercises.map(ex=>ex.unit),sheetCount:5};
+  }
+  function buildF4Model(id,version,kind){
+    if(!['practice','solution'].includes(kind))throw Error('Unknown workbook type.');
+    const scenario=scenarioFor(id,version),done=kind==='solution',exercises=f4Exercises(id,version),
+      [decision,conditional,xlookup,vlookup]=exercises;
+    const decisionEngine=global.CommonplaceExcelDecisionFoundations,conditionalEngine=global.CommonplaceExcelConditionalFoundations,
+      lookupEngine=global.CommonplaceExcelLookupFoundations;
+    const valueStyle=ex=>ex.unit==='PHP'?10:2;
+    const resultStyle=(ex,completed)=>ex.unit==='PHP'?(completed?11:12):(completed?4:3);
+    const amount=(ex,address)=>cell(f4Numeric(ex.values[address]),valueStyle(ex));
+    const heading=text=>cell(text,1);
+    const names=['01 IF','02 Conditional format','03 XLOOKUP','04 VLOOKUP'];
+    const versionText=ex=>ex.dataset.id+' · dataset '+ex.dataset.version+' · lesson '+ex.lesson.version;
+    const descriptions=[
+      'In D2:D4 enter IF tests comparing column B with column C in each row. Return Ready if the value is at least the target; otherwise return Review. Equality is included.',
+      'Select B2:B4. In Home → Conditional Formatting → Highlight Cells Rules → Less Than, enter the target in D2 and select light red fill with dark red text. Do not manually color the cells.',
+      'In F2 use XLOOKUP to find E2 in A2:A4 and return the corresponding amount from C2:C4. Exact matching is the default. Change E2 to another code to see the result update.',
+      'In F2 use VLOOKUP to find E2 in A2:C4 and return its third column. Specify FALSE (or 0) for exact matching. The table need not be sorted.'
+    ];
+    const guide=[
+      [heading('COMMONPLACE · EXCEL STUDY'),heading(done?'F4 · SOLUTIONS':'F4 · PRACTICE')],
+      [cell('Professional context',7),cell(scenario.title,6)],
+      [cell('How to use',7),cell(done?'Compare your work with these editable formulas and the native conditional rule. Change inputs to see the results update.':'Save a copy, open each exercise tab and follow its task. Yellow formula cells are blank; the conditional-formatting sheet has no applied rule yet.',6)],
+      ...exercises.map((ex,i)=>[cell(names[i],7),cell(descriptions[i]+' Units: '+ex.unit+'.',6)]),
+      [cell('Lookup compatibility',7),cell('XLOOKUP requires a supported newer Excel version, such as Microsoft 365 or Excel 2021/2024. In older Excel, practise VLOOKUP instead. A missing exact code returns #N/A; a real zero is a valid amount.',6)],
+      [cell('Fictional data',7),cell('Every sheet uses its own guided example; prices and amounts are fictional. Currency is shown in the headers; there is no currency conversion.',6)],
+      [cell('Material version',7),cell(scenario.id+' · scenario '+scenario.version+' · F4 workbook 1 · guided datasets 1',6)],
+      [cell('Save / review',7),cell('Excel edits stay in the file on your device. Commonplace does not import, collect or grade those edits. The solution is a separate self-study file.',6)]
+    ];
+    function exerciseSheet(ex,index,rows,widths,extra={}){
+      const details=[
+        ['Task',descriptions[index]],
+        ['Context and units',ex.context+' Units: '+ex.unit+'. All values are fictional.'],
+        ['Material version',versionText(ex)]
+      ];
+      rows.push([], ...details.map(([label,value])=>[cell(label,7),cell(value,6)]));
+      return {name:names[index],lesson:ex.lesson.id,rows,widths,
+        heights:[42,28,28,28,12,72,54,34],
+        merges:details.map((_,i)=>'B'+(i+6)+':'+String.fromCharCode(64+widths.length)+(i+6)),
+        ...extra};
+    }
+    const ifRows=[[heading('Item'),heading(decision.actual+' ('+decision.unit+')'),
+      heading(decision.target+' ('+decision.unit+')'),heading('Decision')]];
+    for(let row=2;row<=4;row++){
+      const address='D'+row,formula=F4_FORMULAS['if-minimum-target'][address];
+      const expected=decisionEngine.evaluate('='+formula,decision.values).result;
+      if(!['Ready','Review'].includes(expected))throw Error('Invalid reviewed IF result.');
+      ifRows.push([cell(decision.labels[row-2]),amount(decision,'B'+row),amount(decision,'C'+row),
+        done?{value:expected,style:9,formula}:cell(null,5)]);
+    }
+    const threshold=f4Numeric(conditional.threshold);
+    const rule=conditionalEngine.apply({range:'B2:B4',operator:'lt',threshold:conditional.threshold,style:'red'});
+    if(rule.range!=='B2:B4'||rule.operator!=='lt'||rule.style!=='red'||f4Numeric(rule.threshold)!==threshold)
+      throw Error('Invalid reviewed conditional rule.');
+    const cfRows=[[heading('Item'),heading(conditional.heading+' ('+conditional.unit+')'),cell(null),heading('Task target ('+conditional.unit+')')]];
+    for(let row=2;row<=4;row++){
+      cfRows.push([cell(conditional.labels[row-2]),amount(conditional,'B'+row),cell(null),
+        row===2?cell(threshold,valueStyle(conditional)):cell(null)]);
+    }
+    function lookupSheet(ex,index){
+      const formula=F4_FORMULAS[ex.lesson.id].F2;
+      // The OOXML future-function prefix is required for the native XLOOKUP
+      // formula. The reviewed simulator itself uses the ordinary Excel syntax.
+      const result=lookupEngine.evaluate('='+formula.replace(/^_xlfn\./,''),ex.values);
+      if(result.error!==null||typeof result.result!=='number'||!Number.isFinite(result.result))
+        throw Error('Invalid reviewed lookup result.');
+      const rows=[[heading('Code'),heading('Item'),heading(ex.heading+' ('+ex.unit+')'),cell(null),
+        heading('Lookup code'),heading('Returned amount ('+ex.unit+')')]];
+      for(let row=2;row<=4;row++){
+        rows.push([cell(ex.values['A'+row]),cell(ex.values['B'+row]),amount(ex,'C'+row),cell(null),
+          row===2?cell(ex.values.E2):cell(null),
+          row===2?(done?{value:result.result,style:resultStyle(ex,true),formula}:cell(null,resultStyle(ex,false))):cell(null)]);
+      }
+      return exerciseSheet(ex,index,rows,[19,32,22,4,19,25]);
+    }
+    return {scenario,kind,filename:'Commonplace-Excel-'+id+'-v'+version+'-F4-'+kind+'.xlsx',
+      sheets:[
+        {name:'Read me',rows:guide,widths:[31,85],heights:[32,28,70,70,70,70,70,70,52,36,56]},
+        exerciseSheet(decision,0,ifRows,[31,23,23,21]),
+        exerciseSheet(conditional,1,cfRows,[31,23,5,24],{conditional:done?{range:'B2:B4',threshold}:null}),
+        lookupSheet(xlookup,2),lookupSheet(vlookup,3)
+      ]};
+  }
+  function f4SheetXml(sheet){
+    const rows=sheet.rows.map((row,r)=>{
+      const cells=row.map((c,i)=>{
+        const address=String.fromCharCode(65+i)+(r+1),a=' r="'+address+'" s="'+c.style+'"';
+        if(c.formula){
+          if(F4_FORMULAS[sheet.lesson]?.[address]!==c.formula)throw Error('Unexpected F4 formula.');
+          if(sheet.lesson==='if-minimum-target'){
+            if(!['Ready','Review'].includes(c.value))throw Error('Invalid IF cache.');
+            return '<c'+a+' t="str"><f>'+esc(c.formula)+'</f><v>'+esc(c.value)+'</v></c>';
+          }
+          if(typeof c.value!=='number'||!Number.isFinite(c.value))throw Error('Invalid lookup cache.');
+          return '<c'+a+'><f>'+esc(c.formula)+'</f><v>'+c.value+'</v></c>';
+        }
+        if(c.value===null)return '<c'+a+'/>';
+        if(typeof c.value==='number'){
+          if(!Number.isFinite(c.value))throw Error('Invalid numeric value.');
+          return '<c'+a+'><v>'+c.value+'</v></c>';
+        }
+        return '<c'+a+' t="inlineStr"><is><t xml:space="preserve">'+esc(c.value)+'</t></is></c>';
+      }).join('');
+      return '<row r="'+(r+1)+'" ht="'+(sheet.heights[r]||20)+'" customHeight="1">'+cells+'</row>';
+    }).join('');
+    const merges=sheet.merges?'<mergeCells count="'+sheet.merges.length+'">'+sheet.merges.map(range=>'<mergeCell ref="'+esc(range)+'"/>').join('')+'</mergeCells>':'';
+    let conditional='';
+    if(sheet.conditional){
+      const {range,threshold}=sheet.conditional;
+      if(sheet.lesson!=='highlight-below-target'||range!=='B2:B4'||!Number.isFinite(threshold)||Math.abs(threshold)>1e12)
+        throw Error('Invalid F4 conditional rule.');
+      conditional='<conditionalFormatting sqref="B2:B4"><cfRule type="cellIs" dxfId="0" priority="1" operator="lessThan"><formula>'+threshold+'</formula></cfRule></conditionalFormatting>';
+    }
+    return XML+'<worksheet xmlns="'+NS+'"><sheetViews><sheetView workbookViewId="0" showGridLines="1"/></sheetViews><sheetFormatPr defaultRowHeight="20"/><cols>'+
+      sheet.widths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>'+rows+'</sheetData>'+merges+conditional+'</worksheet>';
+  }
+  function f4Parts(model){
+    const rel=(id,type,target)=>'<Relationship Id="'+id+'" Type="'+REL+'/'+type+'" Target="'+target+'"/>';
+    const relationships=body=>XML+'<Relationships xmlns="'+PKG+'">'+body+'</Relationships>';
+    const content=(path,type)=>'<Override PartName="/'+path+'" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.'+type+'+xml"/>';
+    const styles=stylesXml('JPY',true).replace('</styleSheet>',
+      '<dxfs count="1"><dxf><font><color rgb="FF9C0006"/></font><fill><patternFill patternType="solid"><fgColor rgb="FFFFC7CE"/><bgColor rgb="FFFFC7CE"/></patternFill></fill></dxf></dxfs></styleSheet>');
+    const entries=[
+      ['[Content_Types].xml',XML+'<Types xmlns="'+CT+'"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'+content('xl/workbook.xml','sheet.main')+content('xl/styles.xml','styles')+model.sheets.map((_,i)=>content('xl/worksheets/sheet'+(i+1)+'.xml','worksheet')).join('')+'</Types>'],
+      ['_rels/.rels',relationships(rel('rId1','officeDocument','xl/workbook.xml'))],
+      ['xl/workbook.xml',XML+'<workbook xmlns="'+NS+'" xmlns:r="'+REL+'"><bookViews><workbookView activeTab="0"/></bookViews><sheets>'+model.sheets.map((s,i)=>'<sheet name="'+esc(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets><calcPr calcId="191029" calcMode="auto" fullCalcOnLoad="1"/></workbook>'],
+      ['xl/_rels/workbook.xml.rels',relationships(model.sheets.map((_,i)=>rel('rId'+(i+1),'worksheet','worksheets/sheet'+(i+1)+'.xml')).join('')+rel('rId'+(model.sheets.length+1),'styles','styles.xml'))],
+      ['xl/styles.xml',styles]
+    ];
+    model.sheets.forEach((sheet,i)=>entries.push(['xl/worksheets/sheet'+(i+1)+'.xml',f4SheetXml(sheet)]));
+    return entries;
+  }
+  function createF4Workbook(id,version,kind){
+    const model=buildF4Model(id,version,kind);
+    return {filename:model.filename,mime:MIME,bytes:zip(f4Parts(model))};
+  }
   function download(file){
     const url=URL.createObjectURL(new Blob([file.bytes],{type:file.mime}));
     const a=document.createElement('a');a.href=url;a.download=file.filename;
@@ -349,5 +524,5 @@
     practice.addEventListener('click',()=>handle('practice'));solution.addEventListener('click',()=>handle('solution'));
     refresh();return {refresh};
   }
-  global.CommonplaceExcelTutorials={buildModel,createWorkbook,buildFormulaModel,createFormulaWorkbook,buildReferenceModel,createReferenceWorkbook,buildTableModel,createTableWorkbook,mount};
+  global.CommonplaceExcelTutorials={buildModel,createWorkbook,buildFormulaModel,createFormulaWorkbook,buildReferenceModel,createReferenceWorkbook,buildTableModel,createTableWorkbook,buildF4Model,createF4Workbook,f4WorkbookContext,mount};
 })(window);
