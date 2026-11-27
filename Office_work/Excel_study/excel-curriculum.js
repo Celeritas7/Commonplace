@@ -162,7 +162,33 @@
       explanation:'All three status cells match, including the row whose amount is zero. COUNTIF returns 3.',
       worksheet:{formula:'=COUNTIF(B2:B7,F2)',output:'G2',sumRange:null,pairs:[{range:'B2:B7',criterion:'F2'}]} },
   ];
+  const pivotLessons = [
+    {id:'pivot-group-total',title:'PivotTable — Total amounts by group',
+      concept:'A PivotTable groups source records and summarizes their values. Put the destination or group field in Rows and Amount in Values, summarized by Sum. The grand total equals the sum of all source amounts.',
+      task:'Show the sum of Amount for every group in Rows. Leave Columns empty and include all statuses.',
+      question:'Which Values setting adds the amounts rather than counting the records?',
+      choices:['Sum of Amount','Count of Record','Rows only'],answer:0,
+      explanation:'Sum of Amount adds numeric amounts. Count of Record counts nonblank record labels, including records with zero amounts.',
+      goal:{rows:'group',columns:'none',values:'sum-amount',filter:'all'}},
+    {id:'pivot-status-count',title:'PivotTable — Count records by group and status',
+      concept:'Rows and Columns form a cross-tab. Put Group in Rows, Status in Columns and Count of Record in Values. Each intersection counts records meeting both labels.',
+      task:'Count records by group in Rows and status in Columns. Include all statuses. Count the record labels, not the amount.',
+      question:'A matching record has a zero amount. Does Count of Record include it?',
+      choices:['No','Yes, if its record label is nonblank','Only in a sum'],answer:1,
+      explanation:'A nonblank record label counts as one record, even when the amount is zero.',
+      goal:{rows:'group',columns:'status',values:'count-records',filter:'all'}},
+    {id:'pivot-filtered-total',title:'PivotTable — Filter a grouped total',
+      concept:'A report filter restricts the records summarized without deleting them from the source. Choose Ready in the Status filter, keep Group in Rows and sum Amount in Values. Refresh after source edits.',
+      task:'Sum Amount by group in Rows for Ready records only. Leave Columns empty and use the Status report filter.',
+      question:'After editing a source amount, how do you update an existing PivotTable?',
+      choices:['Delete the original record','Manually overwrite the total','Refresh the PivotTable'],answer:2,
+      explanation:'Refresh reads the current source data and recalculates the pivot. A report filter does not delete source records.',
+      goal:{rows:'group',columns:'none',values:'sum-amount',filter:'Ready'}},
+  ];
+  const pivotWorksheet={range:'A1:D7',fields:['record','status','group','amount']};
   const capabilities = freeze([
+    ...pivotLessons.map(lesson=>({id:'excel.pivot.'+lesson.id+'.v1',version:1,
+      kind:'pivot-table',engine:'bounded-pivot.v1',worksheet:pivotWorksheet})),
     ...summaryLessons.map(lesson=>({id:'excel.summary.'+lesson.id+'.v1',version:1,
       kind:'conditional-summary',engine:'bounded-conditional-summary.v1',worksheet:lesson.worksheet})),
     ...lookupLessons.map(lesson=>({ id:'excel.lookup.'+lesson.id+'.v1', version:1,
@@ -192,6 +218,9 @@
       table_name_max_length: 32 },
   ]);
   const runtimes = freeze([
+    {id:'personal-pivots',version:1,engine:'bounded-pivot.v1',
+      capabilities:['explanation.text.v1',...pivotLessons.map(l=>'excel.pivot.'+l.id+'.v1')],
+      lessons:pivotLessons.map(l=>({id:l.id,version:1}))},
     {id:'personal-conditional-summaries',version:1,engine:'bounded-conditional-summary.v1',
       input_policy:'exact-text-and-required-numbers',
       capabilities:['explanation.text.v1',...summaryLessons.map(l=>'excel.summary.'+l.id+'.v1')],
@@ -253,6 +282,9 @@
         { id: 'validate-entry', version: 2 }] },
   ]);
   const rubrics = freeze([
+    {id:'pivot-foundations',version:1,engine:'pivot-foundations.v1',runtime:{id:'personal-pivots',version:1},
+      criteria:['row-field','column-field','value-field','report-filter','pivot-output','fresh-source'],
+      independent_criteria:['original-records']},
     {id:'conditional-summary-foundations',version:1,engine:'conditional-summary-foundations.v1',
       runtime:{id:'personal-conditional-summaries',version:1},
       criteria:['summary-function','criteria-ranges','criteria-references','sum-range','summary-result'],
@@ -297,7 +329,9 @@
     {id:"min",fn:"MIN",title:"MIN — Find the smallest value",concept:"MIN returns the smallest numeric value in a range. It ignores blank cells. It does not tell you the corresponding product name; that requires a lookup or another method.",task:"Find the smallest recorded value",question:"Which formula finds the smallest numeric value in B2:B4?",choices:["=MIN(B2:B4)","=MAX(B2:B4)","=AVERAGE(B2:B4)"],answer:0,explanation:"MIN returns the smallest of the numeric entries."},
     {id:"max",fn:"MAX",title:"MAX — Find the largest value",concept:"MAX returns the largest numeric value in a range. It ignores blanks, and it works with negative numbers too. Use it to identify the highest quantity or cost.",task:"Find the largest recorded value",question:"The three recorded values are -7, -2 and -5. Which is MAX?",choices:["-7","-2","0"],answer:1,explanation:"-2 is the greatest number, even though all entries are negative."}
   ];
-  const lessons = freeze([...summaryLessons.map(item=>({...item,version:1,
+  const lessons = freeze([...pivotLessons.map(item=>({...item,version:1,worksheet:pivotWorksheet,
+    capability_id:'excel.pivot.'+item.id+'.v1',runtime:{id:'personal-pivots',version:1},
+    rubric:{id:'pivot-foundations',version:1}})), ...summaryLessons.map(item=>({...item,version:1,
     capability_id:'excel.summary.'+item.id+'.v1',runtime:{id:'personal-conditional-summaries',version:1},
     rubric:{id:'conditional-summary-foundations',version:1}})), ...lookupLessons.map(item=>({ ...item, version:1,
     capability_id:'excel.lookup.'+item.id+'.v1',runtime:{id:'personal-lookups',version:1},
@@ -871,6 +905,101 @@
     return {...result(criteria),evaluated};
   }
 
+  // F5B bounded PivotTable: separate source, cached snapshot and field layout.
+  const pivotInputCells=[2,3,4,5,6,7].flatMap(row=>['A'+row,'B'+row,'C'+row,'D'+row]);
+  const pivotStatuses=['Ready','Pending','Completed'];
+  function pivotRuntime(ref){
+    const runtime=resolveRuntime(ref);
+    if(runtime.engine!=='bounded-pivot.v1')throw Error('A PivotTable practice runtime is required.');
+    return runtime;
+  }
+  function validatePivotLayout(runtimeRef,layout){
+    pivotRuntime(runtimeRef);
+    if(!plain(layout)||Object.keys(layout).sort().join()!=='columns,filter,rows,values'||
+        !['group','status'].includes(layout.rows)||!['none','group','status'].includes(layout.columns)||
+        layout.rows===layout.columns||!['sum-amount','count-records'].includes(layout.values)||
+        !['all',...pivotStatuses].includes(layout.filter))
+      throw Error('Choose distinct row/column fields, a supported Values setting and status filter.');
+    if(layout.filter!=='all'&&(layout.rows==='status'||layout.columns==='status'))
+      throw Error('Use Status in only one area; move it out of Rows/Columns before using a Status filter.');
+    return {rows:layout.rows,columns:layout.columns,values:layout.values,filter:layout.filter};
+  }
+  function capturePivotSource(runtimeRef,cells){
+    pivotRuntime(runtimeRef);
+    if(!plain(cells)||Object.keys(cells).sort().join()!==pivotInputCells.slice().sort().join())
+      throw Error('Provide all six complete source records.');
+    const snapshot={};
+    for(const address of pivotInputCells){
+      const value=cells[address];
+      if(address[0]==='A')snapshot[address]=summaryLabel(value);
+      else if(address[0]==='B'){
+        if(!pivotStatuses.includes(value))throw Error('Use a preset status in '+address+'.');
+        snapshot[address]=value;
+      }else if(address[0]==='C'){
+        summaryText(value);snapshot[address]=value;
+      }else snapshot[address]=String(syntax.numericCell(value));
+    }
+    return snapshot;
+  }
+  function pivotView(runtimeRef,layout,cells){
+    const config=validatePivotLayout(runtimeRef,layout),snapshot=capturePivotSource(runtimeRef,cells);
+    const records=[2,3,4,5,6,7].map(row=>({id:row,record:snapshot['A'+row],
+      status:snapshot['B'+row],group:snapshot['C'+row],amount:Number(snapshot['D'+row])}));
+    const included=records.filter(r=>config.filter==='all'||r.status===config.filter);
+    // Group case variants together; preserve the first displayed spelling.
+    const fieldKey=(record,field)=>record[field].toUpperCase();
+    function categories(field){
+      const map=new Map();
+      for(const r of included)if(!map.has(fieldKey(r,field)))map.set(fieldKey(r,field),r[field]);
+      return [...map.keys()].sort().map(key=>({key,label:map.get(key)}));
+    }
+    const rowCategories=categories(config.rows),columnCategories=config.columns==='none'?
+      [{key:'all',label:config.values==='sum-amount'?'Sum of Amount':'Count of Record'}]:categories(config.columns);
+    const aggregate=rows=>Number((config.values==='sum-amount'?rows.reduce((sum,r)=>sum+r.amount,0):rows.length).toPrecision(15));
+    const rows=rowCategories.map(category=>{
+      const selected=included.filter(r=>fieldKey(r,config.rows)===category.key);
+      return {label:category.label,cells:columnCategories.map(col=>{
+        const matches=config.columns==='none'?selected:selected.filter(r=>fieldKey(r,config.columns)===col.key);
+        return matches.length?aggregate(matches):null;
+      }),total:aggregate(selected)};
+    });
+    return {columns:columnCategories.map(c=>c.label),rows,
+      columnTotals:columnCategories.map(col=>aggregate(config.columns==='none'?included:included.filter(r=>fieldKey(r,config.columns)===col.key))),
+      grandTotal:aggregate(included),includedRows:included.map(r=>r.id)};
+  }
+  function gradePivot(rubricRef,exercise,layout,snapshot,current){
+    const rubric=resolveRubric(rubricRef);
+    if(rubric.engine!=='pivot-foundations.v1')throw Error('A PivotTable rubric is required.');
+    const lesson=resolveLesson({id:exercise?.lesson?.id,version:exercise?.lesson?.version});
+    const runtime=pivotRuntime(rubric.runtime);
+    if(lesson.rubric.id!==rubric.id||lesson.rubric.version!==rubric.version||
+        !runtime.lessons.some(ref=>ref.id===lesson.id&&ref.version===lesson.version)||
+        !runtime.capabilities.includes(lesson.capability_id)||
+        !['guided','independent'].includes(exercise.mode))
+      throw Error('PivotTable lesson and rubric do not match.');
+    const baseline=capturePivotSource(rubric.runtime,exercise.values),goal=lesson.goal;
+    const config=layout===null?null:validatePivotLayout(rubric.runtime,layout);
+    const saved=config?capturePivotSource(rubric.runtime,snapshot):null;
+    const view=config?pivotView(rubric.runtime,config,saved):null;
+    let fresh=null,expected=null;
+    try{fresh=capturePivotSource(rubric.runtime,current);expected=pivotView(rubric.runtime,goal,fresh);}catch{}
+    const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+    // Compare display values and totals, not just a coincidentally equal grand total.
+    const display=v=>v&&({columns:v.columns,rows:v.rows,columnTotals:v.columnTotals,grandTotal:v.grandTotal});
+    const criteria=[
+      {id:'row-field',label:'Use the requested Rows field',passed:config?.rows===goal.rows},
+      {id:'column-field',label:'Use the requested Columns field (or none)',passed:config?.columns===goal.columns},
+      {id:'value-field',label:'Use the requested Values field and aggregation',passed:config?.values===goal.values},
+      {id:'report-filter',label:'Use the requested Status report filter',passed:config?.filter===goal.filter},
+      {id:'pivot-output',label:'Complete summary cells and totals match the goal on current source data',
+        passed:view!==null&&expected!==null&&same(display(view),display(expected))},
+      {id:'fresh-source',label:'PivotTable uses a current, valid source snapshot',passed:saved!==null&&fresh!==null&&same(saved,fresh)},
+    ];
+    if(exercise.mode==='independent')criteria.push({id:'original-records',label:'All original source records preserved',
+      passed:fresh!==null&&same(fresh,baseline)});
+    return {...result(criteria),view};
+  }
+
   // F3 keeps typed records separate from order, formatting and hidden rows.
   // Every operation is pure, and rules never rewrite already-entered values.
   function tableRuntime(ref) {
@@ -1251,6 +1380,7 @@
     validateConditionalRule, conditionalView, gradeConditional,
     parseLookupFormula, evaluateLookupFormula, gradeLookup,
     parseSummaryFormula, evaluateSummaryFormula, gradeSummary,
+    validatePivotLayout, capturePivotSource, pivotView, gradePivot,
     createTableState, applyTableAction, tableView, inspectTableValidation, formatTableValue, gradeTables,
   });
 })(typeof window === 'undefined' ? globalThis : window);
