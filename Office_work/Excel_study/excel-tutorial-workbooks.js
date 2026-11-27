@@ -145,8 +145,9 @@
   const TABLE_FORMAT_STYLES={general:0,integer:4,decimal:5,jpy:6,php:7,percent:8,date:9};
   function buildTableModel(id,version,kind){
     if(kind!=='practice'&&kind!=='solution')throw Error('Unknown workbook type.');
-    const s=scenarioFor(id,version),done=kind==='solution',engine=global.CommonplaceExcelTableFoundations;
-    if(!engine)throw Error('Table lesson library is unavailable.');
+    const s=scenarioFor(id,version),done=kind==='solution',library=global.CommonplaceExcelTableFoundations;
+    if(!library)throw Error('Table lesson library is unavailable.');
+    const engine=library.forVersion(1); // Preserve the published F3 workbook data and lesson labels.
     const names=['01 Formats','02 Table','03 Sort','04 Filter','05 Validation'];
     const tableNames=[null,'PracticeItems','SortItems','FilterItems','ValidationItems'];
     const exercises=TABLE_LESSONS.map(lessonId=>engine.exercise(lessonId,id,version,'guided'));

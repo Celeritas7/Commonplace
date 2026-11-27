@@ -2,8 +2,6 @@
 (function (global) {
   'use strict';
   const curriculum = global.CommonplaceExcelCurriculum;
-  const runtime = Object.freeze({ id: 'personal-tables', version: 1 });
-  const rubric = Object.freeze({ id: 'table-foundations', version: 1 });
   const examples = {
     'general-office': {
       prefix: 'OF', currency: 'JPY',
@@ -45,55 +43,62 @@
     'filter-records': () => 'Show only Ready items with Quantity at least 5. Apply both conditions together. Keep the other records in the worksheet and preserve their values.',
     'validate-entry': () => 'Enable both entry rules: Quantity must be a whole number from 0 to 10000, and Status must be Ready, Reserved or Shipped. Keep the existing item values unchanged and check them against the rules.'
   };
-  function lesson(id) {
-    const ref = curriculum.resolveRuntime(runtime).lessons.find(item => item.id === id);
-    if (!ref) throw Error('Unknown table lesson.');
-    return curriculum.resolveLesson(ref);
-  }
-  function exercise(id, scenarioId, version, mode = 'guided') {
-    if (!['guided', 'independent'].includes(mode)) throw Error('Unknown practice mode.');
-    const selected = global.CommonplaceExcelScenarios?.list().find(s => s.id === scenarioId && s.version === version);
-    if (!selected || !Object.hasOwn(examples, scenarioId)) throw Error('Unknown table example or version.');
-    const l = lesson(id), data = examples[scenarioId], independent = mode === 'independent';
-    const quantities = independent ? [11, 3, 101, 8, 1, 23] : [10, 2, 100, 6, 0, 20];
-    const statuses = ['Ready', 'Ready', 'Reserved', 'Ready', 'Shipped', 'Reserved'];
-    const discounts = independent ? [0.06, 0.025, 0, 0.075, 0.1, 0.04] : [0.05, 0.02, 0, 0.1, 0.15, 0.025];
-    const offsets = [4, 0, 7, 2, 1, 5], start = serial('2026-12-01') + (independent ? 14 : 0);
-    const rows = data.items.map((item, i) => ({
-      id: data.prefix + '-' + String(i + 1).padStart(3, '0'), item, status: statuses[i],
-      quantity: quantities[i], unitPrice: data.prices[i] + (independent ? 25 * (i + 1) : 0),
-      discount: discounts[i], shipDate: start + offsets[i]
-    }));
-    return {
-      lesson: l, scenario: selected, mode, currency: data.currency, rows,
-      dataset: { id: 'f3-' + scenarioId + '-' + id + '-' + mode, version: 1 },
-      columns: [{ id: 'id', label: 'Item ID' }, { id: 'item', label: 'Item' },
-        { id: 'status', label: 'Status' }, { id: 'quantity', label: 'Quantity' },
-        { id: 'unitPrice', label: 'Unit price (' + data.currency + ')' },
-        { id: 'discount', label: 'Discount' }, { id: 'shipDate', label: 'Planned ship date' }],
-      context: data.context, instruction: instructions[id](data.currency),
-      note: 'All records, prices, discounts and December 2026 dates are fictional. Currency formatting changes the display, not the amount or currency conversion.'
-    };
-  }
-  function initial(ex) {
-    const l = lesson(ex?.lesson?.id);
-    if (ex.lesson.version !== l.version || !['JPY', 'PHP'].includes(ex.currency)) throw Error('Unsupported table exercise.');
-    let state = curriculum.createTableState(runtime, clone(ex.rows));
-    if (!['number-formats', 'create-table'].includes(l.id)) {
-      const formats = { quantity: 'integer', unitPrice: ex.currency.toLowerCase(), discount: 'percent', shipDate: 'date' };
-      for (const [column, format] of Object.entries(formats))
-        state = curriculum.applyTableAction(runtime, state, { type: 'set-format', column, format });
-      state = curriculum.applyTableAction(runtime, state,
-        { type: 'create-table', name: 'PracticeItems', range: 'A1:G7', headers: true, banded: true });
+  function forVersion(version) {
+    const runtime = Object.freeze({ id: 'personal-tables', version });
+    const rubric = Object.freeze({ id: 'table-foundations', version });
+    curriculum.resolveRuntime(runtime); curriculum.resolveRubric(rubric);
+    function lesson(id) {
+      const ref = curriculum.resolveRuntime(runtime).lessons.find(item => item.id === id);
+      if (!ref) throw Error('Unknown table lesson.');
+      return curriculum.resolveLesson(ref);
     }
-    return state;
+    function exercise(id, scenarioId, version, mode = 'guided') {
+      if (!['guided', 'independent'].includes(mode)) throw Error('Unknown practice mode.');
+      const selected = global.CommonplaceExcelScenarios?.list().find(s => s.id === scenarioId && s.version === version);
+      if (!selected || !Object.hasOwn(examples, scenarioId)) throw Error('Unknown table example or version.');
+      const l = lesson(id), data = examples[scenarioId], independent = mode === 'independent';
+      const quantities = independent ? [11, 3, 101, 8, 1, 23] : [10, 2, 100, 6, 0, 20];
+      const statuses = ['Ready', 'Ready', 'Reserved', 'Ready', 'Shipped', 'Reserved'];
+      const discounts = independent ? [0.06, 0.025, 0, 0.075, 0.1, 0.04] : [0.05, 0.02, 0, 0.1, 0.15, 0.025];
+      const offsets = [4, 0, 7, 2, 1, 5], start = serial('2026-12-01') + (independent ? 14 : 0);
+      const rows = data.items.map((item, i) => ({
+        id: data.prefix + '-' + String(i + 1).padStart(3, '0'), item, status: statuses[i],
+        quantity: quantities[i], unitPrice: data.prices[i] + (independent ? 25 * (i + 1) : 0),
+        discount: discounts[i], shipDate: start + offsets[i]
+      }));
+      return {
+        lesson: l, scenario: selected, mode, currency: data.currency, rows,
+        dataset: { id: 'f3-' + scenarioId + '-' + id + '-' + mode, version: 1 },
+        columns: [{ id: 'id', label: 'Item ID' }, { id: 'item', label: 'Item' },
+          { id: 'status', label: 'Status' }, { id: 'quantity', label: 'Quantity' },
+          { id: 'unitPrice', label: 'Unit price (' + data.currency + ')' },
+          { id: 'discount', label: 'Discount' }, { id: 'shipDate', label: 'Planned ship date' }],
+        context: data.context, instruction: instructions[id](data.currency),
+        note: 'All records, prices, discounts and December 2026 dates are fictional. Currency formatting changes the display, not the amount or currency conversion.'
+      };
+    }
+    function initial(ex) {
+      const l = lesson(ex?.lesson?.id);
+      if (ex.lesson.version !== l.version || !['JPY', 'PHP'].includes(ex.currency)) throw Error('Unsupported table exercise.');
+      let state = curriculum.createTableState(runtime, clone(ex.rows));
+      if (!['number-formats', 'create-table'].includes(l.id)) {
+        const formats = { quantity: 'integer', unitPrice: ex.currency.toLowerCase(), discount: 'percent', shipDate: 'date' };
+        for (const [column, format] of Object.entries(formats))
+          state = curriculum.applyTableAction(runtime, state, { type: 'set-format', column, format });
+        state = curriculum.applyTableAction(runtime, state,
+          { type: 'create-table', name: 'PracticeItems', range: 'A1:G7', headers: true, banded: true });
+      }
+      return state;
+    }
+    return Object.freeze({
+      list: () => curriculum.listLessons(runtime), exercise, initial,
+      apply: (state, action) => curriculum.applyTableAction(runtime, state, action),
+      view: state => curriculum.tableView(runtime, state),
+      format: (column, value, format) => curriculum.formatTableValue(runtime, column, value, format),
+      inspect: state => curriculum.inspectTableValidation(runtime, state),
+      grade: (ex, state) => curriculum.gradeTables(rubric, ex, state)
+    });
   }
-  global.CommonplaceExcelTableFoundations = Object.freeze({
-    list: () => curriculum.listLessons(runtime), exercise, initial,
-    apply: (state, action) => curriculum.applyTableAction(runtime, state, action),
-    view: state => curriculum.tableView(runtime, state),
-    format: (column, value, format) => curriculum.formatTableValue(runtime, column, value, format),
-    inspect: state => curriculum.inspectTableValidation(runtime, state),
-    grade: (ex, state) => curriculum.gradeTables(rubric, ex, state)
-  });
+  // Personal practice opts into R5; workbook exports explicitly keep released v1.
+  global.CommonplaceExcelTableFoundations = Object.freeze({ ...forVersion(2), forVersion });
 })(window);

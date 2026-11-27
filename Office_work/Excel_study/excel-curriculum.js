@@ -120,6 +120,9 @@
       id: 'excel.tables.' + lesson.id + '.v1', version: 1,
       kind: 'business-table', engine: 'bounded-business-table.v1', worksheet: tableWorksheet,
     })),
+    { id: 'excel.tables.create-table.v2', version: 2,
+      kind: 'business-table', engine: 'bounded-business-table.v1', worksheet: tableWorksheet,
+      table_name_max_length: 32 },
   ]);
   const runtimes = freeze([
     { id: 'personal-formulas', version: 1, engine: 'bounded-aggregate.v1',
@@ -156,6 +159,15 @@
       lessons: [{ id: 'number-formats', version: 1 }, { id: 'create-table', version: 1 },
         { id: 'sort-records', version: 1 }, { id: 'filter-records', version: 1 },
         { id: 'validate-entry', version: 1 }] },
+    { id: 'personal-tables', version: 2, engine: 'bounded-business-table.v1',
+      row_count: 6, columns: tableColumns, numeric_columns: tableNumberColumns,
+      formats: tableFormats, statuses: tableStatuses, table_name_max_length: 32,
+      capabilities: ['explanation.text.v1', 'excel.tables.number-formats.v1',
+        'excel.tables.create-table.v2', 'excel.tables.sort-records.v1',
+        'excel.tables.filter-records.v1', 'excel.tables.validate-entry.v1'],
+      lessons: [{ id: 'number-formats', version: 2 }, { id: 'create-table', version: 2 },
+        { id: 'sort-records', version: 2 }, { id: 'filter-records', version: 2 },
+        { id: 'validate-entry', version: 2 }] },
   ]);
   const rubrics = freeze([
     { id: 'formula-foundations', version: 1, engine: 'formula-foundations.v1',
@@ -174,6 +186,9 @@
       independent_criteria: ['original-inputs'] },
     { id: 'table-foundations', version: 1, engine: 'table-foundations.v1',
       runtime: { id: 'personal-tables', version: 1 },
+      independent_criteria: ['original-records'] },
+    { id: 'table-foundations', version: 2, engine: 'table-foundations.v2',
+      runtime: { id: 'personal-tables', version: 2 },
       independent_criteria: ['original-records'] },
   ]);
   const lessonContent = [
@@ -198,6 +213,11 @@
     ...item, version: 1, capability_id: 'excel.tables.' + item.id + '.v1',
     runtime: { id: 'personal-tables', version: 1 },
     rubric: { id: 'table-foundations', version: 1 }, worksheet: tableWorksheet,
+  })), ...tableLessons.map(item => ({
+    ...item, version: 2,
+    capability_id: 'excel.tables.' + item.id + (item.id === 'create-table' ? '.v2' : '.v1'),
+    runtime: { id: 'personal-tables', version: 2 },
+    rubric: { id: 'table-foundations', version: 2 }, worksheet: tableWorksheet,
   }))]);
   function resolveCapability(id) {
     const found = capabilities.find(item => item.id === id);
@@ -381,9 +401,10 @@
       throw Error('Use six complete records with unique SKU IDs and bounded typed values.');
     return rows;
   }
-  function tableName(value) {
-    if (typeof value !== 'string') return false;
-    const match = /^[A-Za-z_][A-Za-z0-9_]{0,30}$/.exec(value);
+  function tableName(runtime, value) {
+    // Released v1 keeps its 31-character policy; v2 explicitly opts into 32.
+    if (typeof value !== 'string' || value.length > (runtime.table_name_max_length ?? 31)) return false;
+    const match = /^[A-Za-z_][A-Za-z0-9_]{0,31}$/.exec(value);
     return !!match && match[0].length === value.length &&
       !/^(?:[A-Za-z]{1,3}[1-9][0-9]*|[RC]|R[1-9][0-9]*C[1-9][0-9]*)$/i.test(value);
   }
@@ -406,7 +427,7 @@
         !tableNumberColumns.every(column => tableFormats.includes(state.formats[column])))
       throw Error('Unsupported column format.');
     if (state.table !== null && (!hasKeys(state.table, ['name', 'range', 'headers', 'banded']) ||
-        !tableName(state.table.name) || state.table.range !== 'A1:G7' ||
+        !tableName(runtime, state.table.name) || state.table.range !== 'A1:G7' ||
         state.table.headers !== true || typeof state.table.banded !== 'boolean'))
       throw Error('Create a named table over A1:G7 with the existing headers.');
     if (state.sort !== null && (!hasKeys(state.sort, ['column', 'direction']) ||
@@ -465,8 +486,10 @@
           !tableFormats.includes(action.format)) throw Error('Choose a numeric column and supported number format.');
       next.formats[action.column] = action.format;
     } else if (action.type === 'create-table') {
-      if (!hasKeys(action, ['type', 'name', 'range', 'headers', 'banded']) || !tableName(action.name))
-        throw Error('Use a table name beginning with a letter or underscore, without spaces or cell references.');
+      if (!hasKeys(action, ['type', 'name', 'range', 'headers', 'banded']) || !tableName(runtime, action.name))
+        throw Error(runtime.version === 1
+          ? 'Use a table name beginning with a letter or underscore, without spaces or cell references.'
+          : 'Use a table name with 1–32 characters: start with A–Z, a–z or _, then use only those letters, digits or _. Spaces, cell-reference names and the single letters R or C are not supported in this practice.');
       if (action.range !== 'A1:G7' || action.headers !== true || typeof action.banded !== 'boolean')
         throw Error('This practice table must include A1:G7 and its existing header row.');
       next.table = { name: action.name, range: action.range, headers: action.headers, banded: action.banded };
@@ -555,7 +578,8 @@
   }
   function gradeTables(rubricRef, exercise, state) {
     const rubric = resolveRubric(rubricRef);
-    if (rubric.engine !== 'table-foundations.v1') throw Error('A business-table rubric is required.');
+    if (!['table-foundations.v1', 'table-foundations.v2'].includes(rubric.engine))
+      throw Error('A business-table rubric is required.');
     const runtime = tableRuntime(rubric.runtime);
     const lesson = resolveLesson({ id: exercise?.lesson?.id, version: exercise?.lesson?.version });
     if (lesson.rubric.id !== rubric.id || lesson.rubric.version !== rubric.version ||
@@ -574,7 +598,9 @@
           state.formats[column] === (expected === 'scenario-currency' ? exercise.currency.toLowerCase() : expected));
     } else if (lesson.id === 'create-table') {
       add('table-created', 'All six records belong to a table with the existing headers', !!state.table);
-      add('table-name', 'The table is named PracticeItems', state.table?.name === lesson.goal.table.name);
+      add('table-name', 'The table is named PracticeItems',
+        rubric.engine === 'table-foundations.v1' ? state.table?.name === lesson.goal.table.name
+          : state.table?.name.toLowerCase() === lesson.goal.table.name.toLowerCase());
       add('table-banding', 'Banded table rows are enabled', state.table?.banded === true);
     } else if (lesson.id === 'sort-records') {
       add('sort-setting', 'Quantity is selected for a smallest-to-largest sort',

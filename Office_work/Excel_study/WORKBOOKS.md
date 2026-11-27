@@ -94,3 +94,9 @@ verified the six-sheet data grids and native table names, and rendered both
 complete Japan–Philippines files plus the PHP formats sheet. All 13 rendered
 views were visually reviewed, including filtered visibility and status dropdowns.
 Native Microsoft Excel open/save and physical iPad acceptance remain pending.
+
+R5 selects corrected v2 references for personal table practice, while the
+workbook writer explicitly uses `CommonplaceExcelTableFoundations.forVersion(1)`.
+This preserves the published F3 data-version labels and all ten output files
+byte-for-byte. Regression hashes pin those ten files as well as the 30 earlier
+D2/F1/F2 exports. R5 changes no workbook task, native table or validation rule.

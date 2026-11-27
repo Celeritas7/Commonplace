@@ -299,3 +299,10 @@ Workbook checks preserve all 30 previous D2/F1/F2 outputs. Native Excel and
 physical iPad acceptance remain pending, along with hosted recovery and G0.
 F3 does not activate production synchronization, alter hosted database/Auth/
 permissions or enroll learners.
+
+R5 explicitly selects F3 lesson/runtime/rubric v2 for new personal sessions after
+combined #128 reached main. Released v1 references, recorded outcomes and the
+worksheet schema remain available unchanged. The corrected case comparison and
+32-character name limit require no persistent-record migration. Workbook exports
+stay pinned to the v1 adapter; only the public shell manifest changes for the
+shared core. All preservation and physical-device boundaries above still apply.
