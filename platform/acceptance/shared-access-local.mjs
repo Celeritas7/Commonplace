@@ -1,3 +1,4 @@
+import {roadmapStructureAcceptance} from "./roadmap-structure-local.mjs";
 // Called only by full-stack.mjs after its loopback/container/environment guards.
 // All identities, records and attestations below belong to that disposable stack.
 import { readFile } from "node:fs/promises";
@@ -334,6 +335,7 @@ export async function sharedAccessAcceptance({
   await roadmapTaskEditsAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await roadmapLogAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await roadmapCreationAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
+  await roadmapStructureAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await check(
     "real Auth binds CP-only identity without legacy roles and preserves legacy viewer signup",
     async () => {
