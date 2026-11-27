@@ -100,3 +100,32 @@ workbook writer explicitly uses `CommonplaceExcelTableFoundations.forVersion(1)`
 This preserves the published F3 data-version labels and all ten output files
 byte-for-byte. Regression hashes pin those ten files as well as the 30 earlier
 D2/F1/F2 exports. R5 changes no workbook task, native table or validation rule.
+
+## F4 decision, conditional-formatting and lookup workbooks
+
+F4D adds ten separate native XLSX files across all five professional contexts:
+`Commonplace-Excel-<scenario>-v1-F4-<practice|solution>.xlsx`. Each contains
+Read me, 01 IF, 02 Conditional format, 03 XLOOKUP and 04 VLOOKUP.
+The four exercises use the exact version-1 guided F4A/F4B/F4C datasets.
+Units are displayed per sheet (counts, PHP or JPY as appropriate). No learner
+edits, independent assessment data, session records or external files are exported.
+
+- IF: D2:D4 are blank in practice and contain real IF formulas with string
+  caches in the solution. Equality returns Ready.
+- Conditional format: B2:B4 contains numeric inputs; D2 shows the requested
+  threshold. Practice has no active rule. The solution uses a native cellIs
+  lessThan rule and a differential light-red-fill/dark-red-text style.
+  The threshold is the numeric value shown in D2 at generation, not a cell link;
+  use Manage Rules to change it. No manually painted answer cells.
+- XLOOKUP and VLOOKUP: separate unsorted catalogs with text item codes and
+  numeric amounts, E2 query, and blank F2 in practice. Solutions contain exact
+  formulas and calculated numeric caches. OOXML uses the future-function prefix
+  _xlfn.XLOOKUP; older Excel versions may not support XLOOKUP, so VLOOKUP is
+  available separately. Auto/full calculation is requested on opening.
+
+F4 has a separate formula allowlist and XML writer using the existing deterministic
+ZIP helper. It does not change the D2/F1/F2/F3 paths or their published hashes.
+The Section 5 pages expose the active context and all four sheet units and offer
+separate practice and solution downloads. Native Microsoft Excel open/save and
+physical iPad download acceptance remain pending. No external workbook edits are
+collected or automatically assessed.
