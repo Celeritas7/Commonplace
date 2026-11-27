@@ -122,7 +122,25 @@
     explanation: 'Only 4 is strictly less than 5. Equality does not qualify, and none of the underlying values changes.',
     worksheet: { inputCells: ['B2','B3','B4'], goal: { range: 'B2:B4', operator: 'lt', style: 'red' } },
   };
+  const lookupLessons = [
+    { id:'xlookup-exact', fn:'XLOOKUP', title:'XLOOKUP — Find a price by item code',
+      concept:'XLOOKUP searches a range for a key and returns the corresponding value from another range. Exact matching is the default. A missing code returns #N/A; this is not a zero price.',
+      task:'Use XLOOKUP in F2 to retrieve the amount for the code in E2 from the complete catalog.',
+      question:'What does an exact XLOOKUP return when the code is absent and no fallback is supplied?',
+      choices:['#N/A','The nearest price','Zero'], answer:0,
+      explanation:'An absent exact match returns #N/A. Check the code or the catalog; do not treat the error as a price.',
+      worksheet:{ formula:'=XLOOKUP(E2,A2:A4,C2:C4)', query:'E2', search:'A2:A4', returns:'C2:C4', output:'F2' } },
+    { id:'vlookup-exact', fn:'VLOOKUP', title:'VLOOKUP — Find a price in a catalog',
+      concept:'VLOOKUP searches the first column of its table range and returns a value from a column to its right. Column numbers count from the first column of the range. Use FALSE or 0 for an exact match.',
+      task:'Use VLOOKUP in F2 to retrieve the amount for the code in E2 from the complete three-column catalog. Specify exact matching.',
+      question:'For A2:C4, which column index retrieves the value in column C?',
+      choices:['1','2','3'], answer:2,
+      explanation:'A is column 1, B is 2, and C is 3 in that table. FALSE or 0 selects exact matching.',
+      worksheet:{ formula:'=VLOOKUP(E2,A2:C4,3,FALSE)', query:'E2', search:'A2:A4', returns:'C2:C4', output:'F2' } },
+  ];
   const capabilities = freeze([
+    ...lookupLessons.map(lesson=>({ id:'excel.lookup.'+lesson.id+'.v1', version:1,
+      kind:'lookup-formula', engine:'bounded-lookup.v1', worksheet:lesson.worksheet })),
     { id: 'excel.conditional.highlight-below-target.v1', version: 1, kind: 'conditional-formatting',
       engine: 'bounded-conditional.v1', worksheet: conditionalLesson.worksheet },
     { id: 'excel.decisions.if-minimum-target.v1', version: 1, kind: 'decision-formula',
@@ -148,6 +166,10 @@
       table_name_max_length: 32 },
   ]);
   const runtimes = freeze([
+    { id:'personal-lookups', version:1, engine:'bounded-lookup.v1',
+      input_policy:'text-codes-and-numbers',
+      capabilities:['explanation.text.v1',...lookupLessons.map(l=>'excel.lookup.'+l.id+'.v1')],
+      lessons:lookupLessons.map(l=>({id:l.id,version:1})) },
     { id: 'personal-conditional-formatting', version: 1, engine: 'bounded-conditional.v1',
       input_policy: 'required-numbers',
       capabilities: ['explanation.text.v1', 'excel.conditional.highlight-below-target.v1'],
@@ -201,6 +223,10 @@
         { id: 'validate-entry', version: 2 }] },
   ]);
   const rubrics = freeze([
+    { id:'lookup-foundations', version:1, engine:'lookup-foundations.v1',
+      runtime:{id:'personal-lookups',version:1},
+      criteria:['lookup-function','lookup-key','search-range','return-range','lookup-result'],
+      independent_criteria:['original-inputs'] },
     { id: 'conditional-foundations', version: 1, engine: 'conditional-foundations.v1',
       runtime: { id: 'personal-conditional-formatting', version: 1 },
       criteria: ['rule-range', 'rule-operator', 'rule-threshold', 'rule-style', 'matched-cells'],
@@ -237,7 +263,9 @@
     {id:"min",fn:"MIN",title:"MIN — Find the smallest value",concept:"MIN returns the smallest numeric value in a range. It ignores blank cells. It does not tell you the corresponding product name; that requires a lookup or another method.",task:"Find the smallest recorded value",question:"Which formula finds the smallest numeric value in B2:B4?",choices:["=MIN(B2:B4)","=MAX(B2:B4)","=AVERAGE(B2:B4)"],answer:0,explanation:"MIN returns the smallest of the numeric entries."},
     {id:"max",fn:"MAX",title:"MAX — Find the largest value",concept:"MAX returns the largest numeric value in a range. It ignores blanks, and it works with negative numbers too. Use it to identify the highest quantity or cost.",task:"Find the largest recorded value",question:"The three recorded values are -7, -2 and -5. Which is MAX?",choices:["-7","-2","0"],answer:1,explanation:"-2 is the greatest number, even though all entries are negative."}
   ];
-  const lessons = freeze([{ ...conditionalLesson, version: 1,
+  const lessons = freeze([...lookupLessons.map(item=>({ ...item, version:1,
+    capability_id:'excel.lookup.'+item.id+'.v1',runtime:{id:'personal-lookups',version:1},
+    rubric:{id:'lookup-foundations',version:1} })), { ...conditionalLesson, version: 1,
     capability_id: 'excel.conditional.highlight-below-target.v1',
     runtime: { id: 'personal-conditional-formatting', version: 1 },
     rubric: { id: 'conditional-foundations', version: 1 },
@@ -571,6 +599,121 @@
       label:'Original exercise inputs preserved',
       passed:inputCells.every(address => Object.hasOwn(cells,address) && numberMatches(cells[address],baseline[address])) });
     return { ...result(criteria), view };
+  }
+
+  // F4C: exact, case-insensitive text-code lookups over a three-row catalog.
+  // No arbitrary expressions, wildcards, approximate matches or formula chains.
+  const lookupGap='(?: |\\r\\n)*';
+  const lookupRef='\\$?[AE]\\$?[234]';
+  const lookupCell='\\$?[ABC]\\$?[234]';
+  const lookupRange='('+lookupCell+':'+lookupCell+')';
+  const lookupPrefix='^'+lookupGap+'='+lookupGap;
+  const lookupEnd=lookupGap+'\\)'+lookupGap+'$';
+  const lookupComma=lookupGap+','+lookupGap;
+  const lookupX=new RegExp(lookupPrefix+'XLOOKUP\\('+lookupGap+'('+lookupRef+')'+lookupComma+
+    lookupRange+lookupComma+lookupRange+'(?:'+lookupComma+','+lookupGap+'0)?'+lookupEnd,'i');
+  const lookupV=new RegExp(lookupPrefix+'VLOOKUP\\('+lookupGap+'('+lookupRef+')'+lookupComma+
+    lookupRange+lookupComma+'([123])'+lookupComma+'(?:FALSE|0)'+lookupEnd,'i');
+  const lookupInputs=['A2','B2','C2','A3','B3','C3','A4','B4','C4','E2'];
+  function lookupRuntime(ref){
+    const runtime=resolveRuntime(ref);
+    if(runtime.engine!=='bounded-lookup.v1')throw Error('A lookup practice runtime is required.');
+    return runtime;
+  }
+  const lookupAddress=s=>s.replaceAll('$','').toUpperCase();
+  function lookupRectangle(range){
+    const [first,last]=range.split(':').map(lookupAddress);
+    const left=first.charCodeAt(0),right=last.charCodeAt(0),start=Number(first[1]),end=Number(last[1]);
+    if(left>right||start>end)throw Error('Use an ordered catalog range.');
+    return {left,right,start,end};
+  }
+  const lookupColumn=(col,start,end)=>String.fromCharCode(col)+start+':'+String.fromCharCode(col)+end;
+  function parseLookupFormula(runtimeRef,formula){
+    lookupRuntime(runtimeRef);
+    if(typeof formula!=='string'||formula.length>160)throw Error('Enter a supported lookup formula, up to 160 characters.');
+    const x=lookupX.exec(formula),v=lookupV.exec(formula);
+    const match=x||v;
+    if(!match||match[0].length!==formula.length)
+      throw Error('Use XLOOKUP with exact matching or VLOOKUP with FALSE/0. Keep references and tokens together.');
+    const key=lookupAddress(match[1]);
+    if(!['E2','A2','A3','A4'].includes(key))throw Error('Use a supported code cell.');
+    const search=lookupRectangle(match[2]);
+    let returns,fn;
+    if(x){
+      returns=lookupRectangle(match[3]);fn='XLOOKUP';
+      if(search.left!==65||search.right!==65||returns.left!==returns.right||
+          search.end-search.start!==returns.end-returns.start)
+        throw Error('Choose an A-column search range and an equally long one-column return range.');
+    }else{
+      fn='VLOOKUP';
+      const index=Number(match[3]),col=search.left+index-1;
+      if(search.left!==65||col>search.right)throw Error('The table must start in column A and contain the requested column.');
+      returns={left:col,right:col,start:search.start,end:search.end};
+    }
+    return {fn,key,search:lookupColumn(65,search.start,search.end),
+      returns:lookupColumn(returns.left,returns.start,returns.end)};
+  }
+  function lookupCode(value){
+    if(typeof value!=='string'||! /^[A-Za-z][A-Za-z0-9_-]{0,23}$/.test(value)||
+        /[\r\n]/.test(value))throw Error('Use a code of 1–24 ASCII characters, starting with a letter; letters, digits, hyphens and underscores only.');
+    return value.toUpperCase();
+  }
+  function lookupLabel(value){
+    if(typeof value!=='string'||!value.trim()||value.length>80||/[\x00-\x1f\x7f]/.test(value))
+      throw Error('Use a nonempty item label of at most 80 characters.');
+    return value;
+  }
+  function lookupValue(cells,address){
+    if(!Object.hasOwn(cells,address))throw Error('Missing input '+address+'.');
+    const value=cells[address];
+    return address[0]==='C'?syntax.numericCell(value):address[0]==='B'?lookupLabel(value):lookupCode(value);
+  }
+  function evaluateLookupFormula(runtimeRef,formula,cells){
+    const parsed=parseLookupFormula(runtimeRef,formula);
+    if(!plain(cells))throw Error('Worksheet inputs are required.');
+    const key=lookupValue(cells,parsed.key),s=lookupRectangle(parsed.search),r=lookupRectangle(parsed.returns);
+    // Validate the entire searched range before returning any match.
+    const keys=[];
+    for(let row=s.start;row<=s.end;row++)keys.push(lookupValue(cells,'A'+row));
+    const index=keys.indexOf(key);
+    if(index===-1)return {result:null,error:'#N/A',matchedCell:null};
+    const address=String.fromCharCode(r.left)+(r.start+index);
+    // Return the original spelling for a text code, not the comparison key.
+    let resultValue=lookupValue(cells,address);
+    if(address[0]==='A')resultValue=cells[address];
+    return {result:resultValue,error:null,matchedCell:address};
+  }
+  function gradeLookup(rubricRef,exercise,formula,cells){
+    const rubric=resolveRubric(rubricRef);
+    if(rubric.engine!=='lookup-foundations.v1')throw Error('A lookup rubric is required.');
+    const lesson=resolveLesson({id:exercise?.lesson?.id,version:exercise?.lesson?.version});
+    const runtime=lookupRuntime(rubric.runtime);
+    if(lesson.rubric.id!==rubric.id||lesson.rubric.version!==rubric.version||
+        !runtime.lessons.some(ref=>ref.id===lesson.id&&ref.version===lesson.version)||
+        !runtime.capabilities.includes(lesson.capability_id)||
+        !['guided','independent'].includes(exercise.mode))
+      throw Error('Lookup lesson and rubric do not match.');
+    const baseline=exercise.values;
+    if(!plain(baseline)||Object.keys(baseline).sort().join()!==lookupInputs.slice().sort().join())
+      throw Error('Lookup exercise inputs do not match the lesson.');
+    lookupInputs.forEach(address=>lookupValue(baseline,address));
+    let parsed=null,evaluated={result:null,error:'Enter a supported lookup formula.',matchedCell:null},expected=null;
+    try{parsed=parseLookupFormula(rubric.runtime,formula);}catch{}
+    try{evaluated=evaluateLookupFormula(rubric.runtime,formula,cells);}
+    catch(error){evaluated={result:null,error:error.message,matchedCell:null};}
+    try{expected=evaluateLookupFormula(rubric.runtime,lesson.worksheet.formula,cells);}catch{}
+    const criteria=[
+      {id:'lookup-function',label:'Use the requested '+lesson.fn+' function',passed:parsed?.fn===lesson.fn},
+      {id:'lookup-key',label:'Look up the code in E2',passed:parsed?.key===lesson.worksheet.query},
+      {id:'search-range',label:'Search the complete code range A2:A4',passed:parsed?.search===lesson.worksheet.search},
+      {id:'return-range',label:'Return the corresponding amount from C2:C4',passed:parsed?.returns===lesson.worksheet.returns},
+      {id:'lookup-result',label:'Retrieve the correct numeric amount for the current code',
+        passed:expected?.error===null&&evaluated.error===null&&typeof evaluated.result==='number'&&evaluated.result===expected.result},
+    ];
+    if(exercise.mode==='independent')criteria.push({id:'original-inputs',label:'Original catalog and lookup code preserved',
+      passed:plain(cells)&&lookupInputs.every(address=>Object.hasOwn(cells,address)&&
+        (address[0]==='C'?numberMatches(cells[address],baseline[address]):cells[address]===baseline[address]))});
+    return {...result(criteria),evaluated};
   }
 
   // F3 keeps typed records separate from order, formatting and hidden rows.
@@ -951,6 +1094,7 @@
     parseReferenceFormula, copyReferenceFormula, evaluateReferenceFormula, gradeReferences,
     parseDecisionFormula, evaluateDecisionFormula, gradeDecision,
     validateConditionalRule, conditionalView, gradeConditional,
+    parseLookupFormula, evaluateLookupFormula, gradeLookup,
     createTableState, applyTableAction, tableView, inspectTableValidation, formatTableValue, gradeTables,
   });
 })(typeof window === 'undefined' ? globalThis : window);

@@ -328,3 +328,18 @@ The lesson goal is registered; the numeric target and baseline come from the
 selected fictional dataset. No central publication change, new storage, schema,
 workbook exporter or production activation. Refresh only the existing public
 shell shared-core dependency. F4C/F4D follow separately.
+
+## F4C — exact catalog lookup
+
+`xlookup-exact@1` and `vlookup-exact@1` use explicit `personal-lookups@1`,
+`lookup-foundations@1` and separate `excel.lookup.<lesson-id>.v1` capabilities.
+The pure parser supports fixed contiguous catalog ranges, exact matching and
+optional cell-reference locks (no copying), with XLOOKUP default exact/explicit
+`,,0` and VLOOKUP FALSE/0. Evaluation uses full-token text-code matching without
+case sensitivity, first matching row, numeric amount or supported text return,
+and explicit #N/A for a missing code. Numeric zero is not an error. Separate
+criteria check the function, key cell, search range, return range, actual
+numeric result and independent original data. The registered lesson goal is
+not taken from caller-derived metadata. Earlier exact references and shared
+central SUM publication are unchanged. Refresh the existing public shell for
+its shared-core dependency; no storage, permissions or native export changes.
