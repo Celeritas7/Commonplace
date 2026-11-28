@@ -92,3 +92,11 @@ limits/migration/erasure; verify Auth subscriptions for both projects; retain th
 existing recovery checkpoint; test current users, denied accounts, account switch
 and offline behavior on actual devices. A preparation PR merge does not authorize
 any hosted action. Do not clear site data or reinstall saved study packs.
+
+## Follow-up
+
+The next bounded source review and checked mirror acknowledgement route are now
+prepared in [Hub protocol readiness](ROADMAP-HUB-PROTOCOL-READINESS.md). That work
+narrows the copied generic consumer to reviewed task mirrors; other prepared
+handlers remain separately gated. Its receipt and caller-cutover requirements
+apply in addition to this account lifecycle checkpoint.
