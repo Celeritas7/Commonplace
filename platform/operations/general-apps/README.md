@@ -345,3 +345,12 @@ candidate 17/20 browser APIs are revoked together with the new route grants;
 coordinate the prepared client and SQL in a later approved installation window.
 Legacy shared writers, sender authority and G0 activation are still unresolved.
 Next: shared-document/place versions and conflict recovery. Restoration stays deferred.
+
+Candidate 23 prepares [shared document/place versions and conflict recovery](../../acceptance/ROADMAP-SHARED-WRITER-READINESS.md)
+after 01/03 and the pinned Akatsuki catalog. Its empty per-owner/path gates expose
+explicit reads and version-checked mutations with immutable receipts. Retried
+writes return current data without restoring old values. Place metadata keeps
+coordinates and old names; retire/restore are explicit. The copied Roadmap client
+retains conflicts and saved history. Legacy global writers are not cut over or
+revoked. Review all live writers and sender policy next; hosted activation,
+enrollment and restoration remain held.

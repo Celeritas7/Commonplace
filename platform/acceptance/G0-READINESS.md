@@ -232,3 +232,11 @@ retained recovery through lost replies. Commonplace #148 / Roadmap #31 are
 confirmed merged. Shared-document/place writers, sender policy, real caller
 cutovers and the other G0 gates remain open. This phase authorizes no hosted
 installation or learner sharing; restoration remains deferred.
+
+**Shared writer version preparation — 2026-11-28:**
+[Candidate 23 and its paired recovery client](ROADMAP-SHARED-WRITER-READINESS.md)
+add explicit document/place versions, atomic receipts and retained conflict
+drafts after merged Commonplace #151 / Roadmap #33. Legacy implicit writers and
+automatic suggestion/tag generation remain gated in staging. Sender policy,
+live writer inventory/cutover and the other G0 requirements remain open. No
+hosted installation, learner sharing or restoration is authorized by this work.
