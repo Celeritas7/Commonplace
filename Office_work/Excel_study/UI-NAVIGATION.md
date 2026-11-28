@@ -90,3 +90,16 @@ without JavaScript. The browser regression covers visible local illustrations,
 viewport fit, touch targets, compact mobile cards, keyboard and mode behavior
 and static links. Physical device acceptance of this new visual revision and
 post-merge deployment checks remain pending.
+
+## UI-V2 — F5B integration
+
+Preserve the merged UI-V1 illustrations, layout, access gate, static links and
+mode-history behavior while incorporating the F5B curriculum branch in PR #144.
+Section 6 advertises PivotTables in addition to conditional summaries and
+provides a separate PivotTable practice shortcut. Native Section 6 workbooks,
+charts and reports remain planned; the existing five workbook sets are unchanged.
+The existing F5B launcher regression also verifies the illustrated mobile header,
+mode icons, Section 6 artwork, roadmap and workbook boundaries before opening the
+PivotTable lesson. No exercise, grading, workbook-generation, database or access
+changes are introduced by this UI reconciliation. Full CI on the combined commit
+and physical-device acceptance of the new visual revision remain required.
