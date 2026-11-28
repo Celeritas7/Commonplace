@@ -185,8 +185,27 @@
       explanation:'Refresh reads the current source data and recalculates the pivot. A report filter does not delete source records.',
       goal:{rows:'group',columns:'none',values:'sum-amount',filter:'Ready'}},
   ];
+  const chartLessons=[
+    {id:'chart-group-amounts',title:'Column chart — Compare group amounts',
+      concept:'Summarize Amount by group before inserting a column chart. Use a zero baseline and label the unit; the height represents the amount, not the number of records.',
+      task:'Build a column chart of total Amount by group for all statuses. Identify the group with the highest displayed value, or a tie if applicable.',
+      question:'Why start a column chart value axis at zero?',choices:['To make differences look larger','To compare lengths without distorting the amounts','To remove zero-valued records'],answer:1,
+      explanation:'A zero baseline makes the lengths proportional to the values.',goal:{type:'column',category:'group',measure:'sum-amount',filter:'all'}},
+    {id:'chart-status-counts',title:'Bar chart — Compare record counts by status',
+      concept:'Count nonblank record labels by status. A horizontal bar chart is useful for categories; its units are records even when amounts are present.',
+      task:'Build a horizontal bar chart counting records by Status across all statuses. Identify the highest category, or a tie if applicable.',
+      question:'What unit belongs on a record-count chart?',choices:['JPY','Percent','Records'],answer:2,
+      explanation:'The measure is a count, not currency or a percentage.',goal:{type:'bar',category:'status',measure:'count-records',filter:'all'}},
+    {id:'chart-ready-report',title:'Business report — Ready amounts by group',
+      concept:'A filtered business report states its scope, measure and unit. Summarize only Ready records, keep the source intact, and compare the group totals. Refresh the report when data changes.',
+      task:'Build a horizontal bar chart of total Amount by group for Ready records only. Identify the largest group, a tie or no matching records as appropriate.',
+      question:'What should a report of Ready records disclose?',choices:['Its Ready filter and units','Only a grand total','A claim that all records were included'],answer:0,
+      explanation:'A reader needs the filter, measure and unit to interpret the report correctly.',goal:{type:'bar',category:'group',measure:'sum-amount',filter:'Ready'}},
+  ];
+  const chartWorksheet={range:'A1:D7',fields:['record','status','group','amount']};
   const pivotWorksheet={range:'A1:D7',fields:['record','status','group','amount']};
   const capabilities = freeze([
+    ...chartLessons.map(l=>({id:'excel.chart.'+l.id+'.v1',version:1,kind:'business-chart',engine:'bounded-business-chart.v1',worksheet:chartWorksheet})),
     ...pivotLessons.map(lesson=>({id:'excel.pivot.'+lesson.id+'.v1',version:1,
       kind:'pivot-table',engine:'bounded-pivot.v1',worksheet:pivotWorksheet})),
     ...summaryLessons.map(lesson=>({id:'excel.summary.'+lesson.id+'.v1',version:1,
@@ -218,6 +237,9 @@
       table_name_max_length: 32 },
   ]);
   const runtimes = freeze([
+    {id:'personal-charts',version:1,engine:'bounded-business-chart.v1',
+      capabilities:['explanation.text.v1',...chartLessons.map(l=>'excel.chart.'+l.id+'.v1')],
+      lessons:chartLessons.map(l=>({id:l.id,version:1}))},
     {id:'personal-pivots',version:1,engine:'bounded-pivot.v1',
       capabilities:['explanation.text.v1',...pivotLessons.map(l=>'excel.pivot.'+l.id+'.v1')],
       lessons:pivotLessons.map(l=>({id:l.id,version:1}))},
@@ -282,6 +304,9 @@
         { id: 'validate-entry', version: 2 }] },
   ]);
   const rubrics = freeze([
+    {id:'chart-foundations',version:1,engine:'chart-foundations.v1',runtime:{id:'personal-charts',version:1},
+      criteria:['chart-type','category-field','measure','report-filter','chart-data','fresh-source','report-insight'],
+      independent_criteria:['original-records']},
     {id:'pivot-foundations',version:1,engine:'pivot-foundations.v1',runtime:{id:'personal-pivots',version:1},
       criteria:['row-field','column-field','value-field','report-filter','pivot-output','fresh-source'],
       independent_criteria:['original-records']},
@@ -329,7 +354,9 @@
     {id:"min",fn:"MIN",title:"MIN — Find the smallest value",concept:"MIN returns the smallest numeric value in a range. It ignores blank cells. It does not tell you the corresponding product name; that requires a lookup or another method.",task:"Find the smallest recorded value",question:"Which formula finds the smallest numeric value in B2:B4?",choices:["=MIN(B2:B4)","=MAX(B2:B4)","=AVERAGE(B2:B4)"],answer:0,explanation:"MIN returns the smallest of the numeric entries."},
     {id:"max",fn:"MAX",title:"MAX — Find the largest value",concept:"MAX returns the largest numeric value in a range. It ignores blanks, and it works with negative numbers too. Use it to identify the highest quantity or cost.",task:"Find the largest recorded value",question:"The three recorded values are -7, -2 and -5. Which is MAX?",choices:["-7","-2","0"],answer:1,explanation:"-2 is the greatest number, even though all entries are negative."}
   ];
-  const lessons = freeze([...pivotLessons.map(item=>({...item,version:1,worksheet:pivotWorksheet,
+  const lessons = freeze([...chartLessons.map(item=>({...item,version:1,worksheet:chartWorksheet,
+    capability_id:'excel.chart.'+item.id+'.v1',runtime:{id:'personal-charts',version:1},
+    rubric:{id:'chart-foundations',version:1}})), ...pivotLessons.map(item=>({...item,version:1,worksheet:pivotWorksheet,
     capability_id:'excel.pivot.'+item.id+'.v1',runtime:{id:'personal-pivots',version:1},
     rubric:{id:'pivot-foundations',version:1}})), ...summaryLessons.map(item=>({...item,version:1,
     capability_id:'excel.summary.'+item.id+'.v1',runtime:{id:'personal-conditional-summaries',version:1},
@@ -1000,6 +1027,73 @@
     return {...result(criteria),view};
   }
 
+  // F5C uses the exact v1 PivotTable source and row-only aggregation contract.
+  const chartPivotRef={id:'personal-pivots',version:1};
+  function chartRuntime(ref){
+    const runtime=resolveRuntime(ref);
+    if(runtime.engine!=='bounded-business-chart.v1')throw Error('A chart practice runtime is required.');
+    return runtime;
+  }
+  function validateChartConfig(ref,config){
+    chartRuntime(ref);
+    if(!plain(config)||Object.keys(config).sort().join()!=='category,filter,measure,type'||
+        !['column','bar'].includes(config.type))throw Error('Choose a column or horizontal bar chart and its summary fields.');
+    validatePivotLayout(chartPivotRef,{rows:config.category,columns:'none',values:config.measure,filter:config.filter});
+    return {type:config.type,category:config.category,measure:config.measure,filter:config.filter};
+  }
+  function captureChartSource(ref,cells){
+    chartRuntime(ref);
+    return capturePivotSource(chartPivotRef,cells);
+  }
+  function chartView(ref,config,cells){
+    const c=validateChartConfig(ref,config);
+    const pivot=pivotView(chartPivotRef,{rows:c.category,columns:'none',values:c.measure,filter:c.filter},cells);
+    const rows=pivot.rows.map(row=>({label:row.label,value:row.total}));
+    const values=rows.map(row=>row.value);
+    if(![...values,pivot.grandTotal].every(Number.isFinite))throw Error('The summary exceeds the supported numeric range.');
+    const min=Math.min(0,...values),max=Math.max(0,...values);
+    // Scale through a common magnitude before subtracting: mixed signs can overflow max-min.
+    const scale=Math.max(Math.abs(min),Math.abs(max))||1;
+    const lo=min/scale,hi=max/scale,span=hi-lo||1;
+    const position=value=>(value/scale-lo)/span;
+    const top=rows.length?Math.max(...values):null;
+    const leaders=rows.filter(row=>row.value===top);
+    const insight=!rows.length?'none':leaders.length>1?'tie':'row:'+rows.indexOf(leaders[0]);
+    return {rows,total:pivot.grandTotal,includedRows:pivot.includedRows,
+      axis:{min,max,zero:position(0),positions:values.map(position)},insight};
+  }
+  function gradeChart(rubricRef,exercise,config,snapshot,current,insight){
+    const rubric=resolveRubric(rubricRef);
+    if(rubric.engine!=='chart-foundations.v1')throw Error('A chart rubric is required.');
+    const lesson=resolveLesson({id:exercise?.lesson?.id,version:exercise?.lesson?.version});
+    const runtime=chartRuntime(rubric.runtime);
+    if(lesson.rubric.id!==rubric.id||lesson.rubric.version!==rubric.version||
+        !runtime.lessons.some(r=>r.id===lesson.id&&r.version===lesson.version)||
+        !runtime.capabilities.includes(lesson.capability_id)||!['guided','independent'].includes(exercise.mode))
+      throw Error('Chart lesson and rubric do not match.');
+    const baseline=captureChartSource(rubric.runtime,exercise.values),goal=lesson.goal;
+    const c=config===null?null:validateChartConfig(rubric.runtime,config);
+    const saved=c?captureChartSource(rubric.runtime,snapshot):null;
+    const view=c?chartView(rubric.runtime,c,saved):null;
+    let fresh=null,expected=null;
+    try{fresh=captureChartSource(rubric.runtime,current);expected=chartView(rubric.runtime,goal,fresh);}catch{}
+    const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+    const data=v=>v&&({rows:v.rows,total:v.total,includedRows:v.includedRows});
+    const correctData=!!view&&!!expected&&same(data(view),data(expected));
+    const isFresh=!!saved&&!!fresh&&!!expected&&same(saved,fresh);
+    const criteria=[
+      {id:'chart-type',label:'Use the requested chart type',passed:c?.type===goal.type},
+      {id:'category-field',label:'Use the requested category field',passed:c?.category===goal.category},
+      {id:'measure',label:'Use the requested measure',passed:c?.measure===goal.measure},
+      {id:'report-filter',label:'Use the requested report scope',passed:c?.filter===goal.filter},
+      {id:'chart-data',label:'Chart categories, values, total and included records match current source and task',passed:correctData},
+      {id:'fresh-source',label:'Report uses a current valid source snapshot',passed:isFresh},
+      {id:'report-insight',label:'Identify the highest category, tie or no data in the requested report',passed:correctData&&isFresh&&insight===expected.insight}
+    ];
+    if(exercise.mode==='independent')criteria.push({id:'original-records',label:'All original source records preserved',passed:!!fresh&&same(fresh,baseline)});
+    return {...result(criteria),view};
+  }
+
   // F3 keeps typed records separate from order, formatting and hidden rows.
   // Every operation is pure, and rules never rewrite already-entered values.
   function tableRuntime(ref) {
@@ -1381,6 +1475,7 @@
     parseLookupFormula, evaluateLookupFormula, gradeLookup,
     parseSummaryFormula, evaluateSummaryFormula, gradeSummary,
     validatePivotLayout, capturePivotSource, pivotView, gradePivot,
+    validateChartConfig, captureChartSource, chartView, gradeChart,
     createTableState, applyTableAction, tableView, inspectTableValidation, formatTableValue, gradeTables,
   });
 })(typeof window === 'undefined' ? globalThis : window);
