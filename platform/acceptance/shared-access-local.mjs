@@ -1,3 +1,4 @@
+import {roadmapConsumerAcceptance} from './roadmap-consumer-acknowledgements-local.mjs';
 import {roadmapHubProtocolAcceptance} from './roadmap-hub-protocol-local.mjs';
 import {roadmapCompletionAcceptance} from "./roadmap-completion-replies-local.mjs";
 import {roadmapStudyAcceptance} from "./roadmap-study-reports-local.mjs";
@@ -346,6 +347,7 @@ export async function sharedAccessAcceptance({
   await roadmapCompletionAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await roadmapStudyAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await roadmapHubProtocolAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
+  await roadmapConsumerAcceptance({a,b,sql,check,client,data,denied,withBlockedWriter,pause});
   await check(
     "real Auth binds CP-only identity without legacy roles and preserves legacy viewer signup",
     async () => {

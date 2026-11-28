@@ -50,17 +50,17 @@ begin
   'public.ga_roadmap_edit_tasks(jsonb,uuid)',
   'public.ga_roadmap_add_log(uuid,jsonb,uuid)',
   'public.ga_roadmap_create_tasks(jsonb,uuid)','public.ga_roadmap_structure(jsonb,uuid)','public.ga_roadmap_answer_suggestion(jsonb,uuid)','public.ga_roadmap_receive_task(jsonb,jsonb,bigint)',
-  'public.ga_roadmap_prepare_done(uuid,uuid,text)','public.ga_roadmap_reconcile_done(uuid)','public.ga_roadmap_done_recovery()','public.ga_roadmap_receive_study_report(bigint)','public.ga_roadmap_receive_task_event(bigint)','public.ga_roadmap_ack_task_event(bigint)'] loop
+  'public.ga_roadmap_prepare_done(uuid,uuid,text)','public.ga_roadmap_reconcile_done(uuid)','public.ga_roadmap_done_recovery()','public.ga_roadmap_receive_study_report(bigint)','public.ga_roadmap_receive_task_event(bigint)','public.ga_roadmap_ack_task_event(bigint)','public.ga_roadmap_answer_local_suggestion(jsonb,uuid)','public.ga_roadmap_receive_suggestion_event(bigint,uuid,text)','public.ga_roadmap_receive_study_event(bigint)','public.ga_roadmap_ack_consumer_event(bigint)','public.ga_roadmap_consumer_status(bigint)'] loop
   begin
    routine:=to_regprocedure(signature);
-   -- Candidates 08/10/11/12/13/14/15/16/17/18/19/20/21 are optional until their separate installation windows.
+   -- Candidates 08/10/11/12/13/14/15/16/17/18/19/20/21/22 are optional until their separate installation windows.
    if routine is null and signature in ('public.ga_roadmap_set_daily_task(uuid,timestamptz,boolean,text,uuid)',
     'public.ga_roadmap_edit_comparison(uuid,timestamptz,jsonb,uuid)',
     'public.ga_roadmap_preview_import(uuid)','public.ga_roadmap_import_comparison(uuid,uuid,text,jsonb,uuid)',
     'public.ga_roadmap_reset_daily_tasks(jsonb,text,text,uuid)',
     'public.ga_roadmap_edit_tasks(jsonb,uuid)','public.ga_roadmap_add_log(uuid,jsonb,uuid)',
     'public.ga_roadmap_create_tasks(jsonb,uuid)','public.ga_roadmap_structure(jsonb,uuid)','public.ga_roadmap_answer_suggestion(jsonb,uuid)','public.ga_roadmap_receive_task(jsonb,jsonb,bigint)',
-  'public.ga_roadmap_prepare_done(uuid,uuid,text)','public.ga_roadmap_reconcile_done(uuid)','public.ga_roadmap_done_recovery()','public.ga_roadmap_receive_study_report(bigint)','public.ga_roadmap_receive_task_event(bigint)','public.ga_roadmap_ack_task_event(bigint)') then continue; end if;
+  'public.ga_roadmap_prepare_done(uuid,uuid,text)','public.ga_roadmap_reconcile_done(uuid)','public.ga_roadmap_done_recovery()','public.ga_roadmap_receive_study_report(bigint)','public.ga_roadmap_receive_task_event(bigint)','public.ga_roadmap_ack_task_event(bigint)','public.ga_roadmap_answer_local_suggestion(jsonb,uuid)','public.ga_roadmap_receive_suggestion_event(bigint,uuid,text)','public.ga_roadmap_receive_study_event(bigint)','public.ga_roadmap_ack_consumer_event(bigint)','public.ga_roadmap_consumer_status(bigint)') then continue; end if;
    if routine is null then raise exception 'missing routine'; end if;
    execute format('revoke execute on function %s from public,anon,authenticated,service_role',routine);
    foreach role_name in array array['anon','authenticated','service_role'] loop

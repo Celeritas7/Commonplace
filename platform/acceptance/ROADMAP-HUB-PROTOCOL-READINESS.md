@@ -136,3 +136,9 @@ and place writers with version checks, sender capability/owner policy and all
 actual callers before enabling them. This source audit provides reproducers for
 those groups; it does not certify or activate them. Commonplace Admin Studio
 activation and learner sharing remain held until the wider G0 gates close.
+
+
+Follow-up: [candidate 22 readiness](ROADMAP-CONSUMER-ACK-READINESS.md) now prepares
+the remaining suggestion/study consumer acknowledgement group. Its source review
+preserves the incoming no-reply contracts; the five new APIs and paired client
+remain candidates, with hosted activation and all wider G0 holds unchanged.
