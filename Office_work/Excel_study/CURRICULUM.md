@@ -1,5 +1,49 @@
 # Excel curriculum — Phase F
 
+## Current development checkpoint — 2026-11-28 (Japan)
+
+Reviewed integrated main: `cb451135ecaea1d78cde20fb735040ccc418332a` ([Correction 1 merge](https://github.com/Celeritas7/Commonplace/pull/153)).
+This dated checkpoint supersedes status and pending-work wording in the historical
+phase notes below; their original context is retained.
+
+- Integrated: F2/F3 #128 (including #132), R5 #136, UI-3 #133, illustrated
+  launcher #146 and PivotTable feedback #149, F4A–D #137/#139/#140/#141,
+  F5A #143, F5B #144 and [F5C #152](https://github.com/Celeritas7/Commonplace/pull/152).
+  F5C is merged, not a candidate. Superseded #93 and intermediate branches are
+  not part of the release path.
+- F5C final head `f53217198abe0f4eb8ad6f40dbaff43cdc2dfee2` passed
+  [foundation CI](https://github.com/Celeritas7/Commonplace/actions/runs/46111216047)
+  and [isolated Supabase CI](https://github.com/Celeritas7/Commonplace/actions/runs/46111216144);
+  its Vercel status succeeded. The subsequent reviewed main
+  `a5763c717a1992253d263d42dbe2a6c144903234` passed
+  [foundation](https://github.com/Celeritas7/Commonplace/actions/runs/46111616798),
+  [isolated Supabase](https://github.com/Celeritas7/Commonplace/actions/runs/46111616814)
+  and [Pages](https://github.com/Celeritas7/Commonplace/actions/runs/46111723913).
+  The review recorded 610 Node/PGlite tests, 124 browser tests, 9 Deno tests,
+  87 isolated integration groups, Windows/Ubuntu staging, SQL/BAT and Vercel success.
+- Correction 1 restored the standalone test gate without runtime changes.
+  Its final [PR foundation run](https://github.com/Celeritas7/Commonplace/actions/runs/46112996078)
+  passed 610 Node/PGlite tests, 124 browser tests, 9 Deno tests/type checks,
+  Windows/Ubuntu staging and all four standalone suites: guided 15, assessment
+  27, scenarios 90 and workbooks 121 checks. SQL/BAT PR checks also passed.
+  The new post-merge [main foundation run](https://github.com/Celeritas7/Commonplace/actions/runs/46113349075)
+  was still in progress at checkpoint inspection; do not substitute PR results
+  for this run's final status.
+- The user reported the illustrated launcher and PivotTable Apply-layout retest
+  passed on 28 November; see [UI acceptance record](UI-NAVIGATION.md).
+  Device, OS/browser, installed context, origin and revision were not supplied.
+  F5C physical chart usability, E3/R1 physical iPad offline checks and native
+  Microsoft Excel open/edit/recalculate/save/reopen remain unverified.
+- The review verified all 50 released D2/F1/F2/F3/F4 workbook files against
+  the F4D baseline, byte-identical (1,306,888 bytes total). F5D native Section 6
+  workbooks remain future work; plan conditional-summary exports, native
+  PivotTables, native charts/reports and integration/native Excel acceptance
+  as separate units. F6 Power Query and G/H remain separate.
+- R4 is planning only: [six implementation units](LEARNING-RECORDS-PLAN.md#10-delivery-order-and-implementation-gates).
+  Central 40-submission cap and session-only personal assessment history remain.
+  G0 is not cleared. No hosted activation, enrollment, permission changes or
+  production synchronization are authorized by these corrections.
+
 The standalone personal-study path is expanded in small reviewable modules. F1 introduces the curriculum index and essential formula lessons. The existing Section 1 URL, gate, workbook API and local reading key remain available. R3 shares versioned lesson metadata, evaluation and grading with central assigned learning. The central publication contract still supports reviewed SUM assignments; publishing the other personal formula lessons and extending persistent progress require separate integration. F1 adds no account-wide storage, auth or database changes.
 
 | Module | Coverage | Status |
@@ -8,7 +52,7 @@ The standalone personal-study path is expanded in small reviewable modules. F1 i
 | F2 | Relative, absolute and mixed references; line totals, quotations, unit cost and fictional JPY/PHP conversion | Merged in combined PR #128; see F2 below |
 | F3 | Number formats, tables, sorting, filtering, validation | #132 merged into F2, then combined #128 merged to main; R5 below corrects table naming |
 | F4 | IF, conditional formatting, lookup functions | F4A #137, F4B #139, F4C #140 and F4D #141 merged |
-| F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | F5A merged in #143; F5B merged in #144; F5C charts/reports candidate; F5D native workbooks remain separate |
+| F5 | SUMIF/SUMIFS, COUNTIF, PivotTables, charts and business reports | F5A merged in #143; F5B merged in #144; F5C merged in #152; F5D native workbooks remain separate |
 | F6 | Power Query and repeatable data preparation; link to existing VBA section | Planned |
 | G/H | Review and extend central published capability contracts, personalized assignment and performance reporting | Separate |
 
@@ -369,7 +413,7 @@ After F4D #141 merged at `5a1b5bf`, Section 6 begins with SUMIF, SUMIFS and COUN
 
 ## F5B — PivotTable foundations
 
-F5A #143 merged at `20f0e77`. The second Section 6 page introduces three bounded PivotTable tasks: sum amounts by group, count records by group and status, and filter grouped amounts to Ready. It deliberately reuses the exact F5A SUMIF guided/independent version-1 source registers across the three tasks, with new F5B dataset identities. All five contexts remain available. Source records, editable field layout, and the last captured source snapshot are separate. Apply Layout reads the source only on first creation; later layout changes use the existing cache. Refresh reads the current source and updates the applied layout. Invalid layouts or sources retain the last valid view; stale data is clearly marked. Empty intersections are blank, totals include zero amounts and Count of Record counts nonblank record labels. The bounded simulation offers Group/Status axes, sum Amount/count Record, and a Status filter when Status is not on an axis. It does not create native PivotTables or offer arbitrary ranges, multiple value fields, subtotals or other Excel options. Independent grading separately checks fields, filter, complete output, fresh source and unchanged original records. Session-only history and quizzes remain separate. F5C charts/reports and F5D workbook exports follow independently.
+F5A #143 merged at `20f0e77`. The second Section 6 page introduces three bounded PivotTable tasks: sum amounts by group, count records by group and status, and filter grouped amounts to Ready. It deliberately reuses the exact F5A SUMIF guided/independent version-1 source registers across the three tasks, with new F5B dataset identities. All five contexts remain available. Source records, editable field layout, and the last captured source snapshot are separate. Apply Layout reads the source only on first creation; later layout changes use the existing cache. Refresh captures valid current source for the already-applied layout; pending selector changes still require Apply Layout. A failed refresh retains the previous layout and snapshot. Invalid layouts or sources retain the last valid view; stale data is clearly marked. Empty intersections are blank, totals include zero amounts and Count of Record counts nonblank record labels. The bounded simulation offers Group/Status axes, sum Amount/count Record, and a Status filter when Status is not on an axis. It does not create native PivotTables or offer arbitrary ranges, multiple value fields, subtotals or other Excel options. Independent grading separately checks fields, filter, complete output, fresh source and unchanged original records. Session-only history and quizzes remain separate. F5C charts/reports and F5D workbook exports follow independently.
 
 ## F5C — charts and business reporting
 
