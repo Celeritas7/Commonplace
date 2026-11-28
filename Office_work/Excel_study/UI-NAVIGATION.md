@@ -61,3 +61,32 @@ curriculum, engine, workbook bytes, or record model is changed by this UI
 integration. Existing UI-2/UI-3 tests remain in the merged tree. A new
 browser regression covers the new pages, workbook context and downloads.
 Physical iPad acceptance and hosted deployment checks are still outstanding.
+
+## UI-V1 — approved visual homepage
+
+The approved standalone mobile design is integrated into the personal Excel
+launcher, rather than copied with preview-only absolute URLs or JS-generated
+cards. The Excel-inspired workbook illustration and the seven topic symbols
+are inline SVG. The four icon-and-label study tabs use the existing IDs, hrefs,
+keyboard and browser-history behavior. Learn cards use one short skill line;
+Practice and Workbooks retain the original shortcut labels and destinations.
+Planned content remains non-interactive and the Section 6 limitations remain
+explicit in the workbook and roadmap notes.
+
+The 390px layout follows the reviewed preview: compact green header, visible
+workbook symbol, four tabs in one row, and illustrated horizontal lesson cards
+in one column. Desktop uses two card columns and retains the existing
+illustrative worksheet alongside the workbook identity. Small readability and
+touch-target adjustments (including 44px breadcrumb links) are intentional.
+All six available sections and five workbook sets are taken from main at
+649d666470579e3043d5568c1db7888a8dfe8343. The separately developing F5B #144
+will update the Section 6 content; preserve those new links and roadmap facts
+when reconciling the homepage. Do not replace the curriculum from a stale preview.
+
+The existing login gate, 29 navigation destinations and homepage tab script
+are unchanged. No additional external art, fonts, framework, runtime storage,
+service worker, or database changes. Native link navigation remains available
+without JavaScript. The browser regression covers visible local illustrations,
+viewport fit, touch targets, compact mobile cards, keyboard and mode behavior
+and static links. Physical device acceptance of this new visual revision and
+post-merge deployment checks remain pending.
