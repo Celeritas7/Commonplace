@@ -20,6 +20,7 @@ module.exports = async function exerciseAcceptance({ context, origin, SECTION, K
   const currentRecord = async language => (await saved()).exercises?.[def(language).id];
   const latest = async language => (await currentRecord(language))?.attempts.at(-1);
   const exerciseView = async language => {
+    await page.locator('.wb-app-tabs [data-view="book"]').click();
     await page.locator('.wb-language-tabs [data-language="' + language + '"]').click();
     await page.locator('.wb-app-tabs [data-view="practice"]').click();
     await page.locator('#wb-exercise-panel').waitFor({ state: 'visible' });

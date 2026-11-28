@@ -1,8 +1,8 @@
-# Web Studio · Commonplace (v1.7.4)
+# Web Studio · Commonplace (v1.8.0)
 
 Web Studio adds an integrated learning book and real HTML/CSS/JavaScript practice to the existing course tracker. Open the [hosted app](https://celeritas7.github.io/Commonplace/Coding/html_css_js_study/index.html) through HTTPS; localhost is for development.
 
-The three-lesson sample app includes checked exercises, projects and backups, account sync, and verified offline downloads. **Phase 5 physical iPad acceptance is pending**: follow the [current v1.7.4 acceptance checklist and deployment gate](docs/PHASE5_IPAD_ACCEPTANCE.md). The older [Phase 7 validation report](docs/PHASE7_VALIDATION.md) preserves the historical v1.7.1 checkpoint. The full learning book remains deferred.
+The three-lesson sample app includes checked exercises, projects and backups, account sync, and verified offline downloads. **UX-1** introduces one primary Learn / Practice / Projects / My learning navigation bar, a Continue learning card reflecting the saved chapter/part, and the contextual HTML/CSS/JavaScript selector inside Learn. **More** separates the original 453-entry linked course index from the three integrated offline lessons. **Phase 5 physical iPad acceptance is pending**: follow the [current v1.7.4 acceptance checklist and deployment gate](docs/PHASE5_IPAD_ACCEPTANCE.md). The older [Phase 7 validation report](docs/PHASE7_VALIDATION.md) preserves the historical v1.7.1 checkpoint. The full learning book remains deferred.
 
 ## Start learning
 
@@ -40,7 +40,7 @@ Open **Projects & backup** from Practice or My notes. Your existing working page
 
 The folder bar links directly to **Commonplace** and **Coding**, including when this section is opened from an installed app without browser history. **Course** has a top **Back to Web Studio** button. Parent links save the current study state before leaving; a failed save lets you cancel departure.
 
-On phones, chapter/view tabs use equal touch targets, the contents summary shows the current part, and Next/Previous bring the new heading into view. Opening Practice does not automatically open the on-screen keyboard. Portrait layouts use Code/Browser result switching. Landscape iPad and desktop place the editor beside the result. Wide desktop adds **All three editors**.
+On phones, the primary navigation has four study destinations plus a More menu. Chapter switching sits inside Learn instead of in a second permanent global tab row. Continue learning uses the existing saved chapter and part without creating or resetting progress. The contents summary shows the current part, and Next/Previous bring the new heading into view. Opening Practice does not automatically open the on-screen keyboard. Portrait layouts use Code/Browser result switching. Landscape iPad and desktop place the editor beside the result. Wide desktop adds **All three editors**.
 
 ## Execution limits
 

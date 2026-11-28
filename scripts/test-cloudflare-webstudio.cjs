@@ -56,7 +56,9 @@ console.log('PASS real gate and unchanged offline worker; production study sync 
 
 const page = fs.readFileSync(path.join(OUT, STUDY, 'index.html'), 'utf8');
 const launcher = fs.readFileSync(path.join(OUT, STUDY, 'offline.html'), 'utf8');
-assert(page.includes('Version 1.7.4'));
+const sourcePage = fs.readFileSync(path.join(ROOT, 'Coding/html_css_js_study/index.html'), 'utf8');
+const currentVersion = sourcePage.match(/Version \d+\.\d+\.\d+/)?.[0];
+assert(currentVersion && page.includes(currentVersion), 'Staging must display the current source Web Studio version');
 assert(launcher.includes('../../_lib/gate.js'));
 const base = new URL('https://cloudflare-pilot.pages.dev/Commonplace/Coding/html_css_js_study/');
 assert.equal(new URL('../../_lib/gate.js', base).pathname, '/Commonplace/_lib/gate.js');
