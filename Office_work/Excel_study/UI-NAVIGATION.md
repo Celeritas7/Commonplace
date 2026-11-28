@@ -1,5 +1,35 @@
 # Excel UI-2 — navigation corrections
 
+## Current acceptance checkpoint — 2026-11-28 (Japan)
+
+Reviewed main `cb451135ecaea1d78cde20fb735040ccc418332a`. The historical UI phase notes below
+describe their original candidate status; this record supersedes their
+outstanding status wording where evidence now exists.
+
+- UI-3 #133, illustrated launcher #146, F5B #144, mobile Apply-layout feedback
+  [#149](https://github.com/Celeritas7/Commonplace/pull/149) and F5C charts/reports
+  [#152](https://github.com/Celeritas7/Commonplace/pull/152) are merged. The
+  F5C final [foundation CI run](https://github.com/Celeritas7/Commonplace/actions/runs/46111216047)
+  passed. Native Section 6 workbooks remain F5D; charts/reports are available
+  in the bounded browser simulator, not as native workbook files.
+- User-reported UI-V3 launcher PASS: workbook symbol, six illustrated cards,
+  compact approved layout, four icon tabs, opening the PivotTable page, and
+  no horizontal overlap/overflow.
+- User-reported #149 Apply-layout retest PASS: missing-field warning;
+  Destination / None / Sum of Amount / All statuses; 9,200 JPY total;
+  Clear PivotTable. Record this as the narrow retest of the reported issue.
+  Refresh captures valid current source for the already-applied layout; pending
+  selector changes require Apply Layout. Failed refresh retains the last valid
+  PivotTable. No engine change is needed for this wording clarification.
+- Device, OS/browser, installed context, tested origin and source revision were
+  not supplied for either report. Do not extend these passes to E3/R1 physical
+  iPad cold reopen/offline recovery, physical F5C chart touch/readability, native
+  Excel, hosted activation or G0. Those remain separate acceptance sessions,
+  with PASS/FAIL/NOT TESTED and actual environment/revision recorded. Preserve
+  existing installations, website data, records and offline packs.
+- For the merged curriculum/test-gate evidence and next-phase boundaries see
+  [current development checkpoint](CURRICULUM.md#current-development-checkpoint--2026-11-28-japan).
+
 Follow-up to the merged UI-1 launcher (PR #127). This change is confined to the
 personal study preview. It does not change the curriculum, exercise engine,
 assessment storage, account permissions or synchronization.
