@@ -306,3 +306,12 @@ mirror updates. Private per-request receipts replace the old shared cursor in th
 isolated client. The completion review gate starts empty. Hub sender/key contract
 acceptance and automatic startup remain gated. Next: session.completed and actual
 study callers. Hosted changes/enrollment remain on hold; restoration stays deferred.
+
+Candidate 20 prepares [owner-scoped study completion reports](../../acceptance/ROADMAP-STUDY-REPORT-READINESS.md)
+after 01/03/09/19 and their dependencies. It reads actual stored hub events, retains
+original task/day/source, applies replay-safe session writes and preserves existing
+history. Its source review registry starts empty. The paired loopback client tests
+the real receiving handler and a pinned JLPT caller replacement; production sources
+and offline packs stay unchanged. App-reported completion is not independent proof.
+Next: shared hub protocol and account-scoped outbox/check-in/leader lifecycle.
+Hosted activation/enrollment remain on hold; restoration remains deferred.
