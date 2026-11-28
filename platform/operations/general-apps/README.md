@@ -336,3 +336,12 @@ server ack, and gates all other generic acknowledgement/document/place writers.
 Next: exact-request acknowledgement/reply contracts for the remaining prepared
 suggestion/study consumers. G0, hosted activation and enrollment remain on hold;
 restoration stays deferred at its existing checkpoint.
+
+Candidate 22 prepares [exact suggestion/study acknowledgements](../../acceptance/ROADMAP-CONSUMER-READINESS.md)
+after 17/20/21 and their dependencies. It derives application from original owned
+requests, confirms outgoing skip publications, commits exact terminal replies
+and provides checked sender status. Its per-source gate starts empty. The old
+candidate 17/20 browser APIs are revoked together with the new route grants;
+coordinate the prepared client and SQL in a later approved installation window.
+Legacy shared writers, sender authority and G0 activation are still unresolved.
+Next: shared-document/place versions and conflict recovery. Restoration stays deferred.
