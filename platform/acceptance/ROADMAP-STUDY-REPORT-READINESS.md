@@ -82,7 +82,8 @@ other study app requires its own source/caller acceptance. Never deploy just one
 half or infer this approval from a preparation merge.
 
 Next bounded work: shared hub protocol and account lifecycle, starting with
-account-scoped outbox/check-in/leader behavior. Link/orphan acknowledgement,
+account-scoped outbox/check-in/leader behavior, now prepared in
+[hub account readiness](ROADMAP-HUB-ACCOUNT-READINESS.md). Link/orphan acknowledgement,
 caller cutover, remaining shared-app writers, provider evidence, deferred recovery,
 devices and the final G0 decision remain open. No additional platform phase is
 created here, and restricted learner sharing is not activated.

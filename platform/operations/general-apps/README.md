@@ -315,3 +315,11 @@ the real receiving handler and a pinned JLPT caller replacement; production sour
 and offline packs stay unchanged. App-reported completion is not independent proof.
 Next: shared hub protocol and account-scoped outbox/check-in/leader lifecycle.
 Hosted activation/enrollment remain on hold; restoration remains deferred.
+
+The next bounded client-only work group prepares
+[account-safe hub queues, check-ins and background leadership](../../acceptance/ROADMAP-HUB-ACCOUNT-READINESS.md).
+It adds no SQL candidate: root Roadmap runtime and automatic hub startup remain
+unchanged. New account-scoped records retain legacy/offline bytes and stop stale
+account callbacks. Next: shared hub protocol acceptance, including link/orphan
+acknowledgements, sender authority and remaining document writers. Actual caller
+cutovers and the remaining G0 gates still precede hosted activation or enrollment.
