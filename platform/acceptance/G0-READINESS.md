@@ -224,3 +224,11 @@ not run in this checkpoint.
 
 Provider references: [grants and RLS](https://supabase.com/docs/guides/api/securing-your-api),
 [database versus Storage backups](https://supabase.com/docs/guides/platform/backups).
+
+**Consumer acknowledgement preparation — 2026-11-28:**
+[Candidate 22 and its paired client](ROADMAP-CONSUMER-READINESS.md) prepare
+exact-request suggestion/study acknowledgements, private sender confirmation and
+retained recovery through lost replies. Commonplace #148 / Roadmap #31 are
+confirmed merged. Shared-document/place writers, sender policy, real caller
+cutovers and the other G0 gates remain open. This phase authorizes no hosted
+installation or learner sharing; restoration remains deferred.
