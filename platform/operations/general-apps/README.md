@@ -336,3 +336,16 @@ server ack, and gates all other generic acknowledgement/document/place writers.
 Next: exact-request acknowledgement/reply contracts for the remaining prepared
 suggestion/study consumers. G0, hosted activation and enrollment remain on hold;
 restoration stays deferred at its existing checkpoint.
+
+
+Candidate 22 prepares [exact-event suggestion and study acknowledgements](../../acceptance/ROADMAP-CONSUMER-ACK-READINESS.md)
+after 17/20/21 and their dependencies. It retains original event/application
+receipts, requires the original skip follow-up before acknowledgement, and exposes
+private status confirmation for the prepared study caller. No reply payload is
+invented. The empty per-owner/source/kind gate is independent of mirror permissions.
+The old incoming APIs become internal dependencies; native answers use an explicit
+local-only wrapper. SQL and client must be cut over together in a later approved
+window. The paired client keeps recovery through failed/lost acknowledgement and
+account switches; root runtime and offline packs stay unchanged. Next: shared-document
+and place writers with version checks, then sender policy/actual caller cutovers.
+Hosted changes/enrollment remain on hold; restoration stays deferred.
