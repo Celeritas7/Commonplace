@@ -89,7 +89,10 @@ let uid=0;const app={crypto:{randomUUID:()=>String(++uid)}};
 for(const n of names)new Function('window','document','Event','CustomEvent',read(n))(app,doc,Event,Event);
 const store={commonplace_excel_preview_v1:JSON.stringify({read:['cells'],open:[],tasks:['locate']})};
 const localStorage={getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=v;}};
-new Function('window','document','localStorage',html.match(/<script>\s*([\s\S]*?)<\/script>/)[1])(app,doc,localStorage);
+const initializers=[...html.matchAll(/<script>\s*([\s\S]*?)<\/script>/g)]
+  .map(match=>match[1]).filter(script=>script.includes('commonplace_excel_preview_v1'));
+if(initializers.length!==1)throw Error('Expected exactly one Section 1 application initializer; found '+initializers.length);
+new Function('window','document','localStorage',initializers[0])(app,doc,localStorage);
 const choose=id=>{$('scenario-picker').value=id;$('scenario-apply').fire('click');};
 const g=k=>gp.querySelector('[data-guided-'+k+']'),a=k=>ap.querySelector('[data-assessment-'+k+']');
 const tab=t=>root.querySelectorAll('[data-excel-tab]').find(x=>x.dataset.excelTab===t),tool=t=>root.querySelectorAll('[data-excel-tool]').find(x=>x.dataset.excelTool===t);
