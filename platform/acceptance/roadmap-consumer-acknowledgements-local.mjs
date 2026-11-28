@@ -64,7 +64,10 @@ export async function roadmapConsumerAcceptance({a,b,sql,check,client,data,denie
   await withBlockedWriter(65,`update auth.users set email_confirmed_at=null where id='${a.id}'`,call,/consumer access denied/);await sql(`update auth.users set email_confirmed_at=now() where id='${a.id}'`);
   await withBlockedWriter(66,`update akatsuki_requests set user_id='${b.id}' where seq=${seq+12}`,call,/consumer event unavailable/);await sql(`update akatsuki_requests set user_id='${a.id}' where seq=${seq+12}`);
   await withBlockedWriter(67,`update akatsuki_requests set src_clock='changed' where seq=${seq+12}`,call,/consumer evidence changed/);await sql(`update akatsuki_requests set src_clock=null where seq=${seq+12}`);
-  await withBlockedWriter(68,`update roadmap_tasks set user_id='${b.id}',parent_id=null where id='${task}'`,call,/study task unavailable/);await sql(`update roadmap_tasks set user_id='${a.id}' where id='${task}'`);
-  data(await ack(seq+12),'Ack after review');
+  // Existing owner FKs correctly forbid transferring a task with owned sessions.
+  // Exercise a legitimate concurrent deletion instead; acknowledgement must not resurrect it.
+  await withBlockedWriter(68,`delete from roadmap_tasks where id='${task}'`,call,/study task unavailable/);
+  assert.equal(await sql(`select count(*) from roadmap_tasks where id='${task}'`),'0');
+  assert.equal(await sql(`select status from akatsuki_requests where seq=${seq+12}`),'pending');
  });
 }

@@ -94,7 +94,7 @@ changed original evidence, status-only refusal, older/newer same-address events,
 monotonic cursor, rollback, revocation, dependency drift and containment. Disposable
 real Auth/Postgres acceptance adds concurrent receive/ack and committed lock waits
 for gate/source revocation, pause, identity, event evidence/ownership and target
-ownership. Browser tests use copied SDK/adapter and real prepared handlers with
+removal. Browser tests use copied SDK/adapter and real prepared handlers with
 synthetic transport, checking render-before-ack, reload/lost replies, delayed account
 responses, newer edits, private caller confirmation and retained offline bytes.
 These do not substitute for hosted or physical-device acceptance.
