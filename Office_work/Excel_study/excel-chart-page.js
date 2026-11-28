@@ -52,6 +52,7 @@
     const text=(x,y,t,anchor='middle')=>add('text',{x,y,'text-anchor':anchor,fill:'#20362a','font-size':13},t);
     const line=(x1,y1,x2,y2)=>add('line',{x1,y1,x2,y2,stroke:'#576a5d','stroke-width':1.5});
     const z=v.axis.zero;
+    const short=(label,n)=>label.length<=n?label:label.slice(0,n-1)+'…';
     if(vertical){
       const x0=70,x1=w-20,y0=24,y1=h-62,dy=y1-y0,dx=(x1-x0)/v.rows.length;
       const y=p=>y1-p*dy,zero=y(z);
@@ -60,17 +61,18 @@
         const end=y(v.axis.positions[i]),x=x0+i*dx+dx*.23,bw=dx*.54;
         add('rect',{x,y:Math.min(zero,end),width:bw,height:Math.abs(end-zero),fill:'#27734d','data-category':i+1});
         if(row.value===0) add('circle',{cx:x+bw/2,cy:zero,r:3,fill:'#27734d'});
-        text(x+bw/2,y1+22,String(i+1)); // Full labels and exact amounts are in the keyed data table.
+        text(x+bw/2,y1+20,String(i+1));
+        text(x+bw/2,y1+37,short(row.label,Math.max(5,Math.floor(dx/8))));
       });
-      text((x0+x1)/2,h-12,category(c)+' · category numbers in table');
+      text((x0+x1)/2,h-4,category(c));
     }else{
-      const x0=60,x1=w-30,y0=20,dy=42,x=p=>x0+p*(x1-x0),zero=x(z);
+      const x0=174,x1=w-30,y0=20,dy=42,x=p=>x0+p*(x1-x0),zero=x(z);
       line(zero,y0,zero,y0+dy*v.rows.length);text(zero,h-10,'0');
       v.rows.forEach((row,i)=>{
         const end=x(v.axis.positions[i]),y=y0+i*dy+8;
         add('rect',{x:Math.min(zero,end),y,width:Math.abs(end-zero),height:26,fill:'#27734d','data-category':i+1});
         if(row.value===0)add('circle',{cx:zero,cy:y+13,r:3,fill:'#27734d'});
-        text(x0-12,y+17,String(i+1),'end');
+        text(x0-12,y+17,String(i+1)+' · '+short(row.label,18),'end');
       });
     }
     root.append(svg);
