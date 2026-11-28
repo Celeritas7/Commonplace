@@ -164,6 +164,8 @@ def render(L, prev=None, written=None):
     for i, key in enumerate(["s1","s2","s3","s4","s5","s6","s7","s8"]):
         heading = L.get(key + "_title", SECTION_TITLES[i])
         body = L[key] + ("\n  " + eol + "\n  " + nav if key == "s8" else "")
+        if L.get("notebook_overlay") and nb:
+            body = body.replace('href="' + nb[0] + '"', 'data-notebook-overlay href="' + nb[0] + '"')
         secs.append('<!-- %d -->\n<section class="lesson-section" id="s%d">\n'
                     '  <div class="step-label"><span class="step-num">%d</span><h2>%s</h2></div>\n'
                     '  %s\n</section>' % (i+1, i+1, i+1, heading, body))
@@ -185,6 +187,7 @@ def render(L, prev=None, written=None):
 <style>
 %(css)s
 </style>
+%(overlay_css)s
 </head>
 <body>
 
@@ -230,13 +233,16 @@ def render(L, prev=None, written=None):
 <script src="../../../_lib/progress-backup.js"></script>
 <script src="../lib/sw-register.js?v=1"></script>
 <script src="../lib/lesson-reader.js" defer></script>
+%(overlay_js)s
 </body>
 </html>
 ''' % dict(id=L["id"], short=L["short"], css=CSS, cobra=COBRA_SVG,
            roman=roman, partname=partname, title=L["title"], sub=L["sub"],
            mins=L.get("mins","12"), meta3=L.get("meta3","No setup needed"),
            sections="\n\n".join(secs), cobra0=L["cobra"]["s1"], js=js,
-           pn=pn, ln=ln) , fname
+           pn=pn, ln=ln,
+           overlay_css='<link rel="stylesheet" href="../lib/notebook-overlay.css">' if L.get("notebook_overlay") else '',
+           overlay_js='<script src="../lib/notebook-overlay.js"></script>' if L.get("notebook_overlay") else '') , fname
 
 
 def sync_shelf():

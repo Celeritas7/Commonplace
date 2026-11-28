@@ -95,7 +95,7 @@ dict(
 
 # ───────────────────────────────────────────────────────────── 0.3
 dict(
- id="0.3", short="Script, REPL, notebook",
+ id="0.3", notebook_overlay=True, notebook=("../fundamentals/02_for_loops.html#np-u12", "Open the counter experiment"), short="Script, REPL, notebook",
  title="Three ways to run code: script, REPL, notebook",
  sub="The same five lines of Python behave differently depending on where you type them. Knowing which of the three you want — and why — saves more time than any other habit in this Part.",
  mins="11", meta3="Links to a live notebook",
@@ -152,8 +152,8 @@ dict(
   ]) + """
   <p>The notebook version is the same code in a cell, with one difference that matters enormously: you can run the loop cell twice. Do that and <code>total</code> becomes 110, because the second run adds to the value the first run left behind. The code did not change. The <em>state</em> did.</p>""",
 
- s4=tryit_notebook("../fundamentals/02_for_loops.html","Open the For Loops notebook",
-   "You already have twenty-odd runnable notebook pages in this book — every cell is editable and executes real Python in your browser, no install. Open the For Loops one and try the experiment: run a cell twice and watch a counter drift."),
+ s4=tryit_notebook("../fundamentals/02_for_loops.html#np-u12","Try the counter experiment",
+   "Open the two-cell experiment below. Run Cell 11 once to initialize the counter, then run Cell 12 twice: you should see 55, then 110. Close the exercise to return to this exact place in the lesson."),
 
  s5=quiz(
   "In a notebook you run three cells top to bottom. Then you go back, edit cell 1, and re-run <em>only</em> cell 3. What does cell 3 see?",
