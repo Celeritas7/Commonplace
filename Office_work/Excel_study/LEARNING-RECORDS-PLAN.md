@@ -582,11 +582,17 @@ F2 can use the exact version/criterion contracts in this plan while truthfully
 retaining current session/bounded persistence until the relevant package below
 is implemented and verified. Do not advertise durable history ahead of delivery.
 
+**2026-11-28 reconciliation:** R4 remains planning only. The six separately
+reviewable implementation units below supersede the earlier combined delivery
+row for central journal/conflict comparison; all existing acceptance and
+preservation requirements remain in force. This does not start implementation.
+
 | Future reviewable package | Dependencies and concrete exit evidence |
 | --- | --- |
 | Record schemas and recovery foundation | Exact evidence/criterion maps, journal/backup formats, compatibility fixtures, paged store API and resumable source importer; local synthetic tests; no production drain |
 | Personal persistent progress | Device scope, save-failure UX, separate reading/guided/independent/quiz records, journal plus complete export/restore, five-context and legacy-state preservation |
-| Central journal and conflict comparison | Verified owner adapter, companion DB, old-shell coexistence, recoverable v1 draft bridge, all-source migration, same-ID collision handling and meaningful comparison; local/CI sample only |
+| Central journal and reconciliation | Verified owner adapter, companion DB, old-shell coexistence, recoverable v1 draft bridge, additive migration from all current/pending/base/conflict/history sources, resumable reconciliation and same-ID collision handling with all variants retained; local/CI sample only |
+| Conflict comparison and stale-choice protection | Build on the central journal; compare meaningful evidence, preserve both sides and distinct attempts, check revision and digest before applying a choice, require refreshed comparison when stale, retain offline accessibility and test LR-11; local/CI sample only |
 | Central append transport | New additive migrations/APIs and bounded cursor/receipt behavior, exact grants/RLS, revocation races, local isolated stack and recovery tests; hosted installation remains a separately approved G0/G1-dependent action |
 | Admin Studio reporting in G/H | Explicit report permission, exact curriculum-plan denominators, bounded summary/drill-downs, private-data exclusions, historical-access policy and freshness/coverage labels |
 
