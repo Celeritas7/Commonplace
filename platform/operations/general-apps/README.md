@@ -323,3 +323,16 @@ unchanged. New account-scoped records retain legacy/offline bytes and stop stale
 account callbacks. Next: shared hub protocol acceptance, including link/orphan
 acknowledgements, sender authority and remaining document writers. Actual caller
 cutovers and the remaining G0 gates still precede hosted activation or enrollment.
+
+Candidate 21 prepares [checked mirror acknowledgement and shared protocol review](../../acceptance/ROADMAP-HUB-PROTOCOL-READINESS.md)
+after 01/03/09/15/18/19 and their dependencies. Sequence-only receive/ack APIs
+read actual owned hub events, retain private evidence and commit monotonic
+link/orphan/status/cursor receipts together. Its protocol gate starts empty; it
+revokes the old browser-supplied mirror receive interface. Coordinate SQL/client
+installation only in a later approved window. Legacy shared hub grants, sender
+attestation and shared-document conflicts are not cleared by this route.
+The paired loopback client retains pending work until rendered application and
+server ack, and gates all other generic acknowledgement/document/place writers.
+Next: exact-request acknowledgement/reply contracts for the remaining prepared
+suggestion/study consumers. G0, hosted activation and enrollment remain on hold;
+restoration stays deferred at its existing checkpoint.
