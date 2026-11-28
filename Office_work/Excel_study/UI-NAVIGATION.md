@@ -103,3 +103,19 @@ mode icons, Section 6 artwork, roadmap and workbook boundaries before opening th
 PivotTable lesson. No exercise, grading, workbook-generation, database or access
 changes are introduced by this UI reconciliation. Full CI on the combined commit
 and physical-device acceptance of the new visual revision remain required.
+
+## F5B mobile Apply layout follow-up
+
+UI-V3 physical review reported that the illustrated launcher was accepted, but
+the PivotTable Apply layout action appeared not to work. The exact device
+failure has not been reproduced. The existing source has a verified feedback
+placement problem: Rows and Values start unselected and invalid layouts
+are rejected, but operation messages appear after the result/submit controls.
+Keep the exercise's field-selection task and move layout, refresh and clear
+feedback immediately after their buttons. Explain required selections and
+conflicting fields, distinguish no pivot from a retained prior pivot, and
+mark invalid selectors. Submission grading feedback remains separate. The
+engine, grading, source snapshot, workbook outputs and account/record paths
+are unchanged. Add a touch-enabled 390px browser regression for missing
+fields, valid layout, conflict, recovery and clear. Real-device retest remains
+required before closing the reported issue.
