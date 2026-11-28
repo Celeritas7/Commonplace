@@ -17,6 +17,17 @@
   }
   $('scenario').value='jp-ph-trade';$('lesson').value='pivot-group-total';
   function clearGrade(){$('criteria').replaceChildren();$('feedback').textContent='';}
+  function layoutFeedback(message='',error=false,invalid=[]){
+    const node=$('layout-feedback');node.className='layout-feedback'+(error?' review':'');node.textContent=message;
+    for(const field of fields){if(invalid.includes(field))$(field).setAttribute('aria-invalid','true');else $(field).removeAttribute('aria-invalid');}
+  }
+  function draftProblem(draft){
+    const missing=[];if(!draft.rows)missing.push('rows');if(!draft.values)missing.push('values');
+    if(missing.length)return {message:missing.length===2?'Choose a Rows field and a Values summary first.':missing[0]==='rows'?'Choose a Rows field first.':'Choose a Values summary first.',fields:missing};
+    if(draft.rows===draft.columns)return {message:'Rows and Columns must use different fields. Choose None or a different Columns field.',fields:['rows','columns']};
+    if(draft.filter!=='all'&&(draft.rows==='status'||draft.columns==='status'))return {message:'Status is already in Rows or Columns. Set the report filter to All statuses, or move Status out of that axis.',fields:[draft.rows==='status'?'rows':'columns','filter']};
+    return null;
+  }
   function draw(view,config){
     $('result').replaceChildren();
     if(!view){$('result-note').textContent='Apply a layout to build the summary.';return;}
@@ -76,7 +87,7 @@
     $('amount-heading').textContent='D · '+exercise.heading+' ('+exercise.unit+')';
     for(const id of ['rows','columns'])$(id).querySelector('option[value="group"]').textContent=exercise.groupHeading;
     for(const address of addresses)$(address).value=exercise.values[address];
-    resetFields();clearGrade();
+    resetFields();clearGrade();layoutFeedback();
     $('question').textContent=lesson.question;$('choices').replaceChildren();$('quiz-feedback').textContent='';
     lesson.choices.forEach((choice,i)=>{
       const label=document.createElement('label'),radio=document.createElement('input');
@@ -84,7 +95,7 @@
     });
     render();
   }
-  function changed(){clearGrade();render();}
+  function changed(){clearGrade();layoutFeedback();render();}
   function history(){
     $('progress').textContent='Independent lessons and examples passed: '+passed.size+' / '+(scenarios.length*lessons.length);
     $('history').replaceChildren();
@@ -111,20 +122,23 @@
   for(const address of addresses)$(address).addEventListener(address[0]==='B'?'change':'input',changed);
   for(const field of fields)$(field).addEventListener('change',changed);
   $('apply').addEventListener('click',()=>{
+    const draft=collect(fields),problem=draftProblem(draft);
+    const retained=()=>active?' Previous PivotTable retained.':' No PivotTable created.';
+    if(problem){layoutFeedback('Layout not applied. '+problem.message+retained(),true,problem.fields);return;}
     try{
-      const next=A.layout(collect(fields)),nextSnapshot=snapshot??A.capture(collect(addresses));
+      const next=A.layout(draft),nextSnapshot=snapshot??A.capture(collect(addresses));
       A.view(next,nextSnapshot);active=next;snapshot=nextSnapshot;changed();
-      $('feedback').textContent='Layout applied. Refresh if the current source differs from the snapshot.';
-    }catch(error){render();$('feedback').textContent='Layout not applied. Previous PivotTable retained. '+error.message;}
+      layoutFeedback('Layout applied. See the PivotTable result below. Refresh if the current source differs from the snapshot.');
+    }catch(error){render();layoutFeedback('Layout not applied. '+error.message+retained(),true);}
   });
   $('refresh').addEventListener('click',()=>{
     if(!active)return;
     try{
       const next=A.capture(collect(addresses));A.view(active,next);snapshot=next;changed();
-      $('feedback').textContent='PivotTable refreshed from the current source.';
-    }catch(error){render();$('feedback').textContent='Refresh failed. Previous PivotTable retained. '+error.message;}
+      layoutFeedback('PivotTable refreshed from the current source.');
+    }catch(error){render();layoutFeedback('Refresh failed. Previous PivotTable retained. '+error.message,true);}
   });
-  $('clear').addEventListener('click',()=>{active=null;snapshot=null;resetFields();changed();$('feedback').textContent='PivotTable cleared. Source and submissions retained.';});
+  $('clear').addEventListener('click',()=>{active=null;snapshot=null;resetFields();changed();layoutFeedback('PivotTable cleared. Source and submissions retained.');});
   $('reset').addEventListener('click',reset);
   $('submit').addEventListener('click',()=>{
     if(attempts.length>=100){$('feedback').textContent='Session history is full. Earlier submissions retained; practice remains available.';return;}
