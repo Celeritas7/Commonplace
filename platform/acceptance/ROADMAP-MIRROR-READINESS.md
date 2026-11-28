@@ -93,8 +93,8 @@ reject/defer and acknowledgement calls. Three disposable Supabase groups add rea
 synthetic JWT concurrency and committed ownership/review/pause/Auth lock waits.
 Record actual CI results on the paired PR heads, not as hosted acceptance.
 
-Next bounded work group: **task.done requests and replies** — persist before send,
-request identity, cursor/order and visible-application recovery. Then address
+The following bounded work group prepares [task.done requests and replies](ROADMAP-COMPLETION-READINESS.md),
+including persistence before send, per-request recovery and shared ordering. Next address
 `session.completed` and actual study callers, shared-hub ordering/contracts,
 account-scoped outbox/pending/reply/check-in/leader recovery and legacy writer
 cutover. The broader G0 admission, deferred recovery, physical-device and final

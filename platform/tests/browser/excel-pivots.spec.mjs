@@ -79,7 +79,20 @@ test("F5B independent layout, refresh, partial credit and separate quiz/history"
 });
 test("F5B launcher and responsive PivotTable navigation",async({page})=>{
   await page.route("**/*",r=>r.request().url().startsWith("http://127.0.0.1:4173/")?r.continue():r.abort());
-  await page.goto(root+"index.html#practice");
+  await page.setViewportSize({width:390,height:844});
+  await page.goto(root+"index.html");
+  await expect(page.getByRole("img",{name:"Excel-inspired workbook and spreadsheet grid"})).toBeVisible();
+  await expect(page.locator("#excel-modes .mode svg use")).toHaveCount(4);
+  const section6=page.locator('#learn .lesson[href="Section_6_Study.html"]');
+  await expect(section6.locator(".mini svg use")).toHaveAttribute("href","#m-report");
+  await expect(section6).toContainText("PivotTables");
+  await page.getByRole("tab",{name:"Roadmap",exact:true}).click();
+  await expect(page.locator("#roadmap .note")).toContainText("conditional summary formulas and PivotTables");
+  await page.getByRole("tab",{name:"Workbooks",exact:true}).click();
+  await expect(page.locator("#workbooks .note")).toContainText("Section 6 workbooks are planned");
+  await page.getByRole("tab",{name:"Practice",exact:true}).click();
+  await expect(page).toHaveURL(/#practice$/);
+  await expect(page.getByRole("link",{name:"Open summary practice"})).toBeVisible();
   await page.getByRole("link",{name:"Open PivotTable practice"}).click();
   await expect(page).toHaveURL(/Section_6_PivotTables\.html#f5b-practice$/);
   await layout(page,"group","status","count-records");await c(page,"apply").click();
